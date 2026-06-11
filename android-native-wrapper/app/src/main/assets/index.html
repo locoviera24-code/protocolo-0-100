@@ -199,6 +199,29 @@
     .templateChips{display:flex; flex-wrap:wrap; gap:7px; margin-top:10px;}
     .templateChip{background:#1c304d; color:#dff6ff; border:1px solid var(--line); font-size:12px; padding:8px 10px;}
     .emptyState{border:1px dashed var(--line); border-radius:14px; padding:15px; color:var(--muted); text-align:center; font-size:13px; margin-top:10px;}
+    .moduleTopbar{position:sticky; top:0; z-index:80; height:58px; display:flex; align-items:center; gap:12px; padding:8px max(14px,calc((100vw - 1160px)/2 + 22px)); background:rgba(9,16,29,.94); border-bottom:1px solid var(--line); backdrop-filter:blur(12px);}
+    .menuBtn{width:42px; height:42px; padding:0; display:grid; place-items:center; background:#203451; color:#fff; border:1px solid var(--line); font-size:22px;}
+    .moduleTopbar strong{font-size:17px; color:#fff;}
+    .moduleTopbar span{font-size:12px; color:var(--muted);}
+    .drawerBackdrop{position:fixed; inset:0; z-index:190; background:rgba(2,6,12,.66); opacity:0; pointer-events:none; transition:opacity .2s ease;}
+    .sideDrawer{position:fixed; z-index:200; inset:0 auto 0 0; width:min(330px,86vw); padding:18px; background:linear-gradient(180deg,#14213a,#0b1220); border-right:1px solid var(--line); box-shadow:20px 0 55px rgba(0,0,0,.5); transform:translateX(-105%); transition:transform .24s ease; overflow:auto;}
+    body.drawerOpen .drawerBackdrop{opacity:1; pointer-events:auto;}
+    body.drawerOpen .sideDrawer{transform:translateX(0);}
+    .drawerHead{display:flex; justify-content:space-between; gap:12px; align-items:center; padding-bottom:16px; border-bottom:1px solid var(--line);}
+    .drawerHead h2{margin:0;}
+    .drawerNav{display:grid; gap:9px; margin-top:16px;}
+    .drawerItem{display:grid; grid-template-columns:42px 1fr; gap:11px; text-align:left; align-items:center; color:#eaf4ff; background:rgba(255,255,255,.04); border:1px solid var(--line); padding:12px;}
+    .drawerItem .drawerIcon{font-size:23px; text-align:center;}
+    .drawerItem strong,.drawerItem span{display:block;}
+    .drawerItem span{font-size:12px; color:var(--muted); margin-top:3px; line-height:1.3;}
+    .drawerItem.active{background:linear-gradient(135deg,rgba(114,214,255,.20),rgba(152,245,194,.11)); border-color:rgba(114,214,255,.45);}
+    body[data-module="gym"] .protocolOnly,body[data-module="nutricion"] .protocolOnly{display:none!important;}
+    body[data-module="gym"] .grid,body[data-module="nutricion"] .grid{display:block;}
+    body[data-module="gym"] .grid>.panel,body[data-module="nutricion"] .grid>.panel{border:0;background:transparent;box-shadow:none;overflow:visible;}
+    body[data-module="gym"] .grid>.panel>.bd,body[data-module="nutricion"] .grid>.panel>.bd{padding:0;}
+    .assistantBox{border:1px solid rgba(152,245,194,.30); background:linear-gradient(135deg,rgba(152,245,194,.10),rgba(114,214,255,.07)); border-radius:16px; padding:14px; margin-top:12px;}
+    .assistantBox textarea{min-height:74px;}
+    .assistantResult{margin-top:10px; display:grid; gap:7px;}
     @media(max-width:800px){.moduleGrid{grid-template-columns:1fr}.quickStats{grid-template-columns:repeat(2,1fr)}}
     @media(max-width:480px){.quickStats{grid-template-columns:1fr}.macroRow{grid-template-columns:72px 1fr 76px}.entryRow{grid-template-columns:1fr}.entryRow button{justify-self:start}}
 
@@ -206,8 +229,21 @@
   </style>
 </head>
 <body>
+  <div class="moduleTopbar">
+    <button type="button" class="menuBtn" id="openDrawerBtn" aria-label="Abrir menú">☰</button>
+    <div><strong id="currentModuleTitle">Protocolo 0→100</strong><span id="currentModuleSubtitle">Atención, pantalla y hábitos diarios</span></div>
+  </div>
+  <div class="drawerBackdrop" id="drawerBackdrop"></div>
+  <aside class="sideDrawer" id="sideDrawer" aria-label="Módulos de la aplicación">
+    <div class="drawerHead"><div><h2>Protocolo 0→100</h2><div class="muted small">Elegí un espacio</div></div><button type="button" class="closeBtn" id="closeDrawerBtn" aria-label="Cerrar menú">×</button></div>
+    <nav class="drawerNav">
+      <button type="button" class="drawerItem active" data-module-target="protocolo"><span class="drawerIcon">📵</span><span><strong>Protocolo</strong><span>Pantalla, sueño, atención y hábitos.</span></span></button>
+      <button type="button" class="drawerItem" data-module-target="gym"><span class="drawerIcon">🏋️</span><span><strong>Gym</strong><span>Rutinas, ejercicios y progresión.</span></span></button>
+      <button type="button" class="drawerItem" data-module-target="nutricion"><span class="drawerIcon">🥗</span><span><strong>Nutrición</strong><span>Comidas, macros, agua y peso.</span></span></button>
+    </nav>
+  </aside>
   <main class="app">
-    <header>
+    <header class="protocolOnly">
       <div class="brand">
         <h1>Protocolo 0→100</h1>
         <div class="subtitle">Sistema integral para atención, sueño, entrenamiento y nutrición. Incluye protocolo diario, rutinas de gym, seguimiento de macros y métricas comparables. Los datos se guardan localmente y funcionan offline.</div>
@@ -218,7 +254,7 @@
 
     <section class="grid">
       <div class="panel">
-        <div class="hd">
+        <div class="hd protocolOnly">
           <div>
             <h2>Hoy</h2>
             <div class="muted small">Configurá el inicio, registrá el día y dejá que la app calcule tu score.</div>
@@ -226,7 +262,7 @@
           <span class="pill" id="dayPill">Día 0</span>
         </div>
         <div class="bd">
-          <div class="formGrid">
+          <div class="formGrid protocolOnly">
             <div class="field">
               <label>Fecha de inicio del protocolo</label>
               <input type="date" id="startDate">
@@ -237,7 +273,7 @@
             </div>
           </div>
 
-          <div class="phaseCard" style="margin-top:14px">
+          <div class="phaseCard protocolOnly" style="margin-top:14px">
             <h3 id="phaseTitle">Fase 0 · Preparación</h3>
             <div class="taskList" id="taskList"></div>
             <div class="todaySummary">
@@ -247,7 +283,7 @@
             </div>
           </div>
 
-          <div class="actionFocus" id="actionFocusCard">
+          <div class="actionFocus protocolOnly" id="actionFocusCard">
             <div class="actionFocusTop">
               <div>
                 <h3>⚡ Acción clave de hoy <button type="button" class="helpBtn" data-help-id="actionToday" title="Ver qué hacer, sentido y objetivo">?</button></h3>
@@ -269,11 +305,9 @@
             </div>
           </div>
 
-          <div class="tabs" style="margin-top:16px">
+          <div class="tabs protocolOnly" style="margin-top:16px">
             <button class="tab active" data-tab="registro" type="button">Registro diario</button>
             <button class="tab" data-tab="dashboard" type="button">Dashboard</button>
-            <button class="tab" data-tab="gym" type="button">Gym</button>
-            <button class="tab" data-tab="nutricion" type="button">Nutrición</button>
             <button class="tab" data-tab="telefono" type="button">Teléfono</button>
             <button class="tab" data-tab="plan" type="button">Plan 0–100</button>
             <button class="tab" data-tab="guia" type="button">Guía: qué hacer / sentido / objetivo</button>
@@ -385,8 +419,19 @@
           <div id="tab-nutricion" class="hidden">
             <div class="moduleHero">
               <h3>🥗 Nutrición diaria</h3>
-              <div class="muted small">Seguimiento práctico de calorías, macros, agua y peso. Los alimentos preestablecidos son orientativos y podés crear los tuyos.</div>
+              <div class="muted small">Seguimiento práctico por gramos de calorías, macros, agua y peso. Los valores preestablecidos son orientativos y podés crear alimentos propios.</div>
               <div class="progressStack" id="nutritionProgress"></div>
+            </div>
+
+            <div class="assistantBox">
+              <h3>✨ Asistente nutricional local</h3>
+              <div class="muted small">Escribí o dictá, por ejemplo: “Comí 200 gramos de pechuga y 150 gramos de arroz cocido”. El análisis se hace en tu dispositivo.</div>
+              <div class="field" style="margin-top:10px"><textarea id="nutritionAssistantInput" placeholder="Contame qué comiste y cuántos gramos…"></textarea></div>
+              <div class="buttons">
+                <button type="button" class="good" id="analyzeNutritionBtn">Analizar y registrar</button>
+                <button type="button" class="secondary" id="speakNutritionBtn">🎙️ Hablar</button>
+              </div>
+              <div class="assistantResult" id="nutritionAssistantResult"></div>
             </div>
 
             <div class="moduleCard">
@@ -407,11 +452,11 @@
                 <div class="field"><label>Comida</label><select id="nutritionMeal"><option>Desayuno</option><option>Almuerzo</option><option>Cena</option><option>Snack</option></select></div>
                 <div class="field"><label>Alimento preestablecido</label><select id="nutritionFood"></select></div>
                 <div class="field"><label>Nombre personalizado (opcional)</label><input type="text" id="customFoodName" placeholder="Ej. receta casera"></div>
-                <div class="field"><label>Cantidad / porciones</label><input type="number" id="foodQuantity" min="0.1" step="0.1" value="1"></div>
-                <div class="field"><label>Calorías por porción</label><input type="number" id="foodCalories" min="0"></div>
-                <div class="field"><label>Proteína por porción (g)</label><input type="number" id="foodProtein" min="0" step="0.1"></div>
-                <div class="field"><label>Carbohidratos por porción (g)</label><input type="number" id="foodCarbs" min="0" step="0.1"></div>
-                <div class="field"><label>Grasas por porción (g)</label><input type="number" id="foodFat" min="0" step="0.1"></div>
+                <div class="field"><label>Cantidad consumida (g)</label><input type="number" id="foodQuantity" min="1" step="1" value="100"></div>
+                <div class="field"><label>Calorías por 100 g</label><input type="number" id="foodCalories" min="0"></div>
+                <div class="field"><label>Proteína por 100 g</label><input type="number" id="foodProtein" min="0" step="0.1"></div>
+                <div class="field"><label>Carbohidratos por 100 g</label><input type="number" id="foodCarbs" min="0" step="0.1"></div>
+                <div class="field"><label>Grasas por 100 g</label><input type="number" id="foodFat" min="0" step="0.1"></div>
                 <div class="field"><label>Agua del día (ml)</label><input type="number" id="nutritionWater" min="0" step="100" placeholder="Ej. 2000"></div>
                 <div class="field"><label>Peso corporal (kg)</label><input type="number" id="nutritionWeight" min="0" step="0.1" placeholder="Opcional"></div>
               </div>
@@ -472,7 +517,7 @@
         </div>
       </div>
 
-      <aside class="panel">
+      <aside class="panel protocolOnly">
         <div class="hd"><div><h2>Puntaje del día</h2><div class="muted small">0–49 rescate · 50–69 transición · 70–79 buen día · 80–89 estabilidad · 90–100 excelente</div></div></div>
         <div class="bd">
           <div class="scoreHero">
@@ -536,6 +581,7 @@ const GYM_SESSIONS_KEY = 'protocolo_0_100_gym_sessions_v1';
 const NUTRITION_ENTRIES_KEY = 'protocolo_0_100_nutrition_entries_v1';
 const NUTRITION_TARGETS_KEY = 'protocolo_0_100_nutrition_targets_v1';
 const BODY_METRICS_KEY = 'protocolo_0_100_body_metrics_v1';
+const ACTIVE_MODULE_KEY = 'protocolo_0_100_active_module_v1';
 
 const EXERCISE_CATALOG = {
   'Pecho':['Press banca con barra','Press inclinado con mancuernas','Fondos','Aperturas en polea','Flexiones'],
@@ -557,21 +603,23 @@ const GYM_TEMPLATES = {
   upper:{name:'Torso',items:[['Pecho','Press banca con barra',4,8],['Espalda','Remo en polea',4,10],['Pecho','Press inclinado con mancuernas',3,10],['Espalda','Jalón al pecho',3,10],['Hombros','Elevaciones laterales',3,15]]}
 };
 const FOOD_CATALOG = [
-  {name:'Seleccionar alimento…',calories:0,protein:0,carbs:0,fat:0},
-  {name:'Pechuga de pollo · 100 g',calories:165,protein:31,carbs:0,fat:3.6},
-  {name:'Carne magra · 100 g',calories:200,protein:26,carbs:0,fat:10},
-  {name:'Huevo · 1 unidad',calories:72,protein:6.3,carbs:0.4,fat:4.8},
-  {name:'Arroz cocido · 100 g',calories:130,protein:2.7,carbs:28,fat:0.3},
-  {name:'Avena · 50 g',calories:190,protein:6.5,carbs:34,fat:3.5},
-  {name:'Papa cocida · 100 g',calories:87,protein:1.9,carbs:20,fat:0.1},
-  {name:'Banana · 1 unidad',calories:105,protein:1.3,carbs:27,fat:0.4},
-  {name:'Leche · 250 ml',calories:150,protein:8,carbs:12,fat:8},
-  {name:'Yogur griego · 170 g',calories:100,protein:17,carbs:6,fat:0},
-  {name:'Pan integral · 2 rebanadas',calories:160,protein:7,carbs:28,fat:2},
-  {name:'Aceite de oliva · 1 cucharada',calories:119,protein:0,carbs:0,fat:13.5},
-  {name:'Proteína whey · 1 scoop',calories:120,protein:24,carbs:3,fat:2}
+  {name:'Seleccionar alimento…',aliases:[],calories:0,protein:0,carbs:0,fat:0},
+  {name:'Pechuga de pollo',aliases:['pechuga','pollo','pechuga de pollo'],calories:165,protein:31,carbs:0,fat:3.6},
+  {name:'Carne magra',aliases:['carne','carne magra','vacuno'],calories:200,protein:26,carbs:0,fat:10},
+  {name:'Huevo',aliases:['huevo','huevos'],calories:143,protein:12.6,carbs:0.7,fat:9.5},
+  {name:'Arroz cocido',aliases:['arroz','arroz cocido'],calories:130,protein:2.7,carbs:28,fat:0.3},
+  {name:'Avena',aliases:['avena'],calories:380,protein:13,carbs:68,fat:7},
+  {name:'Papa cocida',aliases:['papa','papas','patata','papa cocida'],calories:87,protein:1.9,carbs:20,fat:0.1},
+  {name:'Banana',aliases:['banana','bananas','platano','plátano'],calories:89,protein:1.1,carbs:23,fat:0.3},
+  {name:'Leche entera',aliases:['leche','leche entera'],calories:61,protein:3.2,carbs:4.8,fat:3.3},
+  {name:'Yogur griego',aliases:['yogur','yogurt','yogur griego'],calories:59,protein:10,carbs:3.6,fat:0.4},
+  {name:'Pan integral',aliases:['pan','pan integral'],calories:247,protein:13,carbs:41,fat:3.4},
+  {name:'Aceite de oliva',aliases:['aceite','aceite de oliva'],calories:884,protein:0,carbs:0,fat:100},
+  {name:'Proteína whey',aliases:['whey','proteina','proteína','proteina whey','proteína whey'],calories:400,protein:80,carbs:10,fat:6.7}
 ];
 let gymDraft = [];
+let activeModule = 'protocolo';
+let lastProtocolTab = 'registro';
 
 function pad(n){return String(n).padStart(2,'0')}
 function todayStr(){ const d=new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
@@ -728,12 +776,61 @@ function addFood(){
   const custom=document.getElementById('customFoodName').value.trim();
   const name=custom || (selected===FOOD_CATALOG[0]?'':selected.name);
   if(!name){ flash('Elegí un alimento o escribí uno personalizado.'); return; }
-  const quantity=Math.max(.1,num('foodQuantity')||1);
-  const entry={id:uid('food'),date:document.getElementById('nutritionDate').value||todayStr(),meal:document.getElementById('nutritionMeal').value,name,quantity,calories:Math.round(num('foodCalories')*quantity),protein:Number((num('foodProtein')*quantity).toFixed(1)),carbs:Number((num('foodCarbs')*quantity).toFixed(1)),fat:Number((num('foodFat')*quantity).toFixed(1)),savedAt:new Date().toISOString()};
+  const grams=Math.max(1,num('foodQuantity')||100);
+  const factor=grams/100;
+  const entry={id:uid('food'),date:document.getElementById('nutritionDate').value||todayStr(),meal:document.getElementById('nutritionMeal').value,name,grams,calories:Math.round(num('foodCalories')*factor),protein:Number((num('foodProtein')*factor).toFixed(1)),carbs:Number((num('foodCarbs')*factor).toFixed(1)),fat:Number((num('foodFat')*factor).toFixed(1)),savedAt:new Date().toISOString()};
   const entries=getLocalData(NUTRITION_ENTRIES_KEY,[]); entries.push(entry); setLocalData(NUTRITION_ENTRIES_KEY,entries);
   document.getElementById('customFoodName').value='';
   renderNutrition();
   flash('Alimento añadido.');
+}
+function normalizeFoodText(value){ return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^\p{L}\p{N}\s]/gu,' ').replace(/\s+/g,' ').trim(); }
+function findCatalogFood(value){
+  const needle=normalizeFoodText(value).replace(/\b(?:cocido|cocida|entera|magro|magra)\b/g,'').trim();
+  return FOOD_CATALOG.slice(1).find(food=>(food.aliases||[food.name]).some(alias=>{const a=normalizeFoodText(alias);return needle===a || needle.includes(a) || a.includes(needle);}));
+}
+function buildFoodEntry(food, grams, meal, date){
+  const factor=grams/100;
+  return {id:uid('food'),date,meal,name:food.name,grams,calories:Math.round(food.calories*factor),protein:Number((food.protein*factor).toFixed(1)),carbs:Number((food.carbs*factor).toFixed(1)),fat:Number((food.fat*factor).toFixed(1)),source:'asistente local',savedAt:new Date().toISOString()};
+}
+function analyzeNutritionText(){
+  const input=document.getElementById('nutritionAssistantInput');
+  const result=document.getElementById('nutritionAssistantResult');
+  const text=input.value.trim();
+  if(!text){ result.innerHTML='<div class="auditItem warn">Escribí qué comiste e incluí los gramos.</div>'; return; }
+  const normalized=text.replace(/\b(com[ií]|comido|consum[ií]|inger[ií]|tom[eé])\b/gi,' ').trim();
+  const pattern=/(\d+(?:[.,]\d+)?)\s*(?:g|gr|gramos?)\s+(?:de\s+)?(.+?)(?=\s+(?:y|mas|más)\s+\d+(?:[.,]\d+)?\s*(?:g|gr|gramos?)|[,;.]|$)/gi;
+  const found=[], unknown=[];
+  let match;
+  while((match=pattern.exec(normalized))!==null){
+    const grams=Math.max(1,Number(match[1].replace(',','.')));
+    const spokenName=match[2].trim();
+    const food=findCatalogFood(spokenName);
+    if(food) found.push({food,grams}); else unknown.push(`${grams} g de ${spokenName}`);
+  }
+  if(!found.length){
+    result.innerHTML='<div class="auditItem warn">No reconocí alimentos con gramos. Probá: “200 gramos de pechuga y 150 gramos de arroz cocido”.</div>';
+    return;
+  }
+  const entries=getLocalData(NUTRITION_ENTRIES_KEY,[]);
+  const meal=document.getElementById('nutritionMeal').value;
+  const date=document.getElementById('nutritionDate').value||todayStr();
+  found.forEach(item=>entries.push(buildFoodEntry(item.food,item.grams,meal,date)));
+  setLocalData(NUTRITION_ENTRIES_KEY,entries);
+  input.value='';
+  renderNutrition();
+  result.innerHTML=`<div class="auditItem good">Registrado: ${found.map(x=>`${x.grams} g de ${escapeHtml(x.food.name)}`).join(', ')}.</div>${unknown.length?`<div class="auditItem warn">No reconocí: ${escapeHtml(unknown.join(', '))}. Podés cargarlo manualmente con sus macros por 100 g.</div>`:''}`;
+}
+function startNutritionVoice(){
+  const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+  const result=document.getElementById('nutritionAssistantResult');
+  if(!Recognition){ result.innerHTML='<div class="auditItem warn">El reconocimiento de voz no está disponible en este navegador. Podés escribir la comida.</div>'; return; }
+  const recognition=new Recognition();
+  recognition.lang='es-ES'; recognition.interimResults=false; recognition.maxAlternatives=1;
+  result.innerHTML='<div class="auditItem">Escuchando… decí el alimento y los gramos.</div>';
+  recognition.onresult=e=>{document.getElementById('nutritionAssistantInput').value=e.results[0][0].transcript; result.innerHTML='<div class="auditItem good">Texto reconocido. Revisalo y tocá “Analizar y registrar”.</div>';};
+  recognition.onerror=()=>{result.innerHTML='<div class="auditItem warn">No pude reconocer la voz. Revisá el permiso del micrófono o escribí la comida.</div>';};
+  recognition.start();
 }
 function removeFood(id){
   setLocalData(NUTRITION_ENTRIES_KEY,getLocalData(NUTRITION_ENTRIES_KEY,[]).filter(e=>e.id!==id));
@@ -764,7 +861,7 @@ function renderNutrition(){
     progress.innerHTML=Object.keys(labels).map(k=>{const value=Math.round(total[k]);const target=Math.max(1,Number(targets[k])||1);const pct=Math.min(100,(value/target)*100);return `<div class="macroRow ${value>target?'over':''}"><strong>${labels[k]}</strong><div class="bar"><i style="width:${pct}%"></i></div><span>${value}/${target}${k==='calories'?' kcal':' g'}</span></div>`;}).join('');
   }
   const list=document.getElementById('nutritionDayList');
-  if(list) list.innerHTML=day.length?day.map(e=>`<div class="entryRow"><div><strong>${escapeHtml(e.name)}</strong><div class="meta">${escapeHtml(e.meal)} · ${e.quantity} porción(es) · ${Math.round(e.calories)} kcal · P ${Math.round(e.protein)} · C ${Math.round(e.carbs)} · G ${Math.round(e.fat)}</div></div><button type="button" class="danger" data-remove-food="${escapeHtml(e.id)}">Quitar</button></div>`).join(''):'<div class="emptyState">Todavía no registraste comidas para esta fecha.</div>';
+  if(list) list.innerHTML=day.length?day.map(e=>`<div class="entryRow"><div><strong>${escapeHtml(e.name)}</strong><div class="meta">${escapeHtml(e.meal)} · ${e.grams?`${e.grams} g`:`${e.quantity||1} porción(es)`} · ${Math.round(e.calories)} kcal · P ${Math.round(e.protein)} · C ${Math.round(e.carbs)} · G ${Math.round(e.fat)}</div></div><button type="button" class="danger" data-remove-food="${escapeHtml(e.id)}">Quitar</button></div>`).join(''):'<div class="emptyState">Todavía no registraste comidas para esta fecha.</div>';
   const grouped={}; all.forEach(e=>{grouped[e.date]??=[];grouped[e.date].push(e);});
   const metrics=getLocalData(BODY_METRICS_KEY,{});
   const dates=Array.from(new Set([...Object.keys(grouped),...Object.keys(metrics)])).sort().reverse().slice(0,30);
@@ -863,6 +960,7 @@ function markActionDone(){
   flash('Acción clave marcada como cumplida.');
 }
 function maybeAutoShowActionModal(){
+  if(activeModule!=='protocolo') return;
   const date = document.getElementById('entryDate').value || todayStr();
   if(checked('keyActionDone') || isActionDismissed(date)) return;
   setTimeout(()=>showActionModal(false), 650);
@@ -1277,7 +1375,27 @@ function setupHelpButtons(){
     if(check) check.appendChild(btn); else { const field=target.closest('.field'); if(field) field.appendChild(btn); }
   });
 }
+function openDrawer(){ document.body.classList.add('drawerOpen'); }
+function closeDrawer(){ document.body.classList.remove('drawerOpen'); }
+function setModule(module){
+  const meta={
+    protocolo:['Protocolo 0→100','Atención, pantalla y hábitos diarios'],
+    gym:['Gym','Rutinas, ejercicios y progresión'],
+    nutricion:['Nutrición','Comidas, macros, agua y peso']
+  };
+  activeModule=meta[module]?module:'protocolo';
+  document.body.dataset.module=activeModule;
+  localStorage.setItem(ACTIVE_MODULE_KEY,activeModule);
+  document.getElementById('currentModuleTitle').textContent=meta[activeModule][0];
+  document.getElementById('currentModuleSubtitle').textContent=meta[activeModule][1];
+  document.querySelectorAll('[data-module-target]').forEach(btn=>btn.classList.toggle('active',btn.dataset.moduleTarget===activeModule));
+  if(activeModule==='protocolo') activateTab(lastProtocolTab); else activateTab(activeModule);
+  closeActionModal();
+  closeDrawer();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
 function activateTab(tabName){
+  if(['registro','dashboard','telefono','plan','guia'].includes(tabName)) lastProtocolTab=tabName;
   document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active', b.dataset.tab===tabName));
   ['registro','dashboard','gym','nutricion','telefono','plan','guia'].forEach(t=>{
     const el=document.getElementById('tab-'+t); if(el) el.classList.toggle('hidden', t!==tabName);
@@ -1678,6 +1796,10 @@ const syncBtn=document.getElementById('syncAndroidUsageBtn'); if(syncBtn) syncBt
 const requestUsageBtn=document.getElementById('requestUsageAccessBtn'); if(requestUsageBtn) requestUsageBtn.addEventListener('click', requestUsageAccess);
 const installBtn=document.getElementById('installPwaBtn'); if(installBtn) installBtn.addEventListener('click', installPwa);
 const copyPhoneBtn=document.getElementById('copyPhoneToFormBtn'); if(copyPhoneBtn) copyPhoneBtn.addEventListener('click', copyPhoneMetricsToForm);
+document.getElementById('openDrawerBtn').addEventListener('click', openDrawer);
+document.getElementById('closeDrawerBtn').addEventListener('click', closeDrawer);
+document.getElementById('drawerBackdrop').addEventListener('click', closeDrawer);
+document.querySelectorAll('[data-module-target]').forEach(btn=>btn.addEventListener('click',()=>setModule(btn.dataset.moduleTarget)));
 document.getElementById('gymMuscle').addEventListener('change', populateGymExercises);
 document.getElementById('loadGymTemplateBtn').addEventListener('click', loadGymTemplate);
 document.getElementById('addGymExerciseBtn').addEventListener('click', addGymExercise);
@@ -1687,6 +1809,8 @@ document.getElementById('nutritionFood').addEventListener('change', applySelecte
 document.getElementById('saveNutritionTargetsBtn').addEventListener('click', saveNutritionTargets);
 document.getElementById('addFoodBtn').addEventListener('click', addFood);
 document.getElementById('saveBodyMetricsBtn').addEventListener('click', saveBodyMetrics);
+document.getElementById('analyzeNutritionBtn').addEventListener('click', analyzeNutritionText);
+document.getElementById('speakNutritionBtn').addEventListener('click', startNutritionVoice);
 document.getElementById('nutritionDate').addEventListener('change', ()=>{loadBodyMetricsForDate();renderNutrition();});
 
 document.getElementById('saveBtn').addEventListener('click', saveEntry);
@@ -1718,6 +1842,9 @@ document.getElementById('importFile').addEventListener('change', e=>{ if(e.targe
 const actionBackdrop=document.getElementById('actionModalBackdrop');
 if(actionBackdrop) actionBackdrop.addEventListener('click', e=>{ if(e.target===actionBackdrop) closeActionModal(); });
 document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeActionModal(); });
+let swipeStartX=null,swipeStartY=null;
+document.addEventListener('touchstart',e=>{const t=e.touches[0];swipeStartX=t.clientX;swipeStartY=t.clientY;},{passive:true});
+document.addEventListener('touchend',e=>{if(swipeStartX===null)return;const t=e.changedTouches[0],dx=t.clientX-swipeStartX,dy=Math.abs(t.clientY-swipeStartY);if(dy<80&&swipeStartX<30&&dx>75)openDrawer();if(dy<80&&document.body.classList.contains('drawerOpen')&&dx<-75)closeDrawer();swipeStartX=null;swipeStartY=null;},{passive:true});
 document.addEventListener('click', e=>{
   const removeGym=e.target.closest('[data-remove-gym]');
   if(removeGym){ gymDraft=gymDraft.filter(i=>i.id!==removeGym.dataset.removeGym); renderGymDraft(); return; }
@@ -1751,6 +1878,7 @@ renderHelpGuide();
 setupHelpButtons();
 loadEntryForDate();
 renderAll();
+setModule(localStorage.getItem(ACTIVE_MODULE_KEY)||'protocolo');
 maybeAutoShowActionModal();
 </script>
 </body>

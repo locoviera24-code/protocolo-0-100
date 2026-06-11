@@ -8,8 +8,10 @@ Los datos se guardan localmente en el dispositivo. No hay servidor propio ni cue
 
 - **Protocolo diario:** pantalla, sueno, lectura, actividad offline, score y tendencias.
 - **Gym:** rutinas preestablecidas, ejercicios por musculo, ejercicios personalizados, series, repeticiones, peso, RIR, volumen e historial.
-- **Nutricion:** objetivos de calorias y macros, alimentos preestablecidos o personalizados, comidas, agua, peso e historial diario.
+- **Nutricion:** objetivos de calorias y macros, alimentos por gramos, asistente local por texto o voz, comidas, agua, peso e historial diario.
 - **Telefono Android:** importacion opcional de estadisticas de uso con permiso explicito.
+
+Los tres espacios principales se abren desde el menu lateral. En movil tambien puede abrirse deslizando desde el borde izquierdo.
 
 ## Versiones incluidas
 
