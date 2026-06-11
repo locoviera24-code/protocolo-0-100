@@ -7,6 +7,9 @@ on:
       - main
       - master
 
+permissions:
+  contents: write
+
 jobs:
   build-apk:
     name: Generar APK instalable
@@ -52,3 +55,10 @@ jobs:
           name: protocolo-0-100-apk
           path: dist/protocolo-0-100-debug.apk
           retention-days: 30
+
+      - name: Publicar APK como descarga directa
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view v1.0.0 >/dev/null 2>&1 || gh release create v1.0.0 --title "Protocolo 0→100 v1.0.0" --notes "Primera versión instalable para Android."
+          gh release upload v1.0.0 dist/protocolo-0-100-debug.apk --clobber
