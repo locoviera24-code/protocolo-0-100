@@ -1,0 +1,1426 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Protocolo 0→100 | App instalable + métricas del teléfono</title>
+  <meta name="theme-color" content="#0b1220" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Protocolo 0→100" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+
+  <style>
+    :root{
+      --bg:#0b1220;
+      --panel:#121b2f;
+      --panel2:#17243d;
+      --muted:#8fa3c3;
+      --text:#eef5ff;
+      --line:#273958;
+      --accent:#72d6ff;
+      --accent2:#98f5c2;
+      --warn:#ffd36e;
+      --bad:#ff8b8b;
+      --good:#8af0b5;
+      --shadow: 0 16px 40px rgba(0,0,0,.35);
+      --radius: 18px;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0; min-height:100%; background:radial-gradient(circle at 20% 10%, #172b51 0, transparent 30%), radial-gradient(circle at 90% 0, #123934 0, transparent 28%), var(--bg); color:var(--text); font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;}
+    body{padding-bottom:48px;}
+    .app{max-width:1160px; margin:0 auto; padding:22px;}
+    header{display:flex; align-items:center; justify-content:space-between; gap:16px; margin:10px 0 22px;}
+    .brand{display:flex; flex-direction:column; gap:6px;}
+    h1{font-size:clamp(26px,4vw,44px); margin:0; letter-spacing:-.03em;}
+    .subtitle{color:var(--muted); line-height:1.45; max-width:760px;}
+    .pill{display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border:1px solid var(--line); border-radius:999px; background:rgba(255,255,255,.04); color:var(--muted); font-size:13px;}
+    .grid{display:grid; grid-template-columns:1.1fr .9fr; gap:18px;}
+    .panel{background:linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.025)); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden;}
+    .panel .hd{padding:18px 18px 0; display:flex; justify-content:space-between; align-items:flex-start; gap:12px;}
+    .panel .bd{padding:18px;}
+    h2{font-size:20px; margin:0 0 8px; letter-spacing:-.02em;}
+    h3{font-size:15px; margin:0 0 8px; color:#d7e7ff;}
+    .muted{color:var(--muted)}
+    .small{font-size:13px; line-height:1.35}
+    .scoreHero{display:grid; grid-template-columns:160px 1fr; gap:18px; align-items:center;}
+    .ring{width:150px; height:150px; border-radius:50%; background:conic-gradient(var(--accent) calc(var(--p)*1%), rgba(255,255,255,.08) 0); display:grid; place-items:center; position:relative;}
+    .ring::after{content:""; position:absolute; inset:12px; border-radius:50%; background:var(--panel); border:1px solid var(--line);}
+    .ring span{position:relative; z-index:1; font-size:38px; font-weight:800; letter-spacing:-.04em;}
+    .ring small{display:block; font-size:11px; font-weight:600; color:var(--muted); letter-spacing:0; text-align:center;}
+    .stats{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:14px;}
+    .stat{background:rgba(255,255,255,.04); border:1px solid var(--line); border-radius:14px; padding:12px; min-height:76px;}
+    .stat b{font-size:22px; display:block; margin-top:5px;}
+    .phaseCard{background:linear-gradient(135deg, rgba(114,214,255,.12), rgba(152,245,194,.08)); border:1px solid rgba(114,214,255,.22); border-radius:16px; padding:15px;}
+    .taskList{display:grid; gap:9px; margin-top:12px;}
+    .task{display:flex; gap:10px; align-items:flex-start; padding:10px; background:rgba(0,0,0,.12); border:1px solid rgba(255,255,255,.08); border-radius:12px;}
+    .task .icon{font-size:18px; width:24px; text-align:center;}
+    .formGrid{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px;}
+    .field{display:flex; flex-direction:column; gap:7px;}
+    label{font-size:13px; color:#c9d8ef;}
+    input, select, textarea{width:100%; border:1px solid var(--line); background:#0d1628; color:var(--text); border-radius:12px; padding:11px 12px; font:inherit; outline:none;}
+    textarea{min-height:84px; resize:vertical;}
+    input:focus, textarea:focus, select:focus{border-color:var(--accent); box-shadow:0 0 0 3px rgba(114,214,255,.14)}
+    .checks{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-top:12px;}
+    .check{display:flex; align-items:flex-start; gap:10px; padding:10px; border:1px solid var(--line); border-radius:12px; background:rgba(255,255,255,.035);}
+    .check input{width:18px; min-width:18px; margin-top:2px; accent-color:#72d6ff;}
+    .check span{font-size:13px; color:#d8e6fb; line-height:1.3}
+    .buttons{display:flex; flex-wrap:wrap; gap:10px; margin-top:14px;}
+    button{border:none; border-radius:12px; padding:11px 14px; font-weight:700; color:#06111f; background:var(--accent); cursor:pointer; transition:transform .08s ease, filter .2s ease;}
+    button:hover{filter:brightness(1.08)}
+    button:active{transform:translateY(1px)}
+    button.secondary{background:#243653; color:var(--text); border:1px solid var(--line)}
+    button.good{background:var(--accent2)}
+    button.warn{background:var(--warn)}
+    button.danger{background:#36212a; color:#ffd3d3; border:1px solid #6b3340}
+    .scoreBreak{display:grid; gap:10px; margin-top:14px;}
+    .barRow{display:grid; grid-template-columns:160px 1fr 52px; gap:10px; align-items:center; font-size:13px;}
+    .bar{height:10px; background:rgba(255,255,255,.08); border-radius:999px; overflow:hidden; border:1px solid rgba(255,255,255,.08)}
+    .bar i{display:block; height:100%; width:0; background:linear-gradient(90deg, var(--accent), var(--accent2)); border-radius:999px;}
+    .history{overflow:auto; max-height:390px; border-radius:14px; border:1px solid var(--line);}
+    table{border-collapse:collapse; width:100%; min-width:760px;}
+    th,td{padding:10px 12px; border-bottom:1px solid var(--line); text-align:left; font-size:13px; vertical-align:top;}
+    th{position:sticky; top:0; background:#13213a; color:#cfe1fb; z-index:2;}
+    tr:hover td{background:rgba(255,255,255,.03)}
+    .badgeGrid{display:flex; flex-wrap:wrap; gap:8px;}
+    .badge{display:inline-flex; align-items:center; gap:7px; padding:8px 10px; border-radius:999px; border:1px solid var(--line); background:rgba(255,255,255,.04); color:var(--muted); font-size:12px;}
+    .badge.on{color:#092018; background:linear-gradient(135deg, var(--accent2), #d7ffeb); border-color:transparent; font-weight:800;}
+    .chartWrap{height:190px; padding:10px; background:rgba(0,0,0,.12); border:1px solid var(--line); border-radius:14px;}
+    canvas{width:100%; height:100%; display:block;}
+    .rescue{background:rgba(255,211,110,.11); border:1px solid rgba(255,211,110,.27); border-radius:14px; padding:13px; color:#ffe6aa; margin-top:12px;}
+    .tabs{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;}
+    .tab{background:#182641; color:#dbeaff; border:1px solid var(--line); padding:9px 12px; border-radius:999px; font-size:13px;}
+    .tab.active{background:var(--accent); color:#06111f;}
+    .hidden{display:none !important;}
+    .footerNote{margin-top:18px; color:var(--muted); font-size:12px; line-height:1.45;}
+    .todaySummary{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:12px;}
+    .mini{border:1px solid var(--line); border-radius:12px; padding:10px; background:rgba(255,255,255,.035);}
+    .mini strong{display:block; margin-bottom:4px;}
+
+    .mantra{margin-top:8px; display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:999px; border:1px solid rgba(152,245,194,.28); background:rgba(152,245,194,.08); color:#cdfde3; font-size:13px; font-weight:750;}
+    .metricGrid{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-bottom:14px;}
+    .metricCard{border:1px solid var(--line); border-radius:16px; padding:13px; background:rgba(255,255,255,.04); min-height:112px;}
+    .metricCard .k{color:var(--muted); font-size:12px; line-height:1.3;}
+    .metricCard .v{font-size:30px; font-weight:900; letter-spacing:-.04em; margin:5px 0 4px;}
+    .delta{display:inline-flex; align-items:center; gap:4px; padding:4px 7px; border-radius:999px; font-size:12px; font-weight:800; border:1px solid var(--line); color:var(--muted); background:rgba(255,255,255,.035);}
+    .delta.up{color:#082316; background:var(--accent2); border-color:transparent;}
+    .delta.down{color:#351111; background:#ffb3b3; border-color:transparent;}
+    .metricTabs{display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 12px;}
+    .metricTab{background:#182641; color:#dbeaff; border:1px solid var(--line); padding:9px 12px; border-radius:999px; font-size:13px;}
+    .metricTab.active{background:var(--accent2); color:#061b13;}
+    .chartWrap.big{height:260px;}
+    .chartCaption{margin-top:8px; color:var(--muted); font-size:13px; line-height:1.35;}
+    .comparisonBars{display:grid; gap:10px; margin-top:14px;}
+    .comparisonRow{display:grid; grid-template-columns:110px 1fr 76px; gap:10px; align-items:center; font-size:13px;}
+    .comparisonRow .bar{height:16px;}
+    .periodNote{border:1px solid rgba(114,214,255,.22); background:rgba(114,214,255,.07); border-radius:14px; padding:12px; color:#dff6ff; margin-bottom:12px; line-height:1.4;}
+
+    .helpBtn{display:inline-grid; place-items:center; width:24px; height:24px; min-width:24px; padding:0; border-radius:999px; border:1px solid rgba(114,214,255,.35); background:rgba(114,214,255,.10); color:#dff6ff; font-size:13px; line-height:1; font-weight:900; cursor:pointer; box-shadow:none;}
+    .helpBtn:hover{filter:brightness(1.18); transform:none; background:rgba(114,214,255,.18)}
+    .field .helpBtn{align-self:flex-start; margin-top:-2px;}
+    .check{flex-wrap:wrap;}
+    .check .helpBtn{margin-left:28px; margin-top:2px;}
+    .barRow .helpBtn,.comparisonRow .helpBtn{width:20px;height:20px;min-width:20px;font-size:12px;margin-left:5px;vertical-align:middle;}
+    .guideIntro{border:1px solid rgba(152,245,194,.28); background:rgba(152,245,194,.08); border-radius:16px; padding:14px; color:#dbffed; line-height:1.45; margin-bottom:14px;}
+    .guideGrid{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px;}
+    .guideCard{border:1px solid var(--line); border-radius:16px; padding:14px; background:rgba(255,255,255,.04); scroll-margin-top:18px; transition:border-color .2s ease, background .2s ease, box-shadow .2s ease;}
+    .guideCard.highlight{border-color:var(--accent2); background:rgba(152,245,194,.11); box-shadow:0 0 0 4px rgba(152,245,194,.10);}
+    .guideCard h3{font-size:16px; margin-bottom:10px; color:#eef7ff;}
+    .guideMeta{display:grid; gap:8px; font-size:13px; line-height:1.42; color:#d8e6fb;}
+    .guideMeta strong{color:#ffffff;}
+    .guideTags{display:flex; flex-wrap:wrap; gap:6px; margin-top:10px;}
+    .guideTag{font-size:11px; color:#091726; background:#dff6ff; border-radius:999px; padding:4px 7px; font-weight:800;}
+
+
+    .actionFocus{margin-top:14px; border:1px solid rgba(152,245,194,.30); background:linear-gradient(135deg, rgba(152,245,194,.12), rgba(114,214,255,.07)); border-radius:18px; padding:15px; position:relative; overflow:hidden;}
+    .actionFocus::before{content:""; position:absolute; right:-40px; top:-45px; width:140px; height:140px; border-radius:50%; background:rgba(152,245,194,.11); pointer-events:none;}
+    .actionFocusTop{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:8px; position:relative; z-index:1;}
+    .actionFocus h3{font-size:18px; margin:0; color:#f3fff9;}
+    .actionStatus{display:inline-flex; align-items:center; gap:6px; border:1px solid rgba(255,255,255,.14); border-radius:999px; padding:6px 9px; color:#dbffed; background:rgba(0,0,0,.14); font-size:12px; font-weight:850;}
+    .actionDetails{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-top:10px; position:relative; z-index:1;}
+    .actionDetail{border:1px solid rgba(255,255,255,.11); background:rgba(0,0,0,.12); border-radius:14px; padding:11px; font-size:13px; line-height:1.38;}
+    .actionDetail strong{display:block; margin-bottom:4px; color:#ffffff;}
+    .actionFocus .buttons{position:relative; z-index:1;}
+    .actionPulse{animation:pulseGlow 1.35s ease-in-out 0s 2;}
+    @keyframes pulseGlow{0%,100%{box-shadow:var(--shadow)}50%{box-shadow:0 0 0 5px rgba(152,245,194,.10), 0 16px 40px rgba(0,0,0,.38)}}
+    .modalBackdrop{position:fixed; inset:0; display:grid; place-items:center; background:rgba(4,8,15,.72); backdrop-filter:blur(6px); padding:16px; z-index:120;}
+    .actionModal{width:min(720px,100%); border:1px solid rgba(152,245,194,.32); border-radius:24px; background:linear-gradient(180deg, #14213a, #0e1729); box-shadow:0 26px 70px rgba(0,0,0,.55); overflow:hidden;}
+    .actionModal .modalHd{display:flex; justify-content:space-between; gap:12px; align-items:flex-start; padding:20px 20px 0;}
+    .actionModal .modalBd{padding:18px 20px 20px;}
+    .closeBtn{background:#243653; color:var(--text); border:1px solid var(--line); width:36px; height:36px; border-radius:999px; padding:0; display:grid; place-items:center;}
+    .modalActionText{font-size:20px; line-height:1.32; margin:8px 0 10px; font-weight:850; color:#f3fff9;}
+    .auditBox{margin-top:12px; display:grid; gap:8px;}
+    .auditItem{border:1px solid rgba(255,255,255,.10); border-radius:13px; padding:10px 12px; background:rgba(255,255,255,.035); font-size:13px; line-height:1.38; color:#dbeaff;}
+    .auditItem.warn{border-color:rgba(255,211,110,.35); background:rgba(255,211,110,.10); color:#ffe8ad;}
+    .auditItem.good{border-color:rgba(152,245,194,.30); background:rgba(152,245,194,.08); color:#dbffed;}
+    .insightGrid{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin:14px 0;}
+    .insightCard{border:1px solid var(--line); border-radius:16px; padding:12px; background:rgba(255,255,255,.04); font-size:13px; line-height:1.4; min-height:116px;}
+    .insightCard strong{display:block; color:#ffffff; margin-bottom:5px; font-size:14px;}
+    .insightCard .bigNum{font-size:26px; font-weight:900; letter-spacing:-.04em; margin:4px 0;}
+    .insightCard.good{border-color:rgba(152,245,194,.30); background:rgba(152,245,194,.07);}
+    .insightCard.warn{border-color:rgba(255,211,110,.30); background:rgba(255,211,110,.08);}
+    .backupNote{margin-top:12px; border:1px dashed rgba(114,214,255,.35); border-radius:14px; padding:12px; color:#dff6ff; background:rgba(114,214,255,.06); font-size:13px; line-height:1.4;}
+    @media (max-width:900px){.actionDetails{grid-template-columns:1fr}.insightGrid{grid-template-columns:1fr}.guideGrid{grid-template-columns:1fr}.metricGrid{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}.scoreHero{grid-template-columns:1fr}.ring{margin:auto}.stats,.todaySummary{grid-template-columns:repeat(2,1fr)}.formGrid,.checks{grid-template-columns:1fr} header{flex-direction:column; align-items:flex-start}.barRow{grid-template-columns:118px 1fr 48px}}
+    @media (max-width:520px){.metricGrid{grid-template-columns:1fr}.comparisonRow{grid-template-columns:92px 1fr 64px}.app{padding:14px}.stats,.todaySummary{grid-template-columns:1fr}.panel .bd{padding:14px}.panel .hd{padding:14px 14px 0}.ring{width:132px;height:132px}.ring span{font-size:32px}}
+
+    .phoneSyncPanel{margin-top:14px; padding:14px; border:1px solid rgba(114,214,255,.35); background:linear-gradient(180deg, rgba(114,214,255,.10), rgba(152,245,194,.055)); border-radius:16px;}
+    .phoneSyncTop{display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap;}
+    .syncStatus{display:inline-flex; align-items:center; gap:8px; padding:7px 10px; border-radius:999px; border:1px solid var(--line); background:rgba(255,255,255,.06); color:var(--muted); font-size:12px; font-weight:800;}
+    .syncStatus.ok{border-color:rgba(138,240,181,.45); color:var(--good); background:rgba(138,240,181,.08);}
+    .syncStatus.warn{border-color:rgba(255,211,110,.45); color:var(--warn); background:rgba(255,211,110,.08);}
+    .phoneMetricGrid{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:12px;}
+    .phoneMetric{border:1px solid var(--line); border-radius:14px; padding:12px; background:rgba(255,255,255,.04);}
+    .phoneMetric strong{display:block; font-size:20px; margin-top:4px;}
+    .appListBox{max-height:220px; overflow:auto; border:1px solid var(--line); border-radius:14px; margin-top:12px;}
+    .appListBox table{width:100%; border-collapse:collapse; font-size:13px;}
+    .appListBox th,.appListBox td{padding:8px 10px; border-bottom:1px solid var(--line); text-align:left;}
+    .appListBox th{color:var(--muted); font-size:12px; position:sticky; top:0; background:rgba(18,27,47,.95);}
+    @media(max-width:800px){.phoneMetricGrid{grid-template-columns:1fr}.phoneSyncTop{display:block}.phoneSyncTop .syncStatus{margin-top:10px}}
+
+    @media print{body{background:white;color:black}.panel,.stat,.phaseCard,.mini,.history{box-shadow:none;border-color:#ccc;background:white;color:black}.buttons,.tabs,#importFile{display:none!important}.app{max-width:100%;padding:0}.grid{display:block}.panel{page-break-inside:avoid;margin-bottom:14px}.muted,.small,label{color:#333}input,textarea,select{border-color:#aaa;color:black;background:white}}
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <div class="brand">
+        <h1>Protocolo 0→100</h1>
+        <div class="subtitle">Tracker gamificado para pantallas, sueño, lectura/escritura y reconstrucción de atención. Incluye acción clave diaria, métricas comparables y mantenimiento indefinido. Los datos se guardan localmente. En PWA funciona offline; en wrapper Android puede importar métricas reales con permiso de Uso de apps.</div>
+        <div class="mantra">📏 Lo que no se mide no se mejora: día, semana, mes y mantenimiento indefinido.</div>
+      </div>
+      <div class="pill" id="levelPill">Nivel 1 · 0 XP</div>
+    </header>
+
+    <section class="grid">
+      <div class="panel">
+        <div class="hd">
+          <div>
+            <h2>Hoy</h2>
+            <div class="muted small">Configurá el inicio, registrá el día y dejá que la app calcule tu score.</div>
+          </div>
+          <span class="pill" id="dayPill">Día 0</span>
+        </div>
+        <div class="bd">
+          <div class="formGrid">
+            <div class="field">
+              <label>Fecha de inicio del protocolo</label>
+              <input type="date" id="startDate">
+            </div>
+            <div class="field">
+              <label>Fecha del registro</label>
+              <input type="date" id="entryDate">
+            </div>
+          </div>
+
+          <div class="phaseCard" style="margin-top:14px">
+            <h3 id="phaseTitle">Fase 0 · Preparación</h3>
+            <div class="taskList" id="taskList"></div>
+            <div class="todaySummary">
+              <div class="mini"><strong>Límite pantalla</strong><span id="limitText">Medir sin cambiar</span></div>
+              <div class="mini"><strong>Lectura meta</strong><span id="readingTargetText">Elegir libro/cuaderno</span></div>
+              <div class="mini"><strong>Corte nocturno</strong><span id="nightTargetText">Registrar sueño</span></div>
+            </div>
+          </div>
+
+          <div class="actionFocus" id="actionFocusCard">
+            <div class="actionFocusTop">
+              <div>
+                <h3>⚡ Acción clave de hoy <button type="button" class="helpBtn" data-help-id="actionToday" title="Ver qué hacer, sentido y objetivo">?</button></h3>
+                <div class="muted small" id="actionTodayMeta">La app la actualiza según el día y la fase.</div>
+              </div>
+              <span class="actionStatus" id="actionStatus">Pendiente</span>
+            </div>
+            <div class="modalActionText" id="actionTodayText">Configura registro y revisa apps.</div>
+            <div class="actionDetails">
+              <div class="actionDetail"><strong>Qué hacer</strong><span id="actionHowText">Ejecutá la acción concreta del día.</span></div>
+              <div class="actionDetail"><strong>Sentido</strong><span id="actionMeaningText">Cada fase tiene una palanca central.</span></div>
+              <div class="actionDetail"><strong>Objetivo</strong><span id="actionObjectiveText">Que el día tenga un foco verificable.</span></div>
+            </div>
+            <div class="buttons">
+              <button type="button" class="good" id="markActionBtn">Marcar acción como cumplida</button>
+              <button type="button" class="secondary" id="showActionModalBtn">Abrir aviso de acción</button>
+              <button type="button" class="secondary" id="openActionGuideBtn">Ver guía completa</button>
+              <button type="button" class="secondary" id="dismissActionBtn">Ocultar aviso por hoy</button>
+            </div>
+          </div>
+
+          <div class="tabs" style="margin-top:16px">
+            <button class="tab active" data-tab="registro" type="button">Registro diario</button>
+            <button class="tab" data-tab="dashboard" type="button">Dashboard</button>
+            <button class="tab" data-tab="telefono" type="button">Teléfono</button>
+            <button class="tab" data-tab="plan" type="button">Plan 0–100</button>
+            <button class="tab" data-tab="guia" type="button">Guía: qué hacer / sentido / objetivo</button>
+          </div>
+
+          <div id="tab-registro">
+            <div class="formGrid">
+              <div class="field"><label>Pantalla total del día (h)</label><input type="number" id="totalScreen" min="0" max="24" step="0.25" placeholder="Ej. 8.5"></div>
+              <div class="field"><label>Pantalla no esencial (h)</label><input type="number" id="nonEssential" min="0" max="24" step="0.25" placeholder="Ej. 6.25"></div>
+              <div class="field"><label>Sueño real (h)</label><input type="number" id="sleepHours" min="0" max="14" step="0.25" placeholder="Ej. 7.5"></div>
+              <div class="field"><label>Minutos sin redes antes de dormir</label><input type="number" id="noSocialMins" min="0" max="240" step="5" placeholder="Ej. 60"></div>
+              <div class="field"><label>Lectura/escritura (min)</label><input type="number" id="readingMins" min="0" max="240" step="5" placeholder="Ej. 25"></div>
+              <div class="field"><label>Cuerpo/mundo offline (min)</label><input type="number" id="offlineMins" min="0" max="240" step="5" placeholder="Ej. 15"></div>
+              <div class="field"><label>Ansiedad/impulso de celular (1–10)</label><input type="number" id="anxiety" min="1" max="10" step="1" placeholder="Ej. 5"></div>
+              <div class="field"><label>Día manual del protocolo</label><input type="number" id="manualDay" min="0" max="99999" step="1" placeholder="Auto"></div>
+            </div>
+            <input type="hidden" id="phoneImported" value="">
+            <input type="hidden" id="phoneImportedAt" value="">
+            <input type="hidden" id="phoneDetectedTotal" value="">
+            <input type="hidden" id="phoneDetectedNonEssential" value="">
+            <input type="hidden" id="phoneMetricSource" value="">
+            <div class="checks">
+              <label class="check"><input type="checkbox" id="measuredScreen"><span>Medí el tiempo real de pantalla.</span></label>
+              <label class="check"><input type="checkbox" id="wakeNoSocial"><span>Sin redes al despertar / primeros 20–30 min.</span></label>
+              <label class="check"><input type="checkbox" id="stableSchedule"><span>Horario de sueño relativamente estable.</span></label>
+              <label class="check"><input type="checkbox" id="phoneOutBed"><span>Celular fuera de la cama/cuarto.</span></label>
+              <label class="check"><input type="checkbox" id="noPhoneBed"><span>No usé teléfono en cama.</span></label>
+              <label class="check"><input type="checkbox" id="writingDone"><span>Hice nota, párrafo, esquema o miniensayo.</span></label>
+              <label class="check"><input type="checkbox" id="readBeforeScroll"><span>Lectura/escritura antes que scroll.</span></label>
+              <label class="check"><input type="checkbox" id="keyActionDone"><span>Cumplí la acción clave del día.</span></label>
+            </div>
+            <div class="field" style="margin-top:12px"><label>Nota breve del día</label><textarea id="note" placeholder="Una frase: qué funcionó, qué ajustar, idea leída..."></textarea></div>
+            <div class="buttons">
+              <button type="button" class="good" id="saveBtn">Guardar registro</button>
+              <button type="button" class="secondary" id="clearBtn">Limpiar formulario</button>
+              <button type="button" class="danger" id="deleteBtn">Borrar este día</button>
+            </div>
+            <div class="scoreBreak" id="scoreBreak"></div>
+            <div class="auditBox" id="auditBox"></div>
+            <div class="rescue hidden" id="rescueBox"><strong>Día de rescate:</strong> registrá sin dramatizar, no compenses con castigo y mañana volvé al límite anterior.</div>
+          </div>
+
+          <div id="tab-dashboard" class="hidden">
+            <div class="periodNote"><strong>Eje rector:</strong> no se trata solo de “cumplir”, sino de convertir el hábito en datos comparables. La app mide el día, promedia la semana y el mes, y muestra si estás subiendo, bajando o estabilizándote.</div>
+            <div class="metricGrid" id="periodMetrics"></div>
+            <h3>Comparación visual de puntajes</h3>
+            <div class="comparisonBars" id="comparisonBars"></div>
+            <div class="insightGrid" id="insightsPanel"></div>
+            <div class="backupNote"><strong>Curaduría de largo plazo:</strong> exportá JSON al menos una vez por semana o al cierre de cada mes. Así el sistema puede sostenerse indefinidamente sin perder historial.</div>
+            <div class="metricTabs" aria-label="Tipo de gráfico">
+              <button class="metricTab active" data-chart="daily" type="button">Días</button>
+              <button class="metricTab" data-chart="weekly" type="button">Semanas</button>
+              <button class="metricTab" data-chart="monthly" type="button">Meses</button>
+              <button class="metricTab" data-chart="areas" type="button">Áreas</button>
+            </div>
+            <div class="chartWrap big"><canvas id="scoreChart" width="900" height="320"></canvas></div>
+            <div class="chartCaption" id="chartCaption">Guardá registros para ver barras de evolución.</div>
+            <div class="buttons">
+              <button type="button" class="secondary" id="exportJsonBtn">Exportar JSON</button>
+              <button type="button" class="secondary" id="exportCsvBtn">Exportar CSV</button>
+              <button type="button" class="secondary" id="importBtn">Importar JSON</button>
+              <input type="file" id="importFile" accept="application/json" class="hidden">
+              <button type="button" class="secondary" onclick="window.print()">Imprimir resumen</button>
+            </div>
+            <h3 style="margin-top:16px">Insignias</h3>
+            <div class="badgeGrid" id="badges"></div>
+            <h3 style="margin-top:16px">Historial</h3>
+            <div class="history"><table id="historyTable"></table></div>
+          </div>
+
+
+          <div id="tab-telefono" class="hidden">
+            <div class="phoneSyncPanel">
+              <div class="phoneSyncTop">
+                <div>
+                  <h3>📱 Vinculación con métricas del teléfono <button type="button" class="helpBtn" data-help-id="phoneAutoImport" title="Ver qué hacer, sentido y objetivo">?</button></h3>
+                  <div class="muted small">Esta sección intenta convertir el dato de uso real del teléfono en insumo directo del protocolo. En navegador/PWA queda en modo manual; en Android nativo puede importar uso con permiso de “Uso de apps”.</div>
+                </div>
+                <span class="syncStatus" id="nativeBridgeStatus">Detectando conexión…</span>
+              </div>
+
+              <div class="phoneMetricGrid">
+                <div class="phoneMetric"><span class="muted small">Uso total detectado hoy</span><strong id="phoneTotalToday">—</strong></div>
+                <div class="phoneMetric"><span class="muted small">No esencial estimado</span><strong id="phoneNonEssentialToday">—</strong></div>
+                <div class="phoneMetric"><span class="muted small">Fuente</span><strong id="phoneSourceToday">Manual/PWA</strong></div>
+              </div>
+
+              <div class="buttons" style="margin-top:12px">
+                <button type="button" class="good" id="syncAndroidUsageBtn">Sincronizar uso de hoy desde Android</button>
+                <button type="button" class="secondary" id="requestUsageAccessBtn">Conceder permiso de uso</button>
+                <button type="button" class="secondary" id="installPwaBtn">Instalar como app</button>
+                <button type="button" class="secondary" id="copyPhoneToFormBtn">Usar métricas en registro diario</button>
+              </div>
+
+              <div class="auditBox" id="phoneSyncMessage" style="margin-top:12px"></div>
+              <div class="appListBox hidden" id="phoneAppListBox"><table id="phoneAppListTable"></table></div>
+            </div>
+
+            <div class="periodNote" style="margin-top:14px">
+              <strong>Modo de funcionamiento:</strong> la versión PWA instalada desde Chrome puede abrirse como app y funcionar offline, pero el navegador no permite leer por sí solo el panel de Bienestar digital/Configuración. Para lectura automática hace falta la versión Android nativa incluida en el ZIP, porque Android exige permiso especial de acceso a estadísticas de uso. Aun así, la PWA queda preparada para recibir esos datos cuando existe el puente nativo.
+            </div>
+          </div>
+
+          <div id="tab-plan" class="hidden">
+            <div class="history"><table id="planTable"></table></div>
+          </div>
+
+          <div id="tab-guia" class="hidden">
+            <div class="guideIntro"><strong>Guía de sentido:</strong> cada signo <strong>?</strong> te trae a esta sección. En cada explicación vas a encontrar cuatro cosas: <strong>qué mide</strong>, <strong>qué debes hacer</strong>, <strong>cuál es su sentido</strong> dentro del protocolo y <strong>cuál es su objetivo operativo</strong>. La idea no es llenar datos por llenar, sino hacer visible lo que querés mejorar.</div>
+            <div class="guideGrid" id="helpGuide"></div>
+          </div>
+
+        </div>
+      </div>
+
+      <aside class="panel">
+        <div class="hd"><div><h2>Puntaje del día</h2><div class="muted small">0–49 rescate · 50–69 transición · 70–79 buen día · 80–89 estabilidad · 90–100 excelente</div></div></div>
+        <div class="bd">
+          <div class="scoreHero">
+            <div class="ring" id="scoreRing" style="--p:0"><span><span id="scoreValue">0</span><small>score</small></span></div>
+            <div>
+              <h2 id="scoreLabel">Sin registro</h2>
+              <div class="muted small" id="scoreAdvice">Completá el formulario para calcular tu score automático.</div>
+              <div class="stats">
+                <div class="stat"><span class="muted small">Prom. 7 días</span><b id="avg7">—</b></div>
+                <div class="stat"><span class="muted small">Prom. 21 días</span><b id="avg21">—</b></div>
+                <div class="stat"><span class="muted small">Racha ≥70</span><b id="streak70">0</b></div>
+                <div class="stat"><span class="muted small">Registros</span><b id="totalEntries">0</b></div>
+              </div>
+            </div>
+          </div>
+          <h3 style="margin-top:18px">Regla de juego</h3>
+          <div class="taskList">
+            <div class="task"><div class="icon">🛌</div><div><strong>Sueño y horario</strong><br><span class="muted small">Hasta 25 puntos.</span></div></div>
+            <div class="task"><div class="icon">🌙</div><div><strong>Protección nocturna</strong><br><span class="muted small">Hasta 20 puntos.</span></div></div>
+            <div class="task"><div class="icon">📵</div><div><strong>Presupuesto de pantalla</strong><br><span class="muted small">Hasta 20 puntos.</span></div></div>
+            <div class="task"><div class="icon">📚</div><div><strong>Lectura/escritura</strong><br><span class="muted small">Hasta 25 puntos.</span></div></div>
+            <div class="task"><div class="icon">🚶</div><div><strong>Cuerpo/mundo offline</strong><br><span class="muted small">Hasta 10 puntos.</span></div></div>
+          </div>
+          <div class="footerNote">Esta herramienta es de autoorganización. Si la ansiedad es intensa, persistente o te impide dormir, estudiar/trabajar, comer, salir o relacionarte, buscá apoyo profesional o de un adulto de confianza.</div>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <div class="modalBackdrop hidden" id="actionModalBackdrop" role="dialog" aria-modal="true" aria-labelledby="modalActionTitle">
+    <div class="actionModal">
+      <div class="modalHd">
+        <div>
+          <span class="pill" id="modalActionPhase">Día 0 · Fase 0</span>
+          <h2 id="modalActionTitle" style="margin-top:10px">Acción clave de hoy</h2>
+          <div class="muted small">Este aviso aparece al abrir la app o cambiar de fecha si la acción sigue pendiente.</div>
+        </div>
+        <button type="button" class="closeBtn" id="closeActionModalBtn" aria-label="Cerrar">×</button>
+      </div>
+      <div class="modalBd">
+        <div class="modalActionText" id="modalActionText">Configura registro y revisa apps.</div>
+        <div class="actionDetails">
+          <div class="actionDetail"><strong>Qué hacer ahora</strong><span id="modalActionHow">Ejecutá la acción concreta del día.</span></div>
+          <div class="actionDetail"><strong>Sentido</strong><span id="modalActionMeaning">Cada fase tiene una palanca central.</span></div>
+          <div class="actionDetail"><strong>Objetivo</strong><span id="modalActionObjective">Que el día tenga un foco verificable.</span></div>
+        </div>
+        <div class="buttons">
+          <button type="button" class="good" id="modalMarkActionBtn">Marcar como cumplida</button>
+          <button type="button" class="secondary" id="modalGuideBtn">Ver guía</button>
+          <button type="button" class="secondary" id="modalDismissBtn">Ocultar por hoy</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const STORAGE_KEY = 'protocolo_0_100_tracker_v1';
+const START_KEY = 'protocolo_0_100_start_date_v1';
+const ACTION_DISMISS_KEY = 'protocolo_0_100_action_dismissed_v1';
+
+function pad(n){return String(n).padStart(2,'0')}
+function todayStr(){ const d=new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+function parseDate(s){ const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d); }
+function daysBetween(a,b){ return Math.round((parseDate(b)-parseDate(a))/(1000*60*60*24)); }
+function clamp(n,min,max){ return Math.max(min, Math.min(max, Number.isFinite(n)?n:0)); }
+function num(id){ const v=parseFloat(document.getElementById(id).value); return Number.isFinite(v)?v:0; }
+function checked(id){ return document.getElementById(id).checked; }
+
+function planForDay(day){
+  const rawDay = Number(day);
+  const d = Math.max(0, Math.floor(Number.isFinite(rawDay) ? rawDay : 0));
+  let p = {day:d, phase:'Fase 0 · Preparación', limitHours:null, limitText:'Medir 24 h sin cambiar', readingTarget:0, readingText:'Elegir 1 libro + 1 cuaderno', nightMins:0, nightText:'Anotar hora de dormir/despertar', key:'Configura registro y revisa apps.', goal:'Convertir caos en sistema.', group:'Día 0'};
+  if(d===0) return p;
+  const set=(phase,limitHours,limitText,readingTarget,readingText,nightMins,nightText,key,goal,group)=>Object.assign(p,{phase,limitHours,limitText,readingTarget,readingText,nightMins,nightText,key,goal,group});
+  if(d>100){
+    const cycleDay = ((d-101) % 28) + 1;
+    const week = Math.ceil(cycleDay/7);
+    if(week===1) set('Mantenimiento indefinido · Semana 1',5,'≤ 4–5 h no esencial; sin cama',60,'Lectura 5 días + 3 párrafos',60,'Sin teléfono en cama; noche protegida','Conservar estabilidad sin obsesión.','Estabilidad: mantener el sistema funcionando.','Mantenimiento · Semana 1');
+    else if(week===2) set('Mantenimiento indefinido · Semana 2',5,'2–3 ventanas/día',75,'1 miniensayo o mapa conceptual',60,'Ventanas claras; evitar uso disperso','Profundizar en un tema intelectual.','Profundidad: producir pensamiento propio.','Mantenimiento · Semana 2');
+    else if(week===3) set('Mantenimiento indefinido · Semana 3',5.5,'Flexibilidad medida; un día social permitido',60,'Releer y editar lo escrito',60,'No romper la noche aunque haya más uso social','Practicar flexibilidad sin recaer en dispersión.','Flexibilidad: usar pantalla sin perder autonomía.','Mantenimiento · Semana 3');
+    else set('Mantenimiento indefinido · Semana 4',5,'Auditoría mensual de apps y promedios',75,'Elegir tema del próximo mes',60,'Revisión mensual: promedio, apps problemáticas y ajustes','Cerrar mes, comparar métricas y ajustar.','Auditoría: medir para mejorar.','Mantenimiento · Semana 4');
+    return p;
+  }
+  if(d<=3) set('F1 · Desenganche nocturno',8.75,'≤ 8 h 45',10,'10 min + 1 idea',30,'Celular fuera de cama; 30 min sin redes','10 min caminar/orden.','Cama sin teléfono; bajar ansiedad de retiro.','Días 1–3');
+  else if(d<=7) set('F1 · Desenganche nocturno',8.25,'≤ 8 h 15',15,'15 min + 2 notas',45,'45 min sin redes antes de dormir','Respiración 3–6 por 3 min.','Cama sin teléfono; bajar ansiedad de retiro.','Días 4–7');
+  else if(d<=10) set('F2 · Primer recorte real',7.75,'≤ 7 h 45',15,'15–20 min lectura',20,'Sin redes al despertar 20 min','Una ventana de redes con temporizador.','Crear ventanas y no usar al despertar.','Días 8–10');
+  else if(d<=14) set('F2 · Primer recorte real',7.5,'≤ 7 h 30',20,'20 min + 1 pregunta',45,'45–60 min sin redes nocturnas','Caminar 10–15 min sin celular.','Crear ventanas y no usar al despertar.','Días 11–14');
+  else if(d<=17) set('F3 · Ventanas de uso',7,'≤ 7 h',20,'20 min + 5 min notas',45,'Celular carga lejos de cama','Redes en 3 ventanas de 25–30 min.','Salir del uso disperso.','Días 15–17');
+  else if(d<=21) set('F3 · Ventanas de uso',7,'≤ 7 h',25,'25 min + 1 párrafo breve',60,'Rutina fija de cierre nocturno','No scroll disperso entre ventanas.','Salir del uso disperso.','Días 18–21');
+  else if(d<=25) set('F4 · Lectura como eje',6.5,'≤ 6 h 30',30,'25–30 min + 5 min escritura',60,'60 min sin redes antes de dormir','Actividad offline de novedad: ruta/lugar/orden.','La novedad viene de pensamiento propio.','Días 22–25');
+  else if(d<=30) set('F4 · Lectura como eje',6.5,'≤ 6 h 30',35,'35 min + tesis/conexión/pregunta',60,'Dormir/despertar dentro de ±45 min','Revisión de apps: elimina 1 fricción.','La novedad viene de pensamiento propio.','Días 26–30');
+  else if(d<=37) set('F5 · Consolidación',6,'≤ 6 h',40,'35–45 min lectura',60,'60 min sin redes; luz baja','15 min movimiento + registro 0–100.','Aumentar tolerancia al aburrimiento.','Días 31–37');
+  else if(d<=45) set('F5 · Consolidación',6,'≤ 6 h',45,'45 min + 1 párrafo',60,'Cama = dormir/lectura suave','1 conversación o salida breve.','Aumentar tolerancia al aburrimiento.','Días 38–45');
+  else if(d<=52) set('F6 · Profundidad',5.5,'≤ 5 h 30',60,'45–60 min lectura profunda',60,'Misma hora de despertar 5/7 días','Bloque de 25 min sin interrupción.','Atención sostenida y sueño estable.','Días 46–52');
+  else if(d<=60) set('F6 · Profundidad',5.5,'≤ 5 h 30',60,'Miniensayo 250 palabras 2×/semana',90,'60–90 min sin redes nocturnas','Comparar 2 autores en notas.','Atención sostenida y sueño estable.','Días 53–60');
+  else if(d<=67) set('F7 · Autonomía',5,'≤ 5 h',60,'60 min o 2×30 min',60,'Celular fuera del cuarto si posible','Redes solo 2–3 ventanas.','Teléfono como herramienta, no extensión obligatoria.','Días 61–67');
+  else if(d<=75) set('F7 · Autonomía',5,'≤ 5 h',60,'Proyecto: esquema de ensayo',60,'Sin revisión nocturna “una última vez”','Media jornada con celular lejos 1 vez.','Teléfono como herramienta, no extensión obligatoria.','Días 68–75');
+  else if(d<=83) set('F8 · Afinación',4.75,'≤ 4 h 45',75,'60–75 min lectura/escritura',60,'Sueño regular 7+ h/8–10 h según edad','1 bloque de trabajo profundo 45 min.','Proyecto intelectual propio.','Días 76–83');
+  else if(d<=90) set('F8 · Afinación',5,'≤ 4 h 30–5 h',90,'Ensayo 500–800 palabras semanal',60,'Noche estable 6/7 días','Domingo: revisión y ajuste de sistema.','Proyecto intelectual propio.','Días 84–90');
+  else if(d<=97) set('F9 · Cierre operativo',5,'≤ 4–5 h',90,'60–90 min proyecto intelectual',90,'Probar 90 min sin redes antes de dormir','Día con score ≥80 como meta.','Probar estabilidad sin rigidez.','Días 91–97');
+  else set('F9 · Cierre operativo',5,'≤ 4–5 h',90,'Cerrar ensayo o mapa conceptual',60,'Mantener sin rigidez','Evaluación final y plan mensual.','Probar estabilidad sin rigidez.','Días 98–100');
+  return p;
+}
+
+function getEntries(){ try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]')}catch(e){return []} }
+function setEntries(entries){ localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); }
+function calcDay(){
+  const manual = parseInt(document.getElementById('manualDay').value,10);
+  if(Number.isFinite(manual)) return Math.max(0, manual);
+  const start = document.getElementById('startDate').value || todayStr();
+  const date = document.getElementById('entryDate').value || todayStr();
+  return Math.max(0, daysBetween(start,date));
+}
+
+
+function actionMomentSuggestion(key){
+  const k = String(key || '').toLowerCase();
+  if(k.includes('respiración')) return 'Hacelo apenas aparezca ansiedad o en la rutina nocturna, antes de negociar con el celular.';
+  if(k.includes('ventana') || k.includes('redes')) return 'Definí la ventana antes de abrir redes. Usá temporizador visible y cerrá cuando termine.';
+  if(k.includes('caminar') || k.includes('ruta') || k.includes('salida') || k.includes('conversación')) return 'Ubicalo en el primer bloque libre de la tarde o antes de la noche, no lo dejes para “cuando sobre tiempo”.';
+  if(k.includes('bloque') || k.includes('trabajo profundo')) return 'Hacelo en el primer momento de energía disponible: 25–45 min sin interrupciones y con celular lejos.';
+  if(k.includes('ensayo') || k.includes('autores') || k.includes('esquema') || k.includes('mapa')) return 'Reservá un bloque de lectura/escritura. El resultado mínimo puede ser imperfecto, pero debe dejar huella escrita.';
+  if(k.includes('evaluación') || k.includes('auditoría') || k.includes('revisión')) return 'Hacelo al cierre del día o de la semana: revisá datos, promedio, apps problemáticas y ajuste siguiente.';
+  if(k.includes('fricción') || k.includes('apps')) return 'Hacelo una sola vez hoy: quitá una app de acceso fácil, silenciá notificaciones o aumentá distancia física del teléfono.';
+  return 'Hacelo en el primer hueco real del día. No esperes motivación: la acción clave es la palanca mínima de la fase.';
+}
+function actionGuideForPlan(plan){
+  const key = plan.key || 'Ejecutá la acción clave del día.';
+  return {
+    title: key,
+    how: `${key} ${actionMomentSuggestion(key)}`,
+    meaning: `Esta acción se inscribe en ${plan.phase}: ${plan.goal} No intenta resolver todo el protocolo, sino concentrar el esfuerzo en la palanca psicológica de la fase.`,
+    objective: `Al cerrar el día deberías poder responder “sí” al check de acción clave. Eso convierte el objetivo de la fase en una conducta observable y cuantificable.`,
+    meta: `Día ${plan.day} · ${plan.group} · ${plan.phase}`
+  };
+}
+function getActionDismissMap(){
+  try{return JSON.parse(localStorage.getItem(ACTION_DISMISS_KEY) || '{}') || {}}catch(e){return {}}
+}
+function setActionDismissed(date, value=true){
+  const map = getActionDismissMap();
+  if(value) map[date] = true; else delete map[date];
+  localStorage.setItem(ACTION_DISMISS_KEY, JSON.stringify(map));
+}
+function isActionDismissed(date){ return !!getActionDismissMap()[date]; }
+function renderActionCard(){
+  const day = calcDay();
+  const plan = planForDay(day);
+  const g = actionGuideForPlan(plan);
+  const done = checked('keyActionDone');
+  const ids = {
+    meta:'actionTodayMeta', text:'actionTodayText', how:'actionHowText', meaning:'actionMeaningText', objective:'actionObjectiveText', status:'actionStatus'
+  };
+  if(document.getElementById(ids.meta)) document.getElementById(ids.meta).textContent = g.meta;
+  if(document.getElementById(ids.text)) document.getElementById(ids.text).textContent = g.title;
+  if(document.getElementById(ids.how)) document.getElementById(ids.how).textContent = g.how;
+  if(document.getElementById(ids.meaning)) document.getElementById(ids.meaning).textContent = g.meaning;
+  if(document.getElementById(ids.objective)) document.getElementById(ids.objective).textContent = g.objective;
+  const st = document.getElementById(ids.status);
+  if(st){ st.textContent = done ? 'Cumplida' : 'Pendiente'; st.style.background = done ? 'linear-gradient(135deg, var(--accent2), #d7ffeb)' : 'rgba(0,0,0,.14)'; st.style.color = done ? '#071a12' : '#dbffed'; }
+}
+function fillActionModal(){
+  const plan = planForDay(calcDay());
+  const g = actionGuideForPlan(plan);
+  const map = {
+    modalActionPhase:g.meta,
+    modalActionText:g.title,
+    modalActionHow:g.how,
+    modalActionMeaning:g.meaning,
+    modalActionObjective:g.objective
+  };
+  Object.entries(map).forEach(([id,val])=>{ const el=document.getElementById(id); if(el) el.textContent=val; });
+}
+function showActionModal(force=true){
+  const bd = document.getElementById('actionModalBackdrop'); if(!bd) return;
+  if(!force && checked('keyActionDone')) return;
+  fillActionModal();
+  bd.classList.remove('hidden');
+  const card=document.getElementById('actionFocusCard');
+  if(card){ card.classList.add('actionPulse'); setTimeout(()=>card.classList.remove('actionPulse'),2300); }
+}
+function closeActionModal(){ const bd=document.getElementById('actionModalBackdrop'); if(bd) bd.classList.add('hidden'); }
+function dismissActionForSelectedDate(){
+  const date = document.getElementById('entryDate').value || todayStr();
+  setActionDismissed(date, true);
+  closeActionModal();
+  flash('Aviso oculto por hoy. La acción sigue visible en la tarjeta diaria.');
+}
+function markActionDone(){
+  const box = document.getElementById('keyActionDone');
+  if(box) box.checked = true;
+  closeActionModal();
+  updateUI();
+  flash('Acción clave marcada como cumplida.');
+}
+function maybeAutoShowActionModal(){
+  const date = document.getElementById('entryDate').value || todayStr();
+  if(checked('keyActionDone') || isActionDismissed(date)) return;
+  setTimeout(()=>showActionModal(false), 650);
+}
+
+function scoreEntry(raw){
+  const plan = planForDay(raw.day);
+  const sleep = clamp(raw.sleepHours,0,14);
+  const targetSleep = 7.5;
+  let sleepPts = 0;
+  if(sleep>=targetSleep) sleepPts += 12; else sleepPts += clamp((sleep/targetSleep)*12,0,12);
+  if(raw.stableSchedule) sleepPts += 6;
+  if(raw.wakeNoSocial) sleepPts += 7;
+  sleepPts = Math.round(clamp(sleepPts,0,25));
+
+  let nightPts = 0;
+  if(raw.phoneOutBed) nightPts += 8;
+  if(raw.noPhoneBed) nightPts += 4;
+  const nightTarget = Math.max(plan.nightMins || 30, 30);
+  nightPts += clamp((raw.noSocialMins/nightTarget)*8,0,8);
+  nightPts = Math.round(clamp(nightPts,0,20));
+
+  let screenPts = 0;
+  if(raw.measuredScreen) screenPts += 6;
+  if(plan.limitHours){
+    if(raw.nonEssential <= plan.limitHours) screenPts += 14;
+    else {
+      const over = raw.nonEssential - plan.limitHours;
+      screenPts += clamp(14 - over*4, 0, 14);
+    }
+  } else {
+    screenPts += raw.measuredScreen ? 14 : 7;
+  }
+  screenPts = Math.round(clamp(screenPts,0,20));
+
+  const readingTarget = Math.max(plan.readingTarget || 10, 10);
+  let readingPts = clamp((raw.readingMins/readingTarget)*16,0,16);
+  if(raw.writingDone) readingPts += 6;
+  if(raw.readBeforeScroll) readingPts += 3;
+  readingPts = Math.round(clamp(readingPts,0,25));
+
+  let offlineTarget = raw.day>=31 ? 15 : 10;
+  let offlinePts = clamp((raw.offlineMins/offlineTarget)*8,0,8);
+  if(raw.keyActionDone) offlinePts += 2;
+  offlinePts = Math.round(clamp(offlinePts,0,10));
+
+  const total = sleepPts+nightPts+screenPts+readingPts+offlinePts;
+  return {total, parts:[
+    ['Sueño y horario', sleepPts,25],
+    ['Protección nocturna', nightPts,20],
+    ['Presupuesto de pantalla', screenPts,20],
+    ['Lectura/escritura', readingPts,25],
+    ['Cuerpo/mundo offline', offlinePts,10]
+  ]};
+}
+
+function labelForScore(score){
+  if(score>=90) return ['Día excelente','La base está fuerte. Evitá rigidez: mantené lo que funciona.'];
+  if(score>=80) return ['Estabilidad','Muy bien: este es el rango que querés sostener 21 días.'];
+  if(score>=70) return ['Buen día','Día suficiente y constructivo. Repetí mañana sin obsesionarte.'];
+  if(score>=50) return ['Transición','Hay avance, pero elegí una sola palanca para mejorar mañana.'];
+  return ['Día de rescate','No castigarte. Registrá, dormí, y mañana volvés al límite anterior.'];
+}
+
+function readForm(){
+  const date = document.getElementById('entryDate').value || todayStr();
+  const day = calcDay();
+  return {
+    date, day,
+    totalScreen:num('totalScreen'), nonEssential:num('nonEssential'), sleepHours:num('sleepHours'), noSocialMins:num('noSocialMins'), readingMins:num('readingMins'), offlineMins:num('offlineMins'), anxiety:num('anxiety'),
+    measuredScreen:checked('measuredScreen'), wakeNoSocial:checked('wakeNoSocial'), stableSchedule:checked('stableSchedule'), phoneOutBed:checked('phoneOutBed'), noPhoneBed:checked('noPhoneBed'), writingDone:checked('writingDone'), readBeforeScroll:checked('readBeforeScroll'), keyActionDone:checked('keyActionDone'),
+    note:document.getElementById('note').value.trim(),
+    phoneImported:document.getElementById('phoneImported')?.value || '', phoneImportedAt:document.getElementById('phoneImportedAt')?.value || '', phoneDetectedTotal:num('phoneDetectedTotal'), phoneDetectedNonEssential:num('phoneDetectedNonEssential'), phoneMetricSource:document.getElementById('phoneMetricSource')?.value || '',
+    savedAt:new Date().toISOString()
+  };
+}
+
+function fillForm(entry){
+  const defaults = {totalScreen:'', nonEssential:'', sleepHours:'', noSocialMins:'', readingMins:'', offlineMins:'', anxiety:'', note:'', day:null};
+  const e = entry || defaults;
+  ['totalScreen','nonEssential','sleepHours','noSocialMins','readingMins','offlineMins','anxiety'].forEach(id=>{document.getElementById(id).value = e[id] ?? '';});
+  document.getElementById('manualDay').value = entry ? entry.day : '';
+  ['phoneImported','phoneImportedAt','phoneDetectedTotal','phoneDetectedNonEssential','phoneMetricSource'].forEach(id=>{const el=document.getElementById(id); if(el) el.value = entry ? (entry[id] ?? '') : '';});
+  ['measuredScreen','wakeNoSocial','stableSchedule','phoneOutBed','noPhoneBed','writingDone','readBeforeScroll','keyActionDone'].forEach(id=>{document.getElementById(id).checked = !!e[id];});
+  document.getElementById('note').value = e.note || '';
+  updateUI();
+}
+
+function saveEntry(){
+  const raw = readForm();
+  const score = scoreEntry(raw);
+  const plan = planForDay(raw.day);
+  const entry = {...raw, score:score.total, parts:score.parts, phase:plan.phase, keyAction:plan.key, planGoal:plan.goal, planLimit:plan.limitText, planReading:plan.readingText, planNight:plan.nightText};
+  let entries = getEntries();
+  const ix = entries.findIndex(e=>e.date===entry.date);
+  if(ix>=0) entries[ix]=entry; else entries.push(entry);
+  entries.sort((a,b)=>a.date.localeCompare(b.date));
+  setEntries(entries);
+  flash('Registro guardado.');
+  renderAll();
+}
+function deleteEntry(){
+  const date = document.getElementById('entryDate').value || todayStr();
+  let entries = getEntries().filter(e=>e.date!==date);
+  setEntries(entries); fillForm(null); flash('Registro borrado.'); renderAll();
+}
+function flash(msg){
+  const old = document.getElementById('toast'); if(old) old.remove();
+  const div=document.createElement('div'); div.id='toast'; div.textContent=msg; div.style.cssText='position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#e7fff3;color:#071a12;padding:12px 16px;border-radius:999px;font-weight:800;box-shadow:0 10px 30px rgba(0,0,0,.35);z-index:99';
+  document.body.appendChild(div); setTimeout(()=>div.remove(),1800);
+}
+
+function updatePlanUI(){
+  const day = calcDay(); const plan = planForDay(day);
+  document.getElementById('dayPill').textContent = `Día ${day}`;
+  document.getElementById('phaseTitle').textContent = plan.phase;
+  document.getElementById('limitText').textContent = plan.limitText;
+  document.getElementById('readingTargetText').textContent = plan.readingText;
+  document.getElementById('nightTargetText').textContent = plan.nightText;
+  const tasks = [
+    ['🎯', plan.goal], ['📵', `Pantalla no esencial: ${plan.limitText}`], ['🌙', plan.nightText], ['📚', plan.readingText], ['✅', plan.key]
+  ];
+  document.getElementById('taskList').innerHTML = tasks.map(([i,t])=>`<div class="task"><div class="icon">${i}</div><div>${escapeHtml(t)}</div></div>`).join('');
+  renderActionCard();
+}
+
+function inputBlank(id){ const el=document.getElementById(id); return !el || String(el.value||'').trim()===''; }
+function renderAudit(raw, score){
+  const box=document.getElementById('auditBox'); if(!box) return;
+  const missing=[];
+  [['Pantalla total','totalScreen'],['Pantalla no esencial','nonEssential'],['Sueño','sleepHours'],['Corte nocturno','noSocialMins'],['Lectura/escritura','readingMins'],['Mundo offline','offlineMins'],['Ansiedad','anxiety']].forEach(([name,id])=>{ if(inputBlank(id)) missing.push(name); });
+  const items=[];
+  if(missing.length) items.push(['warn',`Faltan datos para que el score sea plenamente confiable: ${missing.join(', ')}.`]);
+  if(raw.totalScreen>0 && raw.nonEssential>raw.totalScreen) items.push(['warn','Revisá consistencia: la pantalla no esencial no debería superar la pantalla total.']);
+  if(raw.nonEssential>0 && !raw.measuredScreen) items.push(['warn','Tenés pantalla no esencial cargada, pero no marcaste medición real. Conviene usar datos del dispositivo, no memoria.']);
+  if(raw.sleepHours<5 && !inputBlank('sleepHours')) items.push(['warn','Sueño muy bajo: mañana puede subir el impulso de scroll. Priorizá protección nocturna y no compenses con castigo.']);
+  if(raw.anxiety>=8) items.push(['warn','Ansiedad/impulso alto: tratá este día como dato de rescate. Usá 10 min de acción física antes de decidir abrir redes.']);
+  if(!items.length && !missing.length) items.push(['good',`Registro consistente. Score provisional: ${score.total}/100. Ahora el dato puede servir para comparar día, semana y mes.`]);
+  box.innerHTML = items.map(([cls,msg])=>`<div class="auditItem ${cls}">${escapeHtml(msg)}</div>`).join('');
+}
+
+function updateScorePreview(){
+  const raw = readForm();
+  const score = scoreEntry(raw);
+  const [label,advice]=labelForScore(score.total);
+  document.getElementById('scoreRing').style.setProperty('--p',score.total);
+  document.getElementById('scoreValue').textContent = score.total;
+  document.getElementById('scoreLabel').textContent = label;
+  document.getElementById('scoreAdvice').textContent = advice;
+  document.getElementById('rescueBox').classList.toggle('hidden', score.total>=50);
+  const areaIds=['areaSleep','areaNight','areaScreen','areaReading','areaOffline'];
+  document.getElementById('scoreBreak').innerHTML = score.parts.map(([name,pts,max],idx)=>`<div class="barRow"><span>${escapeHtml(name)} <button type="button" class="helpBtn" data-help-id="${areaIds[idx]}" title="Ver qué hacer, sentido y objetivo">?</button></span><div class="bar"><i style="width:${(pts/max)*100}%"></i></div><strong>${pts}/${max}</strong></div>`).join('');
+  renderAudit(raw, score);
+}
+function escapeHtml(str){ return String(str).replace(/[&<>"]/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
+
+
+const HELP_CONTENT = {
+  startDate: {
+    title: 'Fecha de inicio del protocolo',
+    what: 'Elegí el día que cuenta como Día 0. Desde ahí la app calcula automáticamente la fase, el límite de pantalla, la meta de lectura y el foco de la jornada.',
+    how: 'Usalo como ancla del proceso. Si reiniciás de verdad, podés cambiarlo; si solo tuviste un mal día, no lo muevas.',
+    meaning: 'Su sentido es convertir el caos en trayectoria: ya no estás “intentando usar menos el celular”, sino recorriendo un proceso medible de 0→100 y luego de mantenimiento indefinido.',
+    objective: 'Fijar un punto de partida claro para que la app pueda ordenar el proceso en fases, mostrar metas progresivas y sostener el seguimiento más allá del día 100.',
+    tags: ['trayectoria','fase','día 0']
+  },
+  entryDate: {
+    title: 'Fecha del registro',
+    what: 'Es la fecha concreta del día que estás cuantificando.',
+    how: 'Registrá una vez por día, idealmente al cierre. También podés cargar días anteriores si olvidaste hacerlo.',
+    meaning: 'Permite comparar día contra día, semana contra semana y mes contra mes. Sin fecha no hay serie temporal; sin serie temporal no hay mejora visible.',
+    objective: 'Construir una serie temporal confiable para comparar puntajes diarios, semanales y mensuales sin depender de la memoria o de impresiones vagas.',
+    tags: ['día','historial','comparación']
+  },
+  totalScreen: {
+    title: 'Pantalla total del día',
+    what: 'Anotá todas las horas de pantalla: trabajo, estudio, mensajes, entretenimiento y uso no esencial.',
+    how: 'Miralo en Bienestar Digital, Tiempo en pantalla o el registro equivalente del celular/computadora. No hace falta revisarlo cada hora.',
+    meaning: 'Da contexto general. El protocolo no demoniza toda pantalla: diferencia uso útil de uso algorítmico, porque estudiar o trabajar no equivale a scroll infinito.',
+    objective: 'Entender el volumen total de exposición digital y detectar si la pantalla útil está ocultando cansancio, fragmentación o exceso general de uso.',
+    tags: ['contexto','medición','uso total']
+  },
+  nonEssential: {
+    title: 'Pantalla no esencial',
+    what: 'Redes, videos cortos, scroll, chats no necesarios, entretenimiento algorítmico y uso disperso.',
+    how: 'Separá lo útil de lo automático. El límite del día se aplica principalmente a esta categoría.',
+    meaning: 'Es el núcleo del presupuesto de pantalla: no se busca vivir sin tecnología, sino que el teléfono vuelva a ser herramienta y no condición de posibilidad para sentir que hay algo que hacer.',
+    objective: 'Reducir primero el uso algorítmico y disperso para recuperar autonomía atencional sin demonizar el uso necesario de tecnología.',
+    tags: ['scroll','presupuesto','autonomía']
+  },
+  sleepHours: {
+    title: 'Sueño real',
+    what: 'Cantidad aproximada de horas dormidas, no el tiempo acostado mirando el celular.',
+    how: 'Anotá una estimación honesta. El protocolo usa como meta práctica 7.5–9 h según necesidad, sin obsesionarse con dormir perfecto.',
+    meaning: 'El sueño es el multiplicador de toda mejora cognitiva: atención, control de impulsos, ansiedad y energía dependen de una noche relativamente protegida.',
+    objective: 'Proteger la base biológica de la atención, el ánimo y el autocontrol; sin sueño suficiente, el protocolo se vuelve mucho más difícil.',
+    tags: ['sueño','recuperación','atención']
+  },
+  noSocialMins: {
+    title: 'Minutos sin redes antes de dormir',
+    what: 'Tiempo entre la última red/scroll y el momento de dormir o iniciar la rutina nocturna.',
+    how: 'Al inicio bastan 30 min; luego 60–90 min. Lectura ligera, luz baja o respiración cuentan como transición.',
+    meaning: 'La última hora sin redes vale más que reducir minutos sueltos: protege el sueño, baja activación y evita cerrar el día con novedad algorítmica.',
+    objective: 'Crear una transición nocturna que baje activación y haga más probable dormir mejor, evitando que la última novedad del día venga del algoritmo.',
+    tags: ['noche','corte','activación']
+  },
+  readingMins: {
+    title: 'Lectura/escritura',
+    what: 'Minutos de lectura profunda, escritura, notas, esquema, párrafo o miniensayo.',
+    how: 'Mínimo vital: 10 min. Base: 25 min. Óptimo: 45–60 min. Profundo: 90 min en bloques.',
+    meaning: 'Es el sustituto principal de novedad. No se trata solo de “no scrollear”, sino de reconstruir un mundo offline con densidad, continuidad y pensamiento propio.',
+    objective: 'Sustituir novedad rápida por novedad profunda: entrenar continuidad, comprensión, elaboración y producción de sentido propio.',
+    tags: ['novedad profunda','lectura','sentido']
+  },
+  offlineMins: {
+    title: 'Cuerpo/mundo offline',
+    what: 'Caminar, entrenar suave, ordenar, ducha, salida breve, conversación, música sin scroll o actividad manual.',
+    how: 'Mínimo 10 min. En fases posteriores, apuntá a 15–30 min o a actividades más completas.',
+    meaning: 'El cuerpo también produce mundo. Esta variable evita que la reducción de pantalla se viva como vacío: cambia abstinencia por acción encarnada.',
+    objective: 'Reactivar el mundo corporal y presencial para que bajar pantalla no se sienta como vacío, sino como recuperación de acciones reales.',
+    tags: ['cuerpo','mundo','acción']
+  },
+  anxiety: {
+    title: 'Ansiedad/impulso de celular',
+    what: 'Valor subjetivo de 1 a 10 sobre ansiedad, impulso de revisar o incomodidad por ausencia del teléfono.',
+    how: 'Marcá el número sin dramatizar. Sirve para ver si con el tiempo baja la intensidad o si hay patrones de recaída.',
+    meaning: 'No es una nota moral. Es una señal: el protocolo busca que la ansiedad exista, pero deje de dirigir el día.',
+    objective: 'Observar la intensidad del impulso sin convertirlo en fracaso; buscar que con el tiempo pierda poder directivo sobre tu conducta.',
+    tags: ['ansiedad','impulso','observación']
+  },
+  manualDay: {
+    title: 'Día manual del protocolo',
+    what: 'Permite forzar el número de día si la fecha no coincide con tu progreso real.',
+    how: 'Usalo solo si necesitás corregir el cálculo automático. Después del día 100, la app pasa a mantenimiento indefinido.',
+    meaning: 'Da flexibilidad sin perder estructura: el protocolo tiene fases, pero la vida real puede exigir ajustes.',
+    objective: 'Mantener la estructura del protocolo aunque la vida real exija ajustes, reinicios parciales o correcciones de calendario.',
+    tags: ['ajuste','fase','flexibilidad']
+  },
+  measuredScreen: {
+    title: 'Medí el tiempo real de pantalla',
+    what: 'Marcá esto cuando miraste datos reales del dispositivo y no solo una impresión subjetiva.',
+    how: 'Revisalo una vez al día. No cada hora, porque medir compulsivamente también puede alimentar ansiedad.',
+    meaning: 'Es la frase rectora en acto: lo que no se mide no se mejora. La medición convierte el hábito invisible en dato trabajable.',
+    objective: 'Distinguir medición real de sensación subjetiva; convertir el hábito invisible en dato concreto y corregible.',
+    tags: ['medición','dato','control sano']
+  },
+  wakeNoSocial: {
+    title: 'Sin redes al despertar',
+    what: 'Primeros 20–30 minutos sin redes, videos, mensajes innecesarios ni scroll.',
+    how: 'Luz natural, agua, higiene, plan de 3 tareas o lectura breve antes de abrir apps.',
+    meaning: 'Protege el comienzo del día: primero decidís vos el horizonte de acción; recién después entra el algoritmo.',
+    objective: 'Recuperar la primera decisión del día antes de entregar la atención al teléfono; empezar desde agencia propia, no desde reacción.',
+    tags: ['mañana','agencia','inicio']
+  },
+  stableSchedule: {
+    title: 'Horario de sueño relativamente estable',
+    what: 'Dormir y despertar dentro de un margen razonable, especialmente a medida que avanzan las fases.',
+    how: 'No exige perfección. Como regla práctica, intentá no desviarte más de ±45–60 min cuando sea posible.',
+    meaning: 'La estabilidad horaria reduce fricción. El objetivo no es rigidez, sino que el cuerpo pueda anticipar descanso y activación.',
+    objective: 'Hacer que el descanso sea más predecible para el cuerpo, reduciendo fricción, cansancio acumulado y vulnerabilidad al scroll.',
+    tags: ['ritmo','regularidad','sueño']
+  },
+  phoneOutBed: {
+    title: 'Celular fuera de la cama/cuarto',
+    what: 'El teléfono carga lejos del cuerpo; idealmente fuera del cuarto o, como mínimo, fuera de la cama.',
+    how: 'Usá alarma separada si podés. Si no, dejalo lejos para tener que levantarte.',
+    meaning: 'Es fricción ambiental: la fuerza de voluntad no debe cargar todo. La cama vuelve a significar sueño, no scroll.',
+    objective: 'Aumentar fricción ambiental para que la conducta correcta sea más fácil que la recaída automática nocturna.',
+    tags: ['cama','fricción','noche']
+  },
+  noPhoneBed: {
+    title: 'No teléfono en cama',
+    what: 'No usar el celular acostado en cama, aunque sea “solo un rato”.',
+    how: 'Si necesitás descansar, descansá sin pantalla. Si querés lectura, mejor papel o lectura no algorítmica fuera del celular.',
+    meaning: 'Rompe la asociación cama = novedad infinita. Esa asociación es una de las más fuertes para insomnio, ansiedad nocturna y rebote de uso.',
+    objective: 'Reasociar la cama con descanso y lectura tranquila, no con novedad infinita, activación e insomnio por scroll.',
+    tags: ['higiene','cama','asociación']
+  },
+  writingDone: {
+    title: 'Nota, párrafo, esquema o miniensayo',
+    what: 'Marcá esto cuando la lectura produjo algo: idea, pregunta, conexión, tesis, esquema o miniensayo.',
+    how: 'Usá la fórmula del protocolo: tesis + conexión + pregunta. No hace falta escribir perfecto.',
+    meaning: 'La escritura transforma consumo en elaboración. En vez de buscar novedad externa, producís sentido propio.',
+    objective: 'Pasar de consumo a elaboración: que la lectura deje huella en forma de idea, conexión, pregunta, esquema o texto.',
+    tags: ['escritura','elaboración','pensamiento']
+  },
+  readBeforeScroll: {
+    title: 'Lectura/escritura antes que scroll',
+    what: 'Antes de abrir redes por aburrimiento, hiciste al menos una acción breve de lectura o escritura.',
+    how: 'Regla mínima: 10 minutos antes de negociar con el impulso de scrollear.',
+    meaning: 'Es la regla “acción antes que scroll”. Reeduca el primer reflejo: del estímulo automático hacia una acción elegida.',
+    objective: 'Modificar el reflejo inicial ante el aburrimiento: primero acción elegida y después, si corresponde, pantalla.',
+    tags: ['acción','impulso','novedad']
+  },
+
+  actionToday: {
+    title: 'Aviso: acción clave de hoy',
+    what: 'Es el recordatorio central que aparece al abrir la app o al cambiar de fecha cuando la acción clave sigue pendiente.',
+    how: 'Leé qué hacer, ejecutá la acción mínima de la fase y marcá “Cumplí la acción clave del día”. Si no podés hacer todo, priorizá esta palanca.',
+    meaning: 'El protocolo no mejora por acumulación caótica de tareas, sino por acciones pequeñas con sentido. La acción clave traduce la fase en una conducta concreta.',
+    objective: 'Que cada día tenga una prioridad observable, medible y conectada con la fase: sueño, ventana de redes, lectura, fricción ambiental, cuerpo o auditoría.',
+    tags: ['aviso','acción clave','palanca diaria']
+  },
+  keyActionDone: {
+    title: 'Acción clave del día',
+    what: 'La tarea específica que corresponde a la fase actual: caminar, ventana de redes, respiración, ensayo, auditoría, etc.',
+    how: 'Mirá la tarjeta de fase del día y cumplí esa acción aunque el resto salga imperfecto.',
+    meaning: 'Cada fase tiene un foco psicológico. La acción clave evita dispersión: hoy no tenés que arreglar toda tu vida, solo ejecutar la palanca del día.',
+    objective: 'Asegurar que cada día tenga una palanca central coherente con la fase, incluso cuando no puedas cumplir todo perfecto.',
+    tags: ['fase','palanca','foco']
+  },
+  note: {
+    title: 'Nota breve del día',
+    what: 'Una frase sobre qué funcionó, qué falló, qué sentiste o qué ajustarás mañana.',
+    how: 'Ejemplo: “Leí antes de redes y bajó el impulso”; “la noche falló por dejar el celular en cama”.',
+    meaning: 'Convierte el registro en aprendizaje. El dato dice qué pasó; la nota ayuda a entender por qué pasó.',
+    objective: 'Transformar el registro en aprendizaje práctico: no solo saber cuánto puntuaste, sino por qué y qué ajustar mañana.',
+    tags: ['reflexión','aprendizaje','ajuste']
+  },
+  areaSleep: {
+    title: 'Área: Sueño y horario',
+    what: 'Hasta 25 puntos por dormir suficiente, mantener cierta estabilidad y no abrir redes al despertar.',
+    how: 'Priorizá horas reales, horario razonable y una mañana sin algoritmo en los primeros minutos.',
+    meaning: 'Es la base fisiológica del protocolo: sin sueño, todo lo demás requiere más fuerza de voluntad.',
+    objective: 'Maximizar la base del sistema: más energía, mejor atención y menor impulsividad para que las demás áreas sean sostenibles.',
+    tags: ['25 pts','base','ritmo']
+  },
+  areaNight: {
+    title: 'Área: Protección nocturna',
+    what: 'Hasta 20 puntos por celular fuera de cama, no usar teléfono acostado y cortar redes antes de dormir.',
+    how: 'Empezá con 30 min sin redes y avanzá hacia 60–90 min. La cama debe quedar protegida.',
+    meaning: 'La noche decide gran parte del día siguiente. Protegerla reduce rebote, ansiedad y uso automático.',
+    objective: 'Blindar la noche como zona crítica del protocolo, reduciendo activación, insomnio y uso automático antes de dormir.',
+    tags: ['20 pts','noche','cama']
+  },
+  areaScreen: {
+    title: 'Área: Presupuesto de pantalla',
+    what: 'Hasta 20 puntos por medir y cumplir el límite de pantalla no esencial de tu fase.',
+    how: 'Cumplí el presupuesto diario, separando pantalla útil de pantalla algorítmica.',
+    meaning: 'No es prohibición; es economía de atención. La pantalla deja de expandirse hasta ocupar todos los huecos.',
+    objective: 'Administrar la atención como presupuesto: poner límite al uso no esencial y volver visible el costo del scroll.',
+    tags: ['20 pts','presupuesto','límite']
+  },
+  areaReading: {
+    title: 'Área: Lectura/escritura',
+    what: 'Hasta 25 puntos por tiempo de lectura, escritura activa y lectura antes que scroll.',
+    how: 'Asegurá el mínimo de tu fase y producí al menos una nota, pregunta o párrafo.',
+    meaning: 'Es el corazón constructivo del sistema: reemplaza novedad rápida por novedad profunda.',
+    objective: 'Construir el reemplazo positivo del teléfono: lectura, escritura y pensamiento como fuente de novedad y continuidad.',
+    tags: ['25 pts','lectura','producción']
+  },
+  areaOffline: {
+    title: 'Área: Cuerpo/mundo offline',
+    what: 'Hasta 10 puntos por movimiento, actividad manual, salida, conversación u otra acción offline.',
+    how: 'Hacé 10–15 min aunque el día sea difícil. Sirve especialmente como protocolo de rescate.',
+    meaning: 'Impide que el protocolo sea pura restricción. La mejora aparece cuando el mundo offline vuelve a tener densidad.',
+    objective: 'Garantizar que la mejora no sea pura abstinencia, sino presencia corporal, movimiento, conversación y acción en el mundo.',
+    tags: ['10 pts','cuerpo','rescate']
+  },
+  dashboardDay: {
+    title: 'Métrica: día',
+    what: 'Puntaje del registro seleccionado o del último registro disponible.',
+    how: 'Comparalo contra el día anterior para saber si hoy subiste, bajaste o te mantuviste.',
+    meaning: 'El día muestra ejecución inmediata, pero no debe absolutizarse: un día malo no cancela el proceso.',
+    objective: 'Corregir rápido: ver el resultado inmediato del día sin dramatizar, usando el puntaje como feedback y no como juicio moral.',
+    tags: ['día','score','comparación']
+  },
+  dashboardWeek: {
+    title: 'Métrica: semana',
+    what: 'Promedio de los registros de la semana calendario actual.',
+    how: 'Usalo para ver tendencia real sin depender de un solo día.',
+    meaning: 'La semana muestra estabilidad conductual: si el promedio sube, el sistema está mejorando.',
+    objective: 'Detectar tendencia real: una semana muestra si la conducta se está estabilizando o si solo hubo días aislados buenos o malos.',
+    tags: ['semana','promedio','tendencia']
+  },
+  dashboardMonth: {
+    title: 'Métrica: mes',
+    what: 'Promedio de los registros del mes actual.',
+    how: 'Comparalo contra el mes anterior para evaluar el protocolo a largo plazo.',
+    meaning: 'El mes es la unidad de mantenimiento indefinido: permite sostener mejora sin vivir pendiente del día aislado.',
+    objective: 'Evaluar sostenibilidad: el mes permite ver mantenimiento, recaídas repetidas y progreso de largo plazo.',
+    tags: ['mes','largo plazo','mantenimiento']
+  },
+  dashboard21: {
+    title: 'Métrica: últimos 21 días',
+    what: 'Promedio de los últimos 21 registros.',
+    how: 'Buscá sostener 80/100 durante 21 días, o 75 si estás en época académica/laboral pesada.',
+    meaning: 'Este es el criterio de estabilidad operativa: no perfección, sino consistencia suficiente.',
+    objective: 'Comprobar estabilidad operativa: sostener un buen promedio durante 21 días indica que el hábito ya no depende solo de motivación momentánea.',
+    tags: ['21 días','estabilidad','criterio final']
+  }
+};
+
+function helpOrder(){
+  return ['startDate','entryDate','totalScreen','nonEssential','sleepHours','noSocialMins','readingMins','offlineMins','anxiety','manualDay','actionToday','measuredScreen','wakeNoSocial','stableSchedule','phoneOutBed','noPhoneBed','writingDone','readBeforeScroll','keyActionDone','phoneImported','phoneImportedAt','phoneDetectedTotal','phoneDetectedNonEssential','phoneMetricSource','note','areaSleep','areaNight','areaScreen','areaReading','areaOffline','dashboardDay','dashboardWeek','dashboardMonth','dashboard21','phoneAutoImport'];
+}
+function renderHelpGuide(){
+  const guide=document.getElementById('helpGuide'); if(!guide) return;
+  guide.innerHTML = helpOrder().map(id=>{
+    const h=HELP_CONTENT[id]; if(!h) return '';
+    const tags=(h.tags||[]).map(t=>`<span class="guideTag">${escapeHtml(t)}</span>`).join('');
+    return `<article class="guideCard" id="help-${id}"><h3>${escapeHtml(h.title)}</h3><div class="guideMeta"><div><strong>Qué mide:</strong> ${escapeHtml(h.what)}</div><div><strong>Qué debes hacer:</strong> ${escapeHtml(h.how)}</div><div><strong>Sentido:</strong> ${escapeHtml(h.meaning)}</div><div><strong>Objetivo:</strong> ${escapeHtml(h.objective || 'Convertir esta conducta en un dato accionable para mejorar el protocolo.')}</div></div><div class="guideTags">${tags}</div></article>`;
+  }).join('');
+}
+function setupHelpButtons(){
+  Object.keys(HELP_CONTENT).forEach(id=>{
+    const target=document.getElementById(id);
+    if(!target || document.querySelector(`.field .helpBtn[data-help-id="${id}"], .check .helpBtn[data-help-id="${id}"]`)) return;
+    const btn=document.createElement('button');
+    btn.type='button'; btn.className='helpBtn'; btn.dataset.helpId=id; btn.textContent='?'; btn.title='Ver qué hacer, sentido y objetivo'; btn.setAttribute('aria-label','Ver qué hacer, sentido y objetivo');
+    const check=target.closest('label.check');
+    if(check) check.appendChild(btn); else { const field=target.closest('.field'); if(field) field.appendChild(btn); }
+  });
+}
+function activateTab(tabName){
+  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active', b.dataset.tab===tabName));
+  ['registro','dashboard','telefono','plan','guia'].forEach(t=>{
+    const el=document.getElementById('tab-'+t); if(el) el.classList.toggle('hidden', t!==tabName);
+  });
+  if(tabName==='dashboard') drawChart();
+}
+function openGuide(id){
+  renderHelpGuide();
+  activateTab('guia');
+  const card=document.getElementById('help-'+id);
+  if(card){
+    card.scrollIntoView({behavior:'smooth', block:'start'});
+    card.classList.add('highlight');
+    setTimeout(()=>card.classList.remove('highlight'),2400);
+  }
+}
+
+
+let metricChartMode = 'daily';
+function mean(arr){ return arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null; }
+function roundOrDash(v){ return v===null || v===undefined || Number.isNaN(v) ? '—' : String(Math.round(v)); }
+function dateToLocal(s){ return parseDate(s); }
+function dateStrFromDate(d){ return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+function weekStartStr(dateStr){
+  const d = dateToLocal(dateStr); const day = (d.getDay()+6)%7; d.setDate(d.getDate()-day); return dateStrFromDate(d);
+}
+function monthKey(dateStr){ return dateStr.slice(0,7); }
+function prevWeekStartStr(startStr){ const d=dateToLocal(startStr); d.setDate(d.getDate()-7); return dateStrFromDate(d); }
+function prevMonthKey(key){ const [y,m]=key.split('-').map(Number); const d=new Date(y,m-2,1); return `${d.getFullYear()}-${pad(d.getMonth()+1)}`; }
+function groupAverage(entries, keyFn, valueFn=(e)=>e.score||0){
+  const map = new Map();
+  entries.forEach(e=>{ const k=keyFn(e); if(!map.has(k)) map.set(k, []); map.get(k).push(valueFn(e)); });
+  return Array.from(map.entries()).sort((a,b)=>a[0].localeCompare(b[0])).map(([key,vals])=>({key, avg:mean(vals), count:vals.length, values:vals}));
+}
+function deltaClass(delta){ if(delta===null || delta===undefined || Number.isNaN(delta) || delta===0) return ''; return delta>0?'up':'down'; }
+function deltaText(delta){ if(delta===null || delta===undefined || Number.isNaN(delta)) return 'sin comparación'; if(delta===0) return 'sin cambio'; return `${delta>0?'+':''}${Math.round(delta)} vs anterior`; }
+function selectedDateOrLatest(entries){
+  const selected = document.getElementById('entryDate').value || todayStr();
+  if(entries.some(e=>e.date===selected)) return selected;
+  return entries.length ? entries[entries.length-1].date : selected;
+}
+function renderPeriodMetrics(){
+  const entries = getEntries().slice().sort((a,b)=>a.date.localeCompare(b.date));
+  const box = document.getElementById('periodMetrics');
+  const bars = document.getElementById('comparisonBars');
+  if(!box || !bars) return;
+  if(entries.length===0){
+    box.innerHTML = '<div class="metricCard"><div class="k">Sin datos todavía</div><div class="v">—</div><div class="muted small">Guardá tu primer registro para activar las métricas diarias, semanales y mensuales.</div></div>';
+    bars.innerHTML = '';
+    return;
+  }
+  const refDate = selectedDateOrLatest(entries);
+  const current = entries.find(e=>e.date===refDate) || entries[entries.length-1];
+  const currentIndex = entries.findIndex(e=>e.date===current.date);
+  const prevEntry = currentIndex>0 ? entries[currentIndex-1] : null;
+  const dayDelta = prevEntry ? (current.score||0) - (prevEntry.score||0) : null;
+
+  const wk = weekStartStr(refDate);
+  const prevWk = prevWeekStartStr(wk);
+  const weekEntries = entries.filter(e=>weekStartStr(e.date)===wk);
+  const prevWeekEntries = entries.filter(e=>weekStartStr(e.date)===prevWk);
+  const weekAvg = mean(weekEntries.map(e=>e.score||0));
+  const prevWeekAvg = mean(prevWeekEntries.map(e=>e.score||0));
+  const weekDelta = weekAvg!==null && prevWeekAvg!==null ? weekAvg-prevWeekAvg : null;
+
+  const mk = monthKey(refDate);
+  const pmk = prevMonthKey(mk);
+  const monthEntries = entries.filter(e=>monthKey(e.date)===mk);
+  const prevMonthEntries = entries.filter(e=>monthKey(e.date)===pmk);
+  const monthAvg = mean(monthEntries.map(e=>e.score||0));
+  const prevMonthAvg = mean(prevMonthEntries.map(e=>e.score||0));
+  const monthDelta = monthAvg!==null && prevMonthAvg!==null ? monthAvg-prevMonthAvg : null;
+
+  const last21 = entries.slice(-21);
+  const last21Avg = mean(last21.map(e=>e.score||0));
+  const previous21 = entries.slice(-42,-21);
+  const previous21Avg = mean(previous21.map(e=>e.score||0));
+  const avg21Delta = last21Avg!==null && previous21Avg!==null ? last21Avg-previous21Avg : null;
+
+  const cards = [
+    ['Día medido', current.score, `${current.date} · Día ${current.day}`, dayDelta],
+    ['Semana actual', weekAvg, `${weekEntries.length} registro(s) desde ${wk}`, weekDelta],
+    ['Mes actual', monthAvg, `${monthEntries.length} registro(s) en ${mk}`, monthDelta],
+    ['Últimos 21 días', last21Avg, `${last21.length}/21 registros medidos`, avg21Delta]
+  ];
+  const metricHelpIds=['dashboardDay','dashboardWeek','dashboardMonth','dashboard21','phoneAutoImport'];
+  box.innerHTML = cards.map(([k,v,sub,d],idx)=>`<div class="metricCard"><div class="k">${escapeHtml(k)} <button type="button" class="helpBtn" data-help-id="${metricHelpIds[idx]}" title="Ver qué hacer, sentido y objetivo">?</button></div><div class="v">${roundOrDash(v)}</div><span class="delta ${deltaClass(d)}">${escapeHtml(deltaText(d))}</span><div class="muted small" style="margin-top:8px">${escapeHtml(sub)}</div></div>`).join('');
+  const rows = [
+    ['Día', current.score], ['Semana', weekAvg], ['Mes', monthAvg], ['21 días', last21Avg]
+  ];
+  bars.innerHTML = rows.map(([name,val])=>`<div class="comparisonRow"><strong>${escapeHtml(name)}</strong><div class="bar"><i style="width:${clamp(val||0,0,100)}%"></i></div><span>${roundOrDash(val)}/100</span></div>`).join('');
+}
+
+function areaAverages(entries){
+  const labels=['Sueño','Noche','Pantalla','Lectura','Offline'];
+  const maxes=[25,20,20,25,10];
+  return labels.map((label,idx)=>{
+    const vals = entries.map(e=>Array.isArray(e.parts)&&e.parts[idx] ? (e.parts[idx][1]/maxes[idx])*100 : null).filter(v=>v!==null);
+    return {label, value: mean(vals), count: vals.length};
+  });
+}
+function renderInsights(){
+  const box=document.getElementById('insightsPanel'); if(!box) return;
+  const entries=getEntries().slice().sort((a,b)=>a.date.localeCompare(b.date));
+  if(!entries.length){ box.innerHTML=''; return; }
+  const refDate=selectedDateOrLatest(entries);
+  const wk=weekStartStr(refDate), mk=monthKey(refDate);
+  const weekEntries=entries.filter(e=>weekStartStr(e.date)===wk);
+  const monthEntries=entries.filter(e=>monthKey(e.date)===mk);
+  const monthAreas=areaAverages(monthEntries).filter(a=>a.value!==null);
+  const weakest=monthAreas.length ? monthAreas.slice().sort((a,b)=>a.value-b.value)[0] : null;
+  const best=monthAreas.length ? monthAreas.slice().sort((a,b)=>b.value-a.value)[0] : null;
+  const last=entries[entries.length-1];
+  const lastDate=parseDate(last.date);
+  const startDate=document.getElementById('startDate').value || entries[0].date;
+  const daysSinceStart=Math.max(1, daysBetween(startDate, refDate)+1);
+  const density=Math.round((entries.length/daysSinceStart)*100);
+  let recommendation='Sostené el registro diario y priorizá la acción clave antes que buscar perfección.';
+  if(weakest){
+    const recMap={
+      'Sueño':'Mañana priorizá horario, horas reales y primeros 20–30 min sin redes.',
+      'Noche':'Mañana protegé la última hora: celular lejos y corte de redes antes de dormir.',
+      'Pantalla':'Mañana hacé presupuesto de pantalla no esencial y medí con datos reales.',
+      'Lectura':'Mañana asegurá 10–25 min de lectura antes del primer scroll por aburrimiento.',
+      'Offline':'Mañana meté 10–15 min de cuerpo/mundo offline antes de negociar con redes.'
+    };
+    recommendation=recMap[weakest.label] || recommendation;
+  }
+  const weekAvg=mean(weekEntries.map(e=>e.score||0));
+  const monthAvg=mean(monthEntries.map(e=>e.score||0));
+  box.innerHTML = `
+    <div class="insightCard ${weekAvg>=70?'good':'warn'}"><strong>Lectura de la semana</strong><div class="bigNum">${roundOrDash(weekAvg)}</div><span class="muted small">${weekEntries.length} registro(s). ${weekAvg>=80?'Rango de estabilidad.':weekAvg>=70?'Buen rango: sostener.':'Elegí una sola palanca para subir.'}</span></div>
+    <div class="insightCard"><strong>Área a trabajar del mes</strong><div class="bigNum">${weakest?escapeHtml(weakest.label):'—'}</div><span class="muted small">${weakest?`Promedio normalizado: ${Math.round(weakest.value)}/100. Mejor área: ${best.label}.`:'Guardá más registros para detectar patrón.'}</span></div>
+    <div class="insightCard"><strong>Recomendación automática</strong><span>${escapeHtml(recommendation)}</span><br><br><span class="muted small">Densidad de registro estimada: ${density}%. Mes actual: ${roundOrDash(monthAvg)}/100.</span></div>`;
+}
+
+function renderStats(){
+  const entries = getEntries();
+  const scores = entries.map(e=>e.score||0);
+  const avg = arr => arr.length ? Math.round(arr.reduce((a,b)=>a+b,0)/arr.length) : null;
+  document.getElementById('avg7').textContent = avg(scores.slice(-7)) ?? '—';
+  document.getElementById('avg21').textContent = avg(scores.slice(-21)) ?? '—';
+  let streak=0; for(let i=entries.length-1;i>=0;i--){ if((entries[i].score||0)>=70) streak++; else break; }
+  document.getElementById('streak70').textContent = streak;
+  document.getElementById('totalEntries').textContent = entries.length;
+  const xp = scores.reduce((a,b)=>a+b,0);
+  const lvl = Math.max(1, Math.floor(xp/500)+1);
+  document.getElementById('levelPill').textContent = `Nivel ${lvl} · ${xp} XP`;
+}
+function renderBadges(){
+  const e=getEntries();
+  const count = pred => e.filter(pred).length;
+  const avg21 = e.slice(-21); const avg21val = avg21.length? avg21.reduce((a,b)=>a+(b.score||0),0)/avg21.length:0;
+  const badges = [
+    ['Primer registro','🟢',e.length>=1],
+    ['Buen día ≥70','⭐',e.some(x=>x.score>=70)],
+    ['Estabilidad ≥80','🏛️',e.some(x=>x.score>=80)],
+    ['7 registros','📆',e.length>=7],
+    ['21 días medidos','🧭',e.length>=21],
+    ['Cama protegida 7×','🌙',count(x=>x.phoneOutBed)>=7],
+    ['Lector base 7×','📚',count(x=>x.readingMins>=25)>=7],
+    ['Mundo offline 7×','🚶',count(x=>x.offlineMins>=10)>=7],
+    ['Promedio 21 ≥80','🏆',avg21.length>=21 && avg21val>=80]
+  ];
+  document.getElementById('badges').innerHTML = badges.map(([name,icon,on])=>`<span class="badge ${on?'on':''}">${icon} ${escapeHtml(name)}</span>`).join('');
+}
+function renderHistory(){
+  const entries = getEntries().slice().reverse();
+  const head = '<thead><tr><th>Fecha</th><th>Día</th><th>Fase</th><th>Score</th><th>Acción clave</th><th>Pantalla no esencial</th><th>Sueño</th><th>Lectura</th><th>Ansiedad</th><th>Nota</th></tr></thead>';
+  const body = entries.map(e=>`<tr><td>${e.date}</td><td>${e.day}</td><td>${escapeHtml(e.phase||planForDay(e.day).phase)}</td><td><strong>${e.score}</strong></td><td>${e.keyActionDone?'✅':'—'} ${escapeHtml(e.keyAction||planForDay(e.day).key)}</td><td>${e.nonEssential||0} h</td><td>${e.sleepHours||0} h</td><td>${e.readingMins||0} min</td><td>${e.anxiety||'—'}</td><td>${escapeHtml(e.note||'')}</td></tr>`).join('') || '<tr><td colspan="10" class="muted">Todavía no hay registros.</td></tr>';
+  document.getElementById('historyTable').innerHTML = head + '<tbody>' + body + '</tbody>';
+}
+function renderPlanTable(){
+  let rows='';
+  for(let d=0; d<=100; d++){
+    const p=planForDay(d);
+    rows += `<tr><td>${d}</td><td>${escapeHtml(p.phase)}</td><td>${escapeHtml(p.limitText)}</td><td>${escapeHtml(p.nightText)}</td><td>${escapeHtml(p.readingText)}</td><td>${escapeHtml(p.key)}</td><td>${escapeHtml(p.goal)}</td></tr>`;
+  }
+  [101,108,115,122].forEach(d=>{
+    const p=planForDay(d);
+    rows += `<tr><td>${d}+ ciclo</td><td>${escapeHtml(p.phase)}</td><td>${escapeHtml(p.limitText)}</td><td>${escapeHtml(p.nightText)}</td><td>${escapeHtml(p.readingText)}</td><td>${escapeHtml(p.key)}</td><td>${escapeHtml(p.goal)}</td></tr>`;
+  });
+  document.getElementById('planTable').innerHTML = '<thead><tr><th>Día</th><th>Fase</th><th>Límite pantalla</th><th>Sueño/noche</th><th>Lectura/escritura</th><th>Acción clave</th><th>Objetivo</th></tr></thead><tbody>'+rows+'</tbody>';
+}
+function chartColor(v){ return v>=80?'#98f5c2':v>=70?'#72d6ff':v>=50?'#ffd36e':'#ff8b8b'; }
+function drawBarChart(items, caption){
+  const canvas=document.getElementById('scoreChart'); if(!canvas) return;
+  const ctx=canvas.getContext('2d'); const w=canvas.width, h=canvas.height;
+  ctx.clearRect(0,0,w,h);
+  ctx.strokeStyle='rgba(255,255,255,.14)'; ctx.lineWidth=1;
+  for(let y of [50,70,80,100]){
+    const py=h-38-(y/100)*(h-62);
+    ctx.beginPath(); ctx.moveTo(46,py); ctx.lineTo(w-16,py); ctx.stroke();
+    ctx.fillStyle='rgba(238,245,255,.55)'; ctx.font='12px system-ui'; ctx.fillText(String(y),12,py+4);
+  }
+  if(!items.length){ ctx.fillStyle='rgba(238,245,255,.65)'; ctx.font='16px system-ui'; ctx.fillText('Guardá registros para ver la evolución.',46,112); return; }
+  const plotW = w-70, base=h-38, top=24, plotH=base-top;
+  const gap = Math.max(4, Math.min(12, plotW/(items.length*5)));
+  const bw = Math.max(8, (plotW - gap*(items.length-1))/items.length);
+  items.forEach((it,i)=>{
+    const val=clamp(Math.round(it.value||0),0,100);
+    const x=46+i*(bw+gap); const bh=(val/100)*plotH; const y=base-bh;
+    ctx.fillStyle=chartColor(val); ctx.fillRect(x,y,bw,bh);
+    ctx.fillStyle='rgba(238,245,255,.8)'; ctx.font='11px system-ui'; ctx.textAlign='center';
+    if(bw>18) ctx.fillText(String(val), x+bw/2, y-5);
+    if(items.length<=16){ ctx.save(); ctx.translate(x+bw/2, base+14); ctx.rotate(-0.55); ctx.fillStyle='rgba(238,245,255,.62)'; ctx.fillText(String(it.label),0,0); ctx.restore(); }
+  });
+  ctx.textAlign='left';
+  document.getElementById('chartCaption').textContent = caption;
+}
+function drawChart(){
+  const entries=getEntries().slice().sort((a,b)=>a.date.localeCompare(b.date));
+  if(metricChartMode==='weekly'){
+    const groups = groupAverage(entries, e=>weekStartStr(e.date)).slice(-12).map(g=>({label:g.key.slice(5), value:g.avg}));
+    drawBarChart(groups, 'Promedio semanal de score. Cada barra resume los registros de una semana calendario.');
+  } else if(metricChartMode==='monthly'){
+    const groups = groupAverage(entries, e=>monthKey(e.date)).slice(-12).map(g=>({label:g.key, value:g.avg}));
+    drawBarChart(groups, 'Promedio mensual de score. Sirve para ver si el sistema mejora a largo plazo, sin depender de un día aislado.');
+  } else if(metricChartMode==='areas'){
+    const refDate = selectedDateOrLatest(entries);
+    const mk = monthKey(refDate);
+    const monthEntries = entries.filter(e=>monthKey(e.date)===mk);
+    const names = ['Sueño','Noche','Pantalla','Lectura','Offline'];
+    const maxes = [25,20,20,25,10];
+    const areaVals = names.map((name, idx)=>{
+      const vals = monthEntries.map(e=>Array.isArray(e.parts) && e.parts[idx] ? (e.parts[idx][1]/maxes[idx])*100 : null).filter(v=>v!==null);
+      return {label:name, value:mean(vals)||0};
+    });
+    drawBarChart(areaVals, 'Áreas del mes actual normalizadas a 100. Muestra dónde estás ganando o perdiendo puntos.');
+  } else {
+    const items = entries.slice(-30).map(e=>({label:e.date.slice(5), value:e.score||0}));
+    drawBarChart(items, 'Puntaje diario de los últimos 30 registros. Ideal para detectar tendencia, rachas y recaídas sin dramatizar.');
+  }
+}
+function updateUI(){ updatePlanUI(); updateScorePreview(); }
+function renderAll(){ updateUI(); renderStats(); renderPeriodMetrics(); renderInsights(); renderBadges(); renderHistory(); renderPlanTable(); drawChart(); updatePhonePanel(); }
+
+function exportJson(){
+  const data={startDate:document.getElementById('startDate').value, entries:getEntries(), exportedAt:new Date().toISOString()};
+  downloadBlob(JSON.stringify(data,null,2),'protocolo_0_100_registros.json','application/json');
+}
+function exportCsv(){
+  const entries=getEntries();
+  const cols=['date','day','phase','score','keyAction','planGoal','planLimit','planReading','planNight','totalScreen','nonEssential','sleepHours','noSocialMins','readingMins','offlineMins','anxiety','measuredScreen','wakeNoSocial','stableSchedule','phoneOutBed','noPhoneBed','writingDone','readBeforeScroll','keyActionDone','phoneImported','phoneImportedAt','phoneDetectedTotal','phoneDetectedNonEssential','phoneMetricSource','note'];
+  const csv=[cols.join(',')].concat(entries.map(e=>cols.map(c=>`"${String(e[c]??'').replace(/"/g,'""')}"`).join(','))).join('\n');
+  downloadBlob(csv,'protocolo_0_100_registros.csv','text/csv;charset=utf-8');
+}
+function downloadBlob(content,name,type){
+  const blob=new Blob([content],{type}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function importJson(file){
+  const reader=new FileReader(); reader.onload=()=>{
+    try{ const data=JSON.parse(reader.result); if(Array.isArray(data.entries)){ setEntries(data.entries); if(data.startDate){document.getElementById('startDate').value=data.startDate; localStorage.setItem(START_KEY,data.startDate)} renderAll(); flash('Importación completa.'); } else alert('JSON inválido: no contiene entries.'); }
+    catch(e){ alert('No pude leer el JSON.'); }
+  }; reader.readAsText(file);
+}
+function loadEntryForDate(){
+  const date=document.getElementById('entryDate').value||todayStr();
+  const e=getEntries().find(x=>x.date===date);
+  fillForm(e || null);
+  maybeAutoShowActionModal();
+}
+
+
+// PWA + Android native usage bridge
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', (event)=>{
+  event.preventDefault();
+  deferredInstallPrompt = event;
+  updatePhonePanel();
+});
+
+function formatHoursFromMinutes(minutes){
+  if(minutes===null || minutes===undefined || Number.isNaN(Number(minutes))) return '—';
+  const h = Number(minutes)/60;
+  return `${h.toFixed(2)} h`;
+}
+function phoneMessage(kind, msg){
+  const box=document.getElementById('phoneSyncMessage'); if(!box) return;
+  box.innerHTML = `<div class="auditItem ${kind==='ok'?'good':'warn'}">${escapeHtml(msg)}</div>`;
+}
+function nativeBridgeAvailable(){
+  return !!(window.AndroidUsageBridge && typeof window.AndroidUsageBridge.getTodayUsageJson === 'function');
+}
+function nativeHasUsageAccess(){
+  try{ return nativeBridgeAvailable() && String(window.AndroidUsageBridge.hasUsageAccess()) === 'true'; }
+  catch(e){ return false; }
+}
+function updatePhonePanel(){
+  const status=document.getElementById('nativeBridgeStatus'); if(!status) return;
+  status.className='syncStatus';
+  const standalone = window.matchMedia && window.matchMedia('(display-mode: standalone)').matches;
+  if(nativeBridgeAvailable()){
+    if(nativeHasUsageAccess()){
+      status.textContent='Android conectado · permiso activo'; status.classList.add('ok');
+      phoneMessage('ok','La app está conectada al puente Android. Podés sincronizar el uso real de hoy.');
+    }else{
+      status.textContent='Android conectado · falta permiso'; status.classList.add('warn');
+      phoneMessage('warn','La app detectó el puente Android, pero falta conceder el permiso “Uso de apps”. Tocá “Conceder permiso de uso”.');
+    }
+  }else if(standalone){
+    status.textContent='PWA instalada · modo manual'; status.classList.add('warn');
+    phoneMessage('warn','Estás usando la PWA instalada. Funciona offline, pero el navegador no puede leer automáticamente Bienestar digital; cargá el dato manualmente o usá la versión Android nativa.');
+  }else{
+    status.textContent='Navegador · instalable/manual';
+    phoneMessage('warn','Podés instalarla como PWA. Para importación automática de uso hace falta la versión Android nativa del ZIP.');
+  }
+  const t=document.getElementById('phoneDetectedTotal')?.value;
+  const n=document.getElementById('phoneDetectedNonEssential')?.value;
+  const src=document.getElementById('phoneMetricSource')?.value || (nativeBridgeAvailable()?'Android':'Manual/PWA');
+  const tt=document.getElementById('phoneTotalToday'); if(tt) tt.textContent = t ? `${Number(t).toFixed(2)} h` : '—';
+  const nn=document.getElementById('phoneNonEssentialToday'); if(nn) nn.textContent = n ? `${Number(n).toFixed(2)} h` : '—';
+  const ss=document.getElementById('phoneSourceToday'); if(ss) ss.textContent = src;
+  const install=document.getElementById('installPwaBtn'); if(install) install.disabled = !deferredInstallPrompt;
+}
+async function installPwa(){
+  if(!deferredInstallPrompt){
+    alert('Para instalar: abrí esta app desde una URL HTTPS en Chrome/Edge y usá “Instalar app” o “Agregar a pantalla principal”. Si abriste el HTML como archivo, el navegador no puede instalarla como PWA completa.');
+    return;
+  }
+  deferredInstallPrompt.prompt();
+  await deferredInstallPrompt.userChoice;
+  deferredInstallPrompt = null;
+  updatePhonePanel();
+}
+function requestUsageAccess(){
+  if(nativeBridgeAvailable()){
+    try{ window.AndroidUsageBridge.requestUsageAccess(); phoneMessage('warn','Se abrió la pantalla de permisos. Activá “Uso de apps” para Protocolo 0→100 y volvé a la app.'); }
+    catch(e){ phoneMessage('warn','No pude abrir el permiso desde esta versión. Abrilo manualmente en Ajustes > Acceso especial > Acceso a datos de uso.'); }
+  }else{
+    alert('La versión PWA del navegador no puede pedir ese permiso. Usá la versión Android nativa incluida en el ZIP para sincronización automática.');
+  }
+}
+function renderNativeAppList(apps){
+  const box=document.getElementById('phoneAppListBox'); const table=document.getElementById('phoneAppListTable');
+  if(!box || !table) return;
+  if(!apps || !apps.length){ box.classList.add('hidden'); table.innerHTML=''; return; }
+  const rows = apps.slice(0,30).map(a=>`<tr><td>${escapeHtml(a.label||a.packageName||'App')}</td><td>${escapeHtml(a.packageName||'')}</td><td>${formatHoursFromMinutes(a.minutes)}</td><td>${a.nonEssential?'No esencial':'—'}</td></tr>`).join('');
+  table.innerHTML = `<thead><tr><th>App</th><th>Paquete</th><th>Uso</th><th>Tipo</th></tr></thead><tbody>${rows}</tbody>`;
+  box.classList.remove('hidden');
+}
+function syncAndroidUsageToday(){
+  if(!nativeBridgeAvailable()){
+    phoneMessage('warn','No hay puente Android activo. Esta PWA no puede leer automáticamente el uso del teléfono; para eso usá la versión Android nativa o cargá el dato manualmente.');
+    updatePhonePanel();
+    return;
+  }
+  if(!nativeHasUsageAccess()){
+    phoneMessage('warn','Falta conceder permiso de Uso de apps. Tocá “Conceder permiso de uso”, activalo y luego volvé a sincronizar.');
+    updatePhonePanel();
+    return;
+  }
+  try{
+    const json = JSON.parse(window.AndroidUsageBridge.getTodayUsageJson());
+    if(!json.ok){ phoneMessage('warn', json.error || 'No se pudieron leer métricas de Android.'); return; }
+    const totalH = Math.max(0, Number(json.totalMinutes||0)/60);
+    const nonH = Math.max(0, Number(json.nonEssentialMinutes||0)/60);
+    document.getElementById('phoneDetectedTotal').value = totalH.toFixed(2);
+    document.getElementById('phoneDetectedNonEssential').value = nonH.toFixed(2);
+    document.getElementById('phoneMetricSource').value = 'Android UsageStats';
+    document.getElementById('phoneImported').value = 'yes';
+    document.getElementById('phoneImportedAt').value = new Date().toISOString();
+    document.getElementById('totalScreen').value = totalH.toFixed(2);
+    document.getElementById('nonEssential').value = nonH.toFixed(2);
+    document.getElementById('measuredScreen').checked = true;
+    const note=document.getElementById('note');
+    if(note && !note.value.includes('Uso importado desde Android')){
+      note.value = (note.value ? note.value + '\n' : '') + `Uso importado desde Android: total ${totalH.toFixed(2)} h; no esencial estimado ${nonH.toFixed(2)} h.`;
+    }
+    renderNativeAppList(json.apps||[]);
+    phoneMessage('ok','Métricas importadas al registro diario. Revisá si el estimado “no esencial” coincide con tu criterio y guardá el día.');
+    updateUI(); updatePhonePanel();
+  }catch(e){
+    phoneMessage('warn','Error leyendo el puente Android: '+(e.message||e));
+  }
+}
+function copyPhoneMetricsToForm(){
+  const total=document.getElementById('phoneDetectedTotal')?.value;
+  const non=document.getElementById('phoneDetectedNonEssential')?.value;
+  if(!total && !non){ phoneMessage('warn','Todavía no hay métricas detectadas. Sincronizá desde Android o cargá manualmente pantalla total/no esencial en el registro.'); return; }
+  if(total) document.getElementById('totalScreen').value = Number(total).toFixed(2);
+  if(non) document.getElementById('nonEssential').value = Number(non).toFixed(2);
+  document.getElementById('measuredScreen').checked = true;
+  updateUI();
+  phoneMessage('ok','Métricas copiadas al formulario del día. Ahora guardá el registro.');
+}
+if('serviceWorker' in navigator && location.protocol !== 'file:'){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  });
+}
+
+// Events
+
+const syncBtn=document.getElementById('syncAndroidUsageBtn'); if(syncBtn) syncBtn.addEventListener('click', syncAndroidUsageToday);
+const requestUsageBtn=document.getElementById('requestUsageAccessBtn'); if(requestUsageBtn) requestUsageBtn.addEventListener('click', requestUsageAccess);
+const installBtn=document.getElementById('installPwaBtn'); if(installBtn) installBtn.addEventListener('click', installPwa);
+const copyPhoneBtn=document.getElementById('copyPhoneToFormBtn'); if(copyPhoneBtn) copyPhoneBtn.addEventListener('click', copyPhoneMetricsToForm);
+
+document.getElementById('saveBtn').addEventListener('click', saveEntry);
+document.getElementById('deleteBtn').addEventListener('click', deleteEntry);
+document.getElementById('clearBtn').addEventListener('click', ()=>fillForm(null));
+document.getElementById('startDate').addEventListener('change', e=>{localStorage.setItem(START_KEY,e.target.value); renderAll();});
+document.getElementById('entryDate').addEventListener('change', loadEntryForDate);
+document.getElementById('manualDay').addEventListener('input', updateUI);
+['totalScreen','nonEssential','sleepHours','noSocialMins','readingMins','offlineMins','anxiety','measuredScreen','wakeNoSocial','stableSchedule','phoneOutBed','noPhoneBed','writingDone','readBeforeScroll','keyActionDone','phoneImported','phoneImportedAt','phoneDetectedTotal','phoneDetectedNonEssential','phoneMetricSource','note'].forEach(id=>document.getElementById(id).addEventListener('input', updateUI));
+document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{
+  activateTab(btn.dataset.tab);
+  if(btn.dataset.tab==='guia') renderHelpGuide();
+}));
+document.querySelectorAll('.metricTab').forEach(btn=>btn.addEventListener('click',()=>{
+  document.querySelectorAll('.metricTab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  metricChartMode = btn.dataset.chart;
+  drawChart();
+}));
+document.getElementById('exportJsonBtn').addEventListener('click', exportJson);
+document.getElementById('exportCsvBtn').addEventListener('click', exportCsv);
+document.getElementById('importBtn').addEventListener('click', ()=>document.getElementById('importFile').click());
+document.getElementById('importFile').addEventListener('change', e=>{ if(e.target.files[0]) importJson(e.target.files[0]); e.target.value=''; });
+['markActionBtn','modalMarkActionBtn'].forEach(id=>{ const el=document.getElementById(id); if(el) el.addEventListener('click', markActionDone); });
+['showActionModalBtn'].forEach(id=>{ const el=document.getElementById(id); if(el) el.addEventListener('click', ()=>showActionModal(true)); });
+['dismissActionBtn','modalDismissBtn'].forEach(id=>{ const el=document.getElementById(id); if(el) el.addEventListener('click', dismissActionForSelectedDate); });
+['closeActionModalBtn'].forEach(id=>{ const el=document.getElementById(id); if(el) el.addEventListener('click', closeActionModal); });
+['openActionGuideBtn','modalGuideBtn'].forEach(id=>{ const el=document.getElementById(id); if(el) el.addEventListener('click', ()=>{ closeActionModal(); openGuide('actionToday'); }); });
+const actionBackdrop=document.getElementById('actionModalBackdrop');
+if(actionBackdrop) actionBackdrop.addEventListener('click', e=>{ if(e.target===actionBackdrop) closeActionModal(); });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeActionModal(); });
+
+// Help click delegation
+document.addEventListener('click', e=>{
+  const btn=e.target.closest('.helpBtn');
+  if(!btn || !btn.dataset.helpId) return;
+  e.preventDefault(); e.stopPropagation();
+  openGuide(btn.dataset.helpId);
+}, true);
+
+// Init
+const savedStart = localStorage.getItem(START_KEY) || todayStr();
+document.getElementById('startDate').value = savedStart;
+document.getElementById('entryDate').value = todayStr();
+renderHelpGuide();
+setupHelpButtons();
+loadEntryForDate();
+renderAll();
+maybeAutoShowActionModal();
+</script>
+</body>
+</html>

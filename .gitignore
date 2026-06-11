@@ -1,0 +1,16 @@
+# Android / Gradle
+.gradle/
+**/build/
+android-native-wrapper/local.properties
+
+# Generated artifacts
+dist/
+dist-pages/
+*.apk
+.tools/
+
+# Editor / OS
+.idea/
+*.iml
+.DS_Store
+Thumbs.db

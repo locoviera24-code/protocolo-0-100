@@ -1,0 +1,10 @@
+INSTRUCCIONES RÁPIDAS
+
+1) Creá un repositorio nuevo en GitHub.
+2) Subí TODO el contenido de esta carpeta al repositorio.
+3) Entrá a Actions > Construir APK Android > Run workflow.
+4) Cuando termine, descargá el artifact "protocolo-0-100-apk".
+5) Descomprimí el artifact e instalá "protocolo-0-100-debug.apk" en tu celular.
+6) En la app, entrá a Teléfono y concedé permiso de uso.
+
+Importante: no subas solamente la carpeta android-native-wrapper. Subí todo, incluyendo la carpeta .github.
