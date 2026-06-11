@@ -4,6 +4,13 @@ Aplicacion instalable para registrar pantalla, sueno, lectura, actividad offline
 
 Los datos se guardan localmente en el dispositivo. No hay servidor propio ni cuentas de usuario.
 
+## Modulos
+
+- **Protocolo diario:** pantalla, sueno, lectura, actividad offline, score y tendencias.
+- **Gym:** rutinas preestablecidas, ejercicios por musculo, ejercicios personalizados, series, repeticiones, peso, RIR, volumen e historial.
+- **Nutricion:** objetivos de calorias y macros, alimentos preestablecidos o personalizados, comidas, agua, peso e historial diario.
+- **Telefono Android:** importacion opcional de estadisticas de uso con permiso explicito.
+
 ## Versiones incluidas
 
 - **PWA:** funciona en navegador, se puede instalar y usar offline.

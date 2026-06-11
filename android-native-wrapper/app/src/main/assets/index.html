@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Protocolo 0→100 | App instalable + métricas del teléfono</title>
+  <title>Protocolo 0→100 | Hábitos, Gym y Nutrición</title>
   <meta name="theme-color" content="#0b1220" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -178,6 +178,30 @@
     .appListBox th{color:var(--muted); font-size:12px; position:sticky; top:0; background:rgba(18,27,47,.95);}
     @media(max-width:800px){.phoneMetricGrid{grid-template-columns:1fr}.phoneSyncTop{display:block}.phoneSyncTop .syncStatus{margin-top:10px}}
 
+    .moduleHero{border:1px solid rgba(114,214,255,.26); border-radius:18px; padding:15px; background:linear-gradient(135deg,rgba(114,214,255,.10),rgba(152,245,194,.055)); margin-bottom:14px;}
+    .moduleHero h3{font-size:19px; margin-bottom:5px;}
+    .moduleGrid{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px;}
+    .moduleCard{border:1px solid var(--line); border-radius:16px; padding:14px; background:rgba(255,255,255,.035); margin-top:12px;}
+    .moduleCard h3{font-size:17px;}
+    .quickStats{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:9px; margin-top:12px;}
+    .quickStat{border:1px solid var(--line); border-radius:13px; padding:10px; background:rgba(0,0,0,.12); min-height:74px;}
+    .quickStat span{display:block; color:var(--muted); font-size:11px; line-height:1.25;}
+    .quickStat strong{display:block; font-size:20px; margin-top:5px;}
+    .entryList{display:grid; gap:8px; margin-top:12px;}
+    .entryRow{display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px; align-items:center; border:1px solid var(--line); border-radius:13px; padding:10px 11px; background:rgba(255,255,255,.035);}
+    .entryRow strong{display:block; color:#fff; margin-bottom:3px;}
+    .entryRow .meta{color:var(--muted); font-size:12px; line-height:1.35;}
+    .entryRow button{padding:7px 9px; font-size:12px;}
+    .progressStack{display:grid; gap:9px; margin-top:12px;}
+    .macroRow{display:grid; grid-template-columns:82px 1fr 90px; gap:9px; align-items:center; font-size:12px;}
+    .macroRow .bar{height:13px;}
+    .macroRow.over .bar i{background:linear-gradient(90deg,var(--warn),var(--bad));}
+    .templateChips{display:flex; flex-wrap:wrap; gap:7px; margin-top:10px;}
+    .templateChip{background:#1c304d; color:#dff6ff; border:1px solid var(--line); font-size:12px; padding:8px 10px;}
+    .emptyState{border:1px dashed var(--line); border-radius:14px; padding:15px; color:var(--muted); text-align:center; font-size:13px; margin-top:10px;}
+    @media(max-width:800px){.moduleGrid{grid-template-columns:1fr}.quickStats{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:480px){.quickStats{grid-template-columns:1fr}.macroRow{grid-template-columns:72px 1fr 76px}.entryRow{grid-template-columns:1fr}.entryRow button{justify-self:start}}
+
     @media print{body{background:white;color:black}.panel,.stat,.phaseCard,.mini,.history{box-shadow:none;border-color:#ccc;background:white;color:black}.buttons,.tabs,#importFile{display:none!important}.app{max-width:100%;padding:0}.grid{display:block}.panel{page-break-inside:avoid;margin-bottom:14px}.muted,.small,label{color:#333}input,textarea,select{border-color:#aaa;color:black;background:white}}
   </style>
 </head>
@@ -186,7 +210,7 @@
     <header>
       <div class="brand">
         <h1>Protocolo 0→100</h1>
-        <div class="subtitle">Tracker gamificado para pantallas, sueño, lectura/escritura y reconstrucción de atención. Incluye acción clave diaria, métricas comparables y mantenimiento indefinido. Los datos se guardan localmente. En PWA funciona offline; en wrapper Android puede importar métricas reales con permiso de Uso de apps.</div>
+        <div class="subtitle">Sistema integral para atención, sueño, entrenamiento y nutrición. Incluye protocolo diario, rutinas de gym, seguimiento de macros y métricas comparables. Los datos se guardan localmente y funcionan offline.</div>
         <div class="mantra">📏 Lo que no se mide no se mejora: día, semana, mes y mantenimiento indefinido.</div>
       </div>
       <div class="pill" id="levelPill">Nivel 1 · 0 XP</div>
@@ -248,6 +272,8 @@
           <div class="tabs" style="margin-top:16px">
             <button class="tab active" data-tab="registro" type="button">Registro diario</button>
             <button class="tab" data-tab="dashboard" type="button">Dashboard</button>
+            <button class="tab" data-tab="gym" type="button">Gym</button>
+            <button class="tab" data-tab="nutricion" type="button">Nutrición</button>
             <button class="tab" data-tab="telefono" type="button">Teléfono</button>
             <button class="tab" data-tab="plan" type="button">Plan 0–100</button>
             <button class="tab" data-tab="guia" type="button">Guía: qué hacer / sentido / objetivo</button>
@@ -316,6 +342,89 @@
             <div class="badgeGrid" id="badges"></div>
             <h3 style="margin-top:16px">Historial</h3>
             <div class="history"><table id="historyTable"></table></div>
+          </div>
+
+          <div id="tab-gym" class="hidden">
+            <div class="moduleHero">
+              <h3>🏋️ Entrenamiento y progresión</h3>
+              <div class="muted small">Armá la sesión con plantillas o ejercicios propios. Registrá series, repeticiones, peso y esfuerzo para comparar tu progreso.</div>
+              <div class="quickStats" id="gymStats"></div>
+            </div>
+
+            <div class="moduleCard">
+              <h3>Sesión de entrenamiento</h3>
+              <div class="formGrid">
+                <div class="field"><label>Fecha</label><input type="date" id="gymDate"></div>
+                <div class="field"><label>Nombre de rutina</label><input type="text" id="gymRoutineName" placeholder="Ej. Push A"></div>
+                <div class="field"><label>Plantilla rápida</label><select id="gymTemplate"><option value="">Elegir plantilla…</option><option value="full">Cuerpo completo</option><option value="push">Push · Empuje</option><option value="pull">Pull · Tirón</option><option value="legs">Piernas</option><option value="upper">Torso</option></select></div>
+                <div class="field"><label>Músculo</label><select id="gymMuscle"></select></div>
+                <div class="field"><label>Ejercicio preestablecido</label><select id="gymExercise"></select></div>
+                <div class="field"><label>Ejercicio personalizado (opcional)</label><input type="text" id="gymCustomExercise" placeholder="Nombre si no está en la lista"></div>
+                <div class="field"><label>Series</label><input type="number" id="gymSets" min="1" max="20" value="3"></div>
+                <div class="field"><label>Repeticiones</label><input type="number" id="gymReps" min="1" max="100" value="10"></div>
+                <div class="field"><label>Peso por serie (kg)</label><input type="number" id="gymWeight" min="0" step="0.5" value="0"></div>
+                <div class="field"><label>RIR · repeticiones en reserva</label><input type="number" id="gymRir" min="0" max="10" value="2"></div>
+              </div>
+              <div class="buttons">
+                <button type="button" class="secondary" id="loadGymTemplateBtn">Cargar plantilla</button>
+                <button type="button" class="good" id="addGymExerciseBtn">Añadir ejercicio</button>
+              </div>
+              <div class="entryList" id="gymCurrentList"></div>
+              <div class="field" style="margin-top:12px"><label>Notas de la sesión</label><textarea id="gymNotes" placeholder="Energía, técnica, molestias, objetivo para la próxima sesión…"></textarea></div>
+              <div class="buttons">
+                <button type="button" class="good" id="saveGymSessionBtn">Guardar sesión</button>
+                <button type="button" class="secondary" id="clearGymSessionBtn">Nueva sesión</button>
+              </div>
+            </div>
+            <div class="moduleCard">
+              <h3>Historial de entrenamiento</h3>
+              <div class="history"><table id="gymHistoryTable"></table></div>
+            </div>
+          </div>
+
+          <div id="tab-nutricion" class="hidden">
+            <div class="moduleHero">
+              <h3>🥗 Nutrición diaria</h3>
+              <div class="muted small">Seguimiento práctico de calorías, macros, agua y peso. Los alimentos preestablecidos son orientativos y podés crear los tuyos.</div>
+              <div class="progressStack" id="nutritionProgress"></div>
+            </div>
+
+            <div class="moduleCard">
+              <h3>Objetivos diarios</h3>
+              <div class="formGrid">
+                <div class="field"><label>Calorías (kcal)</label><input type="number" id="targetCalories" min="0" value="2200"></div>
+                <div class="field"><label>Proteína (g)</label><input type="number" id="targetProtein" min="0" value="140"></div>
+                <div class="field"><label>Carbohidratos (g)</label><input type="number" id="targetCarbs" min="0" value="250"></div>
+                <div class="field"><label>Grasas (g)</label><input type="number" id="targetFat" min="0" value="70"></div>
+              </div>
+              <div class="buttons"><button type="button" class="secondary" id="saveNutritionTargetsBtn">Guardar objetivos</button></div>
+            </div>
+
+            <div class="moduleCard">
+              <h3>Registrar comida</h3>
+              <div class="formGrid">
+                <div class="field"><label>Fecha</label><input type="date" id="nutritionDate"></div>
+                <div class="field"><label>Comida</label><select id="nutritionMeal"><option>Desayuno</option><option>Almuerzo</option><option>Cena</option><option>Snack</option></select></div>
+                <div class="field"><label>Alimento preestablecido</label><select id="nutritionFood"></select></div>
+                <div class="field"><label>Nombre personalizado (opcional)</label><input type="text" id="customFoodName" placeholder="Ej. receta casera"></div>
+                <div class="field"><label>Cantidad / porciones</label><input type="number" id="foodQuantity" min="0.1" step="0.1" value="1"></div>
+                <div class="field"><label>Calorías por porción</label><input type="number" id="foodCalories" min="0"></div>
+                <div class="field"><label>Proteína por porción (g)</label><input type="number" id="foodProtein" min="0" step="0.1"></div>
+                <div class="field"><label>Carbohidratos por porción (g)</label><input type="number" id="foodCarbs" min="0" step="0.1"></div>
+                <div class="field"><label>Grasas por porción (g)</label><input type="number" id="foodFat" min="0" step="0.1"></div>
+                <div class="field"><label>Agua del día (ml)</label><input type="number" id="nutritionWater" min="0" step="100" placeholder="Ej. 2000"></div>
+                <div class="field"><label>Peso corporal (kg)</label><input type="number" id="nutritionWeight" min="0" step="0.1" placeholder="Opcional"></div>
+              </div>
+              <div class="buttons">
+                <button type="button" class="good" id="addFoodBtn">Añadir alimento</button>
+                <button type="button" class="secondary" id="saveBodyMetricsBtn">Guardar agua y peso</button>
+              </div>
+              <div class="entryList" id="nutritionDayList"></div>
+            </div>
+            <div class="moduleCard">
+              <h3>Resumen reciente</h3>
+              <div class="history"><table id="nutritionHistoryTable"></table></div>
+            </div>
           </div>
 
 
@@ -423,6 +532,46 @@
 const STORAGE_KEY = 'protocolo_0_100_tracker_v1';
 const START_KEY = 'protocolo_0_100_start_date_v1';
 const ACTION_DISMISS_KEY = 'protocolo_0_100_action_dismissed_v1';
+const GYM_SESSIONS_KEY = 'protocolo_0_100_gym_sessions_v1';
+const NUTRITION_ENTRIES_KEY = 'protocolo_0_100_nutrition_entries_v1';
+const NUTRITION_TARGETS_KEY = 'protocolo_0_100_nutrition_targets_v1';
+const BODY_METRICS_KEY = 'protocolo_0_100_body_metrics_v1';
+
+const EXERCISE_CATALOG = {
+  'Pecho':['Press banca con barra','Press inclinado con mancuernas','Fondos','Aperturas en polea','Flexiones'],
+  'Espalda':['Dominadas','Jalón al pecho','Remo con barra','Remo en polea','Peso muerto'],
+  'Hombros':['Press militar','Elevaciones laterales','Pájaros','Face pull','Press Arnold'],
+  'Bíceps':['Curl con barra','Curl martillo','Curl inclinado','Curl en polea'],
+  'Tríceps':['Extensión en polea','Press francés','Fondos en banco','Extensión sobre cabeza'],
+  'Cuádriceps':['Sentadilla','Prensa','Zancadas','Extensión de piernas','Sentadilla búlgara'],
+  'Isquiotibiales':['Peso muerto rumano','Curl femoral','Buenos días','Hip hinge'],
+  'Glúteos':['Hip thrust','Puente de glúteos','Patada en polea','Abducción de cadera'],
+  'Pantorrillas':['Elevación de talones de pie','Elevación de talones sentado'],
+  'Core':['Plancha','Crunch en polea','Elevación de piernas','Rueda abdominal']
+};
+const GYM_TEMPLATES = {
+  full:{name:'Cuerpo completo',items:[['Cuádriceps','Sentadilla',3,8],['Pecho','Press banca con barra',3,8],['Espalda','Remo con barra',3,10],['Hombros','Elevaciones laterales',3,12],['Core','Plancha',3,30]]},
+  push:{name:'Push · Empuje',items:[['Pecho','Press banca con barra',4,8],['Pecho','Press inclinado con mancuernas',3,10],['Hombros','Press militar',3,8],['Hombros','Elevaciones laterales',3,15],['Tríceps','Extensión en polea',3,12]]},
+  pull:{name:'Pull · Tirón',items:[['Espalda','Dominadas',4,6],['Espalda','Remo con barra',4,8],['Espalda','Jalón al pecho',3,10],['Hombros','Face pull',3,15],['Bíceps','Curl martillo',3,12]]},
+  legs:{name:'Piernas',items:[['Cuádriceps','Sentadilla',4,8],['Isquiotibiales','Peso muerto rumano',3,10],['Cuádriceps','Prensa',3,12],['Glúteos','Hip thrust',3,10],['Pantorrillas','Elevación de talones de pie',4,15]]},
+  upper:{name:'Torso',items:[['Pecho','Press banca con barra',4,8],['Espalda','Remo en polea',4,10],['Pecho','Press inclinado con mancuernas',3,10],['Espalda','Jalón al pecho',3,10],['Hombros','Elevaciones laterales',3,15]]}
+};
+const FOOD_CATALOG = [
+  {name:'Seleccionar alimento…',calories:0,protein:0,carbs:0,fat:0},
+  {name:'Pechuga de pollo · 100 g',calories:165,protein:31,carbs:0,fat:3.6},
+  {name:'Carne magra · 100 g',calories:200,protein:26,carbs:0,fat:10},
+  {name:'Huevo · 1 unidad',calories:72,protein:6.3,carbs:0.4,fat:4.8},
+  {name:'Arroz cocido · 100 g',calories:130,protein:2.7,carbs:28,fat:0.3},
+  {name:'Avena · 50 g',calories:190,protein:6.5,carbs:34,fat:3.5},
+  {name:'Papa cocida · 100 g',calories:87,protein:1.9,carbs:20,fat:0.1},
+  {name:'Banana · 1 unidad',calories:105,protein:1.3,carbs:27,fat:0.4},
+  {name:'Leche · 250 ml',calories:150,protein:8,carbs:12,fat:8},
+  {name:'Yogur griego · 170 g',calories:100,protein:17,carbs:6,fat:0},
+  {name:'Pan integral · 2 rebanadas',calories:160,protein:7,carbs:28,fat:2},
+  {name:'Aceite de oliva · 1 cucharada',calories:119,protein:0,carbs:0,fat:13.5},
+  {name:'Proteína whey · 1 scoop',calories:120,protein:24,carbs:3,fat:2}
+];
+let gymDraft = [];
 
 function pad(n){return String(n).padStart(2,'0')}
 function todayStr(){ const d=new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
@@ -470,6 +619,160 @@ function planForDay(day){
 
 function getEntries(){ try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]')}catch(e){return []} }
 function setEntries(entries){ localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); }
+function getLocalData(key, fallback){ try{ const value=JSON.parse(localStorage.getItem(key)); return value ?? fallback; }catch(e){ return fallback; } }
+function setLocalData(key, value){ localStorage.setItem(key, JSON.stringify(value)); }
+function uid(prefix){ return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2,8)}`; }
+
+function populateGymMuscles(){
+  const select=document.getElementById('gymMuscle'); if(!select) return;
+  select.innerHTML=Object.keys(EXERCISE_CATALOG).map(m=>`<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('');
+  populateGymExercises();
+}
+function populateGymExercises(){
+  const muscle=document.getElementById('gymMuscle')?.value || Object.keys(EXERCISE_CATALOG)[0];
+  const select=document.getElementById('gymExercise'); if(!select) return;
+  select.innerHTML=(EXERCISE_CATALOG[muscle]||[]).map(name=>`<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('');
+}
+function workoutVolume(items){ return Math.round((items||[]).reduce((sum,i)=>sum+(Number(i.sets)||0)*(Number(i.reps)||0)*(Number(i.weight)||0),0)); }
+function loadGymTemplate(){
+  const template=GYM_TEMPLATES[document.getElementById('gymTemplate').value];
+  if(!template){ flash('Elegí una plantilla de rutina.'); return; }
+  document.getElementById('gymRoutineName').value=template.name;
+  gymDraft=template.items.map(([muscle,name,sets,reps])=>({id:uid('exercise'),muscle,name,sets,reps,weight:0,rir:2}));
+  renderGymDraft();
+  flash('Plantilla cargada. Ajustá peso y repeticiones según tu sesión.');
+}
+function addGymExercise(){
+  const custom=document.getElementById('gymCustomExercise').value.trim();
+  const name=custom || document.getElementById('gymExercise').value;
+  if(!name){ flash('Elegí o escribí un ejercicio.'); return; }
+  gymDraft.push({id:uid('exercise'),muscle:document.getElementById('gymMuscle').value,name,sets:Math.max(1,num('gymSets')),reps:Math.max(1,num('gymReps')),weight:Math.max(0,num('gymWeight')),rir:clamp(num('gymRir'),0,10)});
+  document.getElementById('gymCustomExercise').value='';
+  renderGymDraft();
+}
+function renderGymDraft(){
+  const box=document.getElementById('gymCurrentList'); if(!box) return;
+  if(!gymDraft.length){ box.innerHTML='<div class="emptyState">Añadí ejercicios o cargá una plantilla para comenzar.</div>'; return; }
+  box.innerHTML=gymDraft.map(i=>`<div class="entryRow"><div><strong>${escapeHtml(i.name)}</strong><div class="meta">${escapeHtml(i.muscle)} · ${i.sets} series × ${i.reps} reps · ${Number(i.weight)} kg · RIR ${i.rir}</div></div><button type="button" class="danger" data-remove-gym="${escapeHtml(i.id)}">Quitar</button></div>`).join('');
+}
+function clearGymSession(){
+  gymDraft=[];
+  document.getElementById('gymRoutineName').value='';
+  document.getElementById('gymNotes').value='';
+  document.getElementById('gymTemplate').value='';
+  renderGymDraft();
+}
+function saveGymSession(){
+  if(!gymDraft.length){ flash('Añadí al menos un ejercicio antes de guardar.'); return; }
+  const date=document.getElementById('gymDate').value || todayStr();
+  const routine=document.getElementById('gymRoutineName').value.trim() || 'Entrenamiento';
+  const sessions=getLocalData(GYM_SESSIONS_KEY,[]);
+  const existing=sessions.findIndex(s=>s.date===date && s.routine===routine);
+  const session={id:existing>=0?sessions[existing].id:uid('session'),date,routine,items:gymDraft.map(i=>({...i})),notes:document.getElementById('gymNotes').value.trim(),volume:workoutVolume(gymDraft),savedAt:new Date().toISOString()};
+  if(existing>=0) sessions[existing]=session; else sessions.push(session);
+  sessions.sort((a,b)=>a.date.localeCompare(b.date));
+  setLocalData(GYM_SESSIONS_KEY,sessions);
+  renderGym();
+  flash('Sesión de entrenamiento guardada.');
+}
+function loadGymSession(id){
+  const s=getLocalData(GYM_SESSIONS_KEY,[]).find(x=>x.id===id); if(!s) return;
+  document.getElementById('gymDate').value=s.date;
+  document.getElementById('gymRoutineName').value=s.routine;
+  document.getElementById('gymNotes').value=s.notes||'';
+  gymDraft=(s.items||[]).map(i=>({...i}));
+  renderGymDraft();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function deleteGymSession(id){
+  setLocalData(GYM_SESSIONS_KEY,getLocalData(GYM_SESSIONS_KEY,[]).filter(s=>s.id!==id));
+  renderGym();
+  flash('Sesión eliminada.');
+}
+function renderGym(){
+  const sessions=getLocalData(GYM_SESSIONS_KEY,[]).slice().sort((a,b)=>a.date.localeCompare(b.date));
+  const stats=document.getElementById('gymStats');
+  if(stats){
+    const totalSets=sessions.reduce((n,s)=>n+(s.items||[]).reduce((a,i)=>a+(Number(i.sets)||0),0),0);
+    const maxWeight=sessions.reduce((m,s)=>Math.max(m,...(s.items||[]).map(i=>Number(i.weight)||0)),0);
+    const totalVolume=sessions.reduce((n,s)=>n+(Number(s.volume)||workoutVolume(s.items)),0);
+    stats.innerHTML=[['Sesiones',sessions.length],['Series',totalSets],['Volumen',`${Math.round(totalVolume).toLocaleString()} kg`],['Peso máximo',`${maxWeight} kg`]].map(([k,v])=>`<div class="quickStat"><span>${k}</span><strong>${v}</strong></div>`).join('');
+  }
+  renderGymDraft();
+  const table=document.getElementById('gymHistoryTable'); if(!table) return;
+  const rows=sessions.slice().reverse().map(s=>`<tr><td>${escapeHtml(s.date)}</td><td>${escapeHtml(s.routine)}</td><td>${(s.items||[]).length}</td><td>${(s.items||[]).reduce((a,i)=>a+(Number(i.sets)||0),0)}</td><td>${Math.round(Number(s.volume)||workoutVolume(s.items)).toLocaleString()} kg</td><td><button type="button" class="secondary" data-load-gym="${escapeHtml(s.id)}">Abrir</button> <button type="button" class="danger" data-delete-gym="${escapeHtml(s.id)}">Borrar</button></td></tr>`).join('');
+  table.innerHTML=`<thead><tr><th>Fecha</th><th>Rutina</th><th>Ejercicios</th><th>Series</th><th>Volumen</th><th>Acciones</th></tr></thead><tbody>${rows||'<tr><td colspan="6">Todavía no hay sesiones guardadas.</td></tr>'}</tbody>`;
+}
+
+function nutritionTargets(){ return {...{calories:2200,protein:140,carbs:250,fat:70},...getLocalData(NUTRITION_TARGETS_KEY,{})}; }
+function loadNutritionTargets(){
+  const t=nutritionTargets();
+  [['targetCalories',t.calories],['targetProtein',t.protein],['targetCarbs',t.carbs],['targetFat',t.fat]].forEach(([id,v])=>{const el=document.getElementById(id);if(el)el.value=v;});
+}
+function populateFoods(){
+  const select=document.getElementById('nutritionFood'); if(!select) return;
+  select.innerHTML=FOOD_CATALOG.map((f,i)=>`<option value="${i}">${escapeHtml(f.name)}</option>`).join('');
+  applySelectedFood();
+}
+function applySelectedFood(){
+  const f=FOOD_CATALOG[Number(document.getElementById('nutritionFood')?.value)||0] || FOOD_CATALOG[0];
+  [['foodCalories',f.calories],['foodProtein',f.protein],['foodCarbs',f.carbs],['foodFat',f.fat]].forEach(([id,v])=>{const el=document.getElementById(id);if(el)el.value=v||'';});
+}
+function saveNutritionTargets(){
+  setLocalData(NUTRITION_TARGETS_KEY,{calories:Math.max(0,num('targetCalories')),protein:Math.max(0,num('targetProtein')),carbs:Math.max(0,num('targetCarbs')),fat:Math.max(0,num('targetFat'))});
+  renderNutrition();
+  flash('Objetivos nutricionales guardados.');
+}
+function addFood(){
+  const selected=FOOD_CATALOG[Number(document.getElementById('nutritionFood').value)||0] || FOOD_CATALOG[0];
+  const custom=document.getElementById('customFoodName').value.trim();
+  const name=custom || (selected===FOOD_CATALOG[0]?'':selected.name);
+  if(!name){ flash('Elegí un alimento o escribí uno personalizado.'); return; }
+  const quantity=Math.max(.1,num('foodQuantity')||1);
+  const entry={id:uid('food'),date:document.getElementById('nutritionDate').value||todayStr(),meal:document.getElementById('nutritionMeal').value,name,quantity,calories:Math.round(num('foodCalories')*quantity),protein:Number((num('foodProtein')*quantity).toFixed(1)),carbs:Number((num('foodCarbs')*quantity).toFixed(1)),fat:Number((num('foodFat')*quantity).toFixed(1)),savedAt:new Date().toISOString()};
+  const entries=getLocalData(NUTRITION_ENTRIES_KEY,[]); entries.push(entry); setLocalData(NUTRITION_ENTRIES_KEY,entries);
+  document.getElementById('customFoodName').value='';
+  renderNutrition();
+  flash('Alimento añadido.');
+}
+function removeFood(id){
+  setLocalData(NUTRITION_ENTRIES_KEY,getLocalData(NUTRITION_ENTRIES_KEY,[]).filter(e=>e.id!==id));
+  renderNutrition();
+}
+function saveBodyMetrics(){
+  const date=document.getElementById('nutritionDate').value||todayStr();
+  const metrics=getLocalData(BODY_METRICS_KEY,{});
+  metrics[date]={water:Math.max(0,num('nutritionWater')),weight:Math.max(0,num('nutritionWeight')),savedAt:new Date().toISOString()};
+  setLocalData(BODY_METRICS_KEY,metrics);
+  renderNutrition();
+  flash('Agua y peso guardados.');
+}
+function nutritionTotals(entries){ return entries.reduce((t,e)=>({calories:t.calories+(Number(e.calories)||0),protein:t.protein+(Number(e.protein)||0),carbs:t.carbs+(Number(e.carbs)||0),fat:t.fat+(Number(e.fat)||0)}),{calories:0,protein:0,carbs:0,fat:0}); }
+function loadBodyMetricsForDate(){
+  const m=getLocalData(BODY_METRICS_KEY,{})[document.getElementById('nutritionDate').value||todayStr()]||{};
+  document.getElementById('nutritionWater').value=m.water||'';
+  document.getElementById('nutritionWeight').value=m.weight||'';
+}
+function renderNutrition(){
+  const date=document.getElementById('nutritionDate')?.value||todayStr();
+  const all=getLocalData(NUTRITION_ENTRIES_KEY,[]);
+  const day=all.filter(e=>e.date===date);
+  const total=nutritionTotals(day), targets=nutritionTargets();
+  const progress=document.getElementById('nutritionProgress');
+  if(progress){
+    const labels={calories:'Calorías',protein:'Proteína',carbs:'Carbohidratos',fat:'Grasas'};
+    progress.innerHTML=Object.keys(labels).map(k=>{const value=Math.round(total[k]);const target=Math.max(1,Number(targets[k])||1);const pct=Math.min(100,(value/target)*100);return `<div class="macroRow ${value>target?'over':''}"><strong>${labels[k]}</strong><div class="bar"><i style="width:${pct}%"></i></div><span>${value}/${target}${k==='calories'?' kcal':' g'}</span></div>`;}).join('');
+  }
+  const list=document.getElementById('nutritionDayList');
+  if(list) list.innerHTML=day.length?day.map(e=>`<div class="entryRow"><div><strong>${escapeHtml(e.name)}</strong><div class="meta">${escapeHtml(e.meal)} · ${e.quantity} porción(es) · ${Math.round(e.calories)} kcal · P ${Math.round(e.protein)} · C ${Math.round(e.carbs)} · G ${Math.round(e.fat)}</div></div><button type="button" class="danger" data-remove-food="${escapeHtml(e.id)}">Quitar</button></div>`).join(''):'<div class="emptyState">Todavía no registraste comidas para esta fecha.</div>';
+  const grouped={}; all.forEach(e=>{grouped[e.date]??=[];grouped[e.date].push(e);});
+  const metrics=getLocalData(BODY_METRICS_KEY,{});
+  const dates=Array.from(new Set([...Object.keys(grouped),...Object.keys(metrics)])).sort().reverse().slice(0,30);
+  const table=document.getElementById('nutritionHistoryTable'); if(table){
+    const rows=dates.map(d=>{const t=nutritionTotals(grouped[d]||[]);const m=metrics[d]||{};return `<tr><td>${d}</td><td>${Math.round(t.calories)}</td><td>${Math.round(t.protein)} g</td><td>${Math.round(t.carbs)} g</td><td>${Math.round(t.fat)} g</td><td>${m.water?`${m.water} ml`:'—'}</td><td>${m.weight?`${m.weight} kg`:'—'}</td></tr>`;}).join('');
+    table.innerHTML=`<thead><tr><th>Fecha</th><th>Kcal</th><th>Proteína</th><th>Carbos</th><th>Grasas</th><th>Agua</th><th>Peso</th></tr></thead><tbody>${rows||'<tr><td colspan="7">Todavía no hay registros nutricionales.</td></tr>'}</tbody>`;
+  }
+}
 function calcDay(){
   const manual = parseInt(document.getElementById('manualDay').value,10);
   if(Number.isFinite(manual)) return Math.max(0, manual);
@@ -976,10 +1279,12 @@ function setupHelpButtons(){
 }
 function activateTab(tabName){
   document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active', b.dataset.tab===tabName));
-  ['registro','dashboard','telefono','plan','guia'].forEach(t=>{
+  ['registro','dashboard','gym','nutricion','telefono','plan','guia'].forEach(t=>{
     const el=document.getElementById('tab-'+t); if(el) el.classList.toggle('hidden', t!==tabName);
   });
   if(tabName==='dashboard') drawChart();
+  if(tabName==='gym') renderGym();
+  if(tabName==='nutricion') renderNutrition();
 }
 function openGuide(id){
   renderHelpGuide();
@@ -1210,10 +1515,10 @@ function drawChart(){
   }
 }
 function updateUI(){ updatePlanUI(); updateScorePreview(); }
-function renderAll(){ updateUI(); renderStats(); renderPeriodMetrics(); renderInsights(); renderBadges(); renderHistory(); renderPlanTable(); drawChart(); updatePhonePanel(); }
+function renderAll(){ updateUI(); renderStats(); renderPeriodMetrics(); renderInsights(); renderBadges(); renderHistory(); renderPlanTable(); drawChart(); updatePhonePanel(); renderGym(); renderNutrition(); }
 
 function exportJson(){
-  const data={startDate:document.getElementById('startDate').value, entries:getEntries(), exportedAt:new Date().toISOString()};
+  const data={startDate:document.getElementById('startDate').value, entries:getEntries(), gymSessions:getLocalData(GYM_SESSIONS_KEY,[]), nutritionEntries:getLocalData(NUTRITION_ENTRIES_KEY,[]), nutritionTargets:nutritionTargets(), bodyMetrics:getLocalData(BODY_METRICS_KEY,{}), exportedAt:new Date().toISOString()};
   downloadBlob(JSON.stringify(data,null,2),'protocolo_0_100_registros.json','application/json');
 }
 function exportCsv(){
@@ -1227,7 +1532,7 @@ function downloadBlob(content,name,type){
 }
 function importJson(file){
   const reader=new FileReader(); reader.onload=()=>{
-    try{ const data=JSON.parse(reader.result); if(Array.isArray(data.entries)){ setEntries(data.entries); if(data.startDate){document.getElementById('startDate').value=data.startDate; localStorage.setItem(START_KEY,data.startDate)} renderAll(); flash('Importación completa.'); } else alert('JSON inválido: no contiene entries.'); }
+    try{ const data=JSON.parse(reader.result); if(Array.isArray(data.entries)){ setEntries(data.entries); if(Array.isArray(data.gymSessions)) setLocalData(GYM_SESSIONS_KEY,data.gymSessions); if(Array.isArray(data.nutritionEntries)) setLocalData(NUTRITION_ENTRIES_KEY,data.nutritionEntries); if(data.nutritionTargets) setLocalData(NUTRITION_TARGETS_KEY,data.nutritionTargets); if(data.bodyMetrics) setLocalData(BODY_METRICS_KEY,data.bodyMetrics); if(data.startDate){document.getElementById('startDate').value=data.startDate; localStorage.setItem(START_KEY,data.startDate)} loadNutritionTargets(); loadBodyMetricsForDate(); renderAll(); flash('Importación completa.'); } else alert('JSON inválido: no contiene entries.'); }
     catch(e){ alert('No pude leer el JSON.'); }
   }; reader.readAsText(file);
 }
@@ -1373,6 +1678,16 @@ const syncBtn=document.getElementById('syncAndroidUsageBtn'); if(syncBtn) syncBt
 const requestUsageBtn=document.getElementById('requestUsageAccessBtn'); if(requestUsageBtn) requestUsageBtn.addEventListener('click', requestUsageAccess);
 const installBtn=document.getElementById('installPwaBtn'); if(installBtn) installBtn.addEventListener('click', installPwa);
 const copyPhoneBtn=document.getElementById('copyPhoneToFormBtn'); if(copyPhoneBtn) copyPhoneBtn.addEventListener('click', copyPhoneMetricsToForm);
+document.getElementById('gymMuscle').addEventListener('change', populateGymExercises);
+document.getElementById('loadGymTemplateBtn').addEventListener('click', loadGymTemplate);
+document.getElementById('addGymExerciseBtn').addEventListener('click', addGymExercise);
+document.getElementById('saveGymSessionBtn').addEventListener('click', saveGymSession);
+document.getElementById('clearGymSessionBtn').addEventListener('click', clearGymSession);
+document.getElementById('nutritionFood').addEventListener('change', applySelectedFood);
+document.getElementById('saveNutritionTargetsBtn').addEventListener('click', saveNutritionTargets);
+document.getElementById('addFoodBtn').addEventListener('click', addFood);
+document.getElementById('saveBodyMetricsBtn').addEventListener('click', saveBodyMetrics);
+document.getElementById('nutritionDate').addEventListener('change', ()=>{loadBodyMetricsForDate();renderNutrition();});
 
 document.getElementById('saveBtn').addEventListener('click', saveEntry);
 document.getElementById('deleteBtn').addEventListener('click', deleteEntry);
@@ -1403,6 +1718,16 @@ document.getElementById('importFile').addEventListener('change', e=>{ if(e.targe
 const actionBackdrop=document.getElementById('actionModalBackdrop');
 if(actionBackdrop) actionBackdrop.addEventListener('click', e=>{ if(e.target===actionBackdrop) closeActionModal(); });
 document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeActionModal(); });
+document.addEventListener('click', e=>{
+  const removeGym=e.target.closest('[data-remove-gym]');
+  if(removeGym){ gymDraft=gymDraft.filter(i=>i.id!==removeGym.dataset.removeGym); renderGymDraft(); return; }
+  const loadGym=e.target.closest('[data-load-gym]');
+  if(loadGym){ loadGymSession(loadGym.dataset.loadGym); return; }
+  const deleteGym=e.target.closest('[data-delete-gym]');
+  if(deleteGym){ deleteGymSession(deleteGym.dataset.deleteGym); return; }
+  const removeFoodBtn=e.target.closest('[data-remove-food]');
+  if(removeFoodBtn){ removeFood(removeFoodBtn.dataset.removeFood); }
+});
 
 // Help click delegation
 document.addEventListener('click', e=>{
@@ -1416,6 +1741,12 @@ document.addEventListener('click', e=>{
 const savedStart = localStorage.getItem(START_KEY) || todayStr();
 document.getElementById('startDate').value = savedStart;
 document.getElementById('entryDate').value = todayStr();
+document.getElementById('gymDate').value = todayStr();
+document.getElementById('nutritionDate').value = todayStr();
+populateGymMuscles();
+populateFoods();
+loadNutritionTargets();
+loadBodyMetricsForDate();
 renderHelpGuide();
 setupHelpButtons();
 loadEntryForDate();

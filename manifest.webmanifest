@@ -1,7 +1,7 @@
 {
   "name": "Protocolo 0→100: Pantallas, sueño y atención",
   "short_name": "Protocolo 0→100",
-  "description": "Tracker gamificado para medir pantalla, sueño, lectura y reconstrucción de atención.",
+  "description": "Tracker integral para atención, rutinas de gimnasio, nutrición, sueño y hábitos.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
