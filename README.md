@@ -1,68 +1,58 @@
 # Protocolo 0→100
 
-Aplicacion instalable para registrar pantalla, sueno, lectura, actividad offline y reconstruccion de atencion. Calcula un puntaje diario, muestra tendencias y propone una accion clave segun el dia del protocolo.
+PWA y APK Android para medir hábitos, atención, actividad física y nutrición con el principio **“Lo que no se mide no se mejora”**. Los datos funcionan primero de forma local y privada; no existe una cuenta ni un backend obligatorio.
 
-Los datos se guardan localmente en el dispositivo. No hay servidor propio ni cuentas de usuario.
+## Módulos
 
-## Modulos
+- **Protocolo diario:** pantalla, sueño, lectura, actividad offline, acción clave, score y tendencias.
+- **Gym:** rutinas, ejercicios por músculo, series, repeticiones, peso, RIR, volumen e historial.
+- **Nutrición:** 71 alimentos base, búsqueda por alias, cantidades en gramos, comidas frecuentes, alimentos propios, asistente por texto/voz, hidratación y metas editables.
+- **Cobertura nutricional:** barras de macros, vitaminas y minerales; diagnóstico diario orientativo, alimentos recomendados y tendencias semanales/mensuales.
+- **Progreso integral:** scores separados e integral, Focus Coins no financieros, recompensas, rankings mensuales opcionales y referidos simulados.
+- **Teléfono Android:** importación opcional de estadísticas de uso con permiso explícito.
 
-- **Protocolo diario:** pantalla, sueno, lectura, actividad offline, score y tendencias.
-- **Gym:** rutinas preestablecidas, ejercicios por musculo, ejercicios personalizados, series, repeticiones, peso, RIR, volumen e historial.
-- **Nutricion:** objetivos de calorias y macros, alimentos por gramos y un asistente privado por texto o voz que entiende lenguaje natural, medidas caseras, hidratacion y errores ortograficos. Permite revisar y corregir antes de guardar, aprende alias localmente y admite alimentos propios.
-- **Telefono Android:** importacion opcional de estadisticas de uso con permiso explicito.
+## Arquitectura web
 
-Los tres espacios principales se abren desde el menu lateral. En movil tambien puede abrirse deslizando desde el borde izquierdo.
+La raíz del repositorio es la fuente de la PWA y también se sincroniza dentro del APK:
 
-## Versiones incluidas
+```text
+index.html                  Interfaz, núcleo del protocolo, gym y asistente
+nutrition-data.js           Base local estructurada de alimentos y nutrientes
+advanced-features.js        Cobertura, diagnóstico, tendencias, backup y gamificación
+manifest.webmanifest        Configuración instalable
+sw.js                       Cache y funcionamiento offline
+scripts/validate-app.ps1    Validaciones estructurales
+scripts/sync-web-assets.ps1 Sincronización web -> Android
+android-native-wrapper/     Proyecto Android
+.github/workflows/          Publicación Pages y compilación APK
+```
 
-- **PWA:** funciona en navegador, se puede instalar y usar offline.
-- **APK Android:** carga la misma app, ofrece reconocimiento de voz nativo y puede importar estadisticas de uso con permiso explicito de Android.
+`advanced-features.js` mantiene un estado consolidado con `schemaVersion: 2` y migra los datos locales anteriores. Los alimentos preparados y regionales incluyen nivel de confianza y fuente; varios valores son aproximados y pueden editarse.
 
-## Publicar la PWA con GitHub Pages
+## Seguridad
 
-1. Sube el contenido de este proyecto a un repositorio de GitHub.
-2. En **Settings > Pages > Build and deployment > Source**, elige **GitHub Actions**.
-3. Ejecuta **Actions > Publicar PWA en GitHub Pages > Run workflow**.
+La app usa lenguaje orientativo y no diagnostica deficiencias ni sustituye a nutricionistas, médicos u otros profesionales de salud. No premia restricción extrema, déficit agresivo, sueño insuficiente u obsesión.
 
-GitHub mostrara la URL publica al terminar el workflow.
+Focus Coins es solo gamificación: no es dinero, inversión ni criptomoneda; no es transferible ni intercambiable por dinero. Referidos, conversiones, comisiones y rankings son simulaciones locales hasta conectar un backend real.
 
-## Generar el APK
+## Desarrollo y validación
 
-1. Abre **Actions > Construir APK Android**.
-2. Pulsa **Run workflow**.
-3. Descarga el artifact `protocolo-0-100-apk`.
-4. Descomprimelo e instala `protocolo-0-100-debug.apk` en Android.
+Validar estructura:
 
-El APK es una compilacion `debug`, adecuada para uso personal. Publicar en Play Store requiere una compilacion `release` firmada con una clave privada.
+```powershell
+powershell -ExecutionPolicy Bypass -File ./scripts/validate-app.ps1
+```
 
-## Desarrollo
-
-La version web de la raiz es la fuente principal. Antes de compilar Android localmente, sincronizala:
+Sincronizar la versión web dentro del APK y comprobarla:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File ./scripts/sync-web-assets.ps1
+powershell -ExecutionPolicy Bypass -File ./scripts/validate-app.ps1 -CheckAndroidAssets
 ```
 
-Para comprobar que la copia Android esta actualizada:
+## Publicación
 
-```powershell
-powershell -ExecutionPolicy Bypass -File ./scripts/sync-web-assets.ps1 -Check
-```
+- **PWA:** el workflow `Publicar PWA en GitHub Pages` publica los archivos raíz.
+- **APK:** el workflow `Construir APK Android` compila el wrapper y publica la descarga directa de la versión `v2.0.0`.
 
-Estructura principal:
-
-```text
-index.html                         App web
-manifest.webmanifest               Configuracion PWA
-sw.js                              Soporte offline
-icons/                             Iconos PWA
-android-native-wrapper/            Proyecto Android
-scripts/sync-web-assets.ps1        Sincronizacion web -> Android
-.github/workflows/                 Publicacion PWA y compilacion APK
-```
-
-## Permiso de uso en Android
-
-En el APK, abre la pestana **Telefono**, pulsa **Conceder permiso de uso**, habilita Protocolo 0→100 y vuelve a la app. Luego pulsa **Sincronizar uso de hoy desde Android**.
-
-La clasificacion de uso no esencial es una estimacion basada en paquetes conocidos y conviene revisarla.
+El APK generado es `debug`, apropiado para uso personal. Publicar en Play Store requiere una compilación `release` firmada con una clave privada.

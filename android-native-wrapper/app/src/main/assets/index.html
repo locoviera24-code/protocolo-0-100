@@ -216,9 +216,10 @@
     .drawerItem span{font-size:12px; color:var(--muted); margin-top:3px; line-height:1.3;}
     .drawerItem.active{background:linear-gradient(135deg,rgba(114,214,255,.20),rgba(152,245,194,.11)); border-color:rgba(114,214,255,.45);}
     body[data-module="gym"] .protocolOnly,body[data-module="nutricion"] .protocolOnly{display:none!important;}
-    body[data-module="gym"] .grid,body[data-module="nutricion"] .grid{display:block;}
-    body[data-module="gym"] .grid>.panel,body[data-module="nutricion"] .grid>.panel{border:0;background:transparent;box-shadow:none;overflow:visible;}
-    body[data-module="gym"] .grid>.panel>.bd,body[data-module="nutricion"] .grid>.panel>.bd{padding:0;}
+    body[data-module="progreso"] .protocolOnly{display:none!important;}
+    body[data-module="gym"] .grid,body[data-module="nutricion"] .grid,body[data-module="progreso"] .grid{display:block;}
+    body[data-module="gym"] .grid>.panel,body[data-module="nutricion"] .grid>.panel,body[data-module="progreso"] .grid>.panel{border:0;background:transparent;box-shadow:none;overflow:visible;}
+    body[data-module="gym"] .grid>.panel>.bd,body[data-module="nutricion"] .grid>.panel>.bd,body[data-module="progreso"] .grid>.panel>.bd{padding:0;}
     .assistantBox{border:1px solid rgba(152,245,194,.30); background:linear-gradient(135deg,rgba(152,245,194,.10),rgba(114,214,255,.07)); border-radius:16px; padding:14px; margin-top:12px;}
     .assistantBox textarea{min-height:74px;}
     .assistantResult{margin-top:10px; display:grid; gap:7px;}
@@ -236,7 +237,33 @@
     .assistantCustomGrid{display:grid; grid-template-columns:2fr repeat(4,1fr); gap:7px; margin-top:10px;}
     .assistantCustomGrid input{padding:8px; font-size:12px;}
     .assistantTotals{border:1px solid rgba(152,245,194,.28); border-radius:14px; padding:11px; background:rgba(152,245,194,.07); font-size:13px; line-height:1.5;}
+    .nutritionNav{display:flex;gap:8px;overflow:auto;padding:2px 0 8px;margin:2px 0 8px;scrollbar-width:thin;}
+    .nutritionNav button{white-space:nowrap;background:#182641;color:#dbeaff;border:1px solid var(--line);font-size:12px;padding:9px 11px;}
+    .nutritionNav button.active{background:var(--accent2);color:#071a12;border-color:transparent;}
+    .coverageToolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;}
+    .coverageGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;}
+    .coverageRow{border:1px solid var(--line);border-radius:13px;padding:10px;background:rgba(255,255,255,.03);}
+    .coverageTop{display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:12px;margin-bottom:7px;}
+    .coverageTop span{color:var(--muted);}
+    .coverageRow .bar{height:12px;}
+    .coverageRow.low .bar i{background:linear-gradient(90deg,#72d6ff,#ffd36e);}
+    .coverageRow.good .bar i{background:linear-gradient(90deg,#72d6ff,#98f5c2);}
+    .coverageRow.high .bar i,.coverageRow.review .bar i{background:linear-gradient(90deg,#ffd36e,#ff8b8b);}
+    .statusChip{display:inline-flex;padding:4px 7px;border-radius:999px;font-size:10px;font-weight:850;border:1px solid var(--line);}
+    .statusChip.good{color:#092018;background:var(--accent2);border-color:transparent}.statusChip.low{color:#ffe8ad;background:rgba(255,211,110,.12)}.statusChip.high,.statusChip.review{color:#ffd3d3;background:rgba(255,139,139,.12)}
+    .recommendGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;}
+    .recommendCard{border:1px solid var(--line);border-radius:14px;padding:11px;background:rgba(255,255,255,.035);font-size:12px;line-height:1.4;}
+    .recommendCard strong{display:block;font-size:14px;margin-bottom:5px;color:#fff;}
+    .safetyNote{border:1px solid rgba(255,211,110,.3);background:rgba(255,211,110,.08);color:#ffe8ad;border-radius:14px;padding:12px;font-size:12px;line-height:1.45;margin-top:12px;}
+    .foodQuickActions{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}.foodQuickActions button{font-size:11px;padding:7px 9px;background:#243653;color:#fff;border:1px solid var(--line)}
+    .sectionIntro{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:10px 0}.sectionIntro div{border:1px solid var(--line);border-radius:12px;padding:9px;background:rgba(0,0,0,.12);font-size:11px;line-height:1.4}.sectionIntro strong{display:block;color:#fff;margin-bottom:3px}
+    .integralHero{display:grid;grid-template-columns:150px 1fr;gap:14px;align-items:center}.scoreTiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.scoreTile{border:1px solid var(--line);border-radius:13px;padding:10px;background:rgba(255,255,255,.035)}.scoreTile span{color:var(--muted);font-size:11px}.scoreTile strong{display:block;font-size:23px;margin-top:4px}
+    .coinBalance{font-size:42px;font-weight:900;letter-spacing:-.05em;color:var(--accent2)}.ledgerList{display:grid;gap:7px;max-height:280px;overflow:auto}.ledgerItem{display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid var(--line);padding:8px 0;font-size:12px}
+    .rankingTable{overflow:auto}.rankingTable table{min-width:620px}.legalBox{border:1px dashed var(--line);border-radius:14px;padding:12px;color:var(--muted);font-size:12px;line-height:1.5;margin-top:10px}
+    .updateBanner{position:fixed;left:14px;right:14px;bottom:14px;z-index:300;max-width:680px;margin:auto;border:1px solid rgba(152,245,194,.4);background:#14213a;border-radius:16px;padding:12px;box-shadow:var(--shadow);display:flex;justify-content:space-between;align-items:center;gap:10px}
+    details.advancedDetails{border:1px solid var(--line);border-radius:14px;padding:10px;background:rgba(255,255,255,.025);margin-top:10px}details.advancedDetails summary{cursor:pointer;font-weight:800;color:#fff}
     @media(max-width:800px){.moduleGrid{grid-template-columns:1fr}.quickStats{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:800px){.coverageGrid,.recommendGrid,.sectionIntro,.scoreTiles{grid-template-columns:1fr}.integralHero{grid-template-columns:1fr}}
     @media(max-width:600px){.assistantPreviewGrid,.assistantCustomGrid{grid-template-columns:1fr 1fr}.assistantCustomGrid input:first-child{grid-column:1/-1}}
     @media(max-width:480px){.quickStats{grid-template-columns:1fr}.macroRow{grid-template-columns:72px 1fr 76px}.entryRow{grid-template-columns:1fr}.entryRow button{justify-self:start}.assistantPreviewGrid{grid-template-columns:1fr}}
 
@@ -255,6 +282,7 @@
       <button type="button" class="drawerItem active" data-module-target="protocolo"><span class="drawerIcon">📵</span><span><strong>Protocolo</strong><span>Pantalla, sueño, atención y hábitos.</span></span></button>
       <button type="button" class="drawerItem" data-module-target="gym"><span class="drawerIcon">🏋️</span><span><strong>Gym</strong><span>Rutinas, ejercicios y progresión.</span></span></button>
       <button type="button" class="drawerItem" data-module-target="nutricion"><span class="drawerIcon">🥗</span><span><strong>Nutrición</strong><span>Comidas, macros, agua y peso.</span></span></button>
+      <button type="button" class="drawerItem" data-module-target="progreso"><span class="drawerIcon">📈</span><span><strong>Progreso y recompensas</strong><span>Score integral, Focus Coins y rankings.</span></span></button>
     </nav>
   </aside>
   <main class="app">
@@ -434,11 +462,26 @@
           <div id="tab-nutricion" class="hidden">
             <div class="moduleHero">
               <h3>🥗 Nutrición diaria</h3>
-              <div class="muted small">Seguimiento práctico por gramos de calorías, macros, agua y peso. Los valores preestablecidos son orientativos y podés crear alimentos propios.</div>
+              <div class="muted small">Medí comidas, hidratación y cobertura nutricional sin buscar perfección. Los cálculos son orientativos y dependen de lo registrado.</div>
               <div class="progressStack" id="nutritionProgress"></div>
+              <div class="quickStats" id="nutritionScoreSummary"></div>
             </div>
 
-            <div class="assistantBox">
+            <div class="nutritionNav" aria-label="Secciones de nutrición">
+              <button type="button" class="active" data-nutrition-view="resumen">Resumen</button>
+              <button type="button" data-nutrition-view="registrar">Registrar</button>
+              <button type="button" data-nutrition-view="diagnostico">Diagnóstico</button>
+              <button type="button" data-nutrition-view="tendencias">Semana y mes</button>
+              <button type="button" data-nutrition-view="ajustes">Ajustes</button>
+            </div>
+
+            <div class="moduleCard" id="nutritionCoverageCard" data-nutrition-panel="resumen">
+              <div class="coverageToolbar"><div><h3>Cobertura diaria</h3><div class="muted small">Consumido frente a meta orientativa. El sodio se interpreta como límite máximo.</div></div><button type="button" class="secondary" data-open-nutrition-view="diagnostico">Ver diagnóstico</button></div>
+              <div class="coverageGrid" id="nutritionCoverageGrid"></div>
+              <details class="advancedDetails"><summary>Ver todos los micronutrientes</summary><div class="coverageGrid" id="nutritionCoverageExtended" style="margin-top:10px"></div></details>
+            </div>
+
+            <div class="assistantBox" id="nutritionAssistantCard" data-nutrition-panel="registrar">
               <h3>✨ Asistente nutricional inteligente y privado</h3>
               <div class="muted small">Contale naturalmente qué comiste. Entiende gramos, kilos, mililitros, unidades y medidas caseras; luego te muestra una vista previa para corregir antes de guardar. Todo se analiza en tu dispositivo.</div>
               <div class="assistantExamples">
@@ -456,22 +499,46 @@
               <div class="assistantPreview" id="nutritionAssistantPreview"></div>
             </div>
 
-            <div class="moduleCard">
+            <div class="moduleCard" id="nutritionTargetsCard" data-nutrition-panel="ajustes">
               <h3>Objetivos diarios</h3>
+              <div class="sectionIntro"><div><strong>Qué mide</strong>Metas para comparar lo registrado.</div><div><strong>Qué hacer</strong>Ajustalas si tenés una indicación profesional.</div><div><strong>Sentido</strong>Orientar decisiones, no castigar ni diagnosticar.</div></div>
+              <div class="formGrid">
+                <div class="field"><label>Edad</label><input type="number" id="nutritionAge" min="13" max="120" placeholder="Opcional"></div>
+                <div class="field"><label>Sexo de referencia (opcional)</label><select id="nutritionSex"><option value="">No indicar</option><option value="female">Femenino</option><option value="male">Masculino</option></select></div>
+                <div class="field"><label>Altura (cm)</label><input type="number" id="nutritionHeight" min="100" max="250" placeholder="Opcional"></div>
+                <div class="field"><label>Objetivo general</label><select id="nutritionGoal"><option value="health">Salud general</option><option value="maintenance">Mantenimiento</option><option value="recomp">Recomposición</option><option value="performance">Rendimiento</option></select></div>
+              </div>
               <div class="formGrid">
                 <div class="field"><label>Calorías (kcal)</label><input type="number" id="targetCalories" min="0" value="2200"></div>
                 <div class="field"><label>Proteína (g)</label><input type="number" id="targetProtein" min="0" value="140"></div>
                 <div class="field"><label>Carbohidratos (g)</label><input type="number" id="targetCarbs" min="0" value="250"></div>
                 <div class="field"><label>Grasas (g)</label><input type="number" id="targetFat" min="0" value="70"></div>
+                <div class="field"><label>Fibra (g)</label><input type="number" id="targetFiber" min="0" value="30"></div>
+                <div class="field"><label>Agua (ml)</label><input type="number" id="targetWater" min="0" value="2500"></div>
+                <div class="field"><label>Sodio máximo (mg)</label><input type="number" id="targetSodium" min="0" value="2300"></div>
+                <div class="field"><label>Potasio (mg)</label><input type="number" id="targetPotassium" min="0" value="3500"></div>
+                <div class="field"><label>Calcio (mg)</label><input type="number" id="targetCalcium" min="0" value="1000"></div>
+                <div class="field"><label>Hierro (mg)</label><input type="number" id="targetIron" min="0" step=".1" value="18"></div>
+                <div class="field"><label>Magnesio (mg)</label><input type="number" id="targetMagnesium" min="0" value="400"></div>
+                <div class="field"><label>Zinc (mg)</label><input type="number" id="targetZinc" min="0" step=".1" value="11"></div>
+                <div class="field"><label>Vitamina A (mcg)</label><input type="number" id="targetVitaminA" min="0" value="900"></div>
+                <div class="field"><label>Vitamina C (mg)</label><input type="number" id="targetVitaminC" min="0" value="90"></div>
+                <div class="field"><label>Vitamina D (mcg)</label><input type="number" id="targetVitaminD" min="0" step=".1" value="15"></div>
+                <div class="field"><label>Vitamina E (mg)</label><input type="number" id="targetVitaminE" min="0" step=".1" value="15"></div>
+                <div class="field"><label>Vitamina K (mcg)</label><input type="number" id="targetVitaminK" min="0" value="120"></div>
+                <div class="field"><label>Vitamina B12 (mcg)</label><input type="number" id="targetB12" min="0" step=".1" value="2.4"></div>
+                <div class="field"><label>Folato (mcg)</label><input type="number" id="targetFolate" min="0" value="400"></div>
               </div>
               <div class="buttons"><button type="button" class="secondary" id="saveNutritionTargetsBtn">Guardar objetivos</button></div>
+              <div class="safetyNote">Las metas nutricionales son orientativas. Esta app no diagnostica deficiencias ni sustituye a un nutricionista, médico o profesional de salud.</div>
             </div>
 
-            <div class="moduleCard">
+            <div class="moduleCard" id="nutritionBuilderCard" data-nutrition-panel="registrar">
               <h3>Registrar comida</h3>
               <div class="formGrid">
                 <div class="field"><label>Fecha</label><input type="date" id="nutritionDate"></div>
-                <div class="field"><label>Comida</label><select id="nutritionMeal"><option>Desayuno</option><option>Almuerzo</option><option>Cena</option><option>Snack</option></select></div>
+                <div class="field"><label>Comida</label><select id="nutritionMeal"><option>Desayuno</option><option>Almuerzo</option><option>Merienda</option><option>Cena</option><option>Snack</option><option>Post-entreno</option><option>Otro</option></select></div>
+                <div class="field"><label>Buscar por nombre o alias</label><input type="search" id="nutritionFoodSearch" placeholder="Ej. mandioca, chipa, calcio…"></div>
                 <div class="field"><label>Alimento preestablecido</label><select id="nutritionFood"></select></div>
                 <div class="field"><label>Nombre personalizado (opcional)</label><input type="text" id="customFoodName" placeholder="Ej. receta casera"></div>
                 <div class="field"><label>Cantidad consumida (g)</label><input type="number" id="foodQuantity" min="1" step="1" value="100"></div>
@@ -482,16 +549,93 @@
                 <div class="field"><label>Agua del día (ml)</label><input type="number" id="nutritionWater" min="0" step="100" placeholder="Ej. 2000"></div>
                 <div class="field"><label>Peso corporal (kg)</label><input type="number" id="nutritionWeight" min="0" step="0.1" placeholder="Opcional"></div>
               </div>
+              <details class="advancedDetails">
+                <summary>Micronutrientes del alimento personalizado</summary>
+                <div class="formGrid" style="margin-top:10px">
+                  <div class="field"><label>Fibra (g/100 g)</label><input type="number" id="foodFiber" min="0" step="0.1"></div>
+                  <div class="field"><label>Sodio (mg/100 g)</label><input type="number" id="foodSodium" min="0" step="0.1"></div>
+                  <div class="field"><label>Potasio (mg/100 g)</label><input type="number" id="foodPotassium" min="0" step="0.1"></div>
+                  <div class="field"><label>Calcio (mg/100 g)</label><input type="number" id="foodCalcium" min="0" step="0.1"></div>
+                  <div class="field"><label>Hierro (mg/100 g)</label><input type="number" id="foodIron" min="0" step="0.1"></div>
+                  <div class="field"><label>Magnesio (mg/100 g)</label><input type="number" id="foodMagnesium" min="0" step="0.1"></div>
+                  <div class="field"><label>Zinc (mg/100 g)</label><input type="number" id="foodZinc" min="0" step="0.1"></div>
+                  <div class="field"><label>Vitamina A (mcg/100 g)</label><input type="number" id="foodVitaminA" min="0" step="0.1"></div>
+                  <div class="field"><label>Vitamina C (mg/100 g)</label><input type="number" id="foodVitaminC" min="0" step="0.1"></div>
+                  <div class="field"><label>Vitamina D (mcg/100 g)</label><input type="number" id="foodVitaminD" min="0" step="0.1"></div>
+                  <div class="field"><label>Vitamina B12 (mcg/100 g)</label><input type="number" id="foodB12" min="0" step="0.1"></div>
+                  <div class="field"><label>Folato (mcg/100 g)</label><input type="number" id="foodFolate" min="0" step="0.1"></div>
+                </div>
+                <div class="muted small" style="margin-top:8px">Usá la etiqueta o una fuente confiable cuando esté disponible. Si no conocés un dato, dejalo vacío.</div>
+              </details>
+              <div class="foodQuickActions" aria-label="Porciones rápidas">
+                <button type="button" data-food-portion="50">50 g</button><button type="button" data-food-portion="100">100 g</button><button type="button" data-food-portion="150">150 g</button><button type="button" data-food-portion="200">200 g</button><button type="button" id="useFoodBasePortionBtn">Porción sugerida</button>
+              </div>
               <div class="buttons">
                 <button type="button" class="good" id="addFoodBtn">Añadir alimento</button>
                 <button type="button" class="secondary" id="saveBodyMetricsBtn">Guardar agua y peso</button>
+                <button type="button" class="secondary" id="saveFrequentMealBtn">Guardar comida frecuente</button>
+                <button type="button" class="secondary" id="repeatYesterdayMealBtn">Repetir comida de ayer</button>
               </div>
+              <div class="field" style="margin-top:10px"><label>Comidas frecuentes</label><select id="savedMealSelect"><option value="">Elegir comida guardada…</option></select></div>
+              <div class="buttons"><button type="button" class="secondary" id="loadSavedMealBtn">Agregar comida guardada</button><button type="button" class="secondary" id="copyCurrentMealBtn">Copiar comida a otra fecha</button><button type="button" class="danger" id="deleteSavedMealBtn">Eliminar frecuente</button><button type="button" class="danger" id="deleteCurrentMealBtn">Eliminar esta comida</button></div>
               <div class="entryList" id="nutritionDayList"></div>
             </div>
-            <div class="moduleCard">
+
+            <div class="moduleCard" id="nutritionDiagnosisCard" data-nutrition-panel="diagnostico">
+              <h3>Diagnóstico nutricional orientativo</h3>
+              <div class="sectionIntro"><div><strong>Qué mide</strong>Cobertura del día según alimentos registrados.</div><div><strong>Qué hacer</strong>Priorizá una o dos palancas, no todo a la vez.</div><div><strong>Objetivo</strong>Convertir faltantes aparentes en opciones concretas.</div></div>
+              <div id="nutritionDiagnosis"></div>
+              <h3 style="margin-top:14px">Mejores alimentos para completar hoy</h3>
+              <div class="recommendGrid" id="nutritionRecommendations"></div>
+              <h3 style="margin-top:14px">Combinaciones rápidas</h3>
+              <div class="recommendGrid" id="nutritionCombinations"></div>
+              <div class="safetyNote">Este análisis describe la cobertura estimada de lo registrado hoy. No confirma deficiencias, enfermedades ni necesidades clínicas.</div>
+            </div>
+
+            <div class="moduleCard" id="nutritionTrendsCard" data-nutrition-panel="tendencias">
+              <h3>Semana y mes</h3>
+              <div class="quickStats" id="nutritionTrendStats"></div>
+              <div class="recommendGrid" id="nutritionTrendInsights" style="margin-top:10px"></div>
+            </div>
+
+            <div class="moduleCard" id="customFoodsCard" data-nutrition-panel="ajustes">
+              <h3>Alimentos personalizados</h3>
+              <div class="muted small">Los alimentos propios quedan en tu dispositivo. Podés editarlos o eliminarlos.</div>
+              <div class="entryList" id="customFoodsList"></div>
+            </div>
+
+            <div class="moduleCard" id="nutritionHistoryCard" data-nutrition-panel="tendencias">
               <h3>Resumen reciente</h3>
+              <div class="buttons"><button type="button" class="secondary" id="exportMealsCsvBtn">Exportar comidas CSV</button><button type="button" class="secondary" id="exportNutrientsCsvBtn">Exportar nutrientes CSV</button></div>
               <div class="history"><table id="nutritionHistoryTable"></table></div>
             </div>
+          </div>
+
+          <div id="tab-progreso" class="hidden">
+            <div class="moduleHero">
+              <h3>📈 Progreso integral y recompensas</h3>
+              <div class="muted small">Cada área conserva su propio score. El score integral resume el día y señala una palanca de mejora sin castigos.</div>
+              <div class="integralHero"><div class="ring" id="integralScoreRing" style="--p:0"><span><span id="integralScoreValue">0</span><small>integral</small></span></div><div><h2 id="integralScoreLabel">Sin datos suficientes</h2><div class="muted small" id="integralScoreAdvice"></div><div class="scoreTiles" id="integralScoreTiles" style="margin-top:10px"></div></div></div>
+            </div>
+            <div class="moduleGrid">
+              <div class="moduleCard"><h3>Focus Coins</h3><div class="coinBalance"><span id="coinBalance">0</span> <small style="font-size:14px">coins</small></div><div class="muted small">Gamificación interna, no financiera y no transferible.</div><div class="ledgerList" id="coinLedger" style="margin-top:10px"></div></div>
+              <div class="moduleCard"><h3>Recompensas e insignias</h3><div class="badgeGrid" id="rewardBadges"></div><div class="entryList" id="rewardsList"></div></div>
+            </div>
+            <div class="moduleCard">
+              <h3>Rankings mensuales opcionales</h3>
+              <div class="formGrid"><div class="field"><label>Alias público</label><input type="text" id="rankingAlias" placeholder="Ej. LectorConstante"></div><label class="check"><input type="checkbox" id="rankingOptIn"><span>Participar en rankings locales simulados.</span></label></div>
+              <div class="buttons"><button type="button" class="secondary" id="saveRankingSettingsBtn">Guardar preferencia</button></div>
+              <div class="rankingTable"><table id="monthlyRankingsTable"></table></div>
+              <div class="muted small">No existe un ranking único de perfección. Se comparan constancia, mejora, lectura, sueño, nutrición y reducción de pantalla por separado.</div>
+            </div>
+            <div class="moduleCard">
+              <h3>Referidos y afiliados</h3>
+              <div class="formGrid"><div class="field"><label>Código de referido</label><input type="text" id="referralCodeInput" placeholder="Ej. FOCUS10"></div><div class="field"><label>Estado</label><div class="auditItem" id="referralStatus">Sin código aplicado.</div></div></div>
+              <div class="buttons"><button type="button" class="good" id="applyReferralBtn">Aplicar código</button><button type="button" class="secondary" id="exportAffiliateCsvBtn">Descargar panel CSV</button></div>
+              <div class="quickStats" id="affiliateStats"></div>
+              <div class="legalBox"><strong>Aviso de afiliados:</strong> si una persona recomienda la app mediante un código y recibe comisión, debe declararlo claramente. Las conversiones e ingresos mostrados aquí son simulaciones locales; pagos reales requieren backend, identidad y condiciones comerciales.</div>
+            </div>
+            <div class="legalBox"><strong>Términos básicos de Focus Coins:</strong> los puntos internos no son dinero, inversión ni criptomoneda; no se pueden retirar, transferir ni intercambiar por dinero, no tienen valor garantizado y sus reglas pueden cambiar. Las recompensas priorizan constancia y salud, nunca restricción extrema, sueño insuficiente u obsesión.</div>
           </div>
 
 
@@ -595,6 +739,7 @@
     </div>
   </div>
 
+<script src="nutrition-data.js"></script>
 <script>
 const STORAGE_KEY = 'protocolo_0_100_tracker_v1';
 const START_KEY = 'protocolo_0_100_start_date_v1';
@@ -626,54 +771,7 @@ const GYM_TEMPLATES = {
   legs:{name:'Piernas',items:[['Cuádriceps','Sentadilla',4,8],['Isquiotibiales','Peso muerto rumano',3,10],['Cuádriceps','Prensa',3,12],['Glúteos','Hip thrust',3,10],['Pantorrillas','Elevación de talones de pie',4,15]]},
   upper:{name:'Torso',items:[['Pecho','Press banca con barra',4,8],['Espalda','Remo en polea',4,10],['Pecho','Press inclinado con mancuernas',3,10],['Espalda','Jalón al pecho',3,10],['Hombros','Elevaciones laterales',3,15]]}
 };
-const FOOD_CATALOG = [
-  {name:'Seleccionar alimento…',aliases:[],calories:0,protein:0,carbs:0,fat:0},
-  {name:'Agua',aliases:['agua','agua mineral'],calories:0,protein:0,carbs:0,fat:0,units:{vaso:250,taza:240,botella:500},kind:'water'},
-  {name:'Pechuga de pollo',aliases:['pechuga','pollo','pechuga de pollo','pollo a la plancha'],calories:165,protein:31,carbs:0,fat:3.6,units:{porcion:150}},
-  {name:'Muslo de pollo',aliases:['muslo','muslo de pollo'],calories:209,protein:26,carbs:0,fat:10.9,units:{unidad:110}},
-  {name:'Pechuga de pavo',aliases:['pavo','pechuga de pavo'],calories:135,protein:30,carbs:0,fat:1,units:{porcion:150}},
-  {name:'Carne magra',aliases:['carne','carne magra','vacuno','carne vacuna'],calories:200,protein:26,carbs:0,fat:10,units:{porcion:150}},
-  {name:'Lomo de cerdo',aliases:['cerdo','lomo de cerdo'],calories:196,protein:27,carbs:0,fat:9,units:{porcion:150}},
-  {name:'Salmón',aliases:['salmon','salmón'],calories:208,protein:20,carbs:0,fat:13,units:{porcion:150}},
-  {name:'Atún al natural',aliases:['atun','atún','atun al natural','lata de atun'],calories:116,protein:26,carbs:0,fat:1,units:{lata:120,porcion:120}},
-  {name:'Pescado blanco',aliases:['pescado','pescado blanco','merluza','tilapia'],calories:110,protein:23,carbs:0,fat:2,units:{porcion:150}},
-  {name:'Camarones',aliases:['camaron','camarones','gambas'],calories:99,protein:24,carbs:.2,fat:.3,units:{porcion:150}},
-  {name:'Huevo',aliases:['huevo','huevos'],calories:143,protein:12.6,carbs:.7,fat:9.5,units:{unidad:50}},
-  {name:'Clara de huevo',aliases:['clara','claras','clara de huevo','claras de huevo'],calories:52,protein:10.9,carbs:.7,fat:.2,units:{unidad:33}},
-  {name:'Tofu',aliases:['tofu'],calories:144,protein:17,carbs:2.8,fat:8.7,units:{porcion:150}},
-  {name:'Lentejas cocidas',aliases:['lenteja','lentejas','lentejas cocidas'],calories:116,protein:9,carbs:20,fat:.4,units:{taza:198,porcion:180}},
-  {name:'Garbanzos cocidos',aliases:['garbanzo','garbanzos','garbanzos cocidos'],calories:164,protein:8.9,carbs:27.4,fat:2.6,units:{taza:164,porcion:180}},
-  {name:'Porotos cocidos',aliases:['poroto','porotos','frijol','frijoles','judias'],calories:127,protein:8.7,carbs:22.8,fat:.5,units:{taza:177,porcion:180}},
-  {name:'Arroz cocido',aliases:['arroz','arroz cocido','arroz blanco'],calories:130,protein:2.7,carbs:28,fat:.3,units:{taza:158,porcion:150}},
-  {name:'Arroz integral cocido',aliases:['arroz integral','arroz integral cocido'],calories:123,protein:2.7,carbs:25.6,fat:1,units:{taza:195,porcion:150}},
-  {name:'Pasta cocida',aliases:['pasta','fideos','tallarines','pasta cocida'],calories:157,protein:5.8,carbs:30.9,fat:.9,units:{taza:140,porcion:180}},
-  {name:'Quinoa cocida',aliases:['quinoa','quinoa cocida'],calories:120,protein:4.4,carbs:21.3,fat:1.9,units:{taza:185,porcion:150}},
-  {name:'Avena',aliases:['avena','copos de avena'],calories:380,protein:13,carbs:68,fat:7,units:{taza:80,porcion:40}},
-  {name:'Papa cocida',aliases:['papa','papas','patata','papa cocida'],calories:87,protein:1.9,carbs:20,fat:.1,units:{unidad:170,porcion:200}},
-  {name:'Batata cocida',aliases:['batata','batatas','boniato','camote'],calories:90,protein:2,carbs:20.7,fat:.2,units:{unidad:180,porcion:200}},
-  {name:'Pan integral',aliases:['pan','pan integral','tostada integral'],calories:247,protein:13,carbs:41,fat:3.4,units:{rebanada:30,unidad:30}},
-  {name:'Tortilla de trigo',aliases:['tortilla','tortilla de trigo','wrap'],calories:312,protein:8.3,carbs:52,fat:8.3,units:{unidad:45}},
-  {name:'Leche entera',aliases:['leche','leche entera'],calories:61,protein:3.2,carbs:4.8,fat:3.3,units:{taza:240,vaso:250}},
-  {name:'Leche descremada',aliases:['leche descremada','leche desnatada','leche light'],calories:35,protein:3.4,carbs:5,fat:.1,units:{taza:240,vaso:250}},
-  {name:'Yogur griego',aliases:['yogur','yogurt','yogur griego','yogurt griego'],calories:59,protein:10,carbs:3.6,fat:.4,units:{unidad:150,taza:245}},
-  {name:'Queso fresco',aliases:['queso','queso fresco'],calories:264,protein:18,carbs:3,fat:20,units:{rebanada:30,porcion:40}},
-  {name:'Banana',aliases:['banana','bananas','platano','plátano'],calories:89,protein:1.1,carbs:23,fat:.3,units:{unidad:120}},
-  {name:'Manzana',aliases:['manzana','manzanas'],calories:52,protein:.3,carbs:14,fat:.2,units:{unidad:180}},
-  {name:'Naranja',aliases:['naranja','naranjas'],calories:47,protein:.9,carbs:12,fat:.1,units:{unidad:140}},
-  {name:'Frutilla',aliases:['frutilla','frutillas','fresa','fresas'],calories:32,protein:.7,carbs:7.7,fat:.3,units:{taza:150}},
-  {name:'Palta',aliases:['palta','aguacate','avocado'],calories:160,protein:2,carbs:8.5,fat:14.7,units:{unidad:150}},
-  {name:'Brócoli',aliases:['brocoli','brócoli'],calories:35,protein:2.4,carbs:7.2,fat:.4,units:{taza:155,porcion:150}},
-  {name:'Tomate',aliases:['tomate','tomates'],calories:18,protein:.9,carbs:3.9,fat:.2,units:{unidad:123,taza:180}},
-  {name:'Zanahoria',aliases:['zanahoria','zanahorias'],calories:41,protein:.9,carbs:10,fat:.2,units:{unidad:60,taza:128}},
-  {name:'Espinaca',aliases:['espinaca'],calories:23,protein:2.9,carbs:3.6,fat:.4,units:{taza:30}},
-  {name:'Aceite de oliva',aliases:['aceite','aceite de oliva'],calories:884,protein:0,carbs:0,fat:100,units:{cucharada:14,cucharadita:4.5}},
-  {name:'Mantequilla de maní',aliases:['mantequilla de mani','manteca de mani','crema de cacahuate'],calories:588,protein:25,carbs:20,fat:50,units:{cucharada:16}},
-  {name:'Almendras',aliases:['almendra','almendras'],calories:579,protein:21,carbs:22,fat:50,units:{unidad:1.2,porcion:30}},
-  {name:'Nueces',aliases:['nuez','nueces'],calories:654,protein:15,carbs:14,fat:65,units:{unidad:4,porcion:30}},
-  {name:'Proteína whey',aliases:['whey','proteina','proteína','proteina whey','proteína whey','batido de proteina'],calories:400,protein:80,carbs:10,fat:6.7,units:{scoop:30,porcion:30}},
-  {name:'Azúcar',aliases:['azucar','azúcar'],calories:387,protein:0,carbs:100,fat:0,units:{cucharada:12.5,cucharadita:4.2}},
-  {name:'Miel',aliases:['miel'],calories:304,protein:.3,carbs:82.4,fat:0,units:{cucharada:21,cucharadita:7}}
-];
+const FOOD_CATALOG = window.NUTRITION_DB || [];
 let gymDraft = [];
 let nutritionAssistantDraft = [];
 let activeModule = 'protocolo';
@@ -821,7 +919,7 @@ function saveCustomFoodDefinition(food){
   const foods=getLocalData(CUSTOM_FOODS_KEY,[]);
   const key=normalizeFoodText(food.name);
   const existing=foods.findIndex(f=>normalizeFoodText(f.name)===key);
-  const clean={name:food.name.trim(),aliases:[food.name.trim(),...(food.aliases||[])],calories:Math.max(0,Number(food.calories)||0),protein:Math.max(0,Number(food.protein)||0),carbs:Math.max(0,Number(food.carbs)||0),fat:Math.max(0,Number(food.fat)||0),units:food.units||{},custom:true};
+  const clean={...food,id:food.id||`custom-${key.replace(/\s+/g,'-')||Date.now()}`,name:food.name.trim(),aliases:[food.name.trim(),...(food.aliases||[])],category:food.category||'personalizados',portionGrams:Number(food.portionGrams)||100,calories:Math.max(0,Number(food.calories)||0),protein:Math.max(0,Number(food.protein)||0),carbs:Math.max(0,Number(food.carbs)||0),fat:Math.max(0,Number(food.fat)||0),units:food.units||{},confidence:food.confidence||'aproximado',source:food.source||'etiqueta manual',custom:true};
   if(existing>=0) foods[existing]=clean; else foods.push(clean);
   setLocalData(CUSTOM_FOODS_KEY,foods);
   return clean;
@@ -834,7 +932,7 @@ function populateFoods(){
 function applySelectedFood(){
   const foods=allFoods();
   const f=foods[Number(document.getElementById('nutritionFood')?.value)||0] || foods[0];
-  [['foodCalories',f.calories],['foodProtein',f.protein],['foodCarbs',f.carbs],['foodFat',f.fat]].forEach(([id,v])=>{const el=document.getElementById(id);if(el)el.value=v||'';});
+  [['foodCalories',f.calories],['foodProtein',f.protein],['foodCarbs',f.carbs],['foodFat',f.fat],['foodFiber',f.fiber],['foodSodium',f.sodium],['foodPotassium',f.potassium],['foodCalcium',f.calcium],['foodIron',f.iron],['foodMagnesium',f.magnesium],['foodZinc',f.zinc],['foodVitaminA',f.vitaminA],['foodVitaminC',f.vitaminC],['foodVitaminD',f.vitaminD],['foodB12',f.b12],['foodFolate',f.folate]].forEach(([id,v])=>{const el=document.getElementById(id);if(el)el.value=v||'';});
 }
 function saveNutritionTargets(){
   setLocalData(NUTRITION_TARGETS_KEY,{calories:Math.max(0,num('targetCalories')),protein:Math.max(0,num('targetProtein')),carbs:Math.max(0,num('targetCarbs')),fat:Math.max(0,num('targetFat'))});
@@ -848,13 +946,16 @@ function addFood(){
   const name=custom || (selected===foods[0]?'':selected.name);
   if(!name){ flash('Elegí un alimento o escribí uno personalizado.'); return; }
   const grams=Math.max(1,num('foodQuantity')||100);
-  const factor=grams/100;
-  const entry={id:uid('food'),date:document.getElementById('nutritionDate').value||todayStr(),meal:document.getElementById('nutritionMeal').value,name,grams,calories:Math.round(num('foodCalories')*factor),protein:Number((num('foodProtein')*factor).toFixed(1)),carbs:Number((num('foodCarbs')*factor).toFixed(1)),fat:Number((num('foodFat')*factor).toFixed(1)),savedAt:new Date().toISOString()};
-  const entries=getLocalData(NUTRITION_ENTRIES_KEY,[]); entries.push(entry); setLocalData(NUTRITION_ENTRIES_KEY,entries);
+  const date=document.getElementById('nutritionDate').value||todayStr();
+  const meal=document.getElementById('nutritionMeal').value;
+  let food=selected;
   if(custom){
-    saveCustomFoodDefinition({name:custom,calories:num('foodCalories'),protein:num('foodProtein'),carbs:num('foodCarbs'),fat:num('foodFat')});
+    food=saveCustomFoodDefinition({name:custom,calories:num('foodCalories'),protein:num('foodProtein'),carbs:num('foodCarbs'),fat:num('foodFat'),fiber:num('foodFiber'),sodium:num('foodSodium'),potassium:num('foodPotassium'),calcium:num('foodCalcium'),iron:num('foodIron'),magnesium:num('foodMagnesium'),zinc:num('foodZinc'),vitaminA:num('foodVitaminA'),vitaminC:num('foodVitaminC'),vitaminD:num('foodVitaminD'),b12:num('foodB12'),folate:num('foodFolate')});
     populateFoods();
   }
+  const entries=getLocalData(NUTRITION_ENTRIES_KEY,[]);
+  entries.push({...buildFoodEntry(food,grams,meal,date),source:custom?'alimento personalizado':'registro manual'});
+  setLocalData(NUTRITION_ENTRIES_KEY,entries);
   document.getElementById('customFoodName').value='';
   renderNutrition();
   flash('Alimento añadido.');
@@ -908,7 +1009,9 @@ function findCatalogFood(value){
 }
 function buildFoodEntry(food, grams, meal, date){
   const factor=grams/100;
-  return {id:uid('food'),date,meal,name:food.name,grams,calories:Math.round(food.calories*factor),protein:Number((food.protein*factor).toFixed(1)),carbs:Number((food.carbs*factor).toFixed(1)),fat:Number((food.fat*factor).toFixed(1)),source:'asistente local',savedAt:new Date().toISOString()};
+  const nutrients={};
+  Object.keys(window.NUTRIENT_DEFINITIONS||{}).forEach(key=>{if(!['calories','protein','carbs','fat','water'].includes(key))nutrients[key]=Number(((Number(food[key]??food.nutrients?.[key])||0)*factor).toFixed(3));});
+  return {id:uid('food'),foodId:food.id||'',date,meal,name:food.name,grams,calories:Math.round(food.calories*factor),protein:Number((food.protein*factor).toFixed(1)),carbs:Number((food.carbs*factor).toFixed(1)),fat:Number((food.fat*factor).toFixed(1)),nutrients,source:'asistente local',savedAt:new Date().toISOString()};
 }
 const ASSISTANT_UNIT_PATTERN='kg|kilogramos?|kilos?|gramos?|gr|g|mililitros?|ml|litros?|lts?|l|unidades?|uds?|tazas?|cucharadas?|cucharaditas?|scoops?|medidas?|rebanadas?|rodajas?|vasos?|porciones?|latas?|botellas?';
 function normalizeQuantityWords(value){
@@ -1680,7 +1783,8 @@ function setModule(module){
   const meta={
     protocolo:['Protocolo 0→100','Atención, pantalla y hábitos diarios'],
     gym:['Gym','Rutinas, ejercicios y progresión'],
-    nutricion:['Nutrición','Comidas, macros, agua y peso']
+    nutricion:['Nutrición','Comidas, cobertura y recomendaciones'],
+    progreso:['Progreso y recompensas','Score integral, Focus Coins y rankings']
   };
   activeModule=meta[module]?module:'protocolo';
   document.body.dataset.module=activeModule;
@@ -1696,12 +1800,13 @@ function setModule(module){
 function activateTab(tabName){
   if(['registro','dashboard','telefono','plan','guia'].includes(tabName)) lastProtocolTab=tabName;
   document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active', b.dataset.tab===tabName));
-  ['registro','dashboard','gym','nutricion','telefono','plan','guia'].forEach(t=>{
+  ['registro','dashboard','gym','nutricion','progreso','telefono','plan','guia'].forEach(t=>{
     const el=document.getElementById('tab-'+t); if(el) el.classList.toggle('hidden', t!==tabName);
   });
   if(tabName==='dashboard') drawChart();
   if(tabName==='gym') renderGym();
   if(tabName==='nutricion') renderNutrition();
+  if(tabName==='progreso' && window.renderAdvancedProgress) window.renderAdvancedProgress();
 }
 function openGuide(id){
   renderHelpGuide();
@@ -1935,7 +2040,7 @@ function updateUI(){ updatePlanUI(); updateScorePreview(); }
 function renderAll(){ updateUI(); renderStats(); renderPeriodMetrics(); renderInsights(); renderBadges(); renderHistory(); renderPlanTable(); drawChart(); updatePhonePanel(); renderGym(); renderNutrition(); }
 
 function exportJson(){
-  const data={startDate:document.getElementById('startDate').value, entries:getEntries(), gymSessions:getLocalData(GYM_SESSIONS_KEY,[]), nutritionEntries:getLocalData(NUTRITION_ENTRIES_KEY,[]), nutritionTargets:nutritionTargets(), bodyMetrics:getLocalData(BODY_METRICS_KEY,{}), customFoods:getLocalData(CUSTOM_FOODS_KEY,[]), nutritionAliases:getLocalData(NUTRITION_ALIASES_KEY,{}), exportedAt:new Date().toISOString()};
+  const data=window.buildCompleteBackup?window.buildCompleteBackup():{startDate:document.getElementById('startDate').value, entries:getEntries(), gymSessions:getLocalData(GYM_SESSIONS_KEY,[]), nutritionEntries:getLocalData(NUTRITION_ENTRIES_KEY,[]), nutritionTargets:nutritionTargets(), bodyMetrics:getLocalData(BODY_METRICS_KEY,{}), customFoods:getLocalData(CUSTOM_FOODS_KEY,[]), nutritionAliases:getLocalData(NUTRITION_ALIASES_KEY,{}), exportedAt:new Date().toISOString()};
   downloadBlob(JSON.stringify(data,null,2),'protocolo_0_100_registros.json','application/json');
 }
 function exportCsv(){
@@ -1949,7 +2054,7 @@ function downloadBlob(content,name,type){
 }
 function importJson(file){
   const reader=new FileReader(); reader.onload=()=>{
-    try{ const data=JSON.parse(reader.result); if(Array.isArray(data.entries)){ setEntries(data.entries); if(Array.isArray(data.gymSessions)) setLocalData(GYM_SESSIONS_KEY,data.gymSessions); if(Array.isArray(data.nutritionEntries)) setLocalData(NUTRITION_ENTRIES_KEY,data.nutritionEntries); if(data.nutritionTargets) setLocalData(NUTRITION_TARGETS_KEY,data.nutritionTargets); if(data.bodyMetrics) setLocalData(BODY_METRICS_KEY,data.bodyMetrics); if(Array.isArray(data.customFoods)) setLocalData(CUSTOM_FOODS_KEY,data.customFoods); if(data.nutritionAliases) setLocalData(NUTRITION_ALIASES_KEY,data.nutritionAliases); if(data.startDate){document.getElementById('startDate').value=data.startDate; localStorage.setItem(START_KEY,data.startDate)} populateFoods(); loadNutritionTargets(); loadBodyMetricsForDate(); renderAll(); flash('Importación completa.'); } else alert('JSON inválido: no contiene entries.'); }
+    try{ const data=JSON.parse(reader.result); if(Array.isArray(data.entries)||data.schemaVersion){ if(Array.isArray(data.entries))setEntries(data.entries); if(Array.isArray(data.gymSessions)) setLocalData(GYM_SESSIONS_KEY,data.gymSessions); if(Array.isArray(data.nutritionEntries)) setLocalData(NUTRITION_ENTRIES_KEY,data.nutritionEntries); if(data.nutritionTargets) setLocalData(NUTRITION_TARGETS_KEY,data.nutritionTargets); if(data.bodyMetrics) setLocalData(BODY_METRICS_KEY,data.bodyMetrics); if(Array.isArray(data.customFoods)) setLocalData(CUSTOM_FOODS_KEY,data.customFoods); if(data.nutritionAliases) setLocalData(NUTRITION_ALIASES_KEY,data.nutritionAliases); if(data.startDate){document.getElementById('startDate').value=data.startDate; localStorage.setItem(START_KEY,data.startDate)} if(window.importCompleteBackupData)window.importCompleteBackupData(data); populateFoods(); loadNutritionTargets(); loadBodyMetricsForDate(); renderAll(); flash('Importación completa.'); } else alert('JSON inválido: no contiene datos compatibles.'); }
     catch(e){ alert('No pude leer el JSON.'); }
   }; reader.readAsText(file);
 }
@@ -2197,5 +2302,6 @@ renderAll();
 setModule(localStorage.getItem(ACTIVE_MODULE_KEY)||'protocolo');
 maybeAutoShowActionModal();
 </script>
+<script src="advanced-features.js"></script>
 </body>
 </html>
