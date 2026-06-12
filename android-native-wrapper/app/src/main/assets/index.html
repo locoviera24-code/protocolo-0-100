@@ -222,8 +222,23 @@
     .assistantBox{border:1px solid rgba(152,245,194,.30); background:linear-gradient(135deg,rgba(152,245,194,.10),rgba(114,214,255,.07)); border-radius:16px; padding:14px; margin-top:12px;}
     .assistantBox textarea{min-height:74px;}
     .assistantResult{margin-top:10px; display:grid; gap:7px;}
+    .assistantExamples{display:flex; flex-wrap:wrap; gap:7px; margin-top:10px;}
+    .assistantExample{padding:7px 9px; border-radius:999px; font-size:11px; color:#dff6ff; background:rgba(114,214,255,.08); border:1px solid rgba(114,214,255,.25);}
+    .assistantPreview{display:grid; gap:10px; margin-top:12px;}
+    .assistantPreviewRow{border:1px solid var(--line); border-radius:15px; padding:12px; background:rgba(0,0,0,.14);}
+    .assistantPreviewTop{display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:9px;}
+    .assistantPreviewGrid{display:grid; grid-template-columns:minmax(150px,1fr) 110px; gap:9px;}
+    .assistantPreviewMeta{display:flex; flex-wrap:wrap; gap:6px; margin-top:9px; color:var(--muted); font-size:12px;}
+    .assistantConfidence{display:inline-flex; padding:4px 7px; border-radius:999px; border:1px solid var(--line); font-size:11px; font-weight:850;}
+    .assistantConfidence.high{color:#092018; background:var(--accent2); border-color:transparent;}
+    .assistantConfidence.medium{color:#362b06; background:var(--warn); border-color:transparent;}
+    .assistantConfidence.low{color:#ffd3d3; background:#4a2530; border-color:#743746;}
+    .assistantCustomGrid{display:grid; grid-template-columns:2fr repeat(4,1fr); gap:7px; margin-top:10px;}
+    .assistantCustomGrid input{padding:8px; font-size:12px;}
+    .assistantTotals{border:1px solid rgba(152,245,194,.28); border-radius:14px; padding:11px; background:rgba(152,245,194,.07); font-size:13px; line-height:1.5;}
     @media(max-width:800px){.moduleGrid{grid-template-columns:1fr}.quickStats{grid-template-columns:repeat(2,1fr)}}
-    @media(max-width:480px){.quickStats{grid-template-columns:1fr}.macroRow{grid-template-columns:72px 1fr 76px}.entryRow{grid-template-columns:1fr}.entryRow button{justify-self:start}}
+    @media(max-width:600px){.assistantPreviewGrid,.assistantCustomGrid{grid-template-columns:1fr 1fr}.assistantCustomGrid input:first-child{grid-column:1/-1}}
+    @media(max-width:480px){.quickStats{grid-template-columns:1fr}.macroRow{grid-template-columns:72px 1fr 76px}.entryRow{grid-template-columns:1fr}.entryRow button{justify-self:start}.assistantPreviewGrid{grid-template-columns:1fr}}
 
     @media print{body{background:white;color:black}.panel,.stat,.phaseCard,.mini,.history{box-shadow:none;border-color:#ccc;background:white;color:black}.buttons,.tabs,#importFile{display:none!important}.app{max-width:100%;padding:0}.grid{display:block}.panel{page-break-inside:avoid;margin-bottom:14px}.muted,.small,label{color:#333}input,textarea,select{border-color:#aaa;color:black;background:white}}
   </style>
@@ -424,14 +439,21 @@
             </div>
 
             <div class="assistantBox">
-              <h3>✨ Asistente nutricional local</h3>
-              <div class="muted small">Escribí o dictá, por ejemplo: “Comí 200 gramos de pechuga y 150 gramos de arroz cocido”. El análisis se hace en tu dispositivo.</div>
-              <div class="field" style="margin-top:10px"><textarea id="nutritionAssistantInput" placeholder="Contame qué comiste y cuántos gramos…"></textarea></div>
+              <h3>✨ Asistente nutricional inteligente y privado</h3>
+              <div class="muted small">Contale naturalmente qué comiste. Entiende gramos, kilos, mililitros, unidades y medidas caseras; luego te muestra una vista previa para corregir antes de guardar. Todo se analiza en tu dispositivo.</div>
+              <div class="assistantExamples">
+                <button type="button" class="assistantExample" data-assistant-example="Desayuné 2 huevos, 2 rebanadas de pan integral y una banana">2 huevos + pan + banana</button>
+                <button type="button" class="assistantExample" data-assistant-example="Almorcé 200 g de pechuga con una taza de arroz cocido">pollo + taza de arroz</button>
+                <button type="button" class="assistantExample" data-assistant-example="Ayer cené salmón 180g y media palta">salmón + media palta</button>
+              </div>
+              <div class="field" style="margin-top:10px"><textarea id="nutritionAssistantInput" placeholder="Ej. Almorcé 200 g de pollo, una taza de arroz y media palta"></textarea></div>
               <div class="buttons">
-                <button type="button" class="good" id="analyzeNutritionBtn">Analizar y registrar</button>
+                <button type="button" class="good" id="analyzeNutritionBtn">Analizar comida</button>
                 <button type="button" class="secondary" id="speakNutritionBtn">🎙️ Hablar</button>
+                <button type="button" class="secondary" id="clearNutritionAssistantBtn">Limpiar</button>
               </div>
               <div class="assistantResult" id="nutritionAssistantResult"></div>
+              <div class="assistantPreview" id="nutritionAssistantPreview"></div>
             </div>
 
             <div class="moduleCard">
@@ -582,6 +604,8 @@ const NUTRITION_ENTRIES_KEY = 'protocolo_0_100_nutrition_entries_v1';
 const NUTRITION_TARGETS_KEY = 'protocolo_0_100_nutrition_targets_v1';
 const BODY_METRICS_KEY = 'protocolo_0_100_body_metrics_v1';
 const ACTIVE_MODULE_KEY = 'protocolo_0_100_active_module_v1';
+const CUSTOM_FOODS_KEY = 'protocolo_0_100_custom_foods_v1';
+const NUTRITION_ALIASES_KEY = 'protocolo_0_100_nutrition_aliases_v1';
 
 const EXERCISE_CATALOG = {
   'Pecho':['Press banca con barra','Press inclinado con mancuernas','Fondos','Aperturas en polea','Flexiones'],
@@ -604,20 +628,54 @@ const GYM_TEMPLATES = {
 };
 const FOOD_CATALOG = [
   {name:'Seleccionar alimento…',aliases:[],calories:0,protein:0,carbs:0,fat:0},
-  {name:'Pechuga de pollo',aliases:['pechuga','pollo','pechuga de pollo'],calories:165,protein:31,carbs:0,fat:3.6},
-  {name:'Carne magra',aliases:['carne','carne magra','vacuno'],calories:200,protein:26,carbs:0,fat:10},
-  {name:'Huevo',aliases:['huevo','huevos'],calories:143,protein:12.6,carbs:0.7,fat:9.5},
-  {name:'Arroz cocido',aliases:['arroz','arroz cocido'],calories:130,protein:2.7,carbs:28,fat:0.3},
-  {name:'Avena',aliases:['avena'],calories:380,protein:13,carbs:68,fat:7},
-  {name:'Papa cocida',aliases:['papa','papas','patata','papa cocida'],calories:87,protein:1.9,carbs:20,fat:0.1},
-  {name:'Banana',aliases:['banana','bananas','platano','plátano'],calories:89,protein:1.1,carbs:23,fat:0.3},
-  {name:'Leche entera',aliases:['leche','leche entera'],calories:61,protein:3.2,carbs:4.8,fat:3.3},
-  {name:'Yogur griego',aliases:['yogur','yogurt','yogur griego'],calories:59,protein:10,carbs:3.6,fat:0.4},
-  {name:'Pan integral',aliases:['pan','pan integral'],calories:247,protein:13,carbs:41,fat:3.4},
-  {name:'Aceite de oliva',aliases:['aceite','aceite de oliva'],calories:884,protein:0,carbs:0,fat:100},
-  {name:'Proteína whey',aliases:['whey','proteina','proteína','proteina whey','proteína whey'],calories:400,protein:80,carbs:10,fat:6.7}
+  {name:'Agua',aliases:['agua','agua mineral'],calories:0,protein:0,carbs:0,fat:0,units:{vaso:250,taza:240,botella:500},kind:'water'},
+  {name:'Pechuga de pollo',aliases:['pechuga','pollo','pechuga de pollo','pollo a la plancha'],calories:165,protein:31,carbs:0,fat:3.6,units:{porcion:150}},
+  {name:'Muslo de pollo',aliases:['muslo','muslo de pollo'],calories:209,protein:26,carbs:0,fat:10.9,units:{unidad:110}},
+  {name:'Pechuga de pavo',aliases:['pavo','pechuga de pavo'],calories:135,protein:30,carbs:0,fat:1,units:{porcion:150}},
+  {name:'Carne magra',aliases:['carne','carne magra','vacuno','carne vacuna'],calories:200,protein:26,carbs:0,fat:10,units:{porcion:150}},
+  {name:'Lomo de cerdo',aliases:['cerdo','lomo de cerdo'],calories:196,protein:27,carbs:0,fat:9,units:{porcion:150}},
+  {name:'Salmón',aliases:['salmon','salmón'],calories:208,protein:20,carbs:0,fat:13,units:{porcion:150}},
+  {name:'Atún al natural',aliases:['atun','atún','atun al natural','lata de atun'],calories:116,protein:26,carbs:0,fat:1,units:{lata:120,porcion:120}},
+  {name:'Pescado blanco',aliases:['pescado','pescado blanco','merluza','tilapia'],calories:110,protein:23,carbs:0,fat:2,units:{porcion:150}},
+  {name:'Camarones',aliases:['camaron','camarones','gambas'],calories:99,protein:24,carbs:.2,fat:.3,units:{porcion:150}},
+  {name:'Huevo',aliases:['huevo','huevos'],calories:143,protein:12.6,carbs:.7,fat:9.5,units:{unidad:50}},
+  {name:'Clara de huevo',aliases:['clara','claras','clara de huevo','claras de huevo'],calories:52,protein:10.9,carbs:.7,fat:.2,units:{unidad:33}},
+  {name:'Tofu',aliases:['tofu'],calories:144,protein:17,carbs:2.8,fat:8.7,units:{porcion:150}},
+  {name:'Lentejas cocidas',aliases:['lenteja','lentejas','lentejas cocidas'],calories:116,protein:9,carbs:20,fat:.4,units:{taza:198,porcion:180}},
+  {name:'Garbanzos cocidos',aliases:['garbanzo','garbanzos','garbanzos cocidos'],calories:164,protein:8.9,carbs:27.4,fat:2.6,units:{taza:164,porcion:180}},
+  {name:'Porotos cocidos',aliases:['poroto','porotos','frijol','frijoles','judias'],calories:127,protein:8.7,carbs:22.8,fat:.5,units:{taza:177,porcion:180}},
+  {name:'Arroz cocido',aliases:['arroz','arroz cocido','arroz blanco'],calories:130,protein:2.7,carbs:28,fat:.3,units:{taza:158,porcion:150}},
+  {name:'Arroz integral cocido',aliases:['arroz integral','arroz integral cocido'],calories:123,protein:2.7,carbs:25.6,fat:1,units:{taza:195,porcion:150}},
+  {name:'Pasta cocida',aliases:['pasta','fideos','tallarines','pasta cocida'],calories:157,protein:5.8,carbs:30.9,fat:.9,units:{taza:140,porcion:180}},
+  {name:'Quinoa cocida',aliases:['quinoa','quinoa cocida'],calories:120,protein:4.4,carbs:21.3,fat:1.9,units:{taza:185,porcion:150}},
+  {name:'Avena',aliases:['avena','copos de avena'],calories:380,protein:13,carbs:68,fat:7,units:{taza:80,porcion:40}},
+  {name:'Papa cocida',aliases:['papa','papas','patata','papa cocida'],calories:87,protein:1.9,carbs:20,fat:.1,units:{unidad:170,porcion:200}},
+  {name:'Batata cocida',aliases:['batata','batatas','boniato','camote'],calories:90,protein:2,carbs:20.7,fat:.2,units:{unidad:180,porcion:200}},
+  {name:'Pan integral',aliases:['pan','pan integral','tostada integral'],calories:247,protein:13,carbs:41,fat:3.4,units:{rebanada:30,unidad:30}},
+  {name:'Tortilla de trigo',aliases:['tortilla','tortilla de trigo','wrap'],calories:312,protein:8.3,carbs:52,fat:8.3,units:{unidad:45}},
+  {name:'Leche entera',aliases:['leche','leche entera'],calories:61,protein:3.2,carbs:4.8,fat:3.3,units:{taza:240,vaso:250}},
+  {name:'Leche descremada',aliases:['leche descremada','leche desnatada','leche light'],calories:35,protein:3.4,carbs:5,fat:.1,units:{taza:240,vaso:250}},
+  {name:'Yogur griego',aliases:['yogur','yogurt','yogur griego','yogurt griego'],calories:59,protein:10,carbs:3.6,fat:.4,units:{unidad:150,taza:245}},
+  {name:'Queso fresco',aliases:['queso','queso fresco'],calories:264,protein:18,carbs:3,fat:20,units:{rebanada:30,porcion:40}},
+  {name:'Banana',aliases:['banana','bananas','platano','plátano'],calories:89,protein:1.1,carbs:23,fat:.3,units:{unidad:120}},
+  {name:'Manzana',aliases:['manzana','manzanas'],calories:52,protein:.3,carbs:14,fat:.2,units:{unidad:180}},
+  {name:'Naranja',aliases:['naranja','naranjas'],calories:47,protein:.9,carbs:12,fat:.1,units:{unidad:140}},
+  {name:'Frutilla',aliases:['frutilla','frutillas','fresa','fresas'],calories:32,protein:.7,carbs:7.7,fat:.3,units:{taza:150}},
+  {name:'Palta',aliases:['palta','aguacate','avocado'],calories:160,protein:2,carbs:8.5,fat:14.7,units:{unidad:150}},
+  {name:'Brócoli',aliases:['brocoli','brócoli'],calories:35,protein:2.4,carbs:7.2,fat:.4,units:{taza:155,porcion:150}},
+  {name:'Tomate',aliases:['tomate','tomates'],calories:18,protein:.9,carbs:3.9,fat:.2,units:{unidad:123,taza:180}},
+  {name:'Zanahoria',aliases:['zanahoria','zanahorias'],calories:41,protein:.9,carbs:10,fat:.2,units:{unidad:60,taza:128}},
+  {name:'Espinaca',aliases:['espinaca'],calories:23,protein:2.9,carbs:3.6,fat:.4,units:{taza:30}},
+  {name:'Aceite de oliva',aliases:['aceite','aceite de oliva'],calories:884,protein:0,carbs:0,fat:100,units:{cucharada:14,cucharadita:4.5}},
+  {name:'Mantequilla de maní',aliases:['mantequilla de mani','manteca de mani','crema de cacahuate'],calories:588,protein:25,carbs:20,fat:50,units:{cucharada:16}},
+  {name:'Almendras',aliases:['almendra','almendras'],calories:579,protein:21,carbs:22,fat:50,units:{unidad:1.2,porcion:30}},
+  {name:'Nueces',aliases:['nuez','nueces'],calories:654,protein:15,carbs:14,fat:65,units:{unidad:4,porcion:30}},
+  {name:'Proteína whey',aliases:['whey','proteina','proteína','proteina whey','proteína whey','batido de proteina'],calories:400,protein:80,carbs:10,fat:6.7,units:{scoop:30,porcion:30}},
+  {name:'Azúcar',aliases:['azucar','azúcar'],calories:387,protein:0,carbs:100,fat:0,units:{cucharada:12.5,cucharadita:4.2}},
+  {name:'Miel',aliases:['miel'],calories:304,protein:.3,carbs:82.4,fat:0,units:{cucharada:21,cucharadita:7}}
 ];
 let gymDraft = [];
+let nutritionAssistantDraft = [];
 let activeModule = 'protocolo';
 let lastProtocolTab = 'registro';
 
@@ -757,13 +815,25 @@ function loadNutritionTargets(){
   const t=nutritionTargets();
   [['targetCalories',t.calories],['targetProtein',t.protein],['targetCarbs',t.carbs],['targetFat',t.fat]].forEach(([id,v])=>{const el=document.getElementById(id);if(el)el.value=v;});
 }
+function allFoods(){ return [...FOOD_CATALOG,...getLocalData(CUSTOM_FOODS_KEY,[])]; }
+function availableFoods(){ return allFoods().slice(1); }
+function saveCustomFoodDefinition(food){
+  const foods=getLocalData(CUSTOM_FOODS_KEY,[]);
+  const key=normalizeFoodText(food.name);
+  const existing=foods.findIndex(f=>normalizeFoodText(f.name)===key);
+  const clean={name:food.name.trim(),aliases:[food.name.trim(),...(food.aliases||[])],calories:Math.max(0,Number(food.calories)||0),protein:Math.max(0,Number(food.protein)||0),carbs:Math.max(0,Number(food.carbs)||0),fat:Math.max(0,Number(food.fat)||0),units:food.units||{},custom:true};
+  if(existing>=0) foods[existing]=clean; else foods.push(clean);
+  setLocalData(CUSTOM_FOODS_KEY,foods);
+  return clean;
+}
 function populateFoods(){
   const select=document.getElementById('nutritionFood'); if(!select) return;
-  select.innerHTML=FOOD_CATALOG.map((f,i)=>`<option value="${i}">${escapeHtml(f.name)}</option>`).join('');
+  select.innerHTML=allFoods().map((f,i)=>`<option value="${i}">${escapeHtml(f.name)}${f.custom?' · propio':''}</option>`).join('');
   applySelectedFood();
 }
 function applySelectedFood(){
-  const f=FOOD_CATALOG[Number(document.getElementById('nutritionFood')?.value)||0] || FOOD_CATALOG[0];
+  const foods=allFoods();
+  const f=foods[Number(document.getElementById('nutritionFood')?.value)||0] || foods[0];
   [['foodCalories',f.calories],['foodProtein',f.protein],['foodCarbs',f.carbs],['foodFat',f.fat]].forEach(([id,v])=>{const el=document.getElementById(id);if(el)el.value=v||'';});
 }
 function saveNutritionTargets(){
@@ -772,66 +842,292 @@ function saveNutritionTargets(){
   flash('Objetivos nutricionales guardados.');
 }
 function addFood(){
-  const selected=FOOD_CATALOG[Number(document.getElementById('nutritionFood').value)||0] || FOOD_CATALOG[0];
+  const foods=allFoods();
+  const selected=foods[Number(document.getElementById('nutritionFood').value)||0] || foods[0];
   const custom=document.getElementById('customFoodName').value.trim();
-  const name=custom || (selected===FOOD_CATALOG[0]?'':selected.name);
+  const name=custom || (selected===foods[0]?'':selected.name);
   if(!name){ flash('Elegí un alimento o escribí uno personalizado.'); return; }
   const grams=Math.max(1,num('foodQuantity')||100);
   const factor=grams/100;
   const entry={id:uid('food'),date:document.getElementById('nutritionDate').value||todayStr(),meal:document.getElementById('nutritionMeal').value,name,grams,calories:Math.round(num('foodCalories')*factor),protein:Number((num('foodProtein')*factor).toFixed(1)),carbs:Number((num('foodCarbs')*factor).toFixed(1)),fat:Number((num('foodFat')*factor).toFixed(1)),savedAt:new Date().toISOString()};
   const entries=getLocalData(NUTRITION_ENTRIES_KEY,[]); entries.push(entry); setLocalData(NUTRITION_ENTRIES_KEY,entries);
+  if(custom){
+    saveCustomFoodDefinition({name:custom,calories:num('foodCalories'),protein:num('foodProtein'),carbs:num('foodCarbs'),fat:num('foodFat')});
+    populateFoods();
+  }
   document.getElementById('customFoodName').value='';
   renderNutrition();
   flash('Alimento añadido.');
 }
 function normalizeFoodText(value){ return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^\p{L}\p{N}\s]/gu,' ').replace(/\s+/g,' ').trim(); }
+function cleanFoodQuery(value){
+  return normalizeFoodText(value)
+    .replace(/\b(?:aproximadamente|aprox|unos|unas|el|la|los|las|de|del)\b/g,' ')
+    .replace(/\b(?:a la plancha|al horno|hervido|hervida|frito|frita)\b/g,' ')
+    .replace(/\s+/g,' ').trim();
+}
+function editDistance(a,b){
+  const row=Array.from({length:b.length+1},(_,i)=>i);
+  for(let i=1;i<=a.length;i++){
+    let previous=row[0]; row[0]=i;
+    for(let j=1;j<=b.length;j++){
+      const old=row[j];
+      row[j]=Math.min(row[j]+1,row[j-1]+1,previous+(a[i-1]===b[j-1]?0:1));
+      previous=old;
+    }
+  }
+  return row[b.length];
+}
+function textSimilarity(a,b){
+  if(!a||!b) return 0;
+  if(a===b) return 1;
+  const at=new Set(a.split(' ')), bt=new Set(b.split(' '));
+  const shared=[...at].filter(t=>bt.has(t)).length;
+  const tokenScore=shared/Math.max(at.size,bt.size);
+  const charScore=1-(editDistance(a,b)/Math.max(a.length,b.length));
+  const contained=(a.includes(b)||b.includes(a)) && Math.min(a.length,b.length)>=4 ? .92 : 0;
+  return Math.max(tokenScore*.88,charScore*.82,contained);
+}
 function findCatalogFood(value){
-  const needle=normalizeFoodText(value).replace(/\b(?:cocido|cocida|entera|magro|magra)\b/g,'').trim();
-  return FOOD_CATALOG.slice(1).find(food=>(food.aliases||[food.name]).some(alias=>{const a=normalizeFoodText(alias);return needle===a || needle.includes(a) || a.includes(needle);}));
+  const needle=cleanFoodQuery(value);
+  const learned=getLocalData(NUTRITION_ALIASES_KEY,{});
+  const learnedName=learned[needle];
+  if(learnedName){
+    const learnedFood=availableFoods().find(f=>normalizeFoodText(f.name)===normalizeFoodText(learnedName));
+    if(learnedFood) return {food:learnedFood,confidence:1,matchedAlias:needle,learned:true};
+  }
+  let best={food:null,confidence:0,matchedAlias:''};
+  availableFoods().forEach(food=>{
+    [food.name,...(food.aliases||[])].forEach(alias=>{
+      const normalizedAlias=cleanFoodQuery(alias);
+      const score=textSimilarity(needle,normalizedAlias);
+      if(score>best.confidence) best={food,confidence:score,matchedAlias:alias};
+    });
+  });
+  return best.confidence>=.56?best:{food:null,confidence:best.confidence,matchedAlias:best.matchedAlias};
 }
 function buildFoodEntry(food, grams, meal, date){
   const factor=grams/100;
   return {id:uid('food'),date,meal,name:food.name,grams,calories:Math.round(food.calories*factor),protein:Number((food.protein*factor).toFixed(1)),carbs:Number((food.carbs*factor).toFixed(1)),fat:Number((food.fat*factor).toFixed(1)),source:'asistente local',savedAt:new Date().toISOString()};
 }
+const ASSISTANT_UNIT_PATTERN='kg|kilogramos?|kilos?|gramos?|gr|g|mililitros?|ml|litros?|lts?|l|unidades?|uds?|tazas?|cucharadas?|cucharaditas?|scoops?|medidas?|rebanadas?|rodajas?|vasos?|porciones?|latas?|botellas?';
+function normalizeQuantityWords(value){
+  let text=String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/(\d),(\d)/g,'$1.$2');
+  const words=[['un cuarto','0.25'],['una cuarta parte','0.25'],['tres cuartos','0.75'],['medio','0.5'],['media','0.5'],['una','1'],['un','1'],['dos','2'],['tres','3'],['cuatro','4'],['cinco','5'],['seis','6'],['siete','7'],['ocho','8'],['nueve','9'],['diez','10']];
+  words.forEach(([word,n])=>{text=text.replace(new RegExp(`\\b${word}\\b`,'gi'),n);});
+  return text;
+}
+function canonicalUnit(value){
+  const unit=normalizeFoodText(value);
+  if(/^(g|gr|gramo|gramos)$/.test(unit)) return 'g';
+  if(/^(kg|kilo|kilos|kilogramo|kilogramos)$/.test(unit)) return 'kg';
+  if(/^(ml|mililitro|mililitros)$/.test(unit)) return 'ml';
+  if(/^(l|lt|lts|litro|litros)$/.test(unit)) return 'l';
+  if(/^(unidad|unidades|ud|uds)$/.test(unit)) return 'unidad';
+  if(/^taza/.test(unit)) return 'taza';
+  if(/^cucharadita/.test(unit)) return 'cucharadita';
+  if(/^cucharada/.test(unit)) return 'cucharada';
+  if(/^(scoop|scoops|medida|medidas)$/.test(unit)) return 'scoop';
+  if(/^(rebanada|rebanadas|rodaja|rodajas)$/.test(unit)) return 'rebanada';
+  if(/^vaso/.test(unit)) return 'vaso';
+  if(/^porcion/.test(unit)) return 'porcion';
+  if(/^lata/.test(unit)) return 'lata';
+  if(/^botella/.test(unit)) return 'botella';
+  return '';
+}
+function amountToGrams(amount,unit,food){
+  const n=Math.max(0,Number(amount)||0);
+  if(unit==='g') return {grams:n,warning:''};
+  if(unit==='kg') return {grams:n*1000,warning:''};
+  if(unit==='ml') return {grams:n,warning:'Se estimó 1 ml = 1 g; ajustá si el alimento tiene otra densidad.'};
+  if(unit==='l') return {grams:n*1000,warning:'Se estimó 1 ml = 1 g; ajustá si el alimento tiene otra densidad.'};
+  const generic={unidad:100,taza:240,cucharada:15,cucharadita:5,scoop:30,rebanada:30,vaso:250,porcion:100,lata:120,botella:500};
+  const unitGrams=food?.units?.[unit] || generic[unit] || 1;
+  return {grams:n*unitGrams,warning:food?.units?.[unit]?'':`La medida “${unit}” usa una estimación general; revisá los gramos.`};
+}
+function assistantContext(text){
+  const normalized=normalizeFoodText(text);
+  let meal='';
+  if(/\b(desayuno|desayune|desayunado)\b/.test(normalized)) meal='Desayuno';
+  else if(/\b(almuerzo|almorce|almorzado)\b/.test(normalized)) meal='Almuerzo';
+  else if(/\b(cena|cene|cenado)\b/.test(normalized)) meal='Cena';
+  else if(/\b(snack|merienda|merende|colacion)\b/.test(normalized)) meal='Snack';
+  const date=new Date();
+  if(/\banteayer\b/.test(normalized)) date.setDate(date.getDate()-2);
+  else if(/\bayer\b/.test(normalized)) date.setDate(date.getDate()-1);
+  return {meal,date:`${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`};
+}
+function assistantSegments(text){
+  return normalizeQuantityWords(text)
+    .replace(/\b(?:he comido|comi|comido|consumi|ingeri|tome|bebi|bebido|desayune|almorce|cene|merende)\b/gi,' ')
+    .replace(/\b(?:para|en)\s+(?:el|la)\s+(?:desayuno|almuerzo|cena|merienda)\b/gi,' ')
+    .replace(/\b(?:hoy|ayer|anteayer|desayuno|almuerzo|cena|merienda|snack)\b/gi,' ')
+    .split(/\s+(?:y|mas|más|tambien|también|con)\s+|[,;\n]+/gi)
+    .map(s=>s.replace(/\s+/g,' ').trim())
+    .filter(Boolean);
+}
+function parseAssistantSegment(segment){
+  const unitPattern=new RegExp(`^\\s*(\\d+(?:\\.\\d+)?)\\s*(${ASSISTANT_UNIT_PATTERN})\\b\\s*(?:de\\s+)?(.+?)\\s*$`,'i');
+  const foodFirstPattern=new RegExp(`^\\s*(.+?)\\s+(\\d+(?:\\.\\d+)?)\\s*(${ASSISTANT_UNIT_PATTERN})\\s*$`,'i');
+  let match=segment.match(unitPattern);
+  let amount,unit,query,warning='';
+  if(match){ amount=Number(match[1]); unit=canonicalUnit(match[2]); query=match[3]; }
+  else if((match=segment.match(foodFirstPattern))){ query=match[1]; amount=Number(match[2]); unit=canonicalUnit(match[3]); }
+  else if((match=segment.match(/^\s*(\d+(?:\.\d+)?)\s+(?:de\s+)?(.+?)\s*$/i))){ amount=Number(match[1]); query=match[2]; }
+  else { amount=100; unit='g'; query=segment; warning='No indicaste cantidad; se propusieron 100 g para que puedas corregirlos.'; }
+  const matched=findCatalogFood(query);
+  if(!unit){
+    unit=matched.food?.units?.unidad?'unidad':'g';
+    if(unit==='g') warning=warning||'Interpreté la cantidad como gramos; revisala antes de guardar.';
+  }
+  const converted=amountToGrams(amount,unit,matched.food);
+  return {id:uid('draftfood'),raw:segment,foodQuery:cleanFoodQuery(query),food:matched.food,confidence:matched.confidence,amount,unit,grams:Math.max(1,Math.round(converted.grams*10)/10),warning:warning||converted.warning};
+}
+function parseNutritionStatement(text){
+  const context=assistantContext(text);
+  return {...context,items:assistantSegments(text).map(parseAssistantSegment)};
+}
+function confidenceInfo(item){
+  if(!item.food) return {className:'low',label:'Sin reconocer'};
+  if(item.confidence>=.9) return {className:'high',label:'Coincidencia alta'};
+  if(item.confidence>=.7) return {className:'medium',label:'Revisar coincidencia'};
+  return {className:'low',label:'Coincidencia dudosa'};
+}
+function assistantNutritionInsight(items){
+  if(!items.length) return '';
+  const water=items.filter(i=>i.food?.kind==='water').reduce((sum,i)=>sum+i.grams,0);
+  const foods=items.filter(i=>i.food?.kind!=='water');
+  if(!foods.length) return `<div class="auditItem good"><strong>Hidratación:</strong> se sumarán ${Math.round(water)} ml al agua registrada del día.</div>`;
+  const meal=nutritionTotals(foods.map(i=>buildFoodEntry(i.food,i.grams,'','')));
+  const date=document.getElementById('nutritionDate').value||todayStr();
+  const previous=nutritionTotals(getLocalData(NUTRITION_ENTRIES_KEY,[]).filter(e=>e.date===date));
+  const projected={calories:previous.calories+meal.calories,protein:previous.protein+meal.protein,carbs:previous.carbs+meal.carbs,fat:previous.fat+meal.fat};
+  const target=nutritionTargets();
+  const notes=[];
+  if(meal.protein>=25) notes.push('Buena presencia de proteína en esta comida.');
+  else if(meal.calories>=250 && meal.protein<15) notes.push('Esta comida parece baja en proteína; revisá si falta registrar alguna fuente.');
+  if(projected.calories>target.calories*1.1) notes.push('La proyección supera el objetivo calórico diario en más de 10%.');
+  else notes.push(`Después de registrarla quedarían unas ${Math.max(0,Math.round(target.calories-projected.calories))} kcal y ${Math.max(0,Math.round(target.protein-projected.protein))} g de proteína para el objetivo del día.`);
+  return `<div class="auditItem"><strong>Lectura inteligente:</strong> ${escapeHtml(notes.join(' '))} Valores orientativos; ajustá alimentos y gramos según la etiqueta o preparación real.</div>`;
+}
+function assistantFoodOptions(selected){
+  return `<option value="">Elegí un alimento…</option>${availableFoods().map(f=>`<option value="${escapeHtml(f.name)}"${selected&&normalizeFoodText(selected.name)===normalizeFoodText(f.name)?' selected':''}>${escapeHtml(f.name)}${f.custom?' · propio':''}</option>`).join('')}`;
+}
+function renderNutritionAssistantPreview(){
+  const box=document.getElementById('nutritionAssistantPreview'); if(!box) return;
+  if(!nutritionAssistantDraft.length){ box.innerHTML=''; return; }
+  const resolved=nutritionAssistantDraft.filter(i=>i.food);
+  const totals=nutritionTotals(resolved.map(i=>buildFoodEntry(i.food,i.grams,'','')));
+  box.innerHTML=nutritionAssistantDraft.map(item=>{
+    const confidence=confidenceInfo(item);
+    const factor=item.grams/100;
+    const macro=item.food?.kind==='water'?`${Math.round(item.grams)} ml de hidratación`:item.food?`${Math.round(item.food.calories*factor)} kcal · P ${(item.food.protein*factor).toFixed(1)} · C ${(item.food.carbs*factor).toFixed(1)} · G ${(item.food.fat*factor).toFixed(1)}`:'Seleccioná una coincidencia o creá este alimento.';
+    return `<div class="assistantPreviewRow" data-assistant-row="${escapeHtml(item.id)}">
+      <div class="assistantPreviewTop"><div><strong>${escapeHtml(item.raw)}</strong><div class="muted small">Interpretación editable</div></div><button type="button" class="danger" data-assistant-remove="${escapeHtml(item.id)}">Quitar</button></div>
+      <div class="assistantPreviewGrid"><div class="field"><label>Alimento interpretado</label><select data-assistant-food="${escapeHtml(item.id)}">${assistantFoodOptions(item.food)}</select></div><div class="field"><label>Cantidad final (g)</label><input type="number" min="1" step="0.1" value="${item.grams}" data-assistant-grams="${escapeHtml(item.id)}"></div></div>
+      <div class="assistantPreviewMeta"><span class="assistantConfidence ${confidence.className}">${confidence.label}</span><span>${escapeHtml(macro)}</span></div>
+      ${item.warning?`<div class="auditItem warn" style="margin-top:9px">${escapeHtml(item.warning)}</div>`:''}
+      ${item.food?'':`<div class="assistantCustomGrid"><input data-custom-field="name" value="${escapeHtml(item.foodQuery)}" placeholder="Nombre"><input data-custom-field="calories" type="number" min="0" placeholder="kcal/100g"><input data-custom-field="protein" type="number" min="0" step=".1" placeholder="P/100g"><input data-custom-field="carbs" type="number" min="0" step=".1" placeholder="C/100g"><input data-custom-field="fat" type="number" min="0" step=".1" placeholder="G/100g"></div><div class="buttons"><button type="button" class="secondary" data-assistant-create="${escapeHtml(item.id)}">Crear alimento y usarlo</button></div>`}
+    </div>`;
+  }).join('')+`<div class="assistantTotals"><strong>Vista previa:</strong> ${resolved.length}/${nutritionAssistantDraft.length} alimentos listos · ${Math.round(totals.calories)} kcal · P ${totals.protein.toFixed(1)} g · C ${totals.carbs.toFixed(1)} g · G ${totals.fat.toFixed(1)} g</div>${assistantNutritionInsight(resolved)}<div class="buttons"><button type="button" class="good" id="confirmNutritionAssistantBtn">Confirmar y registrar</button><button type="button" class="secondary" id="cancelNutritionAssistantBtn">Cancelar vista previa</button></div>`;
+}
 function analyzeNutritionText(){
   const input=document.getElementById('nutritionAssistantInput');
   const result=document.getElementById('nutritionAssistantResult');
   const text=input.value.trim();
-  if(!text){ result.innerHTML='<div class="auditItem warn">Escribí qué comiste e incluí los gramos.</div>'; return; }
-  const normalized=text.replace(/\b(com[ií]|comido|consum[ií]|inger[ií]|tom[eé])\b/gi,' ').trim();
-  const pattern=/(\d+(?:[.,]\d+)?)\s*(?:g|gr|gramos?)\s+(?:de\s+)?(.+?)(?=\s+(?:y|mas|más)\s+\d+(?:[.,]\d+)?\s*(?:g|gr|gramos?)|[,;.]|$)/gi;
-  const found=[], unknown=[];
-  let match;
-  while((match=pattern.exec(normalized))!==null){
-    const grams=Math.max(1,Number(match[1].replace(',','.')));
-    const spokenName=match[2].trim();
-    const food=findCatalogFood(spokenName);
-    if(food) found.push({food,grams}); else unknown.push(`${grams} g de ${spokenName}`);
-  }
-  if(!found.length){
-    result.innerHTML='<div class="auditItem warn">No reconocí alimentos con gramos. Probá: “200 gramos de pechuga y 150 gramos de arroz cocido”.</div>';
-    return;
-  }
+  if(!text){ result.innerHTML='<div class="auditItem warn">Contame qué comiste. Podés usar gramos, unidades o medidas caseras.</div>'; return; }
+  const parsed=parseNutritionStatement(text);
+  nutritionAssistantDraft=parsed.items;
+  if(parsed.meal) document.getElementById('nutritionMeal').value=parsed.meal;
+  document.getElementById('nutritionDate').value=parsed.date;
+  renderNutritionAssistantPreview();
+  const unknown=parsed.items.filter(i=>!i.food).length;
+  result.innerHTML=`<div class="auditItem ${unknown?'warn':'good'}">Analicé ${parsed.items.length} elemento${parsed.items.length===1?'':'s'}${parsed.meal?` como ${escapeHtml(parsed.meal.toLowerCase())}`:''}. ${unknown?`${unknown} necesita tu ayuda.`:'Revisá la vista previa y confirmá.'}</div>`;
+}
+function learnAssistantAlias(item,food){
+  const query=cleanFoodQuery(item.foodQuery);
+  if(!query||textSimilarity(query,cleanFoodQuery(food.name))>=.99) return;
+  const aliases=getLocalData(NUTRITION_ALIASES_KEY,{});
+  aliases[query]=food.name;
+  setLocalData(NUTRITION_ALIASES_KEY,aliases);
+}
+function confirmNutritionAssistant(){
+  const result=document.getElementById('nutritionAssistantResult');
+  if(!nutritionAssistantDraft.length) return;
+  const unknown=nutritionAssistantDraft.filter(i=>!i.food);
+  if(unknown.length){ result.innerHTML='<div class="auditItem warn">Antes de registrar, resolvé o quitá los alimentos sin reconocer.</div>'; return; }
   const entries=getLocalData(NUTRITION_ENTRIES_KEY,[]);
   const meal=document.getElementById('nutritionMeal').value;
   const date=document.getElementById('nutritionDate').value||todayStr();
-  found.forEach(item=>entries.push(buildFoodEntry(item.food,item.grams,meal,date)));
+  const metrics=getLocalData(BODY_METRICS_KEY,{});
+  nutritionAssistantDraft.forEach(item=>{
+    if(item.food.kind==='water'){
+      const current=metrics[date]||{};
+      metrics[date]={...current,water:(Number(current.water)||0)+Math.round(item.grams),savedAt:new Date().toISOString()};
+    } else entries.push(buildFoodEntry(item.food,item.grams,meal,date));
+  });
   setLocalData(NUTRITION_ENTRIES_KEY,entries);
-  input.value='';
+  setLocalData(BODY_METRICS_KEY,metrics);
+  const count=nutritionAssistantDraft.length;
+  nutritionAssistantDraft=[];
+  document.getElementById('nutritionAssistantInput').value='';
   renderNutrition();
-  result.innerHTML=`<div class="auditItem good">Registrado: ${found.map(x=>`${x.grams} g de ${escapeHtml(x.food.name)}`).join(', ')}.</div>${unknown.length?`<div class="auditItem warn">No reconocí: ${escapeHtml(unknown.join(', '))}. Podés cargarlo manualmente con sus macros por 100 g.</div>`:''}`;
+  renderNutritionAssistantPreview();
+  result.innerHTML=`<div class="auditItem good">${count} alimento${count===1?'':'s'} registrado${count===1?'':'s'} correctamente.</div>`;
+}
+function clearNutritionAssistant(){
+  nutritionAssistantDraft=[];
+  document.getElementById('nutritionAssistantInput').value='';
+  document.getElementById('nutritionAssistantResult').innerHTML='';
+  renderNutritionAssistantPreview();
+}
+function updateAssistantFood(id,name){
+  const item=nutritionAssistantDraft.find(i=>i.id===id); if(!item) return;
+  const food=availableFoods().find(f=>normalizeFoodText(f.name)===normalizeFoodText(name));
+  item.food=food||null;
+  if(food){
+    learnAssistantAlias(item,food);
+    item.confidence=1;
+    if(item.unit && !['g','kg','ml','l'].includes(item.unit)){
+      const converted=amountToGrams(item.amount,item.unit,food);
+      item.grams=Math.max(1,Math.round(converted.grams*10)/10);
+      item.warning=converted.warning;
+    }
+  }
+  renderNutritionAssistantPreview();
+  if(food) document.getElementById('nutritionAssistantResult').innerHTML='<div class="auditItem good">Corrección aprendida localmente para próximas veces.</div>';
+}
+function createAssistantCustomFood(id,row){
+  const item=nutritionAssistantDraft.find(i=>i.id===id); if(!item) return;
+  const read=field=>row.querySelector(`[data-custom-field="${field}"]`)?.value||'';
+  const name=read('name').trim();
+  const values={calories:Number(read('calories'))||0,protein:Number(read('protein'))||0,carbs:Number(read('carbs'))||0,fat:Number(read('fat'))||0};
+  if(!name || !Object.values(values).some(v=>v>0)){ document.getElementById('nutritionAssistantResult').innerHTML='<div class="auditItem warn">Para crear el alimento, escribí su nombre y al menos un valor nutricional por 100 g.</div>'; return; }
+  const food=saveCustomFoodDefinition({name,...values});
+  item.food=food; item.confidence=1; item.warning='';
+  learnAssistantAlias(item,food);
+  populateFoods();
+  renderNutritionAssistantPreview();
+  document.getElementById('nutritionAssistantResult').innerHTML='<div class="auditItem good">Alimento propio creado. Quedará disponible para próximas comidas.</div>';
 }
 function startNutritionVoice(){
   const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
   const result=document.getElementById('nutritionAssistantResult');
+  if(window.AndroidSpeechBridge && typeof window.AndroidSpeechBridge.startRecognition==='function'){
+    result.innerHTML='<div class="auditItem">Escuchando con el reconocimiento de voz de Android…</div>';
+    window.AndroidSpeechBridge.startRecognition();
+    return;
+  }
   if(!Recognition){ result.innerHTML='<div class="auditItem warn">El reconocimiento de voz no está disponible en este navegador. Podés escribir la comida.</div>'; return; }
   const recognition=new Recognition();
   recognition.lang='es-ES'; recognition.interimResults=false; recognition.maxAlternatives=1;
   result.innerHTML='<div class="auditItem">Escuchando… decí el alimento y los gramos.</div>';
-  recognition.onresult=e=>{document.getElementById('nutritionAssistantInput').value=e.results[0][0].transcript; result.innerHTML='<div class="auditItem good">Texto reconocido. Revisalo y tocá “Analizar y registrar”.</div>';};
+  recognition.onresult=e=>{document.getElementById('nutritionAssistantInput').value=e.results[0][0].transcript; analyzeNutritionText();};
   recognition.onerror=()=>{result.innerHTML='<div class="auditItem warn">No pude reconocer la voz. Revisá el permiso del micrófono o escribí la comida.</div>';};
   recognition.start();
 }
+window.onAndroidSpeechResult=text=>{ document.getElementById('nutritionAssistantInput').value=text||''; analyzeNutritionText(); };
+window.onAndroidSpeechError=message=>{ document.getElementById('nutritionAssistantResult').innerHTML=`<div class="auditItem warn">${escapeHtml(message||'No pude reconocer la voz.')}</div>`; };
 function removeFood(id){
   setLocalData(NUTRITION_ENTRIES_KEY,getLocalData(NUTRITION_ENTRIES_KEY,[]).filter(e=>e.id!==id));
   renderNutrition();
@@ -1636,7 +1932,7 @@ function updateUI(){ updatePlanUI(); updateScorePreview(); }
 function renderAll(){ updateUI(); renderStats(); renderPeriodMetrics(); renderInsights(); renderBadges(); renderHistory(); renderPlanTable(); drawChart(); updatePhonePanel(); renderGym(); renderNutrition(); }
 
 function exportJson(){
-  const data={startDate:document.getElementById('startDate').value, entries:getEntries(), gymSessions:getLocalData(GYM_SESSIONS_KEY,[]), nutritionEntries:getLocalData(NUTRITION_ENTRIES_KEY,[]), nutritionTargets:nutritionTargets(), bodyMetrics:getLocalData(BODY_METRICS_KEY,{}), exportedAt:new Date().toISOString()};
+  const data={startDate:document.getElementById('startDate').value, entries:getEntries(), gymSessions:getLocalData(GYM_SESSIONS_KEY,[]), nutritionEntries:getLocalData(NUTRITION_ENTRIES_KEY,[]), nutritionTargets:nutritionTargets(), bodyMetrics:getLocalData(BODY_METRICS_KEY,{}), customFoods:getLocalData(CUSTOM_FOODS_KEY,[]), nutritionAliases:getLocalData(NUTRITION_ALIASES_KEY,{}), exportedAt:new Date().toISOString()};
   downloadBlob(JSON.stringify(data,null,2),'protocolo_0_100_registros.json','application/json');
 }
 function exportCsv(){
@@ -1650,7 +1946,7 @@ function downloadBlob(content,name,type){
 }
 function importJson(file){
   const reader=new FileReader(); reader.onload=()=>{
-    try{ const data=JSON.parse(reader.result); if(Array.isArray(data.entries)){ setEntries(data.entries); if(Array.isArray(data.gymSessions)) setLocalData(GYM_SESSIONS_KEY,data.gymSessions); if(Array.isArray(data.nutritionEntries)) setLocalData(NUTRITION_ENTRIES_KEY,data.nutritionEntries); if(data.nutritionTargets) setLocalData(NUTRITION_TARGETS_KEY,data.nutritionTargets); if(data.bodyMetrics) setLocalData(BODY_METRICS_KEY,data.bodyMetrics); if(data.startDate){document.getElementById('startDate').value=data.startDate; localStorage.setItem(START_KEY,data.startDate)} loadNutritionTargets(); loadBodyMetricsForDate(); renderAll(); flash('Importación completa.'); } else alert('JSON inválido: no contiene entries.'); }
+    try{ const data=JSON.parse(reader.result); if(Array.isArray(data.entries)){ setEntries(data.entries); if(Array.isArray(data.gymSessions)) setLocalData(GYM_SESSIONS_KEY,data.gymSessions); if(Array.isArray(data.nutritionEntries)) setLocalData(NUTRITION_ENTRIES_KEY,data.nutritionEntries); if(data.nutritionTargets) setLocalData(NUTRITION_TARGETS_KEY,data.nutritionTargets); if(data.bodyMetrics) setLocalData(BODY_METRICS_KEY,data.bodyMetrics); if(Array.isArray(data.customFoods)) setLocalData(CUSTOM_FOODS_KEY,data.customFoods); if(data.nutritionAliases) setLocalData(NUTRITION_ALIASES_KEY,data.nutritionAliases); if(data.startDate){document.getElementById('startDate').value=data.startDate; localStorage.setItem(START_KEY,data.startDate)} populateFoods(); loadNutritionTargets(); loadBodyMetricsForDate(); renderAll(); flash('Importación completa.'); } else alert('JSON inválido: no contiene entries.'); }
     catch(e){ alert('No pude leer el JSON.'); }
   }; reader.readAsText(file);
 }
@@ -1811,6 +2107,23 @@ document.getElementById('addFoodBtn').addEventListener('click', addFood);
 document.getElementById('saveBodyMetricsBtn').addEventListener('click', saveBodyMetrics);
 document.getElementById('analyzeNutritionBtn').addEventListener('click', analyzeNutritionText);
 document.getElementById('speakNutritionBtn').addEventListener('click', startNutritionVoice);
+document.getElementById('clearNutritionAssistantBtn').addEventListener('click', clearNutritionAssistant);
+document.querySelectorAll('[data-assistant-example]').forEach(btn=>btn.addEventListener('click',()=>{document.getElementById('nutritionAssistantInput').value=btn.dataset.assistantExample;analyzeNutritionText();}));
+document.getElementById('nutritionAssistantPreview').addEventListener('change',e=>{
+  if(e.target.matches('[data-assistant-food]')) updateAssistantFood(e.target.dataset.assistantFood,e.target.value);
+  if(e.target.matches('[data-assistant-grams]')){
+    const item=nutritionAssistantDraft.find(i=>i.id===e.target.dataset.assistantGrams);
+    if(item){ item.grams=Math.max(1,Number(e.target.value)||1); renderNutritionAssistantPreview(); }
+  }
+});
+document.getElementById('nutritionAssistantPreview').addEventListener('click',e=>{
+  const remove=e.target.closest('[data-assistant-remove]');
+  if(remove){ nutritionAssistantDraft=nutritionAssistantDraft.filter(i=>i.id!==remove.dataset.assistantRemove); renderNutritionAssistantPreview(); return; }
+  if(e.target.closest('#confirmNutritionAssistantBtn')){ confirmNutritionAssistant(); return; }
+  if(e.target.closest('#cancelNutritionAssistantBtn')){ nutritionAssistantDraft=[]; renderNutritionAssistantPreview(); return; }
+  const create=e.target.closest('[data-assistant-create]');
+  if(create) createAssistantCustomFood(create.dataset.assistantCreate,create.closest('[data-assistant-row]'));
+});
 document.getElementById('nutritionDate').addEventListener('change', ()=>{loadBodyMetricsForDate();renderNutrition();});
 
 document.getElementById('saveBtn').addEventListener('click', saveEntry);

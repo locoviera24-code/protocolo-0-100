@@ -6,7 +6,7 @@ Este paquete está preparado para que GitHub Actions genere un APK instalable au
 
 - `index.html`: app web/PWA del protocolo.
 - `manifest.webmanifest`, `sw.js`, `icons/`: archivos de PWA.
-- `android-native-wrapper/`: app Android nativa que carga la web y agrega puente para métricas reales del teléfono.
+- `android-native-wrapper/`: app Android nativa que carga la web y agrega puentes para métricas reales del teléfono y reconocimiento de voz.
 - `.github/workflows/build-debug-apk.yml`: flujo automático que compila el APK en GitHub.
 
 ## Cómo generar el APK sin Android Studio

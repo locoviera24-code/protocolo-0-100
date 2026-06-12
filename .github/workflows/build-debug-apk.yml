@@ -60,5 +60,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view v1.2.0 >/dev/null 2>&1 || gh release create v1.2.0 --title "Protocolo 0→100 v1.2.0" --notes "Separa Protocolo, Gym y Nutrición; añade registro por gramos y asistente nutricional local con voz."
-          gh release upload v1.2.0 dist/protocolo-0-100-debug.apk --clobber
+          gh release view v1.3.0 >/dev/null 2>&1 || gh release create v1.3.0 --title "Protocolo 0→100 v1.3.0" --notes "Asistente nutricional local avanzado: lenguaje natural, medidas caseras, vista previa editable, aprendizaje de correcciones, alimentos propios, hidratación y voz nativa Android."
+          gh release upload v1.3.0 dist/protocolo-0-100-debug.apk --clobber

@@ -11,6 +11,7 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.speech.RecognizerIntent;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -25,8 +26,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Locale;
 
 public class MainActivity extends Activity {
+    private static final int SPEECH_REQUEST_CODE = 4100;
     private WebView webView;
 
     @Override
@@ -46,6 +49,7 @@ public class MainActivity extends Activity {
 
         webView.setWebViewClient(new WebViewClient());
         webView.addJavascriptInterface(new AndroidUsageBridge(this), "AndroidUsageBridge");
+        webView.addJavascriptInterface(new AndroidSpeechBridge(), "AndroidSpeechBridge");
         webView.loadUrl("file:///android_asset/index.html");
     }
 
@@ -64,10 +68,45 @@ public class MainActivity extends Activity {
     protected void onDestroy() {
         if (webView != null) {
             webView.removeJavascriptInterface("AndroidUsageBridge");
+            webView.removeJavascriptInterface("AndroidSpeechBridge");
             webView.destroy();
             webView = null;
         }
         super.onDestroy();
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != SPEECH_REQUEST_CODE || webView == null) return;
+        if (resultCode == RESULT_OK && data != null) {
+            ArrayList<String> results = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+            if (results != null && !results.isEmpty()) {
+                String quoted = JSONObject.quote(results.get(0));
+                webView.evaluateJavascript("window.onAndroidSpeechResult(" + quoted + ");", null);
+                return;
+            }
+        }
+        webView.evaluateJavascript("window.onAndroidSpeechError('No pude reconocer la voz. Intentá nuevamente o escribí la comida.');", null);
+    }
+
+    public class AndroidSpeechBridge {
+        @JavascriptInterface
+        public void startRecognition() {
+            runOnUiThread(() -> {
+                Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault().toLanguageTag());
+                intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Decí qué comiste y la cantidad");
+                try {
+                    startActivityForResult(intent, SPEECH_REQUEST_CODE);
+                } catch (Exception e) {
+                    if (webView != null) {
+                        webView.evaluateJavascript("window.onAndroidSpeechError('El reconocimiento de voz no está disponible en este teléfono.');", null);
+                    }
+                }
+            });
+        }
     }
 
     @Override
