@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const APP_VERSION='2.0.0';
+  const APP_VERSION='2.1.0';
   const APP_STATE_KEY='protocolo_0_100_state_v2';
   const SAVED_MEALS_KEY='protocolo_0_100_saved_meals_v1';
   const NUTRITION_PROFILE_KEY='protocolo_0_100_nutrition_profile_v1';
@@ -11,6 +11,7 @@
   const RANKING_SETTINGS_KEY='protocolo_0_100_ranking_settings_v1';
   const MONTHLY_RANKINGS_KEY='protocolo_0_100_monthly_rankings_v1';
   const REWARDS_KEY='protocolo_0_100_rewards_v1';
+  const FDC=window.FDC_CLIENT||null;
   const DEFINITIONS=window.NUTRIENT_DEFINITIONS||{};
   const PRIMARY_COVERAGE=['calories','protein','carbs','fat','fiber','water','sodium','potassium','calcium','iron','magnesium','zinc','vitaminA','vitaminC','vitaminD','vitaminE','vitaminK','b12','folate'];
   const EXTENDED_COVERAGE=['phosphorus','selenium','b1','b2','b3','b6','choline','omega3','omega6'];
@@ -50,6 +51,8 @@
     folate:'lenteja, poroto, garbanzo, espinaca o palta',
     omega3:'sardina, salmón o nueces'
   };
+  let fdcSearchPage=1;
+  let fdcLastSearch={query:'',local:[],cached:[],remote:{foods:[],totalHits:0,currentPage:1,totalPages:0,source:'empty'}};
 
   function round(value,digits=1){
     const p=10**digits;
@@ -177,7 +180,7 @@
     const sodiumState=coverageState('sodium',totals.sodium,targets.sodium);
     const cards=[];
     if(covered.length) cards.push(`<div class="auditItem good"><strong>Bien cubierto según lo registrado:</strong> ${escapeHtml(covered.slice(0,7).join(', '))}.</div>`);
-    missing.slice(0,5).forEach(item=>cards.push(`<div class="auditItem warn"><strong>${escapeHtml(SUGGESTION_LABELS[item.key])} parece bajo (${Math.round(item.pct)}%):</strong> podrías priorizar ${escapeHtml(SPECIFIC_SUGGESTIONS[item.key]||'alimentos variados y poco procesados')}.</div>`));
+    missing.slice(0,5).forEach(item=>cards.push(`<div class="auditItem warn"><strong>${escapeHtml(SUGGESTION_LABELS[item.key])} parece bajo según lo registrado (${Math.round(item.pct)}%):</strong> podrías priorizar ${escapeHtml(SPECIFIC_SUGGESTIONS[item.key]||'alimentos variados y poco procesados')}.</div>`));
     if(sodiumState.key==='review') cards.push('<div class="auditItem warn"><strong>Sodio alto según lo registrado:</strong> conviene priorizar comidas menos procesadas y más alimentos frescos en la próxima elección.</div>');
     const protocol=getEntries().find(e=>e.date===date);
     if(protocol && Number(protocol.anxiety)>=8) cards.push('<div class="auditItem warn"><strong>Mensaje de cuidado:</strong> hoy registraste ansiedad alta. Evitá compensar, restringir o buscar perfección; si la preocupación por comida o cuerpo es intensa, hablá con un adulto o profesional de salud.</div>');
@@ -250,8 +253,104 @@
       if(!query) return true;
       const haystack=normalizeFoodText([food.name,...(food.aliases||[]),food.category].join(' '));
       return haystack.includes(query)||(nutrientKey&&foodNutrient(food,nutrientKey)>0);
-    }).map(({food,index})=>`<option value="${index}">${escapeHtml(food.name)}${food.custom?' · propio':''}</option>`).join('');
+    }).map(({food,index})=>`<option value="${index}">${escapeHtml(food.name)}${food.fdcImported?' · USDA':food.custom?' · propio':''}</option>`).join('');
     select.value='0'; applySelectedFood();
+    renderFdcLocalHint(query);
+  }
+  function fdcLocalFoods(){
+    return [...(window.NUTRITION_DB||[]).slice(1),...getLocalData(CUSTOM_FOODS_KEY,[])];
+  }
+  function fdcCard(food,{cached=false}={}){
+    const brand=food.brandOwner?` · ${food.brandOwner}`:'';
+    const action=cached?'<span class="statusChip good">Disponible offline</span>':`<button type="button" class="secondary" data-import-fdc="${escapeHtml(String(food.fdcId))}">Importar detalle</button>`;
+    return `<div class="fdcResult"><strong>${escapeHtml(food.description||food.name)}</strong><div class="fdcMeta">FDC ${escapeHtml(String(food.fdcId||''))} · ${escapeHtml(food.dataType||'')}${escapeHtml(brand)}</div>${action}</div>`;
+  }
+  function renderFdcLocalHint(query){
+    const status=document.getElementById('fdcSearchStatus');if(!status||!FDC)return;
+    const text=String(query||'').trim();
+    if(!text){status.textContent='Buscá primero por nombre o alias. La consulta remota es opcional.';return;}
+    const local=fdcLocalFoods().filter(food=>normalizeFoodText([food.name,...(food.aliases||[]),food.category].join(' ')).includes(text)).length;
+    const cached=FDC.findCachedByQuery(text,30).length;
+    status.textContent=`Primera capa: ${local} coincidencia(s) locales y ${cached} alimento(s) USDA en caché. Pulsá “Buscar también en USDA” para ampliar.`;
+  }
+  function renderFdcSearch(){
+    const results=document.getElementById('fdcSearchResults'),status=document.getElementById('fdcSearchStatus');if(!results||!status||!FDC)return;
+    const {query,local,cached,remote}=fdcLastSearch,remoteFoods=(remote.foods||[]).filter(food=>!cached.some(item=>String(item.fdcId)===String(food.fdcId)));
+    const groups=[];
+    if(cached.length)groups.push(`<div><strong>Ya guardados (${cached.length})</strong><div class="fdcResultGrid">${cached.map(food=>fdcCard(food,{cached:true})).join('')}</div></div>`);
+    if(remoteFoods.length)groups.push(`<div><strong>Resultados USDA (${remote.totalHits||remoteFoods.length})</strong><div class="fdcResultGrid">${remoteFoods.map(food=>fdcCard(food)).join('')}</div></div>`);
+    results.innerHTML=groups.join('')||'<div class="emptyState">No hay resultados adicionales para mostrar.</div>';
+    const access=FDC.hasRemoteAccess()?'Acceso remoto configurado.':'Sin acceso remoto configurado; se muestran base local y caché.';
+    status.textContent=`${local.length} resultado(s) locales · ${cached.length} en caché · página ${remote.currentPage||1}/${remote.totalPages||1}. ${access}`;
+    const prev=document.getElementById('fdcPrevPageBtn'),next=document.getElementById('fdcNextPageBtn');
+    if(prev)prev.disabled=(remote.currentPage||1)<=1;if(next)next.disabled=!remote.totalPages||(remote.currentPage||1)>=remote.totalPages;
+    if(query)document.getElementById('nutritionFoodSearch').value=query;
+  }
+  async function runFdcSearch(page=1){
+    if(!FDC)return;
+    const query=document.getElementById('nutritionFoodSearch')?.value.trim()||'',status=document.getElementById('fdcSearchStatus');
+    if(query.length<2){flash('Escribí al menos dos caracteres para buscar.');return;}
+    const normalized=normalizeFoodText(query),local=fdcLocalFoods().filter(food=>normalizeFoodText([food.name,...(food.aliases||[]),food.category].join(' ')).includes(normalized)).slice(0,FDC.config().pageSize);
+    const cached=FDC.findCachedByQuery(query,FDC.config().pageSize);
+    fdcSearchPage=Math.max(1,page);
+    fdcLastSearch={query,local,cached,remote:{foods:[],totalHits:0,currentPage:fdcSearchPage,totalPages:0,source:'pending'}};
+    renderFdcSearch();
+    if(!FDC.hasRemoteAccess()){if(status)status.textContent=`${local.length} resultado(s) locales y ${cached.length} en caché. Configurá acceso para ampliar con USDA.`;return;}
+    if(status)status.textContent=`Resultados locales listos (${local.length}+${cached.length}). Consultando USDA en segundo plano…`;
+    document.getElementById('searchFdcBtn').disabled=true;
+    try{
+      const remote=await FDC.searchFoods(query,{pageNumber:fdcSearchPage,pageSize:FDC.config().pageSize});
+      fdcLastSearch={query,local,cached,remote};renderFdcSearch();
+    }catch(error){
+      const messages={FDC_RATE_LIMIT:'Se alcanzó temporalmente el límite de consultas de FDC.',FDC_NOT_CONFIGURED:'Configurá una API key personal o un backend/proxy.'};
+      if(status)status.textContent=messages[error.message]||'No pude consultar FoodData Central. La búsqueda local sigue disponible.';
+    }finally{document.getElementById('searchFdcBtn').disabled=false}
+  }
+  async function importFdcFood(fdcId){
+    if(!FDC)return;
+    const status=document.getElementById('fdcSearchStatus'),summary=fdcLastSearch.remote.foods.find(food=>String(food.fdcId)===String(fdcId));
+    if(status)status.textContent='Obteniendo detalle y normalizando nutrientes por 100 g…';
+    try{
+      const food=await FDC.importFood(summary||fdcId);
+      populateFoods();renderFdcCachedFoods();filterFoodSelect();syncVersionedState();
+      if(status)status.textContent=`${food.name} quedó guardado offline y disponible para registrar o editar.`;
+      flash('Alimento USDA importado.');
+    }catch(error){
+      if(status)status.textContent=error.message==='FDC_RATE_LIMIT'?'Se alcanzó el límite temporal de FDC.':'No pude importar ese alimento.';
+    }
+  }
+  function loadFdcConfigFields(){
+    if(!FDC)return;const value=FDC.config();
+    const key=document.getElementById('fdcApiKey'),backend=document.getElementById('fdcBackendUrl'),size=document.getElementById('fdcPageSize');
+    if(key)key.value=value.apiKey||'';if(backend)backend.value=value.backendUrl||'';if(size)size.value=value.pageSize||20;
+  }
+  function saveFdcConfig(){
+    if(!FDC)return;
+    FDC.saveConfig({apiKey:document.getElementById('fdcApiKey')?.value||'',backendUrl:document.getElementById('fdcBackendUrl')?.value||'',pageSize:document.getElementById('fdcPageSize')?.value||20});
+    renderFdcLocalHint(document.getElementById('nutritionFoodSearch')?.value||'');flash('Configuración FDC guardada solo en este dispositivo.');
+  }
+  function clearFdcApiKey(){
+    if(!FDC)return;FDC.saveConfig({...FDC.config(),apiKey:''});loadFdcConfigFields();flash('API key local eliminada.');
+  }
+  function editCachedFdcFood(id){
+    if(!FDC)return;const food=FDC.cachedFoods().find(item=>item.id===id);if(!food)return;
+    const name=(window.prompt('Nombre editable:',food.name)||food.name).trim(),updated={name,aliases:[name,food.description,food.brandOwner].filter(Boolean)};
+    const fields={calories:'Calorías/100 g',protein:'Proteína/100 g',carbs:'Carbohidratos/100 g',fat:'Grasas/100 g',fiber:'Fibra/100 g',sodium:'Sodio mg/100 g',potassium:'Potasio mg/100 g',calcium:'Calcio mg/100 g',iron:'Hierro mg/100 g',vitaminC:'Vitamina C mg/100 g'};
+    Object.entries(fields).forEach(([key,label])=>{const value=window.prompt(label,String(food[key]??food.nutrients?.[key]??0));if(value!==null)updated[key]=Math.max(0,Number(value)||0)});
+    FDC.updateCachedFood(id,updated);populateFoods();renderFdcCachedFoods();renderAdvancedNutrition();syncVersionedState();flash('Alimento USDA editado localmente.');
+  }
+  function renderFdcCachedFoods(){
+    const box=document.getElementById('fdcCachedFoodsList');if(!box||!FDC)return;const foods=FDC.cachedFoods();
+    box.innerHTML=foods.length?foods.map(food=>`<div class="entryRow"><div><strong>${escapeHtml(food.name)}</strong><div class="meta">FDC ${escapeHtml(String(food.fdcId))} · ${escapeHtml(food.dataType)} · ${food.calories||0} kcal/100 g · ${escapeHtml(food.brandOwner||'sin marca')}</div></div><div class="buttons" style="margin:0"><button type="button" class="secondary" data-edit-fdc="${escapeHtml(food.id)}">Editar</button><button type="button" class="danger" data-delete-fdc="${escapeHtml(food.id)}">Quitar caché</button></div></div>`).join(''):'<div class="emptyState">Todavía no importaste alimentos desde FoodData Central.</div>';
+  }
+  async function importFdcDataset(){
+    if(!FDC)return;const file=document.getElementById('fdcDatasetFile')?.files?.[0],status=document.getElementById('fdcDatasetStatus');
+    if(!file){flash('Elegí un archivo JSON FDC compatible.');return;}
+    status.textContent='Procesando el dataset fuera del flujo principal de la interfaz…';
+    try{
+      const result=await FDC.importDataset(file,{limit:document.getElementById('fdcDatasetLimit')?.value||250});
+      populateFoods();renderFdcCachedFoods();syncVersionedState();status.textContent=`Importados ${result.imported} de ${result.totalInDataset} registros detectados; ${result.cached} alimentos FDC disponibles offline.`;
+    }catch(error){status.textContent=error.message==='FDC_DATASET_JSON_REQUIRED'?'El importador opcional acepta archivos JSON FDC compatibles.':'No pude procesar ese dataset.'}
   }
   function currentMealEntries(date=document.getElementById('nutritionDate')?.value||todayStr(),meal=document.getElementById('nutritionMeal')?.value||'Desayuno'){
     return entriesForDate(date).filter(e=>e.meal===meal);
@@ -261,7 +360,7 @@
     const suggested=`${document.getElementById('nutritionMeal').value} frecuente`;
     const name=(window.prompt('Nombre de la comida frecuente:',suggested)||'').trim(); if(!name)return;
     const saved=getLocalData(SAVED_MEALS_KEY,[]);
-    saved.push({id:uid('savedmeal'),name,items:items.map(({name,grams,calories,protein,carbs,fat,foodId,nutrients})=>({name,grams,calories,protein,carbs,fat,foodId,nutrients})),savedAt:new Date().toISOString()});
+    saved.push({id:uid('savedmeal'),name,items:items.map(({name,grams,calories,protein,carbs,fat,foodId,fdcId,nutrients,source,sourceCitation})=>({name,grams,calories,protein,carbs,fat,foodId,fdcId,nutrients,source,sourceCitation})),savedAt:new Date().toISOString()});
     setLocalData(SAVED_MEALS_KEY,saved); renderSavedMeals();syncVersionedState();flash('Comida frecuente guardada.');
   }
   function addMealItems(items,date,meal){
@@ -433,7 +532,7 @@
   window.renderAdvancedProgress=renderAdvancedProgress;
 
   function exportMealsCsv(){
-    const entries=getLocalData(NUTRITION_ENTRIES_KEY,[]),cols=['date','meal','name','grams','calories','protein','carbs','fat','source'];
+    const entries=getLocalData(NUTRITION_ENTRIES_KEY,[]),cols=['date','meal','name','grams','calories','protein','carbs','fat','fdcId','source','sourceCitation'];
     downloadBlob([cols.join(','),...entries.map(e=>cols.map(k=>`"${String(e[k]??'').replace(/"/g,'""')}"`).join(','))].join('\n'),'protocolo_comidas.csv','text/csv;charset=utf-8');
   }
   function exportNutrientsCsv(){
@@ -445,7 +544,7 @@
   function buildCompleteBackup(){
     syncVersionedState();
     const state=getLocalData(APP_STATE_KEY,{});
-    return {...state,startDate:localStorage.getItem(START_KEY)||todayStr(),entries:getEntries(),gymSessions:getLocalData(GYM_SESSIONS_KEY,[]),nutritionEntries:getLocalData(NUTRITION_ENTRIES_KEY,[]),nutritionTargets:advancedTargets(),bodyMetrics:getLocalData(BODY_METRICS_KEY,{}),customFoods:getLocalData(CUSTOM_FOODS_KEY,[]),nutritionAliases:getLocalData(NUTRITION_ALIASES_KEY,{}),exportedAt:new Date().toISOString()};
+    return {...state,startDate:localStorage.getItem(START_KEY)||todayStr(),entries:getEntries(),gymSessions:getLocalData(GYM_SESSIONS_KEY,[]),nutritionEntries:getLocalData(NUTRITION_ENTRIES_KEY,[]),nutritionTargets:advancedTargets(),bodyMetrics:getLocalData(BODY_METRICS_KEY,{}),customFoods:getLocalData(CUSTOM_FOODS_KEY,[]),cachedFdcFoods:FDC?.cachedFoods?.()||[],nutritionAliases:getLocalData(NUTRITION_ALIASES_KEY,{}),exportedAt:new Date().toISOString()};
   }
   window.buildCompleteBackup=buildCompleteBackup;
   function importCompleteBackupData(data){
@@ -455,6 +554,7 @@
       if(Array.isArray(state.meals))setLocalData(NUTRITION_ENTRIES_KEY,state.meals);
       if(Array.isArray(state.gymSessions))setLocalData(GYM_SESSIONS_KEY,state.gymSessions);
       if(Array.isArray(state.customFoods))setLocalData(CUSTOM_FOODS_KEY,state.customFoods);
+      if(Array.isArray(state.cachedFdcFoods)&&FDC)FDC.replaceCache(state.cachedFdcFoods);
       if(state.nutritionTargets)setLocalData(NUTRITION_TARGETS_KEY,state.nutritionTargets);
       if(state.bodyMetrics)setLocalData(BODY_METRICS_KEY,state.bodyMetrics);
       if(Array.isArray(state.savedMeals))setLocalData(SAVED_MEALS_KEY,state.savedMeals);
@@ -469,10 +569,10 @@
   function syncVersionedState(){
     // Future API: this object is the client-side contract ready to sync with a backend.
     const state={
-      schemaVersion:2,appVersion:APP_VERSION,updatedAt:new Date().toISOString(),
+      schemaVersion:3,appVersion:APP_VERSION,updatedAt:new Date().toISOString(),
       settings:{activeModule:localStorage.getItem(ACTIVE_MODULE_KEY)||'protocolo',nutritionProfile:nutritionProfile(),ranking:getLocalData(RANKING_SETTINGS_KEY,{alias:'Anónimo 0→100',optIn:false})},
       dailyLogs:getEntries(),gymSessions:getLocalData(GYM_SESSIONS_KEY,[]),meals:getLocalData(NUTRITION_ENTRIES_KEY,[]),
-      customFoods:getLocalData(CUSTOM_FOODS_KEY,[]),nutritionTargets:advancedTargets(),bodyMetrics:getLocalData(BODY_METRICS_KEY,{}),
+      customFoods:getLocalData(CUSTOM_FOODS_KEY,[]),cachedFdcFoods:FDC?.cachedFoods?.()||[],nutritionTargets:advancedTargets(),bodyMetrics:getLocalData(BODY_METRICS_KEY,{}),
       savedMeals:getLocalData(SAVED_MEALS_KEY,[]),referralCodes:referralCodes(),userReferral:getLocalData(USER_REFERRAL_KEY,null),
       coinLedger:getLocalData(COIN_LEDGER_KEY,[]),monthlyRankings:getLocalData(MONTHLY_RANKINGS_KEY,{}),rewards:getLocalData(REWARDS_KEY,{})
     };
@@ -481,7 +581,7 @@
   function migrateAdvancedState(){
     normalizeCustomFoods();
     const existing=getLocalData(APP_STATE_KEY,null);
-    if(existing?.schemaVersion>=2)return existing;
+    if(existing?.schemaVersion>=3)return existing;
     return syncVersionedState();
   }
 
@@ -490,10 +590,10 @@
     document.querySelectorAll('[data-nutrition-panel]').forEach(panel=>panel.classList.toggle('hidden',panel.dataset.nutritionPanel!==view));
     if(view==='diagnostico')renderDiagnosis();
     if(view==='tendencias')renderNutritionTrends();
-    if(view==='ajustes'){renderCustomFoods();loadAdvancedTargetFields();}
+    if(view==='ajustes'){renderCustomFoods();renderFdcCachedFoods();loadAdvancedTargetFields();loadFdcConfigFields();}
   }
   function renderAdvancedNutrition(){
-    renderCoverage();renderDiagnosis();renderNutritionTrends();renderSavedMeals();renderCustomFoods();syncVersionedState();
+    renderCoverage();renderDiagnosis();renderNutritionTrends();renderSavedMeals();renderCustomFoods();renderFdcCachedFoods();syncVersionedState();
   }
   window.renderAdvancedNutrition=renderAdvancedNutrition;
   window.advancedNutritionTotals=nutrientTotalsForDate;
@@ -518,6 +618,12 @@
     document.querySelectorAll('[data-nutrition-view]').forEach(button=>button.addEventListener('click',()=>setNutritionView(button.dataset.nutritionView)));
     document.querySelectorAll('[data-open-nutrition-view]').forEach(button=>button.addEventListener('click',()=>setNutritionView(button.dataset.openNutritionView)));
     document.getElementById('nutritionFoodSearch')?.addEventListener('input',filterFoodSelect);
+    document.getElementById('searchFdcBtn')?.addEventListener('click',()=>runFdcSearch(1));
+    document.getElementById('fdcPrevPageBtn')?.addEventListener('click',()=>runFdcSearch(Math.max(1,fdcSearchPage-1)));
+    document.getElementById('fdcNextPageBtn')?.addEventListener('click',()=>runFdcSearch(fdcSearchPage+1));
+    document.getElementById('saveFdcConfigBtn')?.addEventListener('click',saveFdcConfig);
+    document.getElementById('clearFdcApiKeyBtn')?.addEventListener('click',clearFdcApiKey);
+    document.getElementById('importFdcDatasetBtn')?.addEventListener('click',importFdcDataset);
     document.querySelectorAll('[data-food-portion]').forEach(button=>button.addEventListener('click',()=>{document.getElementById('foodQuantity').value=button.dataset.foodPortion;}));
     document.getElementById('useFoodBasePortionBtn')?.addEventListener('click',()=>{const food=allFoods()[Number(document.getElementById('nutritionFood').value)||0];document.getElementById('foodQuantity').value=food?.portionGrams||100;});
     document.getElementById('saveNutritionTargetsBtn')?.addEventListener('click',saveAdvancedTargets);
@@ -536,6 +642,9 @@
     document.addEventListener('click',event=>{
       const edit=event.target.closest('[data-edit-custom-food]');if(edit){editCustomFood(edit.dataset.editCustomFood);return;}
       const remove=event.target.closest('[data-delete-custom-food]');if(remove){setLocalData(CUSTOM_FOODS_KEY,getLocalData(CUSTOM_FOODS_KEY,[]).filter(f=>f.id!==remove.dataset.deleteCustomFood));populateFoods();renderCustomFoods();syncVersionedState();}
+      const importFdc=event.target.closest('[data-import-fdc]');if(importFdc){importFdcFood(importFdc.dataset.importFdc);return;}
+      const editFdc=event.target.closest('[data-edit-fdc]');if(editFdc){editCachedFdcFood(editFdc.dataset.editFdc);return;}
+      const deleteFdc=event.target.closest('[data-delete-fdc]');if(deleteFdc&&FDC){FDC.removeCachedFood(deleteFdc.dataset.deleteFdc);populateFoods();renderFdcCachedFoods();syncVersionedState();flash('Alimento USDA quitado de la caché.');}
     });
   }
 
@@ -547,6 +656,7 @@
   migrateAdvancedState();
   loadAdvancedTargetFields();
   renderSavedMeals();
+  loadFdcConfigFields();
   setupEvents();
   setNutritionView('resumen');
   renderAdvancedNutrition();

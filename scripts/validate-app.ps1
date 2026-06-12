@@ -17,6 +17,7 @@ function Assert-True([bool]$condition, [string]$message) {
 
 $html = Read-Utf8 'index.html'
 $nutrition = Read-Utf8 'nutrition-data.js'
+$fdc = Read-Utf8 'fdc-client.js'
 $advanced = Read-Utf8 'advanced-features.js'
 $serviceWorker = Read-Utf8 'sw.js'
 
@@ -24,12 +25,12 @@ $staticIds = [regex]::Matches($html, '\bid="([^"$]+)"') | ForEach-Object { $_.Gr
 $duplicates = $staticIds | Group-Object | Where-Object Count -gt 1 | Select-Object -ExpandProperty Name
 Assert-True ($duplicates.Count -eq 0) "Hay IDs HTML duplicados: $($duplicates -join ', ')"
 
-$requiredFiles = @('nutrition-data.js', 'advanced-features.js', 'manifest.webmanifest', 'sw.js')
+$requiredFiles = @('nutrition-data.js', 'fdc-client.js', 'advanced-features.js', 'manifest.webmanifest', 'sw.js')
 foreach ($file in $requiredFiles) {
     Assert-True (Test-Path -LiteralPath (Join-Path $repoRoot $file) -PathType Leaf) "Falta $file"
 }
 
-foreach ($script in @('nutrition-data.js', 'advanced-features.js')) {
+foreach ($script in @('nutrition-data.js', 'fdc-client.js', 'advanced-features.js')) {
     Assert-True ($html.Contains("<script src=`"$script`"></script>")) "index.html no carga $script"
     Assert-True ($serviceWorker.Contains("'./$script'")) "sw.js no cachea $script"
 }
@@ -49,13 +50,20 @@ $nutrientCount = [regex]::Matches($nutrition, "^\s{4}[A-Za-z0-9]+:\{label:", 'Mu
 Assert-True ($foodCount -ge 60) "La base nutricional tiene pocos alimentos: $foodCount"
 Assert-True ($nutrientCount -ge 28) "La base nutricional tiene pocos nutrientes: $nutrientCount"
 
-foreach ($contract in @('schemaVersion:2', 'coinLedger:', 'monthlyRankings:', 'referralCodes:', 'nutritionTargets:', 'savedMeals:')) {
+foreach ($contract in @('schemaVersion:3', 'coinLedger:', 'monthlyRankings:', 'referralCodes:', 'nutritionTargets:', 'savedMeals:', 'cachedFdcFoods:')) {
     Assert-True ($advanced.Contains($contract)) "Falta contrato versionado: $contract"
 }
 
 foreach ($safetyText in @('no diagnostica deficiencias', 'no son dinero', 'pagos reales requieren backend')) {
     Assert-True ($html.Contains($safetyText)) "Falta aviso de seguridad/legal: $safetyText"
 }
+
+foreach ($fdcContract in @('cachedFdcFoods', 'hybridSearch', 'searchFoods', 'getFoodDetails', 'normalizeFood', 'importDataset', 'sourceCitation')) {
+    Assert-True ($fdc.Contains($fdcContract)) "Falta contrato FoodData Central: $fdcContract"
+}
+$demoToken = 'DEMO' + '_KEY'
+Assert-True (-not $fdc.Contains($demoToken)) 'No se debe publicar una API key de demostracion ni otra API key en fdc-client.js'
+Assert-True ($html.Contains('Datos nutricionales ampliados basados en USDA FoodData Central')) 'Falta atribucion visible de USDA FoodData Central'
 
 if ($CheckAndroidAssets) {
     & (Join-Path $PSScriptRoot 'sync-web-assets.ps1') -Check

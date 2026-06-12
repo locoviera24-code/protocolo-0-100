@@ -9,6 +9,7 @@ on:
     paths:
       - index.html
       - nutrition-data.js
+      - fdc-client.js
       - advanced-features.js
       - manifest.webmanifest
       - sw.js
@@ -39,7 +40,7 @@ jobs:
       - name: Preparar archivos publicos
         run: |
           mkdir -p dist-pages/icons
-          cp index.html nutrition-data.js advanced-features.js manifest.webmanifest sw.js dist-pages/
+          cp index.html nutrition-data.js fdc-client.js advanced-features.js manifest.webmanifest sw.js dist-pages/
           cp icons/icon-192.png icons/icon-512.png dist-pages/icons/
 
       - name: Configurar GitHub Pages

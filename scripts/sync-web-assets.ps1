@@ -9,6 +9,7 @@ $assetRoot = Join-Path $repoRoot 'android-native-wrapper/app/src/main/assets'
 $relativeFiles = @(
     'index.html',
     'nutrition-data.js',
+    'fdc-client.js',
     'advanced-features.js',
     'manifest.webmanifest',
     'sw.js',

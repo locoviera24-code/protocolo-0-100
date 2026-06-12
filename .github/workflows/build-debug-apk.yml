@@ -60,5 +60,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view v2.0.0 >/dev/null 2>&1 || gh release create v2.0.0 --title "Protocolo 0→100 v2.0.0" --notes "App integral: nutrición avanzada con micronutrientes, diagnóstico orientativo, recomendador, tendencias, score integral, Focus Coins, rankings opcionales, referidos y backup versionado."
-          gh release upload v2.0.0 dist/protocolo-0-100-debug.apk --clobber
+          gh release view v2.1.0 >/dev/null 2>&1 || gh release create v2.1.0 --title "Protocolo 0→100 v2.1.0" --notes "Integración híbrida opcional con USDA FoodData Central: búsqueda paginada, detalle por fdcId, normalización, caché offline, edición local e importador JSON sin publicar API keys."
+          gh release upload v2.1.0 dist/protocolo-0-100-debug.apk --clobber

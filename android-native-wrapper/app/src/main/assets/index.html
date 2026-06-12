@@ -262,8 +262,12 @@
     .rankingTable{overflow:auto}.rankingTable table{min-width:620px}.legalBox{border:1px dashed var(--line);border-radius:14px;padding:12px;color:var(--muted);font-size:12px;line-height:1.5;margin-top:10px}
     .updateBanner{position:fixed;left:14px;right:14px;bottom:14px;z-index:300;max-width:680px;margin:auto;border:1px solid rgba(152,245,194,.4);background:#14213a;border-radius:16px;padding:12px;box-shadow:var(--shadow);display:flex;justify-content:space-between;align-items:center;gap:10px}
     details.advancedDetails{border:1px solid var(--line);border-radius:14px;padding:10px;background:rgba(255,255,255,.025);margin-top:10px}details.advancedDetails summary{cursor:pointer;font-weight:800;color:#fff}
+    .fdcResultGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:10px}
+    .fdcResult{border:1px solid var(--line);border-radius:14px;padding:11px;background:rgba(114,214,255,.045);display:grid;gap:7px}
+    .fdcResult strong{font-size:13px;line-height:1.35}.fdcMeta{color:var(--muted);font-size:11px;line-height:1.4}
+    .sourceNote{border-left:3px solid var(--accent);padding:9px 11px;background:rgba(114,214,255,.06);border-radius:0 12px 12px 0;color:var(--muted);font-size:11px;line-height:1.45;margin-top:10px}
     @media(max-width:800px){.moduleGrid{grid-template-columns:1fr}.quickStats{grid-template-columns:repeat(2,1fr)}}
-    @media(max-width:800px){.coverageGrid,.recommendGrid,.sectionIntro,.scoreTiles{grid-template-columns:1fr}.integralHero{grid-template-columns:1fr}}
+    @media(max-width:800px){.coverageGrid,.recommendGrid,.sectionIntro,.scoreTiles,.fdcResultGrid{grid-template-columns:1fr}.integralHero{grid-template-columns:1fr}}
     @media(max-width:600px){.assistantPreviewGrid,.assistantCustomGrid{grid-template-columns:1fr 1fr}.assistantCustomGrid input:first-child{grid-column:1/-1}}
     @media(max-width:480px){.quickStats{grid-template-columns:1fr}.macroRow{grid-template-columns:72px 1fr 76px}.entryRow{grid-template-columns:1fr}.entryRow button{justify-self:start}.assistantPreviewGrid{grid-template-columns:1fr}}
 
@@ -581,6 +585,15 @@
               <div class="entryList" id="nutritionDayList"></div>
             </div>
 
+            <div class="moduleCard" id="fdcSearchCard" data-nutrition-panel="registrar">
+              <h3>Ampliar búsqueda con USDA FoodData Central</h3>
+              <div class="sectionIntro"><div><strong>Primero</strong>La búsqueda usa la base local curada y alimentos ya guardados.</div><div><strong>Después</strong>Solo consulta FDC al pulsar el botón y si configuraste acceso.</div><div><strong>Offline</strong>Los alimentos importados quedan en caché local y se pueden editar.</div></div>
+              <div class="buttons"><button type="button" class="secondary" id="searchFdcBtn">Buscar también en USDA</button><button type="button" class="secondary" id="fdcPrevPageBtn">Página anterior</button><button type="button" class="secondary" id="fdcNextPageBtn">Página siguiente</button></div>
+              <div class="auditItem" id="fdcSearchStatus">Buscá primero por nombre o alias. La consulta remota es opcional.</div>
+              <div class="fdcResultGrid" id="fdcSearchResults"></div>
+              <div class="sourceNote">Datos nutricionales ampliados basados en USDA FoodData Central: U.S. Department of Agriculture, Agricultural Research Service. FoodData Central.</div>
+            </div>
+
             <div class="moduleCard" id="nutritionDiagnosisCard" data-nutrition-panel="diagnostico">
               <h3>Diagnóstico nutricional orientativo</h3>
               <div class="sectionIntro"><div><strong>Qué mide</strong>Cobertura del día según alimentos registrados.</div><div><strong>Qué hacer</strong>Priorizá una o dos palancas, no todo a la vez.</div><div><strong>Objetivo</strong>Convertir faltantes aparentes en opciones concretas.</div></div>
@@ -602,6 +615,26 @@
               <h3>Alimentos personalizados</h3>
               <div class="muted small">Los alimentos propios quedan en tu dispositivo. Podés editarlos o eliminarlos.</div>
               <div class="entryList" id="customFoodsList"></div>
+            </div>
+
+            <div class="moduleCard" id="fdcSettingsCard" data-nutrition-panel="ajustes">
+              <h3>FoodData Central opcional</h3>
+              <div class="formGrid">
+                <div class="field"><label>API key FDC personal</label><input type="password" id="fdcApiKey" autocomplete="off" placeholder="No incluida en el código público"></div>
+                <div class="field"><label>URL de backend/proxy futuro</label><input type="url" id="fdcBackendUrl" placeholder="Ej. https://api.ejemplo.com/fdc"></div>
+                <div class="field"><label>Resultados por página</label><input type="number" id="fdcPageSize" min="10" max="30" value="20"></div>
+              </div>
+              <div class="buttons"><button type="button" class="secondary" id="saveFdcConfigBtn">Guardar configuración local</button><button type="button" class="danger" id="clearFdcApiKeyBtn">Quitar API key</button></div>
+              <div class="safetyNote">No existe ninguna API key real dentro del repositorio. Si guardás una clave personal, queda únicamente en localStorage de este dispositivo. Para producción conviene mover las llamadas a un backend que proteja la clave.</div>
+              <details class="advancedDetails">
+                <summary>Importar dataset FDC descargado</summary>
+                <div class="formGrid" style="margin-top:10px"><div class="field"><label>Máximo a importar</label><input type="number" id="fdcDatasetLimit" min="1" max="750" value="250"></div><div class="field"><label>Archivo JSON FDC compatible</label><input type="file" id="fdcDatasetFile" accept=".json,application/json"></div></div>
+                <div class="buttons"><button type="button" class="secondary" id="importFdcDatasetBtn">Importar sin agregar al bundle</button></div>
+                <div class="muted small" id="fdcDatasetStatus">El archivo se procesa de forma opcional y no se publica con la app.</div>
+              </details>
+              <h3 style="margin-top:14px">Alimentos FDC guardados</h3>
+              <div class="entryList" id="fdcCachedFoodsList"></div>
+              <div class="sourceNote">Fuente: USDA FoodData Central. Las marcas, preparación, cocción y porciones pueden variar; revisá y editá los datos cuando corresponda.</div>
             </div>
 
             <div class="moduleCard" id="nutritionHistoryCard" data-nutrition-panel="tendencias">
@@ -740,6 +773,7 @@
   </div>
 
 <script src="nutrition-data.js"></script>
+<script src="fdc-client.js"></script>
 <script>
 const STORAGE_KEY = 'protocolo_0_100_tracker_v1';
 const START_KEY = 'protocolo_0_100_start_date_v1';
@@ -913,7 +947,7 @@ function loadNutritionTargets(){
   const t=nutritionTargets();
   [['targetCalories',t.calories],['targetProtein',t.protein],['targetCarbs',t.carbs],['targetFat',t.fat]].forEach(([id,v])=>{const el=document.getElementById(id);if(el)el.value=v;});
 }
-function allFoods(){ return [...FOOD_CATALOG,...getLocalData(CUSTOM_FOODS_KEY,[])]; }
+function allFoods(){ return [...FOOD_CATALOG,...getLocalData(CUSTOM_FOODS_KEY,[]),...(window.FDC_CLIENT?.cachedFoods?.()||[])]; }
 function availableFoods(){ return allFoods().slice(1); }
 function saveCustomFoodDefinition(food){
   const foods=getLocalData(CUSTOM_FOODS_KEY,[]);
@@ -926,7 +960,7 @@ function saveCustomFoodDefinition(food){
 }
 function populateFoods(){
   const select=document.getElementById('nutritionFood'); if(!select) return;
-  select.innerHTML=allFoods().map((f,i)=>`<option value="${i}">${escapeHtml(f.name)}${f.custom?' · propio':''}</option>`).join('');
+  select.innerHTML=allFoods().map((f,i)=>`<option value="${i}">${escapeHtml(f.name)}${f.fdcImported?' · USDA':f.custom?' · propio':''}</option>`).join('');
   applySelectedFood();
 }
 function applySelectedFood(){
@@ -954,7 +988,7 @@ function addFood(){
     populateFoods();
   }
   const entries=getLocalData(NUTRITION_ENTRIES_KEY,[]);
-  entries.push({...buildFoodEntry(food,grams,meal,date),source:custom?'alimento personalizado':'registro manual'});
+  entries.push({...buildFoodEntry(food,grams,meal,date),source:custom?'alimento personalizado':food.source||'registro manual'});
   setLocalData(NUTRITION_ENTRIES_KEY,entries);
   document.getElementById('customFoodName').value='';
   renderNutrition();
@@ -1011,7 +1045,7 @@ function buildFoodEntry(food, grams, meal, date){
   const factor=grams/100;
   const nutrients={};
   Object.keys(window.NUTRIENT_DEFINITIONS||{}).forEach(key=>{if(!['calories','protein','carbs','fat','water'].includes(key))nutrients[key]=Number(((Number(food[key]??food.nutrients?.[key])||0)*factor).toFixed(3));});
-  return {id:uid('food'),foodId:food.id||'',date,meal,name:food.name,grams,calories:Math.round(food.calories*factor),protein:Number((food.protein*factor).toFixed(1)),carbs:Number((food.carbs*factor).toFixed(1)),fat:Number((food.fat*factor).toFixed(1)),nutrients,source:'asistente local',savedAt:new Date().toISOString()};
+  return {id:uid('food'),foodId:food.id||'',fdcId:food.fdcId||null,date,meal,name:food.name,grams,calories:Math.round(food.calories*factor),protein:Number((food.protein*factor).toFixed(1)),carbs:Number((food.carbs*factor).toFixed(1)),fat:Number((food.fat*factor).toFixed(1)),nutrients,source:food.source||'asistente local',sourceCitation:food.sourceCitation||'',savedAt:new Date().toISOString()};
 }
 const ASSISTANT_UNIT_PATTERN='kg|kilogramos?|kilos?|gramos?|gr|g|mililitros?|ml|litros?|lts?|l|unidades?|uds?|tazas?|cucharadas?|cucharaditas?|scoops?|medidas?|rebanadas?|rodajas?|vasos?|porciones?|latas?|botellas?';
 function normalizeQuantityWords(value){
