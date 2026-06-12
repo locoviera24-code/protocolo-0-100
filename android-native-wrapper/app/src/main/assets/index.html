@@ -1040,6 +1040,8 @@ function analyzeNutritionText(){
   nutritionAssistantDraft=parsed.items;
   if(parsed.meal) document.getElementById('nutritionMeal').value=parsed.meal;
   document.getElementById('nutritionDate').value=parsed.date;
+  loadBodyMetricsForDate();
+  renderNutrition();
   renderNutritionAssistantPreview();
   const unknown=parsed.items.filter(i=>!i.food).length;
   result.innerHTML=`<div class="auditItem ${unknown?'warn':'good'}">Analicé ${parsed.items.length} elemento${parsed.items.length===1?'':'s'}${parsed.meal?` como ${escapeHtml(parsed.meal.toLowerCase())}`:''}. ${unknown?`${unknown} necesita tu ayuda.`:'Revisá la vista previa y confirmá.'}</div>`;
@@ -1071,9 +1073,10 @@ function confirmNutritionAssistant(){
   const count=nutritionAssistantDraft.length;
   nutritionAssistantDraft=[];
   document.getElementById('nutritionAssistantInput').value='';
+  loadBodyMetricsForDate();
   renderNutrition();
   renderNutritionAssistantPreview();
-  result.innerHTML=`<div class="auditItem good">${count} alimento${count===1?'':'s'} registrado${count===1?'':'s'} correctamente.</div>`;
+  result.innerHTML=`<div class="auditItem good">${count} elemento${count===1?'':'s'} registrado${count===1?'':'s'} correctamente.</div>`;
 }
 function clearNutritionAssistant(){
   nutritionAssistantDraft=[];
