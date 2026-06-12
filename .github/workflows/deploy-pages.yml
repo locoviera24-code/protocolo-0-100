@@ -37,6 +37,13 @@ jobs:
       - name: Descargar repositorio
         uses: actions/checkout@v4
 
+      - name: Validar contratos web
+        shell: pwsh
+        run: ./scripts/validate-app.ps1
+
+      - name: Probar estrategia del service worker
+        run: node ./scripts/test-service-worker.mjs
+
       - name: Preparar archivos publicos
         run: |
           mkdir -p dist-pages/icons

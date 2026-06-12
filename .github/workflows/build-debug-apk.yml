@@ -35,6 +35,13 @@ jobs:
         shell: pwsh
         run: ./scripts/sync-web-assets.ps1
 
+      - name: Validar contratos y assets Android
+        shell: pwsh
+        run: ./scripts/validate-app.ps1 -CheckAndroidAssets
+
+      - name: Probar estrategia del service worker
+        run: node ./scripts/test-service-worker.mjs
+
       - name: Configurar Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
@@ -60,5 +67,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view v2.1.0 >/dev/null 2>&1 || gh release create v2.1.0 --title "Protocolo 0→100 v2.1.0" --notes "Integración híbrida opcional con USDA FoodData Central: búsqueda paginada, detalle por fdcId, normalización, caché offline, edición local e importador JSON sin publicar API keys."
-          gh release upload v2.1.0 dist/protocolo-0-100-debug.apk --clobber
+          gh release view v2.1.1 >/dev/null 2>&1 || gh release create v2.1.1 --title "Protocolo 0→100 v2.1.1" --notes "Importación v3 completa, caché PWA acotada y validaciones automáticas antes de publicar."
+          gh release upload v2.1.1 dist/protocolo-0-100-debug.apk --clobber

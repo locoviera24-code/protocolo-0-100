@@ -2,9 +2,9 @@
 
 Ultima actualizacion del handoff: 2026-06-12  
 Rama principal: `main`  
-Version web/Android actual: `2.1.0`  
+Version web/Android actual: `2.1.1`
 Esquema de datos consolidado: `3`  
-Cache actual del service worker: `protocolo-0-100-pwa-v9`
+Cache actual del service worker: `protocolo-0-100-pwa-v10`
 
 ## 1. Estado actual de la app
 
@@ -33,11 +33,14 @@ Modulos funcionales:
 
 Estado de publicacion:
 
-- PWA: <https://locoviera24-code.github.io/protocolo-0-100/?v=210>
+- PWA publicada, ultima verificada:
+  <https://locoviera24-code.github.io/protocolo-0-100/?v=210>
 - APK debug personal:
   <https://github.com/locoviera24-code/protocolo-0-100/releases/download/v2.1.0/protocolo-0-100-debug.apk>
 - Ultima publicacion verificada: version `2.1.0`; Pages y APK respondieron
   correctamente.
+- Estado del repositorio: version `2.1.1` preparada con importacion v3
+  completa, cache PWA acotada y validaciones CI; falta verificar su publicacion.
 
 La nutricion es orientativa. La app evita diagnosticos medicos y debe conservar
 frases como "segun lo registrado", "podrias priorizar" y "conviene revisar".
@@ -53,12 +56,14 @@ Archivos fuente principales:
 | `fdc-client.js` | Cliente opcional de FoodData Central, normalizacion, cache y importador de datasets JSON compatibles. |
 | `advanced-features.js` | Cobertura, diagnostico, recomendaciones, tendencias, comidas guardadas, backup v3, FDC UI, coins, rankings, recompensas y referidos. |
 | `manifest.webmanifest` | Metadata de instalacion PWA. |
-| `sw.js` | Cache offline y version del service worker. |
+| `sw.js` | Cache offline acotada, navegacion network-first y version del service worker. |
 | `README.md` | Documentacion general, despliegue y uso. |
 | `scripts/validate-app.ps1` | Validaciones estructurales, de seguridad y sincronizacion. |
+| `scripts/test-service-worker.mjs` | Prueba aislada de cache, offline, FDC y caches ajenos. |
 | `scripts/sync-web-assets.ps1` | Copia los assets web fuente al wrapper Android. |
 | `.github/workflows/deploy-pages.yml` | Publicacion automatica en GitHub Pages. |
 | `.github/workflows/build-debug-apk.yml` | Compilacion del APK debug y publicacion de release. |
+| `.github/workflows/validate-app.yml` | Validacion CI de contratos web/PWA y assets Android. |
 | `android-native-wrapper/app/src/main/assets/*` | Copias generadas de los archivos web para Android. |
 | `CODEX_HANDOFF.md` | Este contrato tecnico para continuar el desarrollo. |
 
@@ -113,6 +118,8 @@ Los archivos web de la raiz son la fuente de verdad. No editar directamente
   `renderReferral`
 - Backup completo v3, CSV, Focus Coins, recompensas, rankings opcionales y
   referidos mock/locales.
+- La importacion v3 restaura tambien modulo activo, ledger, rankings,
+  recompensas y un referido nulo, sin importar configuracion FDC.
 
 ## 4. Estructura actual de datos en localStorage
 
@@ -200,7 +207,7 @@ Snapshot consolidado:
 ```js
 {
   schemaVersion: 3,
-  appVersion: "2.1.0",
+  appVersion: "2.1.1",
   updatedAt,
   settings: { activeModule, nutritionProfile, ranking },
   dailyLogs, gymSessions, meals, customFoods, cachedFdcFoods,
@@ -247,8 +254,9 @@ su API key no deben incluirse en el backup.
   todos los micronutrientes en un unico formulario.
 - Rankings, afiliados, conversiones, comisiones y premium son simulaciones
   locales; no representan pagos ni competencia real.
-- El service worker es cache-first. Tras desplegar, una pestaña ya abierta puede
-  usar JS anterior hasta activar el nuevo worker y recargar.
+- El service worker usa network-first para navegaciones y cache-first con
+  revalidacion solo para assets principales. Tras desplegar, una pestaña ya
+  abierta puede requerir una recarga para activar todos los cambios.
 - La PWA del navegador no puede leer estadisticas Android; esa funcion requiere
   el puente del APK y permiso del usuario.
 - Voz y reconocimiento dependen del navegador/permisos; el puente Android suele
@@ -286,6 +294,7 @@ cuando corresponda publicar una nueva version.
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\validate-app.ps1
 powershell -ExecutionPolicy Bypass -File .\scripts\validate-app.ps1 -CheckAndroidAssets
+node .\scripts\test-service-worker.mjs
 git diff --check
 ```
 
@@ -335,12 +344,14 @@ git diff --check
 ### PWA y service worker
 
 1. En DevTools -> Application, revisar manifest, service worker y cache
-   `protocolo-0-100-pwa-v9`.
+   `protocolo-0-100-pwa-v10`.
 2. Cargar la app online una vez, activar modo offline y recargar.
 3. Confirmar que abren los modulos principales y que estan cacheados
    `index.html`, `nutrition-data.js`, `fdc-client.js`,
    `advanced-features.js`, manifest e iconos.
-4. Al cambiar assets web, incrementar el nombre de cache en `sw.js`, desplegar
+4. Confirmar que llamadas FDC/remotas no sean interceptadas ni respondidas con
+   `index.html`.
+5. Al cambiar assets web, incrementar el nombre de cache en `sw.js`, desplegar
    y comprobar el aviso de nueva version/recarga.
 
 ## 9. Partes que no deben reescribirse sin necesidad
@@ -367,7 +378,8 @@ git diff --check
 ## 10. Proximos pasos recomendados
 
 1. Añadir pruebas unitarias para normalizacion FDC, calculos por gramos,
-   cobertura, recomendaciones, score y migraciones.
+   cobertura, recomendaciones, score y migraciones; hoy CI cubre contratos
+   estructurales, versiones, PWA y sincronizacion Android.
 2. Extraer primero storage/migraciones y nutricion de `index.html` a modulos
    independientes, manteniendo una capa global compatible.
 3. Implementar un proxy/backend FDC con rate limiting, cache y secretos fuera
@@ -382,4 +394,3 @@ git diff --check
    actualizacion del service worker.
 8. Preparar firma, privacidad, terminos y canal de actualizacion antes de una
    distribucion publica del APK.
-

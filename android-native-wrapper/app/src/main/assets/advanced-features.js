@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const APP_VERSION='2.1.0';
+  const APP_VERSION='2.1.1';
   const APP_STATE_KEY='protocolo_0_100_state_v2';
   const SAVED_MEALS_KEY='protocolo_0_100_saved_meals_v1';
   const NUTRITION_PROFILE_KEY='protocolo_0_100_nutrition_profile_v1';
@@ -558,12 +558,17 @@
       if(state.nutritionTargets)setLocalData(NUTRITION_TARGETS_KEY,state.nutritionTargets);
       if(state.bodyMetrics)setLocalData(BODY_METRICS_KEY,state.bodyMetrics);
       if(Array.isArray(state.savedMeals))setLocalData(SAVED_MEALS_KEY,state.savedMeals);
+      if(typeof state.settings?.activeModule==='string')localStorage.setItem(ACTIVE_MODULE_KEY,state.settings.activeModule);
       if(state.settings?.nutritionProfile)setLocalData(NUTRITION_PROFILE_KEY,state.settings.nutritionProfile);
       if(state.settings?.ranking)setLocalData(RANKING_SETTINGS_KEY,state.settings.ranking);
-      if(state.referralCodes)setLocalData(REFERRAL_CODES_KEY,state.referralCodes);
-      if(state.userReferral)setLocalData(USER_REFERRAL_KEY,state.userReferral);
+      if(Array.isArray(state.referralCodes))setLocalData(REFERRAL_CODES_KEY,state.referralCodes);
+      if(Object.prototype.hasOwnProperty.call(state,'userReferral'))setLocalData(USER_REFERRAL_KEY,state.userReferral);
+      if(Array.isArray(state.coinLedger))setLocalData(COIN_LEDGER_KEY,state.coinLedger);
+      if(state.monthlyRankings&&typeof state.monthlyRankings==='object')setLocalData(MONTHLY_RANKINGS_KEY,state.monthlyRankings);
+      if(state.rewards&&typeof state.rewards==='object')setLocalData(REWARDS_KEY,state.rewards);
     }
     migrateAdvancedState();populateFoods();loadAdvancedTargetFields();renderSavedMeals();renderAll();renderAdvancedNutrition();renderAdvancedProgress();
+    if(typeof state?.settings?.activeModule==='string')setModule(state.settings.activeModule);
   }
   window.importCompleteBackupData=importCompleteBackupData;
   function syncVersionedState(){

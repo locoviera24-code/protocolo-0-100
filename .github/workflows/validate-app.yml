@@ -1,0 +1,28 @@
+name: Validar aplicacion
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validar contratos web y Android
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Comprobar estructura, datos, PWA y assets Android
+        shell: pwsh
+        run: ./scripts/validate-app.ps1 -CheckAndroidAssets
+
+      - name: Probar estrategia del service worker
+        run: node ./scripts/test-service-worker.mjs

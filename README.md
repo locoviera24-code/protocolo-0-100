@@ -24,12 +24,13 @@ advanced-features.js        Cobertura, diagnóstico, tendencias, backup y gamifi
 manifest.webmanifest        Configuración instalable
 sw.js                       Cache y funcionamiento offline
 scripts/validate-app.ps1    Validaciones estructurales
+scripts/test-service-worker.mjs Prueba ejecutable de cache/offline/FDC
 scripts/sync-web-assets.ps1 Sincronización web -> Android
 android-native-wrapper/     Proyecto Android
 .github/workflows/          Publicación Pages y compilación APK
 ```
 
-`advanced-features.js` mantiene un estado consolidado con `schemaVersion: 3` y migra los datos locales anteriores. Los alimentos preparados y regionales incluyen nivel de confianza y fuente; varios valores son aproximados y pueden editarse.
+`advanced-features.js` mantiene un estado consolidado con `schemaVersion: 3`, migra los datos locales anteriores y restaura todos los campos del backup completo. Los alimentos preparados y regionales incluyen nivel de confianza y fuente; varios valores son aproximados y pueden editarse.
 
 La integración FoodData Central es híbrida:
 
@@ -38,6 +39,8 @@ La integración FoodData Central es híbrida:
 3. consulta FDC únicamente si el usuario configuró una API key personal o un backend/proxy.
 
 No hay ninguna API key dentro del repositorio. La clave personal, si se usa, queda en el `localStorage` del dispositivo y no se incluye en backups. Para producción debe usarse un backend que proteja la clave. Los datasets FDC no forman parte del bundle; el importador JSON es opcional y limita la cantidad almacenada para cuidar rendimiento.
+
+El service worker usa navegación `network-first`, conserva offline únicamente los assets principales de la app y no intercepta llamadas FDC ni otros orígenes. Los workflows validan contratos web, PWA y assets Android antes de publicar.
 
 ## Seguridad
 
@@ -51,6 +54,7 @@ Validar estructura:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File ./scripts/validate-app.ps1
+node ./scripts/test-service-worker.mjs
 ```
 
 Sincronizar la versión web dentro del APK y comprobarla:
@@ -63,7 +67,7 @@ powershell -ExecutionPolicy Bypass -File ./scripts/validate-app.ps1 -CheckAndroi
 ## Publicación
 
 - **PWA:** el workflow `Publicar PWA en GitHub Pages` publica los archivos raíz.
-- **APK:** el workflow `Construir APK Android` compila el wrapper y publica la descarga directa de la versión `v2.1.0`.
+- **APK:** el workflow `Construir APK Android` compila el wrapper y publica la descarga directa de la versión `v2.1.1`.
 
 El APK generado es `debug`, apropiado para uso personal. Publicar en Play Store requiere una compilación `release` firmada con una clave privada.
 
