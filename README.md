@@ -44,15 +44,17 @@ Desde la pantalla de inicio el widget permite:
 
 - ver el entrenamiento del dia;
 - ver el ejercicio actual;
+- ver series del ejercicio actual y total de series del musculo activo por separado;
 - subir/bajar repeticiones;
 - subir/bajar kilos siempre en pasos de 0.5 kg;
+- usar ajuste rapido de peso de 5 kg para evitar muchos taps en cargas altas;
 - tocar **Guardar serie** sin abrir la app;
 - tocar **Repetir** para cargar la ultima serie conocida;
 - tocar **Atras** para volver al ejercicio anterior;
 - tocar **Siguiente** para avanzar de ejercicio;
 - abrir Gym / Entrenamiento de hoy o Registro rapido cuando hace falta una edicion completa.
 
-Limitacion practica: `RemoteViews` no ofrece un formulario libre comodo con teclado, RIR/RPE y notas largas. Para eso el boton de abrir registro rapido sigue entrando directo a la pantalla completa. El registro directo del widget cubre el flujo estable de gimnasio: reps, kilos, guardar, repetir y siguiente.
+Limitacion practica: `RemoteViews` no ofrece un formulario libre comodo con teclado, RIR/RPE y notas largas. Para eso el boton de abrir registro rapido sigue entrando directo a la pantalla completa. El registro directo del widget cubre el flujo estable de gimnasio: reps, kilos, ajustes rapidos de peso, guardar, repetir, atras y siguiente.
 
 Para agregarlo: instala el APK, manten presionada la pantalla de inicio, entra a **Widgets**, busca **Protocolo 0->100 · Gym** y agregalo. El widget pequeno ofrece guardado rapido minimo; el mediano muestra controles completos.
 
@@ -87,7 +89,7 @@ El APK resultante queda en `android-native-wrapper/app/build/outputs/apk/debug/a
 ## Publicacion
 
 - **PWA:** el workflow `Publicar PWA en GitHub Pages` publica los archivos raiz.
-- **APK:** el workflow `Construir APK Android` compila el wrapper y publica la descarga directa de la version `v2.3.1`.
+- **APK:** el workflow `Construir APK Android` compila el wrapper y publica la descarga directa de la version `v2.3.2`.
 
 El APK generado es `debug`, apropiado para uso personal. Publicar en Play Store requiere una compilacion `release` firmada con una clave privada.
 

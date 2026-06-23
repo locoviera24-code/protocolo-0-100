@@ -70,5 +70,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view v2.3.1 >/dev/null 2>&1 || gh release create v2.3.1 --title "Protocolo 0-100 v2.3.1" --notes "Widget Android nativo con registro directo, boton Atras para volver al ejercicio anterior y escala de peso fija de 0.5 kg."
-          gh release upload v2.3.1 dist/protocolo-0-100-debug.apk --clobber
+          gh release view v2.3.2 >/dev/null 2>&1 || gh release create v2.3.2 --title "Protocolo 0-100 v2.3.2" --notes "Widget Android nativo con series por ejercicio y por musculo, controles de peso precisos de 0.5 kg y ajuste rapido de 5 kg."
+          gh release upload v2.3.2 dist/protocolo-0-100-debug.apk --clobber

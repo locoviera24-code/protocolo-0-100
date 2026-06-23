@@ -2,9 +2,9 @@
 
 Ultima actualizacion del handoff: 2026-06-23
 Rama principal: `main`
-Version web/Android actual: `2.3.1`
+Version web/Android actual: `2.3.2`
 Esquema de datos consolidado: `3`
-Cache actual del service worker: `protocolo-0-100-pwa-v13`
+Cache actual del service worker: `protocolo-0-100-pwa-v14`
 
 ## 1. Estado actual
 
@@ -19,8 +19,9 @@ Modulos activos:
   score, historial y tendencias.
 - Gym: rutina semanal editable, entrenamiento del dia, registro rapido,
   historial por ejercicio, volumen y score gym.
-- Widget Android nativo: rutina del dia, controles directos reps/kg, guardar
-  serie desde pantalla de inicio, repetir ultima serie y siguiente ejercicio.
+- Widget Android nativo: rutina del dia, controles directos reps/kg, series
+  por ejercicio y por musculo, guardar serie desde pantalla de inicio, repetir
+  ultima serie, atras/siguiente y ajuste rapido de peso.
 - Nutricion: alimentos locales, asistente texto/voz, objetivos, cobertura,
   diagnostico orientativo y FoodData Central opcional.
 - Backup/importacion: snapshot `schemaVersion: 3`, CSV y migraciones seguras.
@@ -35,7 +36,7 @@ El APK publicado es debug/personal. Para Play Store hace falta release firmado.
 | `index.html` | UI principal, navegacion, protocolo, gym legacy, nutricion y puentes base. |
 | `workout-features.js` | Rutina semanal, registro rapido, historial gym, estado del widget e importacion de registros nativos. |
 | `advanced-features.js` | Version app, backup v3, cobertura, diagnostico, FDC, coins, rankings y recompensas. |
-| `sw.js` | Cache PWA `protocolo-0-100-pwa-v13`, navegacion network-first y assets principales. |
+| `sw.js` | Cache PWA `protocolo-0-100-pwa-v14`, navegacion network-first y assets principales. |
 | `manifest.webmanifest` | Metadata PWA para GitHub Pages. |
 | `scripts/sync-web-assets.ps1` | Copia assets web al wrapper Android. |
 | `scripts/validate-app.ps1` | Contratos estructurales web, PWA, backup, widget y assets Android. |
@@ -46,7 +47,7 @@ El APK publicado es debug/personal. Para Play Store hace falta release firmado.
 | `android-native-wrapper/app/src/main/res/layout/widget_workout_small.xml` | Widget compacto con guardado rapido minimo. |
 | `android-native-wrapper/app/src/main/res/layout/widget_workout_medium.xml` | Widget mediano con controles reps/kg, guardar, repetir y siguiente. |
 | `android-native-wrapper/app/src/main/res/xml/workout_widget_info.xml` | Metadata para aparecer en Widgets del launcher. |
-| `.github/workflows/build-debug-apk.yml` | Compila APK debug y publica release `v2.3.1`. |
+| `.github/workflows/build-debug-apk.yml` | Compila APK debug y publica release `v2.3.2`. |
 
 No editar manualmente `android-native-wrapper/app/src/main/assets/*`; cambiar
 la raiz web y ejecutar la sincronizacion.
@@ -70,6 +71,7 @@ Acciones principales:
 - `ACTION_REFRESH_WORKOUT_WIDGET`: refresca RemoteViews.
 - `ACTION_WIDGET_REPS_DOWN` / `ACTION_WIDGET_REPS_UP`: ajusta reps desde el widget.
 - `ACTION_WIDGET_WEIGHT_DOWN` / `ACTION_WIDGET_WEIGHT_UP`: ajusta kilos siempre en pasos de 0.5 kg.
+- `ACTION_WIDGET_WEIGHT_FAST_DOWN` / `ACTION_WIDGET_WEIGHT_FAST_UP`: ajusta kilos en pasos de 5 kg, manteniendo valores compatibles con la escala de 0.5 kg.
 - `ACTION_WIDGET_SAVE_SET`: guarda serie directamente en `SharedPreferences`.
 - `ACTION_WIDGET_REPEAT_LAST`: carga ultima serie conocida.
 - `ACTION_WIDGET_PREVIOUS_EXERCISE`: vuelve al ejercicio anterior.
@@ -85,6 +87,7 @@ El JSON compartido `workoutWidgetState` usa `schemaVersion: 2` e incluye:
 - resumen del dia;
 - ejercicios con sets;
 - `quickLog` con reps, peso, unidad, set actual y ejercicio actual;
+- `currentExerciseSets`, `currentMuscleSets` y `currentMuscleName`;
 - `workoutSession` importable por la web;
 - `exerciseHistory`;
 - `lastNativeMutationAt` y `lastNativeMutationSource: "android-widget-direct"`.
@@ -157,19 +160,21 @@ GitHub Actions con Java 17, Android SDK 35 y Gradle 8.10.2.
 
 ## 7. Pruebas manuales criticas
 
-1. Instalar APK `v2.3.1`.
+1. Instalar APK `v2.3.2`.
 2. Agregar widget `Protocolo 0->100 · Gym`.
 3. Confirmar que muestra rutina del dia.
 4. Ajustar reps y kilos desde el widget.
-5. Tocar `Guardar serie` sin abrir la app.
-6. Confirmar que suben series/progreso en el widget.
-7. Tocar `Repetir` y guardar otra serie.
-8. Tocar `Siguiente` y confirmar cambio de ejercicio.
-9. Tocar `Atras` y confirmar vuelta al ejercicio anterior.
-10. Abrir app desde el widget y confirmar que la sesion aparece en Gym.
-11. Exportar backup y confirmar `workoutSessions`, `exerciseHistory` y `workoutWidgetState`.
-12. Importar backup en perfil limpio y confirmar restauracion.
-13. Revisar PWA/GitHub Pages para confirmar que nutricion, habitos, score y offline no se rompieron.
+5. Confirmar que el widget muestra series del ejercicio actual y series totales del musculo activo.
+6. Tocar `+5 kg` hasta una carga alta y ajustar fino con `+/-0.5 kg`.
+7. Tocar `Guardar serie` sin abrir la app.
+8. Confirmar que suben las series del ejercicio y del musculo.
+9. Tocar `Repetir` y guardar otra serie.
+10. Tocar `Siguiente` y confirmar cambio de ejercicio con contadores reiniciados/actualizados.
+11. Tocar `Atras` y confirmar vuelta al ejercicio anterior con sus series.
+12. Abrir app desde el widget y confirmar que la sesion aparece en Gym.
+13. Exportar backup y confirmar `workoutSessions`, `exerciseHistory` y `workoutWidgetState`.
+14. Importar backup en perfil limpio y confirmar restauracion.
+15. Revisar PWA/GitHub Pages para confirmar que nutricion, habitos, score y offline no se rompieron.
 
 ## 8. Reglas de continuidad
 

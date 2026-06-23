@@ -197,6 +197,10 @@
     return session.exercises[Math.min(session.currentExerciseIndex||0,session.exercises.length-1)] || session.exercises.find(x=>!x.completed) || session.exercises[0];
   }
   function exerciseVolume(exercise){ return (exercise.sets||[]).reduce((sum,set)=>sum+(Number(set.reps)||0)*(Number(set.weight)||0),0); }
+  function exerciseSetCount(exercise){ return exercise?.sets?.length||0; }
+  function muscleSetCount(exercises,muscle){
+    return (exercises||[]).filter(exercise=>exercise.muscle===muscle).reduce((sum,exercise)=>sum+exerciseSetCount(exercise),0);
+  }
   function sessionSummary(session){
     const exercises=session.exercises||[];
     const allSets=exercises.flatMap(e=>(e.sets||[]).map(set=>({...set,exerciseName:e.name,exerciseId:e.exerciseId})));
@@ -322,9 +326,11 @@
           <label class="check" style="margin-top:10px"><input type="checkbox" id="quickBodyweight"><span>Peso corporal: registrar reps sin kilos, o usar kilos como lastre si agregás carga.</span></label>
           <div class="field" style="margin-top:10px"><label>Nota opcional</label><textarea id="quickNote" placeholder="Técnica, molestia, energía, ajuste para próxima serie…"></textarea></div>
           <div class="auditItem" id="quickLastHint">Última vez: sin datos todavía.</div>
+          <div class="auditItem" id="quickSetStats">Ejercicio: 0 series · músculo: 0 series.</div>
           <div class="buttons">
             <button type="button" class="good" id="saveQuickSetBtn">Guardar serie</button>
             <button type="button" class="secondary" id="repeatLastSetBtn">Repetir última serie</button>
+            <button type="button" class="secondary" id="previousExerciseBtn">Ejercicio anterior</button>
             <button type="button" class="secondary" id="nextExerciseBtn">Siguiente ejercicio</button>
             <button type="button" class="secondary" id="completeExerciseBtn">Completar ejercicio</button>
             <button type="button" class="warn" id="finishWorkoutBtn">Finalizar entrenamiento</button>
@@ -372,6 +378,7 @@
     document.getElementById('quickExerciseSelect')?.addEventListener('change',event=>{currentQuickExerciseId=event.target.value;renderQuickLogger();});
     document.getElementById('saveQuickSetBtn')?.addEventListener('click',saveQuickSet);
     document.getElementById('repeatLastSetBtn')?.addEventListener('click',repeatLastSet);
+    document.getElementById('previousExerciseBtn')?.addEventListener('click',previousExercise);
     document.getElementById('nextExerciseBtn')?.addEventListener('click',nextExercise);
     document.getElementById('completeExerciseBtn')?.addEventListener('click',completeCurrentExercise);
     document.getElementById('finishWorkoutBtn')?.addEventListener('click',finishWorkout);
@@ -442,6 +449,12 @@
     const hint=document.getElementById('quickLastHint');
     if(h) hint.textContent=`Última vez: ${h.name} — ${h.lastWeight||0} ${settings().unit} x ${h.lastReps||0} reps. Podés repetir la carga anterior; si te sentís bien, intentá +1 rep.`;
     else hint.textContent='Última vez: sin datos todavía. Si estás fatigado, mantener carga también cuenta.';
+    const stat=document.getElementById('quickSetStats');
+    if(stat){
+      const exerciseSets=exerciseSetCount(exercise);
+      const muscleSets=muscleSetCount(source,exercise.muscle);
+      stat.textContent=`Series de este ejercicio: ${exerciseSets}. Total de ${exercise.muscle}: ${muscleSets}.`;
+    }
     const show=settings().showRir;
     ['quickRir','quickRpe'].forEach(id=>{const field=document.getElementById(id)?.closest('.field'); if(field) field.classList.toggle('hidden',!show);});
   }
@@ -500,6 +513,15 @@
     const next=session.exercises[Math.min(session.exercises.length-1,index+1)];
     session.currentExerciseIndex=session.exercises.findIndex(x=>x.id===next.id);
     currentQuickExerciseId=next.id;
+    replaceSession(session);
+    renderGym();
+  }
+  function previousExercise(){
+    const session=selectedSessionForQuick(); if(!session) return;
+    const current=selectedQuickExercise(session),index=session.exercises.findIndex(x=>x.id===current?.id);
+    const previous=session.exercises[Math.max(0,index-1)];
+    session.currentExerciseIndex=session.exercises.findIndex(x=>x.id===previous.id);
+    currentQuickExerciseId=previous.id;
     replaceSession(session);
     renderGym();
   }
@@ -599,6 +621,8 @@
     const quickReps=Number(quickMatches?previousQuick.reps:(lastSet?.reps??h?.lastReps??8))||8;
     const quickWeight=Number(quickMatches?previousQuick.weight:(lastSet?.weight??h?.lastWeight??0))||0;
     const quickBodyweight=!!(quickMatches?previousQuick.bodyweight:(current?.bodyweight||lastSet?.bodyweight||h?.bodyweight));
+    const currentExerciseSets=exerciseSetCount(current);
+    const currentMuscleSets=muscleSetCount(exercises,current?.muscle);
     const quickHint=h
       ? `Ultima vez: ${h.name} — ${h.lastWeight||0} ${s.unit} x ${h.lastReps||0} reps.`
       : 'Ajusta reps/kg y guarda desde el widget.';
@@ -629,6 +653,9 @@
       })),
       currentExerciseId:currentId,
       currentExerciseName:current?.name||'',
+      currentExerciseSets,
+      currentMuscleSets,
+      currentMuscleName:current?.muscle||'',
       quickLog:{
         currentExerciseId:currentId,
         exerciseName:current?.name||'',
@@ -638,6 +665,10 @@
         bodyweight:quickBodyweight,
         unit:s.unit,
         weightStep:0.5,
+        weightFastStep:5,
+        currentExerciseSets,
+        currentMuscleSets,
+        currentMuscleName:current?.muscle||'',
         hintText:quickHint
       },
       workoutSession:session?clone(session):null,

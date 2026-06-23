@@ -190,12 +190,13 @@ foreach ($contract in @(
     'ACTION_WIDGET_SAVE_SET',
     'ACTION_WIDGET_REPS_UP',
     'ACTION_WIDGET_WEIGHT_UP',
+    'ACTION_WIDGET_WEIGHT_FAST_UP',
     'ACTION_WIDGET_PREVIOUS_EXERCISE',
     'handleWidgetAction'
 )) {
     Assert-True (($widgetProvider + $widgetUpdater + $mainActivity).Contains($contract)) "Falta contrato nativo de widget: $contract"
 }
-foreach ($contract in @('widgetPreviousButton', 'WEIGHT_STEP = 0.5')) {
+foreach ($contract in @('widgetPreviousButton', 'widgetSetStats', 'widgetWeightFastPlusButton', 'WEIGHT_STEP = 0.5', 'WEIGHT_FAST_STEP = 5.0', 'currentExerciseSets', 'currentMuscleSets')) {
     Assert-True ($widgetUpdater.Contains($contract) -or ($contract -eq 'widgetPreviousButton' -and (($widgetUpdater + (Read-Utf8 'android-native-wrapper/app/src/main/res/layout/widget_workout_medium.xml') + (Read-Utf8 'android-native-wrapper/app/src/main/res/layout/widget_workout_small.xml')).Contains($contract)))) "Falta contrato de widget directo: $contract"
 }
 

@@ -24,6 +24,7 @@ public final class WorkoutWidgetUpdateService {
 
     private static final int REQUEST_REFRESH = 1004;
     private static final double WEIGHT_STEP = 0.5;
+    private static final double WEIGHT_FAST_STEP = 5.0;
 
     private WorkoutWidgetUpdateService() {}
 
@@ -87,6 +88,7 @@ public final class WorkoutWidgetUpdateService {
         views.setTextViewText(R.id.widgetExercises, state.exerciseText);
         views.setTextViewText(R.id.widgetProgress, state.progressText);
         views.setTextViewText(R.id.widgetCurrentExercise, state.currentExerciseName);
+        views.setTextViewText(R.id.widgetSetStats, state.setStatsText);
         views.setTextViewText(R.id.widgetQuickReps, state.quickRepsText);
         views.setTextViewText(R.id.widgetQuickWeight, state.quickWeightText);
         views.setTextViewText(R.id.widgetActionStatus, state.actionStatus);
@@ -105,6 +107,8 @@ public final class WorkoutWidgetUpdateService {
         views.setOnClickPendingIntent(R.id.widgetRepsPlusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_REPS_UP));
         views.setOnClickPendingIntent(R.id.widgetWeightMinusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_WEIGHT_DOWN));
         views.setOnClickPendingIntent(R.id.widgetWeightPlusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_WEIGHT_UP));
+        views.setOnClickPendingIntent(R.id.widgetWeightFastMinusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_WEIGHT_FAST_DOWN));
+        views.setOnClickPendingIntent(R.id.widgetWeightFastPlusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_WEIGHT_FAST_UP));
         views.setOnClickPendingIntent(R.id.widgetSaveSetButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_SAVE_SET));
         views.setOnClickPendingIntent(R.id.widgetRepeatButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_REPEAT_LAST));
         views.setOnClickPendingIntent(R.id.widgetPreviousButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_PREVIOUS_EXERCISE));
@@ -139,6 +143,8 @@ public final class WorkoutWidgetUpdateService {
                 || MainActivity.ACTION_WIDGET_REPS_UP.equals(action)
                 || MainActivity.ACTION_WIDGET_WEIGHT_DOWN.equals(action)
                 || MainActivity.ACTION_WIDGET_WEIGHT_UP.equals(action)
+                || MainActivity.ACTION_WIDGET_WEIGHT_FAST_DOWN.equals(action)
+                || MainActivity.ACTION_WIDGET_WEIGHT_FAST_UP.equals(action)
                 || MainActivity.ACTION_WIDGET_SAVE_SET.equals(action)
                 || MainActivity.ACTION_WIDGET_REPEAT_LAST.equals(action)
                 || MainActivity.ACTION_WIDGET_PREVIOUS_EXERCISE.equals(action)
@@ -159,6 +165,10 @@ public final class WorkoutWidgetUpdateService {
             adjustQuick(state, "weight", -WEIGHT_STEP);
         } else if (MainActivity.ACTION_WIDGET_WEIGHT_UP.equals(action)) {
             adjustQuick(state, "weight", WEIGHT_STEP);
+        } else if (MainActivity.ACTION_WIDGET_WEIGHT_FAST_DOWN.equals(action)) {
+            adjustQuick(state, "weight", -WEIGHT_FAST_STEP);
+        } else if (MainActivity.ACTION_WIDGET_WEIGHT_FAST_UP.equals(action)) {
+            adjustQuick(state, "weight", WEIGHT_FAST_STEP);
         } else if (MainActivity.ACTION_WIDGET_REPEAT_LAST.equals(action)) {
             repeatLast(state);
         } else if (MainActivity.ACTION_WIDGET_PREVIOUS_EXERCISE.equals(action)) {
@@ -351,6 +361,8 @@ public final class WorkoutWidgetUpdateService {
         put(quick, "setNumber", setNumber);
         put(quick, "unit", state.optString("unit", "kg"));
         put(quick, "weightStep", WEIGHT_STEP);
+        put(quick, "weightFastStep", WEIGHT_FAST_STEP);
+        putCurrentSetStats(quick, state, exercise);
         put(quick, "hintText", "Ajusta reps/kg y guarda desde el widget.");
         put(state, "quickLog", quick);
         return quick;
@@ -371,10 +383,37 @@ public final class WorkoutWidgetUpdateService {
         if (selectedExercise == null) selectedExercise = currentExercise(state, session);
         put(state, "currentExerciseId", exerciseIdOf(selectedExercise));
         put(state, "currentExerciseName", selectedExercise == null ? "" : selectedExercise.optString("name", ""));
+        putCurrentSetStats(state, state, selectedExercise);
         put(state, "progressText", summary.optInt("completedExercises", 0) + "/" + summary.optInt("totalExercises", 0)
                 + " ejercicios · " + summary.optInt("totalSets", 0) + " series · "
                 + Math.round(summary.optDouble("totalVolume", 0)) + " " + state.optString("unit", "kg"));
         ensureQuickLog(state, selectedExercise);
+    }
+
+    private static void putCurrentSetStats(JSONObject target, JSONObject state, JSONObject selectedExercise) {
+        int exerciseSets = setCount(selectedExercise);
+        String muscle = selectedExercise == null ? "" : selectedExercise.optString("muscle", "");
+        int muscleSets = muscleSetCount(state.optJSONArray("exercises"), muscle);
+        put(target, "currentExerciseSets", exerciseSets);
+        put(target, "currentMuscleSets", muscleSets);
+        put(target, "currentMuscleName", muscle);
+    }
+
+    private static int setCount(JSONObject exercise) {
+        JSONArray sets = exercise == null ? null : exercise.optJSONArray("sets");
+        return sets == null ? 0 : sets.length();
+    }
+
+    private static int muscleSetCount(JSONArray exercises, String muscle) {
+        if (exercises == null || muscle == null || muscle.length() == 0) return 0;
+        int total = 0;
+        for (int i = 0; i < exercises.length(); i++) {
+            JSONObject exercise = exercises.optJSONObject(i);
+            if (exercise != null && muscle.equals(exercise.optString("muscle", ""))) {
+                total += setCount(exercise);
+            }
+        }
+        return total;
     }
 
     private static JSONObject sessionSummary(JSONObject session) {
@@ -773,6 +812,7 @@ public final class WorkoutWidgetUpdateService {
         String progressText;
         String currentExerciseId;
         String currentExerciseName;
+        String setStatsText;
         String quickRepsText;
         String quickWeightText;
         String actionStatus;
@@ -785,6 +825,7 @@ public final class WorkoutWidgetUpdateService {
             state.currentExerciseId = opt(json, "currentExerciseId", "");
             state.currentExerciseName = opt(json, "currentExerciseName", "Ejercicio actual");
             state.progressText = opt(json, "progressText", "Sin progreso registrado");
+            state.setStatsText = setStatsText(json, null);
 
             JSONArray muscles = json.optJSONArray("muscles");
             state.summary = muscles == null || muscles.length() == 0 ? opt(json, "message", "") : join(muscles, " · ", 5);
@@ -803,12 +844,22 @@ public final class WorkoutWidgetUpdateService {
                 state.currentExerciseName = opt(quick, "exerciseName", state.currentExerciseName);
                 state.quickRepsText = quick.optInt("reps", 8) + " reps";
                 state.quickWeightText = formatWeight(quick.optDouble("weight", 0)) + " " + opt(quick, "unit", json.optString("unit", "kg"));
+                state.setStatsText = setStatsText(json, quick);
             } else {
                 state.quickRepsText = "8 reps";
                 state.quickWeightText = "0 " + json.optString("unit", "kg");
             }
             state.actionStatus = opt(json, "lastWidgetActionText", "Ajusta reps/kg y guarda desde el widget.");
             return state;
+        }
+
+        private static String setStatsText(JSONObject state, JSONObject quick) {
+            JSONObject source = quick == null ? state : quick;
+            int exerciseSets = source == null ? 0 : source.optInt("currentExerciseSets", state == null ? 0 : state.optInt("currentExerciseSets", 0));
+            int muscleSets = source == null ? 0 : source.optInt("currentMuscleSets", state == null ? 0 : state.optInt("currentMuscleSets", 0));
+            String muscle = opt(source == null ? state : source, "currentMuscleName", state == null ? "" : state.optString("currentMuscleName", ""));
+            if (muscle.length() == 0) muscle = "musculo";
+            return "Ejercicio: " + exerciseSets + " series · " + muscle + ": " + muscleSets + " series";
         }
 
         private static String opt(JSONObject json, String key, String fallback) {
