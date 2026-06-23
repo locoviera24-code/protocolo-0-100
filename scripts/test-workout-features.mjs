@@ -57,9 +57,47 @@ assert.ok(workout.planForDate('2026-06-23').exercises.some(exercise => exercise.
 
 const widgetState = workout.buildWorkoutWidgetState('2026-06-22');
 assert.equal(widgetState.title, 'Lunes — Torso A');
+assert.equal(widgetState.schemaVersion, 2);
 assert.equal(widgetState.currentExerciseName, 'Apertura sentado / Peck deck');
+assert.equal(widgetState.quickLog.reps, 8);
+assert.equal(widgetState.quickLog.unit, 'kg');
+assert.ok(widgetState.weeklyWorkoutPlan.monday);
+assert.ok(widgetState.exerciseHistory);
 assert.ok(widgetState.exercises.length >= 9);
 assert.equal(store.has(workout.keys.weeklyWorkoutPlan), true);
+
+const nativeExercise = {...workout.planForDate('2026-06-22').exercises[1], sets: [{
+  id: 'set_android_test',
+  setNumber: 1,
+  reps: 8,
+  weight: 60,
+  bodyweight: false,
+  savedAt: '2026-06-22T12:00:00.000Z',
+  volume: 480
+}]};
+const nativeSession = {
+  id: 'workout_android_test',
+  date: '2026-06-22',
+  dayKey: 'monday',
+  weekday: 'Lunes',
+  routine: {name: 'Torso A', exercises: []},
+  startedAt: '2026-06-22T11:55:00.000Z',
+  status: 'en progreso',
+  currentExerciseIndex: 0,
+  exercises: [nativeExercise],
+  summary: {totalSets: 1, totalVolume: 480}
+};
+assert.equal(workout.importWidgetStateFromAndroid({
+  schemaVersion: 2,
+  date: '2026-06-22',
+  currentExerciseId: nativeExercise.id,
+  lastNativeMutationAt: '2026-06-22T12:00:00.000Z',
+  lastNativeMutationSource: 'android-widget-direct',
+  workoutSession: nativeSession,
+  exerciseHistory: {}
+}), true);
+assert.equal(JSON.parse(store.get(workout.keys.workoutSessions))[0].id, 'workout_android_test');
+assert.equal(JSON.parse(store.get(workout.keys.exerciseHistory))['press-banca'].lastWeight, 60);
 
 const customPlan = {monday: {dayKey: 'monday', weekday: 'Lunes', name: 'Rutina propia', type: 'workout', muscles: ['Test'], exercises: []}};
 const {context: customContext} = createContext({
@@ -67,4 +105,4 @@ const {context: customContext} = createContext({
 });
 assert.equal(customContext.WORKOUT_FEATURES.planForDate('2026-06-22').name, 'Rutina propia');
 
-console.log('Workout features correcto: plan semanal, descanso, widget state y no sobrescritura.');
+console.log('Workout features correcto: plan semanal, descanso, widget state, importacion directa y no sobrescritura.');

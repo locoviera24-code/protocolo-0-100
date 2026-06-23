@@ -14,7 +14,10 @@ public class WorkoutWidgetProvider extends AppWidgetProvider {
     @Override
     public void onReceive(Context context, Intent intent) {
         super.onReceive(context, intent);
-        if (MainActivity.ACTION_REFRESH_WORKOUT_WIDGET.equals(intent.getAction())) {
+        if (intent != null && WorkoutWidgetUpdateService.handleWidgetAction(context, intent.getAction())) {
+            return;
+        }
+        if (intent != null && MainActivity.ACTION_REFRESH_WORKOUT_WIDGET.equals(intent.getAction())) {
             WorkoutWidgetUpdateService.updateAll(context);
         }
     }

@@ -34,6 +34,13 @@ public class MainActivity extends Activity {
     public static final String ACTION_QUICK_LOG_SET = "com.protocolo.cien.ACTION_QUICK_LOG_SET";
     public static final String ACTION_COMPLETE_CURRENT_EXERCISE = "com.protocolo.cien.ACTION_COMPLETE_CURRENT_EXERCISE";
     public static final String ACTION_REFRESH_WORKOUT_WIDGET = "com.protocolo.cien.ACTION_REFRESH_WORKOUT_WIDGET";
+    public static final String ACTION_WIDGET_REPS_DOWN = "com.protocolo.cien.ACTION_WIDGET_REPS_DOWN";
+    public static final String ACTION_WIDGET_REPS_UP = "com.protocolo.cien.ACTION_WIDGET_REPS_UP";
+    public static final String ACTION_WIDGET_WEIGHT_DOWN = "com.protocolo.cien.ACTION_WIDGET_WEIGHT_DOWN";
+    public static final String ACTION_WIDGET_WEIGHT_UP = "com.protocolo.cien.ACTION_WIDGET_WEIGHT_UP";
+    public static final String ACTION_WIDGET_SAVE_SET = "com.protocolo.cien.ACTION_WIDGET_SAVE_SET";
+    public static final String ACTION_WIDGET_REPEAT_LAST = "com.protocolo.cien.ACTION_WIDGET_REPEAT_LAST";
+    public static final String ACTION_WIDGET_NEXT_EXERCISE = "com.protocolo.cien.ACTION_WIDGET_NEXT_EXERCISE";
     private static final int SPEECH_REQUEST_CODE = 4100;
     private WebView webView;
     private Intent pendingWidgetIntent;

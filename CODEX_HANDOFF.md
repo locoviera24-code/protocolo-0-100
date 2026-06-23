@@ -1,489 +1,190 @@
 # CODEX_HANDOFF - Protocolo 0->100
 
 Ultima actualizacion del handoff: 2026-06-23
-Rama principal: `main`  
-Version web/Android actual: `2.2.0`
-Esquema de datos consolidado: `3`  
-Cache actual del service worker: `protocolo-0-100-pwa-v11`
+Rama principal: `main`
+Version web/Android actual: `2.3.0`
+Esquema de datos consolidado: `3`
+Cache actual del service worker: `protocolo-0-100-pwa-v12`
 
-## 1. Estado actual de la app
+## 1. Estado actual
 
-La app es una PWA funcional, instalable y compatible con GitHub Pages. Tambien
-existe un wrapper Android que carga los mismos archivos web y agrega puentes
-nativos para voz y estadisticas de uso.
+La app es una PWA instalable compatible con GitHub Pages y un APK Android con
+WebView. La raiz del repositorio es la fuente de verdad web; los assets se
+copian a `android-native-wrapper/app/src/main/assets/` con
+`scripts/sync-web-assets.ps1`.
 
-Modulos funcionales:
+Modulos activos:
 
-- Protocolo 0->100: registro diario, plan progresivo, score, historial,
-  estadisticas, rachas, insignias y mantenimiento posterior al dia 100.
-- Gimnasio: rutinas, ejercicios predefinidos y personalizados, series,
-  repeticiones, peso, RIR, volumen e historial.
-- Widget Android nativo de gimnasio: rutina del dia, progreso, acceso directo
-  a entrenamiento de hoy y registro rapido de series.
-- Nutricion: alimentos locales, registro por gramos/comida, asistente de texto
-  y voz, objetivos, cobertura diaria, diagnostico orientativo, recomendaciones
-  y tendencias.
-- USDA FoodData Central: busqueda hibrida local/cache/remota, importacion y
-  edicion de alimentos, sin exponer una API key en el repositorio.
-- Progreso integral: scores separados y score integral opcional.
-- Gamificacion: Focus Coins, recompensas, rankings mensuales opcionales y
-  referidos/afiliados simulados localmente.
-- Persistencia: datos versionados en `localStorage`, migracion, backup JSON y
-  exportaciones CSV.
-- PWA: manifest, funcionamiento offline, cache versionado y aviso de nueva
-  version.
+- Protocolo diario: pantalla, sueno, lectura, actividad offline, accion clave,
+  score, historial y tendencias.
+- Gym: rutina semanal editable, entrenamiento del dia, registro rapido,
+  historial por ejercicio, volumen y score gym.
+- Widget Android nativo: rutina del dia, controles directos reps/kg, guardar
+  serie desde pantalla de inicio, repetir ultima serie y siguiente ejercicio.
+- Nutricion: alimentos locales, asistente texto/voz, objetivos, cobertura,
+  diagnostico orientativo y FoodData Central opcional.
+- Backup/importacion: snapshot `schemaVersion: 3`, CSV y migraciones seguras.
+- PWA/offline: manifest relativo, service worker acotado y cache versionado.
 
-Estado de publicacion:
+El APK publicado es debug/personal. Para Play Store hace falta release firmado.
 
-- PWA publicada, ultima verificada:
-  <https://locoviera24-code.github.io/protocolo-0-100/?v=210>
-- APK debug personal:
-  <https://github.com/locoviera24-code/protocolo-0-100/releases/download/v2.1.1/protocolo-0-100-debug.apk>
-- Ultima publicacion verificada: version `2.1.1`; Pages y APK respondieron
-  correctamente.
-- Estado del repositorio: version `2.2.0` en desarrollo con widget Android
-  nativo, rutina semanal, registro rapido y backup gym/widget; falta publicar
-  y verificar release APK.
-
-La nutricion es orientativa. La app evita diagnosticos medicos y debe conservar
-frases como "segun lo registrado", "podrias priorizar" y "conviene revisar".
-
-## 2. Archivos modificados y responsabilidad actual
-
-Archivos fuente principales:
+## 2. Archivos clave
 
 | Archivo | Responsabilidad |
 | --- | --- |
-| `index.html` | UI principal, navegacion, protocolo, gimnasio, registro nutricional, asistente nutricional y eventos base. |
-| `workout-features.js` | Rutina semanal, entrenamiento del dia, registro rapido, historial de ejercicios y estado app-widget. |
-| `nutrition-data.js` | Base local curada de 71 alimentos y definiciones de 28 nutrientes. |
-| `fdc-client.js` | Cliente opcional de FoodData Central, normalizacion, cache y importador de datasets JSON compatibles. |
-| `advanced-features.js` | Cobertura, diagnostico, recomendaciones, tendencias, comidas guardadas, backup v3, FDC UI, coins, rankings, recompensas y referidos. |
-| `manifest.webmanifest` | Metadata de instalacion PWA. |
-| `sw.js` | Cache offline acotada, navegacion network-first y version del service worker. |
-| `README.md` | Documentacion general, despliegue y uso. |
-| `scripts/validate-app.ps1` | Validaciones estructurales, de seguridad y sincronizacion. |
-| `scripts/test-service-worker.mjs` | Prueba aislada de cache, offline, FDC y caches ajenos. |
-| `scripts/test-workout-features.mjs` | Prueba de rutina semanal, fallback, no sobrescritura y estado widget. |
-| `scripts/sync-web-assets.ps1` | Copia los assets web fuente al wrapper Android. |
-| `.github/workflows/deploy-pages.yml` | Publicacion automatica en GitHub Pages. |
-| `.github/workflows/build-debug-apk.yml` | Compilacion del APK debug y publicacion de release. |
-| `.github/workflows/validate-app.yml` | Validacion CI de contratos web/PWA y assets Android. |
-| `android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetProvider.java` | `AppWidgetProvider` del widget real de Android. |
-| `android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetUpdateService.java` | Render y actualizacion `RemoteViews` desde `SharedPreferences`. |
-| `android-native-wrapper/app/src/main/res/xml/workout_widget_info.xml` | Metadata del widget para aparecer en Widgets del launcher. |
-| `android-native-wrapper/app/src/main/res/layout/widget_workout_small.xml` | Layout compacto del widget. |
-| `android-native-wrapper/app/src/main/res/layout/widget_workout_medium.xml` | Layout mediano del widget. |
-| `android-native-wrapper/app/src/main/assets/*` | Copias generadas de los archivos web para Android. |
-| `CODEX_HANDOFF.md` | Este contrato tecnico para continuar el desarrollo. |
+| `index.html` | UI principal, navegacion, protocolo, gym legacy, nutricion y puentes base. |
+| `workout-features.js` | Rutina semanal, registro rapido, historial gym, estado del widget e importacion de registros nativos. |
+| `advanced-features.js` | Version app, backup v3, cobertura, diagnostico, FDC, coins, rankings y recompensas. |
+| `sw.js` | Cache PWA `protocolo-0-100-pwa-v12`, navegacion network-first y assets principales. |
+| `manifest.webmanifest` | Metadata PWA para GitHub Pages. |
+| `scripts/sync-web-assets.ps1` | Copia assets web al wrapper Android. |
+| `scripts/validate-app.ps1` | Contratos estructurales web, PWA, backup, widget y assets Android. |
+| `scripts/test-workout-features.mjs` | Rutina semanal, no sobrescritura, estado widget e importacion directa desde Android. |
+| `android-native-wrapper/app/src/main/java/com/protocolo/cien/MainActivity.java` | WebView, `AndroidBridge`, intents de widget y puentes Android. |
+| `android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetProvider.java` | `AppWidgetProvider` y dispatch de acciones directas. |
+| `android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetUpdateService.java` | Render `RemoteViews`, mutacion `SharedPreferences`, guardado directo de series y fallback por dia. |
+| `android-native-wrapper/app/src/main/res/layout/widget_workout_small.xml` | Widget compacto con guardado rapido minimo. |
+| `android-native-wrapper/app/src/main/res/layout/widget_workout_medium.xml` | Widget mediano con controles reps/kg, guardar, repetir y siguiente. |
+| `android-native-wrapper/app/src/main/res/xml/workout_widget_info.xml` | Metadata para aparecer en Widgets del launcher. |
+| `.github/workflows/build-debug-apk.yml` | Compila APK debug y publica release `v2.3.0`. |
 
-Los archivos web de la raiz son la fuente de verdad. No editar directamente
-`android-native-wrapper/app/src/main/assets/*`; ejecutar
-`scripts/sync-web-assets.ps1` despues de cambiar la web.
+No editar manualmente `android-native-wrapper/app/src/main/assets/*`; cambiar
+la raiz web y ejecutar la sincronizacion.
 
-## 3. Funciones principales implementadas
+## 3. Widget Android directo
 
-### Nucleo, protocolo y navegacion
+El widget real vive en el APK, no en GitHub Pages. Usa:
 
-- `planForDay`, `scoreEntry`, `readForm`, `saveEntry`, `renderAll`
-- `setModule`, `activateTab`
-- Registro diario, score individual, plan por fase, historial y estadisticas.
+- `AppWidgetProvider`
+- `AppWidgetManager`
+- `RemoteViews`
+- `SharedPreferences`
+- `AndroidBridge.saveWorkoutWidgetData(json)`
+- `AndroidBridge.getWorkoutWidgetData()`
+- `AndroidBridge.updateWorkoutWidget()`
 
-### Gimnasio
+Acciones principales:
 
-- `saveGymSession`, `renderGym`
-- Rutinas, ejercicios por musculo, ejercicio personalizado, series,
-  repeticiones, peso, RIR y volumen.
-- `openGymToday`, `openQuickSetLogger`, `handleAndroidWidgetIntent`,
-  `buildWorkoutWidgetState`, `syncWorkoutWidget`
-- Rutina semanal predeterminada exacta de lunes a domingo, editable sin
-  sobrescribir si ya existe `weeklyWorkoutPlan`.
-- Registro rapido de serie con ejercicio actual, numero de serie, reps, kilos,
-  peso corporal, RIR/RPE opcional, nota, repetir ultima serie, siguiente
-  ejercicio, completar ejercicio y finalizar entrenamiento.
-- Historial por ejercicio con ultima carga, reps, series, mejor serie, volumen
-  anterior y fecha de ultima ejecucion.
+- `ACTION_OPEN_TODAY_WORKOUT`: abre Gym / Entrenamiento de hoy.
+- `ACTION_QUICK_LOG_SET`: abre Registro rapido en la app.
+- `ACTION_REFRESH_WORKOUT_WIDGET`: refresca RemoteViews.
+- `ACTION_WIDGET_REPS_DOWN` / `ACTION_WIDGET_REPS_UP`: ajusta reps desde el widget.
+- `ACTION_WIDGET_WEIGHT_DOWN` / `ACTION_WIDGET_WEIGHT_UP`: ajusta kilos en pasos de 2.5 kg.
+- `ACTION_WIDGET_SAVE_SET`: guarda serie directamente en `SharedPreferences`.
+- `ACTION_WIDGET_REPEAT_LAST`: carga ultima serie conocida.
+- `ACTION_WIDGET_NEXT_EXERCISE`: avanza al siguiente ejercicio.
 
-### Widget Android nativo
+Limitacion aceptada: `RemoteViews` no ofrece teclado/formulario libre estable
+para RIR/RPE y notas largas. El widget si registra directamente reps/kg y crea
+o actualiza la sesion; la pantalla completa sigue existiendo para detalles.
 
-- `WorkoutWidgetProvider` usa `AppWidgetProvider` y `AppWidgetManager`.
-- `WorkoutWidgetUpdateService` lee `SharedPreferences` y usa fallback nativo de
-  rutina semanal si la WebView todavia no sincronizo datos.
-- `AndroidBridge.saveWorkoutWidgetData(json)`,
-  `AndroidBridge.getWorkoutWidgetData()` y
-  `AndroidBridge.updateWorkoutWidget()` conectan WebView con el widget.
-- Intents: `ACTION_OPEN_TODAY_WORKOUT`, `ACTION_QUICK_LOG_SET`,
-  `ACTION_COMPLETE_CURRENT_EXERCISE` y `ACTION_REFRESH_WORKOUT_WIDGET`.
+El JSON compartido `workoutWidgetState` usa `schemaVersion: 2` e incluye:
 
-### Nutricion base y asistente
+- rutina semanal (`weeklyWorkoutPlan`);
+- resumen del dia;
+- ejercicios con sets;
+- `quickLog` con reps, peso, unidad, set actual y ejercicio actual;
+- `workoutSession` importable por la web;
+- `exerciseHistory`;
+- `lastNativeMutationAt` y `lastNativeMutationSource: "android-widget-direct"`.
 
-- `saveCustomFoodDefinition`, `allFoods`, `buildFoodEntry`, `addFood`,
-  `renderNutrition`
-- `parseNutritionStatement`, `analyzeNutritionText`,
-  `confirmNutritionAssistant`
-- Registro por gramos, medidas comunes, aliases aprendidos, previsualizacion y
-  confirmacion antes de guardar.
+Cuando la WebView abre o renderiza Gym, `workout-features.js` llama
+`AndroidBridge.getWorkoutWidgetData()`. Si encuentra una mutacion nativa mas
+nueva, importa `workoutSession` y `exerciseHistory` a `localStorage` antes de
+volver a sincronizar hacia Android. Esto evita perder series guardadas desde el
+launcher.
 
-### Diagnostico y recomendaciones
+## 4. Rutina predeterminada
 
-- `nutrientTotalsForDate`, `nutritionScoreForDate`, `renderCoverage`,
-  `renderDiagnosis`, `scoredFoodsForDate`, `renderNutritionTrends`
-- Barras de cobertura, tratamiento especial de limites como sodio,
-  recomendaciones concretas y promedios semanales/mensuales.
+Se crea solo si no existe `weeklyWorkoutPlan`. No sobrescribir rutinas editadas.
+El boton `Restablecer rutina predeterminada` vuelve a cargar la rutina exacta.
 
-### FoodData Central
+- Lunes: Torso A.
+- Martes: Pierna A.
+- Miercoles: Torso B.
+- Jueves: Pierna B.
+- Viernes: Torso C.
+- Sabado: descanso / actividad suave.
+- Domingo: descanso / revision semanal.
 
-- UI: `runFdcSearch`, `importFdcFood`, `renderFdcCachedFoods`,
-  `importFdcDataset`
-- Cliente: `normalizeFood`, `searchFoods`, `hybridSearch`, `getFoodDetails`,
-  `importFood`, `importDataset` y metodos de configuracion/cache.
-- Orden de busqueda: base local -> cache FDC -> API FDC si hay API key o
-  backend configurado.
+Torso incluye Peck deck, Press de banca, Dominadas, Jalon al pecho sentado,
+Laterales en polea, Press militar en maquina, Curl martillo, Curl con barra Z
+sentado y Extension de triceps en polea. Pierna incluye Prensa, Extension de
+cuadriceps, Aductores, Pantorrillas sentado y Tibial anterior.
 
-### Datos, backup y gamificacion
+## 5. Persistencia
 
-- `buildCompleteBackup`, `importCompleteBackupData`, `syncVersionedState`,
-  `migrateAdvancedState`
-- `renderIntegralScore`, `rebuildCoinLedger`, `renderRankings`,
-  `renderReferral`
-- Backup completo v3, CSV, Focus Coins, recompensas, rankings opcionales y
-  referidos mock/locales.
-- La importacion v3 restaura tambien modulo activo, ledger, rankings,
-  recompensas y un referido nulo, sin importar configuracion FDC.
+Claves principales en `localStorage`:
 
-## 4. Estructura actual de datos en localStorage
+- `protocolo_0_100_tracker_v1`
+- `protocolo_0_100_gym_sessions_v1`
+- `protocolo_0_100_weekly_workout_plan_v1`
+- `protocolo_0_100_workout_sessions_v1`
+- `protocolo_0_100_exercise_history_v1`
+- `protocolo_0_100_exercise_library_v1`
+- `protocolo_0_100_gym_settings_v1`
+- `protocolo_0_100_workout_widget_state_v1`
+- `protocolo_0_100_nutrition_entries_v1`
+- `protocolo_0_100_state_v2` con `schemaVersion: 3`
 
-### Claves principales
+No renombrar ni borrar claves sin migracion explicita. El backup completo debe
+seguir incluyendo rutina, sesiones, historial, biblioteca, ajustes y estado de
+widget. La configuracion FDC/API key no debe exportarse.
 
-| Clave | Contenido |
-| --- | --- |
-| `protocolo_0_100_tracker_v1` | Array de registros diarios del protocolo. |
-| `protocolo_0_100_start_date_v1` | Fecha inicial del protocolo. |
-| `protocolo_0_100_action_dismissed_v1` | Mapa de acciones descartadas por fecha. |
-| `protocolo_0_100_gym_sessions_v1` | Array de sesiones de gimnasio. |
-| `protocolo_0_100_weekly_workout_plan_v1` | Rutina semanal editable para widget y entrenamiento del dia. |
-| `protocolo_0_100_workout_sessions_v1` | Sesiones nuevas con estado en progreso/finalizado y series detalladas. |
-| `protocolo_0_100_exercise_history_v1` | Historial por ejercicio: ultima carga, reps, mejor serie y volumen. |
-| `protocolo_0_100_exercise_library_v1` | Biblioteca local de ejercicios y metadata tecnica. |
-| `protocolo_0_100_gym_settings_v1` | Preferencias kg/lb, RIR/RPE, modo y widget. |
-| `protocolo_0_100_workout_widget_state_v1` | Resumen minimo sincronizable con el widget Android. |
-| `protocolo_0_100_nutrition_entries_v1` | Array de alimentos consumidos. |
-| `protocolo_0_100_nutrition_targets_v1` | Objetivos nutricionales editables. |
-| `protocolo_0_100_body_metrics_v1` | Agua, peso y fecha de guardado por dia. |
-| `protocolo_0_100_active_module_v1` | Modulo activo. |
-| `protocolo_0_100_custom_foods_v1` | Alimentos personalizados/editados. |
-| `protocolo_0_100_nutrition_aliases_v1` | Aliases aprendidos por el asistente. |
-| `protocolo_0_100_saved_meals_v1` | Comidas frecuentes guardadas. |
-| `protocolo_0_100_nutrition_profile_v1` | Perfil y preferencias nutricionales. |
-| `protocolo_0_100_state_v2` | Snapshot consolidado con `schemaVersion: 3`. |
-| `protocolo_0_100_referral_codes_v1` | Codigos de referido mock. |
-| `protocolo_0_100_user_referral_v1` | Codigo aplicado por el usuario. |
-| `protocolo_0_100_coin_ledger_v1` | Historial de Focus Coins. |
-| `protocolo_0_100_ranking_settings_v1` | Alias y participacion en rankings. |
-| `protocolo_0_100_monthly_rankings_v1` | Rankings mensuales locales/mock. |
-| `protocolo_0_100_rewards_v1` | Recompensas e insignias. |
-| `protocolo_0_100_cached_fdc_foods_v1` | Alimentos FDC importados/cacheados. |
-| `protocolo_0_100_fdc_search_cache_v1` | Resultados temporales de busquedas FDC. |
-| `protocolo_0_100_fdc_config_v1` | API key personal, backend URL y page size. |
+## 6. Validacion
 
-`protocolo_0_100_state_v2` conserva su nombre antiguo por compatibilidad, pero
-su contenido actual usa `schemaVersion: 3`. No renombrar la clave sin una
-migracion explicita.
-
-### Formas de datos relevantes
-
-Registro diario:
-
-```js
-{
-  date, day, totalScreen, nonEssential, sleepHours, noSocialMins,
-  readingMins, offlineMins, anxiety, measuredScreen, wakeNoSocial,
-  stableSchedule, phoneOutBed, noPhoneBed, writingDone, readBeforeScroll,
-  keyActionDone, note, phoneImported, phoneImportedAt, phoneDetectedTotal,
-  phoneDetectedNonEssential, phoneMetricSource, savedAt, score, parts, phase,
-  keyAction, planGoal, planLimit, planReading, planNight
-}
-```
-
-Sesion de gimnasio:
-
-```js
-{
-  id, date, routine,
-  items: [{ id, muscle, name, sets, reps, weight, rir }],
-  notes, volume, savedAt
-}
-```
-
-Sesion nueva de entrenamiento del dia:
-
-```js
-{
-  id, date, dayKey, weekday, routine, startedAt, finishedAt,
-  status: "en progreso" | "finalizado",
-  currentExerciseIndex,
-  exercises: [{
-    id, exerciseId, name, muscle, type, unit, bodyweight,
-    sets: [{ id, setNumber, reps, weight, rir, rpe, bodyweight, note, savedAt, volume }],
-    completed
-  }],
-  notes, subjectiveNote,
-  summary: {
-    durationMinutes, completedExercises, totalExercises, totalSets,
-    totalVolume, bestByExercise, compliance, subjectiveNote
-  }
-}
-```
-
-Entrada nutricional:
-
-```js
-{
-  id, foodId, fdcId, date, meal, name, grams,
-  calories, protein, carbs, fat,
-  nutrients: { fiber, sugar, sodium, /* micronutrientes */ },
-  source, sourceCitation, savedAt
-}
-```
-
-Alimento FDC cacheado/importado:
-
-```js
-{
-  id: `fdc-${fdcId}`, fdcId, name, description, aliases, category,
-  portionGrams, calories, protein, carbs, fat,
-  nutrients, units, dataType, brandOwner, servingSize, servingSizeUnit,
-  confidence, source: "USDA FoodData Central", sourceCitation,
-  importedAt, fdcImported: true, custom: true
-}
-```
-
-Snapshot consolidado:
-
-```js
-{
-  schemaVersion: 3,
-  appVersion: "2.2.0",
-  updatedAt,
-  settings: { activeModule, nutritionProfile, ranking },
-  dailyLogs, gymSessions, weeklyWorkoutPlan, workoutSessions,
-  exerciseHistory, exerciseLibrary, gymSettings, workoutWidgetState,
-  meals, customFoods, cachedFdcFoods,
-  nutritionTargets, bodyMetrics, savedMeals, referralCodes, userReferral,
-  coinLedger, monthlyRankings, rewards
-}
-```
-
-El backup completo incluye tambien aliases legacy como `startDate`, `entries`,
-`nutritionEntries`, `nutritionAliases` y `exportedAt`. La configuracion FDC y
-su API key no deben incluirse en el backup.
-
-## 5. Cambios pendientes
-
-- Mover las llamadas FDC a un backend/proxy antes de uso publico con API key.
-- Sustituir rankings, referidos, conversiones, comisiones y recompensas mock por
-  servicios multiusuario con autenticacion y base de datos.
-- Dividir gradualmente `index.html` en modulos sin cambiar contratos globales ni
-  el orden de carga actual.
-- Crear formularios completos para editar alimentos personalizados/FDC; hoy la
-  edicion avanzada usa varios `prompt()`.
-- Ampliar editor visual de rutina semanal; hoy usa formulario y textarea por
-  dia para mantener el cambio acotado.
-- Probar manualmente el widget en dispositivos/launchers reales; la validacion
-  local cubre contratos, pero no puede agregar widgets al launcher.
-- Ampliar el importador FDC para ZIP/CSV o procesamiento por streaming.
-- Añadir pruebas automatizadas de navegador, migraciones y calculos
-  nutricionales.
-- Preparar APK firmado de produccion si se publica fuera del uso personal.
-- Revisar y adaptar objetivos nutricionales por pais/edad con asesoramiento
-  profesional antes de afirmar mayor precision clinica.
-
-## 6. Bugs conocidos y limitaciones
-
-- `index.html` sigue siendo grande y parcialmente monolitico.
-- Todo se guarda por dispositivo/navegador; no existe sincronizacion cloud.
-- `localStorage` puede alcanzar su cuota con muchos datos o alimentos FDC. La
-  cache FDC se limita a 750 alimentos y la cache de busqueda a 40 entradas/24 h.
-- El modo FDC directo guarda una API key personal en el dispositivo. Es valido
-  solo para pruebas/uso personal, no para produccion publica.
-- Las descripciones remotas USDA suelen estar en ingles. La base local cubre
-  nombres frecuentes en español/LatAm.
-- El importador FDC acepta JSON compatible, no ZIP/CSV, y puede consumir memoria
-  al analizar datasets grandes.
-- El mapeo FDC puede omitir nutrientes o unidades no soportados. Marcas,
-  coccion y porciones varian; por eso los alimentos importados son editables.
-- La edicion de alimentos usa dialogos `prompt()` secuenciales y no expone
-  todos los micronutrientes en un unico formulario.
-- Rankings, afiliados, conversiones, comisiones y premium son simulaciones
-  locales; no representan pagos ni competencia real.
-- El service worker usa network-first para navegaciones y cache-first con
-  revalidacion solo para assets principales. Tras desplegar, una pestaña ya
-  abierta puede requerir una recarga para activar todos los cambios.
-- La PWA del navegador no puede leer estadisticas Android; esa funcion requiere
-  el puente del APK y permiso del usuario.
-- Voz y reconocimiento dependen del navegador/permisos; el puente Android suele
-  ser mas estable.
-- El APK publicado es debug/personal, no una version firmada para Play Store.
-- No hay suite E2E automatizada; actualmente se usa validacion estructural y
-  pruebas manuales.
-- El widget Android no registra reps/kg directamente dentro de `RemoteViews`;
-  abre el flujo correcto de Gym -> Entrenamiento de hoy -> Registro rapido.
-
-## 7. Como probar la app en GitHub Pages
-
-1. Ejecutar las validaciones locales indicadas en la seccion 8.
-2. Hacer push a `main`.
-3. Verificar que finalice el workflow `Publicar PWA en GitHub Pages`.
-4. Abrir
-   `https://locoviera24-code.github.io/protocolo-0-100/?v=<cache-buster>`.
-5. Si aparece el aviso de nueva version o se ve comportamiento anterior,
-   recargar una vez.
-6. Revisar la consola del navegador: no debe haber errores JavaScript.
-7. Probar con ancho movil y confirmar que no exista scroll horizontal.
-
-Para cambios web que tambien deban llegar al APK:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\sync-web-assets.ps1
-powershell -ExecutionPolicy Bypass -File .\scripts\validate-app.ps1 -CheckAndroidAssets
-```
-
-Incrementar version web/Android, cache del service worker y tag de release
-cuando corresponda publicar una nueva version.
-
-## 8. Como probar funciones criticas
-
-### Validacion local
+Comandos esperados:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\validate-app.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\sync-web-assets.ps1
 powershell -ExecutionPolicy Bypass -File .\scripts\validate-app.ps1 -CheckAndroidAssets
 node .\scripts\test-service-worker.mjs
 node .\scripts\test-workout-features.mjs
 git diff --check
 ```
 
-### Nutricion y comidas
+Compilacion local APK:
 
-1. Abrir menu lateral -> `Nutricion` -> `Registrar`.
-2. Registrar `200 g` de pechuga de pollo. Resultado local esperado aproximado:
-   `330 kcal`, `62 g` de proteina y `512 mg` de potasio.
-3. Probar el asistente con: `Almorce 200 g de pollo, una taza de arroz y media palta`.
-4. Confirmar que detecta tres elementos, muestra previsualizacion y solo guarda
-   despues de confirmar.
-5. Guardar una comida frecuente, cargarla, repetir la comida de ayer, copiarla
-   a otra fecha y eliminar un alimento.
-6. Revisar totales de comida/dia, barras y diagnostico. El diagnostico debe
-   decir "segun lo registrado" y no afirmar deficiencias medicas.
+```powershell
+cd android-native-wrapper
+gradle :app:assembleDebug --stacktrace
+```
 
-### FoodData Central
+Si Java/Gradle no estan instalados localmente, la compilacion se verifica en
+GitHub Actions con Java 17, Android SDK 35 y Gradle 8.10.2.
 
-1. Sin API key: la busqueda debe devolver solo base local y cache FDC.
-2. En ajustes FDC, configurar temporalmente una API key personal y buscar
-   `broccoli`; comprobar limite/paginacion.
-3. Importar un resultado y verificar fuente, `fdcId`, valores por 100 g,
-   edicion y eliminacion.
-4. Borrar la API key y repetir la busqueda; el alimento importado debe aparecer
-   desde cache.
-5. Exportar backup y confirmar que `cachedFdcFoods` esta incluido, pero la API
-   key/configuracion FDC no.
+## 7. Pruebas manuales criticas
 
-### Scores, coins y rankings
+1. Instalar APK `v2.3.0`.
+2. Agregar widget `Protocolo 0->100 · Gym`.
+3. Confirmar que muestra rutina del dia.
+4. Ajustar reps y kilos desde el widget.
+5. Tocar `Guardar serie` sin abrir la app.
+6. Confirmar que suben series/progreso en el widget.
+7. Tocar `Repetir` y guardar otra serie.
+8. Tocar `Siguiente` y confirmar cambio de ejercicio.
+9. Abrir app desde el widget y confirmar que la sesion aparece en Gym.
+10. Exportar backup y confirmar `workoutSessions`, `exerciseHistory` y `workoutWidgetState`.
+11. Importar backup en perfil limpio y confirmar restauracion.
+12. Revisar PWA/GitHub Pages para confirmar que nutricion, habitos, score y offline no se rompieron.
 
-1. Guardar un dia completo en Protocolo.
-2. Verificar score, historial, progreso y score integral.
-3. Revisar que Focus Coins se generen una sola vez por motivo/fecha.
-4. Probar alias publico y salida voluntaria de rankings.
-5. Confirmar que no se premien restriccion agresiva, sueño insuficiente ni
-   sobreentrenamiento.
+## 8. Reglas de continuidad
 
-### Backup y CSV
+- No reescribir toda la app.
+- Mantener orden de scripts: `nutrition-data.js`, `fdc-client.js`, script inline
+  de `index.html`, `workout-features.js`, `advanced-features.js`.
+- No editar assets Android generados sin sincronizar desde raiz.
+- No borrar datos previos de nutricion, habitos, score, pantalla, sueno,
+  lectura, gym ni backups.
+- Mantener lenguaje no culpabilizante: "segun lo registrado", "prioriza
+  tecnica", "si estas fatigado, mantener carga tambien cuenta".
+- No convertir Focus Coins/referidos/rankings mock en dinero o promesa de valor.
 
-1. Exportar backup JSON completo.
-2. Confirmar `schemaVersion: 3`, logs, gimnasio legacy, `weeklyWorkoutPlan`,
-   `workoutSessions`, `exerciseHistory`, `exerciseLibrary`, `gymSettings`,
-   `workoutWidgetState`, comidas, alimentos personalizados, cache FDC, coins y
-   preferencias.
-3. Importar el backup en un perfil/navegador limpio.
-4. Verificar que no se pierdan datos previos ni se importe una API key FDC.
-5. Exportar CSV de registros diarios, comidas y nutrientes diarios.
+## 9. Pendientes razonables
 
-### PWA y service worker
-
-1. En DevTools -> Application, revisar manifest, service worker y cache
-   `protocolo-0-100-pwa-v11`.
-2. Cargar la app online una vez, activar modo offline y recargar.
-3. Confirmar que abren los modulos principales y que estan cacheados
-   `index.html`, `nutrition-data.js`, `fdc-client.js`,
-   `workout-features.js`, `advanced-features.js`, manifest e iconos.
-4. Confirmar que llamadas FDC/remotas no sean interceptadas ni respondidas con
-   `index.html`.
-5. Al cambiar assets web, incrementar el nombre de cache en `sw.js`, desplegar
-   y comprobar el aviso de nueva version/recarga.
-
-### Widget Android de gimnasio
-
-1. Instalar APK debug `v2.2.0`.
-2. Mantener presionada la pantalla de inicio -> Widgets.
-3. Confirmar que aparece `Protocolo 0→100 · Gym`.
-4. Agregar el widget pequeno o redimensionarlo a mediano.
-5. Sin abrir la app, confirmar fallback por dia: lunes Torso A, martes Pierna A,
-   miercoles Torso B, jueves Pierna B, viernes Torso C, sabado descanso suave y
-   domingo revision semanal.
-6. Abrir la app -> Gym y confirmar que si no existia rutina previa se crea
-   `weeklyWorkoutPlan` con la rutina predeterminada exacta.
-7. Tocar `Abrir entrenamiento` en el widget y confirmar Gym / Entrenamiento de
-   hoy.
-8. Tocar `Registrar serie` y confirmar Registro rapido.
-9. Registrar Press de banca con 3 series y Dominadas como peso corporal.
-10. Finalizar entrenamiento y revisar volumen, historial y progreso del widget.
-11. Editar martes, recargar y confirmar que no se sobrescribe.
-12. Usar `Restablecer rutina predeterminada` y confirmar que vuelve al plan
-    indicado.
-13. Exportar e importar backup y verificar rutina, sesiones, historial y widget.
-
-## 9. Partes que no deben reescribirse sin necesidad
-
-- No reescribir toda la app ni reemplazar `index.html` de una vez. Refactorizar
-  por modulos pequeños, conservando comportamiento y migraciones.
-- Mantener este orden de scripts clasicos:
-  1. `nutrition-data.js`
-  2. `fdc-client.js`
-  3. script principal inline de `index.html`
-  4. `workout-features.js`
-  5. `advanced-features.js`
-- `advanced-features.js` envuelve globales como `renderNutrition` y
-  `renderAll`; no renombrarlos ni cambiar el orden sin adaptar esos wrappers.
-- No renombrar ni eliminar claves `localStorage` existentes sin migracion.
-- No incluir claves FDC reales en codigo, commits, backups ni capturas.
-- No eliminar campos legacy del backup sin probar importacion de datos viejos.
-- No editar directamente los assets Android generados; sincronizarlos desde la
-  raiz.
-- Mantener `workout-features.js` cargado despues del script principal inline y
-  antes de `advanced-features.js`; el backup avanzado lee sus claves globales.
-- No registrar pesos/reps desde `RemoteViews` si vuelve fragil el widget; el
-  acceso directo al registro rapido de la app es el flujo principal.
-- No reemplazar el lenguaje nutricional seguro por afirmaciones medicas,
-  culpabilizantes o de restriccion extrema.
-- No convertir Focus Coins en dinero, cripto, activo transferible o promesa de
-  valor.
-
-## 10. Proximos pasos recomendados
-
-1. Añadir pruebas unitarias para normalizacion FDC, calculos por gramos,
-   cobertura, recomendaciones, score y migraciones; hoy CI cubre contratos
-   estructurales, versiones, PWA y sincronizacion Android.
-2. Extraer primero storage/migraciones y nutricion de `index.html` a modulos
-   independientes, manteniendo una capa global compatible.
-3. Implementar un proxy/backend FDC con rate limiting, cache y secretos fuera
-   del cliente.
-4. Migrar datos voluminosos, especialmente cache FDC, de `localStorage` a
-   IndexedDB.
-5. Crear formularios accesibles para alimentos y metas, reemplazando
-   `prompt()`.
-6. Añadir autenticacion y backend solo cuando se implementen rankings/referidos
-   reales; conservar modo local/offline.
-7. Crear pruebas E2E moviles para registro diario, nutricion, backup, offline y
-   actualizacion del service worker.
-8. Preparar firma, privacidad, terminos y canal de actualizacion antes de una
-   distribucion publica del APK.
+- Probar manualmente el widget en launchers reales.
+- Agregar pruebas instrumentadas Android para `WorkoutWidgetUpdateService`.
+- Crear APK release firmado si se distribuye fuera de uso personal.
+- Migrar datos voluminosos a IndexedDB.
+- Implementar backend/proxy para FDC antes de uso publico con API key.

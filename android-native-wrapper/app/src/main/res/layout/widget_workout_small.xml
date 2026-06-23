@@ -13,7 +13,7 @@
         android:layout_height="wrap_content"
         android:ellipsize="end"
         android:maxLines="1"
-        android:text="Lunes — Torso A"
+        android:text="Lunes - Torso A"
         android:textColor="#eef5ff"
         android:textSize="15sp"
         android:textStyle="bold" />
@@ -26,19 +26,117 @@
         android:maxLines="1"
         android:text="Pecho · Espalda"
         android:textColor="#98f5c2"
-        android:textSize="11sp" />
+        android:textSize="10sp" />
 
     <TextView
         android:id="@+id/widgetExercises"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_marginTop="4dp"
-        android:layout_weight="1"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="3dp"
         android:ellipsize="end"
-        android:maxLines="2"
-        android:text="Press banca · Dominadas · Jalón"
+        android:maxLines="1"
+        android:text="Press banca · Dominadas · Jalon"
         android:textColor="#cfe1fb"
-        android:textSize="12sp" />
+        android:textSize="11sp" />
+
+    <LinearLayout
+        android:id="@+id/widgetDirectPanel"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="5dp"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/widgetCurrentExercise"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="Press de banca"
+            android:textColor="#ffffff"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="30dp"
+            android:layout_marginTop="5dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/widgetRepsMinusButton"
+                android:layout_width="1dp"
+                android:layout_height="1dp"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/widgetQuickReps"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@drawable/widget_button_secondary"
+                android:gravity="center"
+                android:text="8 reps"
+                android:textColor="#eef5ff"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/widgetRepsPlusButton"
+                android:layout_width="30dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="5dp"
+                android:background="@drawable/widget_button_secondary"
+                android:gravity="center"
+                android:text="+"
+                android:textColor="#eef5ff"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/widgetWeightMinusButton"
+                android:layout_width="1dp"
+                android:layout_height="1dp"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/widgetQuickWeight"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="5dp"
+                android:layout_weight="1"
+                android:background="@drawable/widget_button_secondary"
+                android:gravity="center"
+                android:text="0 kg"
+                android:textColor="#eef5ff"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/widgetWeightPlusButton"
+                android:layout_width="30dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="5dp"
+                android:background="@drawable/widget_button_secondary"
+                android:gravity="center"
+                android:text="+"
+                android:textColor="#eef5ff"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/widgetActionStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="Listo para guardar."
+            android:textColor="#ffd36e"
+            android:textSize="9sp" />
+    </LinearLayout>
 
     <TextView
         android:id="@+id/widgetProgress"
@@ -48,42 +146,67 @@
         android:maxLines="1"
         android:text="0/9 ejercicios · 0 series"
         android:textColor="#8fa3c3"
-        android:textSize="10sp" />
+        android:textSize="9sp" />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
+        android:layout_marginTop="5dp"
         android:orientation="horizontal">
 
         <TextView
-            android:id="@+id/widgetOpenButton"
+            android:id="@+id/widgetSaveSetButton"
             android:layout_width="0dp"
-            android:layout_height="34dp"
+            android:layout_height="32dp"
             android:layout_weight="1"
             android:background="@drawable/widget_button"
             android:gravity="center"
-            android:text="Abrir"
+            android:text="Guardar"
             android:textColor="#06111f"
             android:textSize="12sp"
             android:textStyle="bold" />
 
         <TextView
-            android:id="@+id/widgetQuickButton"
-            android:layout_width="1dp"
-            android:layout_height="1dp"
-            android:visibility="gone" />
+            android:id="@+id/widgetOpenButton"
+            android:layout_width="0dp"
+            android:layout_height="32dp"
+            android:layout_marginStart="6dp"
+            android:layout_weight="1"
+            android:background="@drawable/widget_button_secondary"
+            android:gravity="center"
+            android:text="Abrir"
+            android:textColor="#eef5ff"
+            android:textSize="12sp"
+            android:textStyle="bold" />
 
         <TextView
             android:id="@+id/widgetRefreshButton"
-            android:layout_width="34dp"
-            android:layout_height="34dp"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
             android:layout_marginStart="6dp"
             android:background="@drawable/widget_button_secondary"
             android:gravity="center"
             android:text="↻"
             android:textColor="#eef5ff"
-            android:textSize="15sp"
+            android:textSize="14sp"
             android:textStyle="bold" />
     </LinearLayout>
+
+    <TextView
+        android:id="@+id/widgetQuickButton"
+        android:layout_width="1dp"
+        android:layout_height="1dp"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/widgetRepeatButton"
+        android:layout_width="1dp"
+        android:layout_height="1dp"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/widgetNextButton"
+        android:layout_width="1dp"
+        android:layout_height="1dp"
+        android:visibility="gone" />
 </LinearLayout>

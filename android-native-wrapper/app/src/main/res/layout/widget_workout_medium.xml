@@ -13,9 +13,9 @@
         android:layout_height="wrap_content"
         android:ellipsize="end"
         android:maxLines="1"
-        android:text="Lunes — Torso A"
+        android:text="Lunes - Torso A"
         android:textColor="#eef5ff"
-        android:textSize="17sp"
+        android:textSize="16sp"
         android:textStyle="bold" />
 
     <TextView
@@ -25,46 +25,202 @@
         android:layout_marginTop="2dp"
         android:ellipsize="end"
         android:maxLines="1"
-        android:text="Pecho · Espalda · Hombro · Bíceps · Tríceps"
+        android:text="Pecho · Espalda · Hombro"
         android:textColor="#98f5c2"
-        android:textSize="12sp" />
+        android:textSize="11sp" />
 
     <TextView
         android:id="@+id/widgetExercises"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_marginTop="8dp"
-        android:layout_weight="1"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
         android:ellipsize="end"
-        android:maxLines="3"
-        android:text="Peck deck · Press banca · Dominadas · Jalón · Laterales · Press militar"
+        android:maxLines="2"
+        android:text="Peck deck · Press banca · Dominadas · Jalon"
         android:textColor="#dbeaff"
-        android:textSize="13sp" />
+        android:textSize="12sp" />
 
     <TextView
         android:id="@+id/widgetProgress"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="3dp"
         android:ellipsize="end"
         android:maxLines="1"
         android:text="0/9 ejercicios · 0 series"
         android:textColor="#8fa3c3"
-        android:textSize="11sp" />
+        android:textSize="10sp" />
+
+    <LinearLayout
+        android:id="@+id/widgetDirectPanel"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="7dp"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/widgetCurrentExercise"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="Press de banca"
+            android:textColor="#ffffff"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="34dp"
+            android:layout_marginTop="6dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/widgetRepsMinusButton"
+                android:layout_width="34dp"
+                android:layout_height="match_parent"
+                android:background="@drawable/widget_button_secondary"
+                android:gravity="center"
+                android:text="-"
+                android:textColor="#eef5ff"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/widgetQuickReps"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="6dp"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/widget_button_secondary"
+                android:gravity="center"
+                android:text="8 reps"
+                android:textColor="#eef5ff"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/widgetRepsPlusButton"
+                android:layout_width="34dp"
+                android:layout_height="match_parent"
+                android:background="@drawable/widget_button_secondary"
+                android:gravity="center"
+                android:text="+"
+                android:textColor="#eef5ff"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/widgetWeightMinusButton"
+                android:layout_width="34dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/widget_button_secondary"
+                android:gravity="center"
+                android:text="-"
+                android:textColor="#eef5ff"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/widgetQuickWeight"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="6dp"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/widget_button_secondary"
+                android:gravity="center"
+                android:text="0 kg"
+                android:textColor="#eef5ff"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/widgetWeightPlusButton"
+                android:layout_width="34dp"
+                android:layout_height="match_parent"
+                android:background="@drawable/widget_button_secondary"
+                android:gravity="center"
+                android:text="+"
+                android:textColor="#eef5ff"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="34dp"
+            android:layout_marginTop="7dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/widgetSaveSetButton"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1.25"
+                android:background="@drawable/widget_button"
+                android:gravity="center"
+                android:text="Guardar serie"
+                android:textColor="#06111f"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/widgetRepeatButton"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="7dp"
+                android:layout_weight="1"
+                android:background="@drawable/widget_button_secondary"
+                android:gravity="center"
+                android:text="Repetir"
+                android:textColor="#eef5ff"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/widgetNextButton"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="7dp"
+                android:layout_weight="1"
+                android:background="@drawable/widget_button_secondary"
+                android:gravity="center"
+                android:text="Siguiente"
+                android:textColor="#eef5ff"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/widgetActionStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="Ajusta reps/kg y guarda desde el widget."
+            android:textColor="#ffd36e"
+            android:textSize="10sp" />
+    </LinearLayout>
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="7dp"
         android:orientation="horizontal">
 
         <TextView
             android:id="@+id/widgetOpenButton"
             android:layout_width="0dp"
-            android:layout_height="36dp"
+            android:layout_height="32dp"
             android:layout_weight="1"
             android:background="@drawable/widget_button_secondary"
             android:gravity="center"
-            android:text="Abrir entrenamiento"
+            android:text="Abrir"
             android:textColor="#eef5ff"
             android:textSize="12sp"
             android:textStyle="bold" />
@@ -72,21 +228,21 @@
         <TextView
             android:id="@+id/widgetQuickButton"
             android:layout_width="0dp"
-            android:layout_height="36dp"
-            android:layout_marginStart="8dp"
+            android:layout_height="32dp"
+            android:layout_marginStart="7dp"
             android:layout_weight="1"
-            android:background="@drawable/widget_button"
+            android:background="@drawable/widget_button_secondary"
             android:gravity="center"
-            android:text="Registrar serie"
-            android:textColor="#06111f"
+            android:text="Abrir registro"
+            android:textColor="#eef5ff"
             android:textSize="12sp"
             android:textStyle="bold" />
 
         <TextView
             android:id="@+id/widgetRefreshButton"
-            android:layout_width="38dp"
-            android:layout_height="36dp"
-            android:layout_marginStart="8dp"
+            android:layout_width="34dp"
+            android:layout_height="32dp"
+            android:layout_marginStart="7dp"
             android:background="@drawable/widget_button_secondary"
             android:gravity="center"
             android:text="↻"

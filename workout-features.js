@@ -15,6 +15,7 @@
   const actionQuickLog='com.protocolo.cien.ACTION_QUICK_LOG_SET';
   const actionCompleteExercise='com.protocolo.cien.ACTION_COMPLETE_CURRENT_EXERCISE';
   const actionRefreshWidget='com.protocolo.cien.ACTION_REFRESH_WORKOUT_WIDGET';
+  const actionWidgetSaveSet='com.protocolo.cien.ACTION_WIDGET_SAVE_SET';
 
   const exerciseLibrary=[
     ex('peck-deck','Apertura sentado / Peck deck',['peck deck','apertura sentado','aperturas en máquina'],'Pecho','máquina','kg',['Pecho'],['Deltoides anterior'],'Controlá el recorrido y evitá rebotar.'),
@@ -66,6 +67,7 @@
   };
   let currentQuickExerciseId=null;
   let currentPlanEditorDay='monday';
+  let importingNativeWidgetState=false;
 
   function ex(id,name,aliases,muscle,type,unit,primary,secondary,notes){
     return {id,name,aliases,group:muscle,type,unit,primaryMuscles:primary,secondaryMuscles:secondary,notes};
@@ -108,6 +110,45 @@
   function saveSessions(value){ setLocalData(keys.workoutSessions,value); }
   function history(){ return getLocalData(keys.exerciseHistory,{}); }
   function saveHistory(value){ setLocalData(keys.exerciseHistory,value); }
+  function maybeImportWidgetStateFromAndroid(){
+    if(importingNativeWidgetState) return false;
+    if(!window.AndroidBridge || typeof window.AndroidBridge.getWorkoutWidgetData!=='function') return false;
+    try{
+      const raw=window.AndroidBridge.getWorkoutWidgetData();
+      if(!raw) return false;
+      return importWidgetStateFromAndroid(JSON.parse(raw));
+    }catch(e){
+      return false;
+    }
+  }
+  function importWidgetStateFromAndroid(state){
+    if(!state || typeof state!=='object') return false;
+    const nativeStamp=String(state.lastNativeMutationAt||'');
+    if(!nativeStamp || state.lastNativeMutationSource!=='android-widget-direct') return false;
+    const localState=getLocalData(keys.workoutWidgetState,null);
+    const localStamp=String(localState?.lastNativeMutationAt||'');
+    if(localStamp && localStamp>=nativeStamp) return false;
+    importingNativeWidgetState=true;
+    try{
+      if(state.exerciseHistory && typeof state.exerciseHistory==='object'){
+        saveHistory({...history(),...state.exerciseHistory});
+      }
+      if(state.workoutSession && state.workoutSession.id){
+        const session=state.workoutSession;
+        const list=sessions();
+        const index=list.findIndex(item=>item.id===session.id);
+        if(index>=0) list[index]=session; else list.push(session);
+        saveSessions(list);
+        syncLegacyGymSession(session);
+        updateExerciseHistory(session);
+        currentQuickExerciseId=state.currentExerciseId || session.exercises?.[session.currentExerciseIndex||0]?.id || currentQuickExerciseId;
+      }
+      setLocalData(keys.workoutWidgetState,state);
+      return true;
+    }finally{
+      importingNativeWidgetState=false;
+    }
+  }
   function activeSession(date=todayStr()){
     return sessions().find(s=>s.date===date && s.status==='en progreso') || null;
   }
@@ -345,6 +386,7 @@
   function renderWorkoutDashboard(){
     injectWorkoutUi();
     ensureWorkoutData();
+    maybeImportWidgetStateFromAndroid();
     renderTodayWorkout();
     renderQuickLogger();
     renderPlanEditor();
@@ -547,9 +589,73 @@
     const completed=summary?.completedExercises||0,total=exercises.length,totalSets=summary?.totalSets||0,totalVolume=summary?.totalVolume||0;
     const s=settings();
     const restMessage=s.showRestDays ? (plan.message||'Hoy toca descanso') : 'Descanso configurado como oculto en la app';
-    return {schemaVersion:1,date,dayKey:plan.dayKey,weekday:plan.weekday,title:`${plan.weekday} — ${plan.name}`,routineName:plan.name,type:plan.type,muscles:plan.muscles||[],message:restMessage,suggestions:s.showRestDays?(plan.suggestions||[]):[],exercises:exercises.map(x=>({id:x.id,exerciseId:x.exerciseId,name:x.name,muscle:x.muscle,completed:!!x.completed,setsLogged:x.sets?.length||0,bodyweight:!!x.bodyweight})),currentExerciseId:current?.id||current?.exerciseId||'',currentExerciseName:current?.name||'',progressText:plan.type==='rest'?restMessage:`${completed}/${total} ejercicios · ${totalSets} series · ${Math.round(totalVolume).toLocaleString()} ${s.unit}`,completedExercises:completed,totalExercises:total,totalSets,totalVolume,status:session?.status||'sin iniciar',updatedAt:new Date().toISOString()};
+    const previousState=getLocalData(keys.workoutWidgetState,{})||{};
+    const previousQuick=previousState.quickLog||{};
+    const currentSets=current?.sets||[];
+    const lastSet=currentSets[currentSets.length-1]||null;
+    const h=current?.exerciseId ? history()[current.exerciseId] : null;
+    const currentId=current?.id||current?.exerciseId||'';
+    const quickMatches=previousQuick.currentExerciseId && previousQuick.currentExerciseId===currentId;
+    const quickReps=Number(quickMatches?previousQuick.reps:(lastSet?.reps??h?.lastReps??8))||8;
+    const quickWeight=Number(quickMatches?previousQuick.weight:(lastSet?.weight??h?.lastWeight??0))||0;
+    const quickBodyweight=!!(quickMatches?previousQuick.bodyweight:(current?.bodyweight||lastSet?.bodyweight||h?.bodyweight));
+    const quickHint=h
+      ? `Ultima vez: ${h.name} — ${h.lastWeight||0} ${s.unit} x ${h.lastReps||0} reps.`
+      : 'Ajusta reps/kg y guarda desde el widget.';
+    return {
+      schemaVersion:2,
+      date,
+      dayKey:plan.dayKey,
+      weekday:plan.weekday,
+      title:`${plan.weekday} — ${plan.name}`,
+      routineName:plan.name,
+      type:plan.type,
+      unit:s.unit,
+      muscles:plan.muscles||[],
+      message:restMessage,
+      suggestions:s.showRestDays?(plan.suggestions||[]):[],
+      weeklyWorkoutPlan:weeklyPlan(),
+      exercises:exercises.map(x=>({
+        id:x.id,
+        exerciseId:x.exerciseId,
+        name:x.name,
+        muscle:x.muscle,
+        type:x.type,
+        unit:x.unit,
+        completed:!!x.completed,
+        setsLogged:x.sets?.length||0,
+        sets:clone(x.sets||[]),
+        bodyweight:!!x.bodyweight
+      })),
+      currentExerciseId:currentId,
+      currentExerciseName:current?.name||'',
+      quickLog:{
+        currentExerciseId:currentId,
+        exerciseName:current?.name||'',
+        setNumber:(currentSets.length||0)+1,
+        reps:Math.max(0,Math.round(quickReps)),
+        weight:Math.max(0,Math.round(quickWeight*2)/2),
+        bodyweight:quickBodyweight,
+        unit:s.unit,
+        weightStep:2.5,
+        hintText:quickHint
+      },
+      workoutSession:session?clone(session):null,
+      exerciseHistory:history(),
+      progressText:plan.type==='rest'?restMessage:`${completed}/${total} ejercicios · ${totalSets} series · ${Math.round(totalVolume).toLocaleString()} ${s.unit}`,
+      completedExercises:completed,
+      totalExercises:total,
+      totalSets,
+      totalVolume,
+      status:session?.status||'sin iniciar',
+      lastNativeMutationAt:previousState.lastNativeMutationAt||null,
+      lastNativeMutationSource:previousState.lastNativeMutationSource||'',
+      lastWidgetActionText:previousState.lastWidgetActionText||quickHint,
+      updatedAt:new Date().toISOString()
+    };
   }
   function syncWorkoutWidget(){
+    if(!importingNativeWidgetState) maybeImportWidgetStateFromAndroid();
     const s=settings();
     const state=buildWorkoutWidgetState();
     setLocalData(keys.workoutWidgetState,state);
@@ -563,13 +669,15 @@
     return state;
   }
   function handleAndroidWidgetIntent(action,payload={}){
+    maybeImportWidgetStateFromAndroid();
     if(action===actionOpenToday) openGymToday();
     else if(action===actionQuickLog) openQuickSetLogger(payload.exerciseId||payload.currentExerciseId||'');
     else if(action===actionCompleteExercise){openQuickSetLogger(payload.exerciseId||'');completeCurrentExercise();}
     else if(action===actionRefreshWidget){syncWorkoutWidget();openGymToday();}
+    else if(action===actionWidgetSaveSet){syncWorkoutWidget();openGymToday();}
   }
 
-  window.WORKOUT_FEATURES={keys,dayOrder,defaultWeeklyPlan:clone(defaultWeeklyPlan),exerciseLibrary:clone(exerciseLibrary),dayKeyForDate,planForDate,buildWorkoutWidgetState,syncWorkoutWidget};
+  window.WORKOUT_FEATURES={keys,dayOrder,defaultWeeklyPlan:clone(defaultWeeklyPlan),exerciseLibrary:clone(exerciseLibrary),dayKeyForDate,planForDate,buildWorkoutWidgetState,syncWorkoutWidget,importWidgetStateFromAndroid};
   window.openGymToday=openGymToday;
   window.openQuickSetLogger=openQuickSetLogger;
   window.handleAndroidWidgetIntent=(action,payload)=>handleAndroidWidgetIntent(action,payload||{});

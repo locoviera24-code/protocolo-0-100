@@ -160,6 +160,8 @@ foreach ($contract in @(
     'window.handleAndroidWidgetIntent',
     'saveWorkoutWidgetData',
     'buildWorkoutWidgetState',
+    'importWidgetStateFromAndroid',
+    'android-widget-direct',
     'protocolo_0_100_weekly_workout_plan_v1',
     'protocolo_0_100_workout_sessions_v1',
     'protocolo_0_100_exercise_history_v1',
@@ -184,7 +186,11 @@ foreach ($contract in @(
     'ACTION_OPEN_TODAY_WORKOUT',
     'ACTION_QUICK_LOG_SET',
     'ACTION_COMPLETE_CURRENT_EXERCISE',
-    'ACTION_REFRESH_WORKOUT_WIDGET'
+    'ACTION_REFRESH_WORKOUT_WIDGET',
+    'ACTION_WIDGET_SAVE_SET',
+    'ACTION_WIDGET_REPS_UP',
+    'ACTION_WIDGET_WEIGHT_UP',
+    'handleWidgetAction'
 )) {
     Assert-True (($widgetProvider + $widgetUpdater + $mainActivity).Contains($contract)) "Falta contrato nativo de widget: $contract"
 }

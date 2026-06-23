@@ -3,6 +3,10 @@ import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
 
 const source = await readFile(new URL('../sw.js', import.meta.url), 'utf8');
+const cacheVersion = source.match(/\$\{CACHE_PREFIX\}v(\d+)/)?.[1];
+assert.ok(cacheVersion, 'No se pudo detectar la version del cache');
+const currentCacheName = `protocolo-0-100-pwa-v${cacheVersion}`;
+const previousCacheName = `protocolo-0-100-pwa-v${Number(cacheVersion) - 1}`;
 const handlers = {};
 const deletedCaches = [];
 const cacheStores = new Map();
@@ -99,12 +103,13 @@ function dispatchFetch(request) {
 }
 
 cacheStores.set('protocolo-0-100-pwa-v9', new MockCache());
-cacheStores.set('protocolo-0-100-pwa-v11', new MockCache());
+cacheStores.set(previousCacheName, new MockCache());
+cacheStores.set(currentCacheName, new MockCache());
 cacheStores.set('otra-app-cache', new MockCache());
 let activation;
 handlers.activate({waitUntil(value) { activation = Promise.resolve(value); }});
 await activation;
-assert.deepEqual(deletedCaches, ['protocolo-0-100-pwa-v9']);
+assert.deepEqual(deletedCaches.sort(), ['protocolo-0-100-pwa-v9', previousCacheName].sort());
 assert.equal(cacheStores.has('otra-app-cache'), true);
 
 const fdc = dispatchFetch({method: 'GET', mode: 'cors', url: 'https://api.nal.usda.gov/fdc/v1/foods/search'});
@@ -113,7 +118,7 @@ assert.equal(fdc.responsePromise, undefined);
 const unknown = dispatchFetch({method: 'GET', mode: 'cors', url: 'https://app.test/protocolo/otro.json'});
 assert.equal(unknown.responsePromise, undefined);
 
-const currentCache = await caches.open('protocolo-0-100-pwa-v11');
+const currentCache = await caches.open(currentCacheName);
 currentCache.entries.set('https://app.test/protocolo/index.html', new Response('offline-index'));
 const navigation = dispatchFetch({method: 'GET', mode: 'navigate', url: 'https://app.test/protocolo/?v=211'});
 assert.equal(await (await navigation.responsePromise).text(), 'offline-index');
