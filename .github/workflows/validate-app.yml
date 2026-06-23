@@ -26,3 +26,6 @@ jobs:
 
       - name: Probar estrategia del service worker
         run: node ./scripts/test-service-worker.mjs
+
+      - name: Probar rutina semanal y estado widget
+        run: node ./scripts/test-workout-features.mjs

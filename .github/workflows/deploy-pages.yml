@@ -10,6 +10,7 @@ on:
       - index.html
       - nutrition-data.js
       - fdc-client.js
+      - workout-features.js
       - advanced-features.js
       - manifest.webmanifest
       - sw.js
@@ -43,6 +44,9 @@ jobs:
 
       - name: Probar estrategia del service worker
         run: node ./scripts/test-service-worker.mjs
+
+      - name: Probar rutina semanal y estado widget
+        run: node ./scripts/test-workout-features.mjs
 
       - name: Preparar archivos publicos
         run: |

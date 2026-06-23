@@ -1,0 +1,70 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import vm from 'node:vm';
+
+const source = await readFile(new URL('../workout-features.js', import.meta.url), 'utf8');
+
+function createContext(preloaded = {}, today = '2026-06-22') {
+  const store = new Map(Object.entries(preloaded));
+  const context = {
+    console,
+    window: null,
+    document: {
+      getElementById() { return null; },
+      head: { appendChild() {} },
+      createElement() { return {id: '', textContent: ''}; }
+    },
+    localStorage: {
+      getItem(key) { return store.has(key) ? store.get(key) : null; },
+      setItem(key, value) { store.set(key, String(value)); },
+      removeItem(key) { store.delete(key); }
+    },
+    getLocalData(key, fallback) {
+      try {
+        const raw = store.has(key) ? store.get(key) : null;
+        return raw === null ? fallback : JSON.parse(raw) ?? fallback;
+      } catch {
+        return fallback;
+      }
+    },
+    setLocalData(key, value) { store.set(key, JSON.stringify(value)); },
+    uid(prefix) { return `${prefix}_test`; },
+    todayStr() { return today; },
+    escapeHtml(value) { return String(value ?? ''); },
+    flash() {},
+    setModule() {},
+    renderGym() {},
+    GYM_SESSIONS_KEY: 'protocolo_0_100_gym_sessions_v1'
+  };
+  context.window = context;
+  vm.runInContext(source, vm.createContext(context), {filename: 'workout-features.js'});
+  return {context, store};
+}
+
+const {context, store} = createContext();
+const workout = context.WORKOUT_FEATURES;
+assert.equal(workout.planForDate('2026-06-22').name, 'Torso A');
+assert.equal(workout.planForDate('2026-06-23').name, 'Pierna A');
+assert.equal(workout.planForDate('2026-06-24').name, 'Torso B');
+assert.equal(workout.planForDate('2026-06-25').name, 'Pierna B');
+assert.equal(workout.planForDate('2026-06-26').name, 'Torso C');
+assert.equal(workout.planForDate('2026-06-27').message, 'Hoy toca descanso o actividad suave.');
+assert.equal(workout.planForDate('2026-06-28').message, 'Hoy toca descanso o revisión semanal.');
+assert.ok(workout.planForDate('2026-06-22').exercises.some(exercise => exercise.name === 'Press de banca'));
+assert.ok(workout.planForDate('2026-06-22').exercises.some(exercise => exercise.name === 'Dominadas' && exercise.bodyweight));
+assert.ok(workout.planForDate('2026-06-23').exercises.some(exercise => exercise.name === 'Máquina de aductores, cerrar piernas'));
+assert.ok(workout.planForDate('2026-06-23').exercises.some(exercise => exercise.name === 'Elevación de punta del pie / tibial anterior'));
+
+const widgetState = workout.buildWorkoutWidgetState('2026-06-22');
+assert.equal(widgetState.title, 'Lunes — Torso A');
+assert.equal(widgetState.currentExerciseName, 'Apertura sentado / Peck deck');
+assert.ok(widgetState.exercises.length >= 9);
+assert.equal(store.has(workout.keys.weeklyWorkoutPlan), true);
+
+const customPlan = {monday: {dayKey: 'monday', weekday: 'Lunes', name: 'Rutina propia', type: 'workout', muscles: ['Test'], exercises: []}};
+const {context: customContext} = createContext({
+  protocolo_0_100_weekly_workout_plan_v1: JSON.stringify(customPlan)
+});
+assert.equal(customContext.WORKOUT_FEATURES.planForDate('2026-06-22').name, 'Rutina propia');
+
+console.log('Workout features correcto: plan semanal, descanso, widget state y no sobrescritura.');

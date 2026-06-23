@@ -14,5 +14,17 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <receiver
+            android:name=".WorkoutWidgetProvider"
+            android:exported="false"
+            android:label="Protocolo 0→100 · Gym">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.protocolo.cien.ACTION_REFRESH_WORKOUT_WIDGET" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/workout_widget_info" />
+        </receiver>
     </application>
 </manifest>

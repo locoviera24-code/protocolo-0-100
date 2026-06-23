@@ -6,6 +6,7 @@ import android.app.usage.UsageStats;
 import android.app.usage.UsageStatsManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.net.Uri;
@@ -29,8 +30,13 @@ import java.util.Set;
 import java.util.Locale;
 
 public class MainActivity extends Activity {
+    public static final String ACTION_OPEN_TODAY_WORKOUT = "com.protocolo.cien.ACTION_OPEN_TODAY_WORKOUT";
+    public static final String ACTION_QUICK_LOG_SET = "com.protocolo.cien.ACTION_QUICK_LOG_SET";
+    public static final String ACTION_COMPLETE_CURRENT_EXERCISE = "com.protocolo.cien.ACTION_COMPLETE_CURRENT_EXERCISE";
+    public static final String ACTION_REFRESH_WORKOUT_WIDGET = "com.protocolo.cien.ACTION_REFRESH_WORKOUT_WIDGET";
     private static final int SPEECH_REQUEST_CODE = 4100;
     private WebView webView;
+    private Intent pendingWidgetIntent;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,7 +53,16 @@ public class MainActivity extends Activity {
         settings.setAllowFileAccessFromFileURLs(false);
         settings.setAllowUniversalAccessFromFileURLs(false);
 
-        webView.setWebViewClient(new WebViewClient());
+        pendingWidgetIntent = getIntent();
+        webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                dispatchWidgetIntentToWeb(pendingWidgetIntent);
+                pendingWidgetIntent = null;
+            }
+        });
+        webView.addJavascriptInterface(new AndroidBridge(this), "AndroidBridge");
         webView.addJavascriptInterface(new AndroidUsageBridge(this), "AndroidUsageBridge");
         webView.addJavascriptInterface(new AndroidSpeechBridge(), "AndroidSpeechBridge");
         webView.loadUrl("file:///android_asset/index.html");
@@ -62,6 +77,14 @@ public class MainActivity extends Activity {
                     null
             ));
         }
+        WorkoutWidgetUpdateService.updateAll(this);
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        dispatchWidgetIntentToWeb(intent);
     }
 
     @Override
@@ -69,6 +92,7 @@ public class MainActivity extends Activity {
         if (webView != null) {
             webView.removeJavascriptInterface("AndroidUsageBridge");
             webView.removeJavascriptInterface("AndroidSpeechBridge");
+            webView.removeJavascriptInterface("AndroidBridge");
             webView.destroy();
             webView = null;
         }
@@ -107,6 +131,56 @@ public class MainActivity extends Activity {
                 }
             });
         }
+    }
+
+    public class AndroidBridge {
+        private final Activity activity;
+
+        AndroidBridge(Activity activity) {
+            this.activity = activity;
+        }
+
+        @JavascriptInterface
+        public void saveWorkoutWidgetData(String json) {
+            activity.getSharedPreferences(WorkoutWidgetUpdateService.PREFS_NAME, Context.MODE_PRIVATE)
+                    .edit()
+                    .putString(WorkoutWidgetUpdateService.KEY_STATE_JSON, json == null ? "" : json)
+                    .apply();
+            WorkoutWidgetUpdateService.updateAll(activity);
+        }
+
+        @JavascriptInterface
+        public String getWorkoutWidgetData() {
+            SharedPreferences prefs = activity.getSharedPreferences(WorkoutWidgetUpdateService.PREFS_NAME, Context.MODE_PRIVATE);
+            return prefs.getString(WorkoutWidgetUpdateService.KEY_STATE_JSON, "");
+        }
+
+        @JavascriptInterface
+        public void updateWorkoutWidget() {
+            WorkoutWidgetUpdateService.updateAll(activity);
+        }
+    }
+
+    private void dispatchWidgetIntentToWeb(Intent intent) {
+        if (intent == null || webView == null) return;
+        String action = intent.getAction();
+        if (!isWorkoutAction(action)) return;
+        String exerciseId = intent.getStringExtra("exerciseId");
+        try {
+            JSONObject payload = new JSONObject();
+            payload.put("exerciseId", exerciseId == null ? "" : exerciseId);
+            String js = "if (window.handleAndroidWidgetIntent) window.handleAndroidWidgetIntent("
+                    + JSONObject.quote(action) + "," + payload.toString() + ");";
+            webView.post(() -> webView.evaluateJavascript(js, null));
+        } catch (Exception ignored) {
+        }
+    }
+
+    private boolean isWorkoutAction(String action) {
+        return ACTION_OPEN_TODAY_WORKOUT.equals(action)
+                || ACTION_QUICK_LOG_SET.equals(action)
+                || ACTION_COMPLETE_CURRENT_EXERCISE.equals(action)
+                || ACTION_REFRESH_WORKOUT_WIDGET.equals(action);
     }
 
     @Override

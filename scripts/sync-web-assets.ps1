@@ -10,6 +10,7 @@ $relativeFiles = @(
     'index.html',
     'nutrition-data.js',
     'fdc-client.js',
+    'workout-features.js',
     'advanced-features.js',
     'manifest.webmanifest',
     'sw.js',

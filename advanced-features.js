@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const APP_VERSION='2.1.1';
+  const APP_VERSION='2.2.0';
   const APP_STATE_KEY='protocolo_0_100_state_v2';
   const SAVED_MEALS_KEY='protocolo_0_100_saved_meals_v1';
   const NUTRITION_PROFILE_KEY='protocolo_0_100_nutrition_profile_v1';
@@ -544,7 +544,8 @@
   function buildCompleteBackup(){
     syncVersionedState();
     const state=getLocalData(APP_STATE_KEY,{});
-    return {...state,startDate:localStorage.getItem(START_KEY)||todayStr(),entries:getEntries(),gymSessions:getLocalData(GYM_SESSIONS_KEY,[]),nutritionEntries:getLocalData(NUTRITION_ENTRIES_KEY,[]),nutritionTargets:advancedTargets(),bodyMetrics:getLocalData(BODY_METRICS_KEY,{}),customFoods:getLocalData(CUSTOM_FOODS_KEY,[]),cachedFdcFoods:FDC?.cachedFoods?.()||[],nutritionAliases:getLocalData(NUTRITION_ALIASES_KEY,{}),exportedAt:new Date().toISOString()};
+    const workoutKeys=window.WORKOUT_FEATURES?.keys||{};
+    return {...state,startDate:localStorage.getItem(START_KEY)||todayStr(),entries:getEntries(),gymSessions:getLocalData(GYM_SESSIONS_KEY,[]),weeklyWorkoutPlan:getLocalData(workoutKeys.weeklyWorkoutPlan||'protocolo_0_100_weekly_workout_plan_v1',null),workoutSessions:getLocalData(workoutKeys.workoutSessions||'protocolo_0_100_workout_sessions_v1',[]),exerciseHistory:getLocalData(workoutKeys.exerciseHistory||'protocolo_0_100_exercise_history_v1',{}),exerciseLibrary:getLocalData(workoutKeys.exerciseLibrary||'protocolo_0_100_exercise_library_v1',[]),gymSettings:getLocalData(workoutKeys.gymSettings||'protocolo_0_100_gym_settings_v1',{}),workoutWidgetState:getLocalData(workoutKeys.workoutWidgetState||'protocolo_0_100_workout_widget_state_v1',null),nutritionEntries:getLocalData(NUTRITION_ENTRIES_KEY,[]),nutritionTargets:advancedTargets(),bodyMetrics:getLocalData(BODY_METRICS_KEY,{}),customFoods:getLocalData(CUSTOM_FOODS_KEY,[]),cachedFdcFoods:FDC?.cachedFoods?.()||[],nutritionAliases:getLocalData(NUTRITION_ALIASES_KEY,{}),exportedAt:new Date().toISOString()};
   }
   window.buildCompleteBackup=buildCompleteBackup;
   function importCompleteBackupData(data){
@@ -553,6 +554,13 @@
       if(Array.isArray(state.dailyLogs))setEntries(state.dailyLogs);
       if(Array.isArray(state.meals))setLocalData(NUTRITION_ENTRIES_KEY,state.meals);
       if(Array.isArray(state.gymSessions))setLocalData(GYM_SESSIONS_KEY,state.gymSessions);
+      const workoutKeys=window.WORKOUT_FEATURES?.keys||{};
+      if(state.weeklyWorkoutPlan)setLocalData(workoutKeys.weeklyWorkoutPlan||'protocolo_0_100_weekly_workout_plan_v1',state.weeklyWorkoutPlan);
+      if(Array.isArray(state.workoutSessions))setLocalData(workoutKeys.workoutSessions||'protocolo_0_100_workout_sessions_v1',state.workoutSessions);
+      if(state.exerciseHistory)setLocalData(workoutKeys.exerciseHistory||'protocolo_0_100_exercise_history_v1',state.exerciseHistory);
+      if(Array.isArray(state.exerciseLibrary))setLocalData(workoutKeys.exerciseLibrary||'protocolo_0_100_exercise_library_v1',state.exerciseLibrary);
+      if(state.gymSettings)setLocalData(workoutKeys.gymSettings||'protocolo_0_100_gym_settings_v1',state.gymSettings);
+      if(state.workoutWidgetState)setLocalData(workoutKeys.workoutWidgetState||'protocolo_0_100_workout_widget_state_v1',state.workoutWidgetState);
       if(Array.isArray(state.customFoods))setLocalData(CUSTOM_FOODS_KEY,state.customFoods);
       if(Array.isArray(state.cachedFdcFoods)&&FDC)FDC.replaceCache(state.cachedFdcFoods);
       if(state.nutritionTargets)setLocalData(NUTRITION_TARGETS_KEY,state.nutritionTargets);
@@ -573,10 +581,17 @@
   window.importCompleteBackupData=importCompleteBackupData;
   function syncVersionedState(){
     // Future API: this object is the client-side contract ready to sync with a backend.
+    const workoutKeys=window.WORKOUT_FEATURES?.keys||{};
     const state={
       schemaVersion:3,appVersion:APP_VERSION,updatedAt:new Date().toISOString(),
       settings:{activeModule:localStorage.getItem(ACTIVE_MODULE_KEY)||'protocolo',nutritionProfile:nutritionProfile(),ranking:getLocalData(RANKING_SETTINGS_KEY,{alias:'Anónimo 0→100',optIn:false})},
       dailyLogs:getEntries(),gymSessions:getLocalData(GYM_SESSIONS_KEY,[]),meals:getLocalData(NUTRITION_ENTRIES_KEY,[]),
+      weeklyWorkoutPlan:getLocalData(workoutKeys.weeklyWorkoutPlan||'protocolo_0_100_weekly_workout_plan_v1',null),
+      workoutSessions:getLocalData(workoutKeys.workoutSessions||'protocolo_0_100_workout_sessions_v1',[]),
+      exerciseHistory:getLocalData(workoutKeys.exerciseHistory||'protocolo_0_100_exercise_history_v1',{}),
+      exerciseLibrary:getLocalData(workoutKeys.exerciseLibrary||'protocolo_0_100_exercise_library_v1',[]),
+      gymSettings:getLocalData(workoutKeys.gymSettings||'protocolo_0_100_gym_settings_v1',{}),
+      workoutWidgetState:getLocalData(workoutKeys.workoutWidgetState||'protocolo_0_100_workout_widget_state_v1',null),
       customFoods:getLocalData(CUSTOM_FOODS_KEY,[]),cachedFdcFoods:FDC?.cachedFoods?.()||[],nutritionTargets:advancedTargets(),bodyMetrics:getLocalData(BODY_METRICS_KEY,{}),
       savedMeals:getLocalData(SAVED_MEALS_KEY,[]),referralCodes:referralCodes(),userReferral:getLocalData(USER_REFERRAL_KEY,null),
       coinLedger:getLocalData(COIN_LEDGER_KEY,[]),monthlyRankings:getLocalData(MONTHLY_RANKINGS_KEY,{}),rewards:getLocalData(REWARDS_KEY,{})

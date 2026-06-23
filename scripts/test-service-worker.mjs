@@ -99,7 +99,7 @@ function dispatchFetch(request) {
 }
 
 cacheStores.set('protocolo-0-100-pwa-v9', new MockCache());
-cacheStores.set('protocolo-0-100-pwa-v10', new MockCache());
+cacheStores.set('protocolo-0-100-pwa-v11', new MockCache());
 cacheStores.set('otra-app-cache', new MockCache());
 let activation;
 handlers.activate({waitUntil(value) { activation = Promise.resolve(value); }});
@@ -113,13 +113,13 @@ assert.equal(fdc.responsePromise, undefined);
 const unknown = dispatchFetch({method: 'GET', mode: 'cors', url: 'https://app.test/protocolo/otro.json'});
 assert.equal(unknown.responsePromise, undefined);
 
-const currentCache = await caches.open('protocolo-0-100-pwa-v10');
+const currentCache = await caches.open('protocolo-0-100-pwa-v11');
 currentCache.entries.set('https://app.test/protocolo/index.html', new Response('offline-index'));
 const navigation = dispatchFetch({method: 'GET', mode: 'navigate', url: 'https://app.test/protocolo/?v=211'});
 assert.equal(await (await navigation.responsePromise).text(), 'offline-index');
 
-currentCache.entries.set('https://app.test/protocolo/advanced-features.js', new Response('cached-core'));
-const core = dispatchFetch({method: 'GET', mode: 'cors', url: 'https://app.test/protocolo/advanced-features.js?v=211'});
+currentCache.entries.set('https://app.test/protocolo/workout-features.js', new Response('cached-core'));
+const core = dispatchFetch({method: 'GET', mode: 'cors', url: 'https://app.test/protocolo/workout-features.js?v=220'});
 assert.equal(await (await core.responsePromise).text(), 'cached-core');
 await Promise.all(core.waits);
 

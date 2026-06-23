@@ -18,14 +18,20 @@ function Assert-True([bool]$condition, [string]$message) {
 $html = Read-Utf8 'index.html'
 $nutrition = Read-Utf8 'nutrition-data.js'
 $fdc = Read-Utf8 'fdc-client.js'
+$workout = Read-Utf8 'workout-features.js'
 $advanced = Read-Utf8 'advanced-features.js'
 $serviceWorker = Read-Utf8 'sw.js'
 $manifestText = Read-Utf8 'manifest.webmanifest'
 $androidBuild = Read-Utf8 'android-native-wrapper/app/build.gradle'
+$androidManifest = Read-Utf8 'android-native-wrapper/app/src/main/AndroidManifest.xml'
+$mainActivity = Read-Utf8 'android-native-wrapper/app/src/main/java/com/protocolo/cien/MainActivity.java'
+$widgetProvider = Read-Utf8 'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetProvider.java'
+$widgetUpdater = Read-Utf8 'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetUpdateService.java'
 $deployWorkflow = Read-Utf8 '.github/workflows/deploy-pages.yml'
 $apkWorkflow = Read-Utf8 '.github/workflows/build-debug-apk.yml'
 $validationWorkflow = Read-Utf8 '.github/workflows/validate-app.yml'
 $serviceWorkerTest = Read-Utf8 'scripts/test-service-worker.mjs'
+$workoutTest = Read-Utf8 'scripts/test-workout-features.mjs'
 $readme = Read-Utf8 'README.md'
 $handoff = Read-Utf8 'CODEX_HANDOFF.md'
 
@@ -39,12 +45,23 @@ $staticIds = [regex]::Matches($html, '\bid="([^"$]+)"') | ForEach-Object { $_.Gr
 $duplicates = $staticIds | Group-Object | Where-Object Count -gt 1 | Select-Object -ExpandProperty Name
 Assert-True ($duplicates.Count -eq 0) "Hay IDs HTML duplicados: $($duplicates -join ', ')"
 
-$requiredFiles = @('nutrition-data.js', 'fdc-client.js', 'advanced-features.js', 'manifest.webmanifest', 'sw.js')
+$requiredFiles = @(
+    'nutrition-data.js', 'fdc-client.js', 'workout-features.js', 'advanced-features.js',
+    'manifest.webmanifest', 'sw.js',
+    'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetProvider.java',
+    'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetUpdateService.java',
+    'android-native-wrapper/app/src/main/res/xml/workout_widget_info.xml',
+    'android-native-wrapper/app/src/main/res/layout/widget_workout_small.xml',
+    'android-native-wrapper/app/src/main/res/layout/widget_workout_medium.xml',
+    'android-native-wrapper/app/src/main/res/drawable/widget_background.xml',
+    'android-native-wrapper/app/src/main/res/drawable/widget_button.xml',
+    'android-native-wrapper/app/src/main/res/drawable/widget_button_secondary.xml'
+)
 foreach ($file in $requiredFiles) {
     Assert-True (Test-Path -LiteralPath (Join-Path $repoRoot $file) -PathType Leaf) "Falta $file"
 }
 
-foreach ($script in @('nutrition-data.js', 'fdc-client.js', 'advanced-features.js')) {
+foreach ($script in @('nutrition-data.js', 'fdc-client.js', 'workout-features.js', 'advanced-features.js')) {
     Assert-True ($html.Contains("<script src=`"$script`"></script>")) "index.html no carga $script"
     Assert-True ($serviceWorker.Contains("'./$script'")) "sw.js no cachea $script"
 }
@@ -105,6 +122,83 @@ foreach ($contract in @('schemaVersion:3', 'coinLedger:', 'monthlyRankings:', 'r
 }
 
 foreach ($contract in @(
+    'weeklyWorkoutPlan:',
+    'workoutSessions:',
+    'exerciseHistory:',
+    'exerciseLibrary:',
+    'gymSettings:',
+    'workoutWidgetState:'
+)) {
+    Assert-True ($advanced.Contains($contract)) "Falta contrato de backup gym/widget: $contract"
+}
+
+$workoutLower = $workout.ToLowerInvariant()
+foreach ($term in @(
+    'peck deck',
+    'press de banca',
+    'dominadas',
+    'jalon al pecho',
+    'laterales',
+    'press militar',
+    'curl martillo',
+    'barra z',
+    'triceps',
+    'prensa',
+    'cuadriceps',
+    'aductores',
+    'pantorrillas',
+    'tibial anterior',
+    'actividad suave',
+    'revisar entrenamientos'
+)) {
+    Assert-True ($workoutLower.Contains($term)) "Falta rutina/ejercicio obligatorio en workout-features.js: $term"
+}
+
+foreach ($contract in @(
+    'window.openGymToday',
+    'window.openQuickSetLogger',
+    'window.handleAndroidWidgetIntent',
+    'saveWorkoutWidgetData',
+    'buildWorkoutWidgetState',
+    'protocolo_0_100_weekly_workout_plan_v1',
+    'protocolo_0_100_workout_sessions_v1',
+    'protocolo_0_100_exercise_history_v1',
+    'Restablecer rutina predeterminada',
+    'Registro r'
+)) {
+    Assert-True ($workout.Contains($contract)) "Falta contrato web gym/widget: $contract"
+}
+
+foreach ($contract in @(
+    'WorkoutWidgetProvider',
+    'android.appwidget.action.APPWIDGET_UPDATE',
+    '@xml/workout_widget_info',
+    'com.protocolo.cien.ACTION_REFRESH_WORKOUT_WIDGET'
+)) {
+    Assert-True ($androidManifest.Contains($contract)) "Falta contrato AndroidManifest de widget: $contract"
+}
+
+foreach ($contract in @(
+    'AppWidgetProvider',
+    'AppWidgetManager',
+    'ACTION_OPEN_TODAY_WORKOUT',
+    'ACTION_QUICK_LOG_SET',
+    'ACTION_COMPLETE_CURRENT_EXERCISE',
+    'ACTION_REFRESH_WORKOUT_WIDGET'
+)) {
+    Assert-True (($widgetProvider + $widgetUpdater + $mainActivity).Contains($contract)) "Falta contrato nativo de widget: $contract"
+}
+
+foreach ($contract in @(
+    'saveWorkoutWidgetData',
+    'getWorkoutWidgetData',
+    'updateWorkoutWidget',
+    'handleAndroidWidgetIntent'
+)) {
+    Assert-True ($mainActivity.Contains($contract)) "Falta puente Android/WebView: $contract"
+}
+
+foreach ($contract in @(
     'localStorage.setItem(ACTIVE_MODULE_KEY,state.settings.activeModule)',
     'setLocalData(COIN_LEDGER_KEY,state.coinLedger)',
     'setLocalData(MONTHLY_RANKINGS_KEY,state.monthlyRankings)',
@@ -133,6 +227,12 @@ foreach ($workflow in @($deployWorkflow, $apkWorkflow, $validationWorkflow)) {
 }
 Assert-True ($serviceWorkerTest.Contains('api.nal.usda.gov')) 'La prueba del service worker debe cubrir llamadas FDC'
 Assert-True ($serviceWorkerTest.Contains('otra-app-cache')) 'La prueba del service worker debe proteger caches ajenos'
+foreach ($workflow in @($deployWorkflow, $apkWorkflow, $validationWorkflow)) {
+    Assert-True ($workflow.Contains('node ./scripts/test-workout-features.mjs')) 'Cada workflow debe probar rutina semanal y estado widget'
+}
+foreach ($contract in @('Torso A', 'Pierna A', 'Torso B', 'Pierna B', 'Torso C', 'Rutina propia', 'buildWorkoutWidgetState')) {
+    Assert-True ($workoutTest.Contains($contract)) "Falta prueba workout: $contract"
+}
 
 if ($CheckAndroidAssets) {
     & (Join-Path $PSScriptRoot 'sync-web-assets.ps1') -Check
