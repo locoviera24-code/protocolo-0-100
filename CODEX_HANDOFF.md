@@ -2,9 +2,9 @@
 
 Ultima actualizacion del handoff: 2026-06-23
 Rama principal: `main`
-Version web/Android actual: `2.3.0`
+Version web/Android actual: `2.3.1`
 Esquema de datos consolidado: `3`
-Cache actual del service worker: `protocolo-0-100-pwa-v12`
+Cache actual del service worker: `protocolo-0-100-pwa-v13`
 
 ## 1. Estado actual
 
@@ -35,7 +35,7 @@ El APK publicado es debug/personal. Para Play Store hace falta release firmado.
 | `index.html` | UI principal, navegacion, protocolo, gym legacy, nutricion y puentes base. |
 | `workout-features.js` | Rutina semanal, registro rapido, historial gym, estado del widget e importacion de registros nativos. |
 | `advanced-features.js` | Version app, backup v3, cobertura, diagnostico, FDC, coins, rankings y recompensas. |
-| `sw.js` | Cache PWA `protocolo-0-100-pwa-v12`, navegacion network-first y assets principales. |
+| `sw.js` | Cache PWA `protocolo-0-100-pwa-v13`, navegacion network-first y assets principales. |
 | `manifest.webmanifest` | Metadata PWA para GitHub Pages. |
 | `scripts/sync-web-assets.ps1` | Copia assets web al wrapper Android. |
 | `scripts/validate-app.ps1` | Contratos estructurales web, PWA, backup, widget y assets Android. |
@@ -46,7 +46,7 @@ El APK publicado es debug/personal. Para Play Store hace falta release firmado.
 | `android-native-wrapper/app/src/main/res/layout/widget_workout_small.xml` | Widget compacto con guardado rapido minimo. |
 | `android-native-wrapper/app/src/main/res/layout/widget_workout_medium.xml` | Widget mediano con controles reps/kg, guardar, repetir y siguiente. |
 | `android-native-wrapper/app/src/main/res/xml/workout_widget_info.xml` | Metadata para aparecer en Widgets del launcher. |
-| `.github/workflows/build-debug-apk.yml` | Compila APK debug y publica release `v2.3.0`. |
+| `.github/workflows/build-debug-apk.yml` | Compila APK debug y publica release `v2.3.1`. |
 
 No editar manualmente `android-native-wrapper/app/src/main/assets/*`; cambiar
 la raiz web y ejecutar la sincronizacion.
@@ -69,9 +69,10 @@ Acciones principales:
 - `ACTION_QUICK_LOG_SET`: abre Registro rapido en la app.
 - `ACTION_REFRESH_WORKOUT_WIDGET`: refresca RemoteViews.
 - `ACTION_WIDGET_REPS_DOWN` / `ACTION_WIDGET_REPS_UP`: ajusta reps desde el widget.
-- `ACTION_WIDGET_WEIGHT_DOWN` / `ACTION_WIDGET_WEIGHT_UP`: ajusta kilos en pasos de 2.5 kg.
+- `ACTION_WIDGET_WEIGHT_DOWN` / `ACTION_WIDGET_WEIGHT_UP`: ajusta kilos siempre en pasos de 0.5 kg.
 - `ACTION_WIDGET_SAVE_SET`: guarda serie directamente en `SharedPreferences`.
 - `ACTION_WIDGET_REPEAT_LAST`: carga ultima serie conocida.
+- `ACTION_WIDGET_PREVIOUS_EXERCISE`: vuelve al ejercicio anterior.
 - `ACTION_WIDGET_NEXT_EXERCISE`: avanza al siguiente ejercicio.
 
 Limitacion aceptada: `RemoteViews` no ofrece teclado/formulario libre estable
@@ -156,7 +157,7 @@ GitHub Actions con Java 17, Android SDK 35 y Gradle 8.10.2.
 
 ## 7. Pruebas manuales criticas
 
-1. Instalar APK `v2.3.0`.
+1. Instalar APK `v2.3.1`.
 2. Agregar widget `Protocolo 0->100 · Gym`.
 3. Confirmar que muestra rutina del dia.
 4. Ajustar reps y kilos desde el widget.
@@ -164,10 +165,11 @@ GitHub Actions con Java 17, Android SDK 35 y Gradle 8.10.2.
 6. Confirmar que suben series/progreso en el widget.
 7. Tocar `Repetir` y guardar otra serie.
 8. Tocar `Siguiente` y confirmar cambio de ejercicio.
-9. Abrir app desde el widget y confirmar que la sesion aparece en Gym.
-10. Exportar backup y confirmar `workoutSessions`, `exerciseHistory` y `workoutWidgetState`.
-11. Importar backup en perfil limpio y confirmar restauracion.
-12. Revisar PWA/GitHub Pages para confirmar que nutricion, habitos, score y offline no se rompieron.
+9. Tocar `Atras` y confirmar vuelta al ejercicio anterior.
+10. Abrir app desde el widget y confirmar que la sesion aparece en Gym.
+11. Exportar backup y confirmar `workoutSessions`, `exerciseHistory` y `workoutWidgetState`.
+12. Importar backup en perfil limpio y confirmar restauracion.
+13. Revisar PWA/GitHub Pages para confirmar que nutricion, habitos, score y offline no se rompieron.
 
 ## 8. Reglas de continuidad
 

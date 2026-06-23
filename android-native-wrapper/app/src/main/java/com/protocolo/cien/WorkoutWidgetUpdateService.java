@@ -23,7 +23,7 @@ public final class WorkoutWidgetUpdateService {
     public static final String KEY_STATE_JSON = "state_json";
 
     private static final int REQUEST_REFRESH = 1004;
-    private static final double WEIGHT_STEP = 2.5;
+    private static final double WEIGHT_STEP = 0.5;
 
     private WorkoutWidgetUpdateService() {}
 
@@ -107,6 +107,7 @@ public final class WorkoutWidgetUpdateService {
         views.setOnClickPendingIntent(R.id.widgetWeightPlusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_WEIGHT_UP));
         views.setOnClickPendingIntent(R.id.widgetSaveSetButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_SAVE_SET));
         views.setOnClickPendingIntent(R.id.widgetRepeatButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_REPEAT_LAST));
+        views.setOnClickPendingIntent(R.id.widgetPreviousButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_PREVIOUS_EXERCISE));
         views.setOnClickPendingIntent(R.id.widgetNextButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_NEXT_EXERCISE));
         return views;
     }
@@ -140,6 +141,7 @@ public final class WorkoutWidgetUpdateService {
                 || MainActivity.ACTION_WIDGET_WEIGHT_UP.equals(action)
                 || MainActivity.ACTION_WIDGET_SAVE_SET.equals(action)
                 || MainActivity.ACTION_WIDGET_REPEAT_LAST.equals(action)
+                || MainActivity.ACTION_WIDGET_PREVIOUS_EXERCISE.equals(action)
                 || MainActivity.ACTION_WIDGET_NEXT_EXERCISE.equals(action);
     }
 
@@ -159,6 +161,8 @@ public final class WorkoutWidgetUpdateService {
             adjustQuick(state, "weight", WEIGHT_STEP);
         } else if (MainActivity.ACTION_WIDGET_REPEAT_LAST.equals(action)) {
             repeatLast(state);
+        } else if (MainActivity.ACTION_WIDGET_PREVIOUS_EXERCISE.equals(action)) {
+            moveToPreviousExercise(state);
         } else if (MainActivity.ACTION_WIDGET_NEXT_EXERCISE.equals(action)) {
             moveToNextExercise(state);
         } else if (MainActivity.ACTION_WIDGET_SAVE_SET.equals(action)) {
@@ -250,6 +254,21 @@ public final class WorkoutWidgetUpdateService {
         put(state, "workoutSession", session);
         refreshStateFromSession(state, session, next);
         put(state, "lastWidgetActionText", "Siguiente ejercicio: " + shortName(next == null ? "" : next.optString("name", "")) + ".");
+    }
+
+    private static void moveToPreviousExercise(JSONObject state) {
+        JSONObject session = ensureSession(state);
+        if (session == null) return;
+        JSONArray exercises = session.optJSONArray("exercises");
+        if (exercises == null || exercises.length() == 0) return;
+        JSONObject current = currentExercise(state, session);
+        int index = indexOfExercise(exercises, exerciseIdOf(current));
+        int previousIndex = Math.max(0, Math.max(0, index) - 1);
+        JSONObject previous = exercises.optJSONObject(previousIndex);
+        put(session, "currentExerciseIndex", previousIndex);
+        put(state, "workoutSession", session);
+        refreshStateFromSession(state, session, previous);
+        put(state, "lastWidgetActionText", "Ejercicio anterior: " + shortName(previous == null ? "" : previous.optString("name", "")) + ".");
     }
 
     private static JSONObject ensureSession(JSONObject state) {

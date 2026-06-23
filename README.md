@@ -45,9 +45,10 @@ Desde la pantalla de inicio el widget permite:
 - ver el entrenamiento del dia;
 - ver el ejercicio actual;
 - subir/bajar repeticiones;
-- subir/bajar kilos en pasos de 2.5 kg;
+- subir/bajar kilos siempre en pasos de 0.5 kg;
 - tocar **Guardar serie** sin abrir la app;
 - tocar **Repetir** para cargar la ultima serie conocida;
+- tocar **Atras** para volver al ejercicio anterior;
 - tocar **Siguiente** para avanzar de ejercicio;
 - abrir Gym / Entrenamiento de hoy o Registro rapido cuando hace falta una edicion completa.
 
@@ -86,7 +87,7 @@ El APK resultante queda en `android-native-wrapper/app/build/outputs/apk/debug/a
 ## Publicacion
 
 - **PWA:** el workflow `Publicar PWA en GitHub Pages` publica los archivos raiz.
-- **APK:** el workflow `Construir APK Android` compila el wrapper y publica la descarga directa de la version `v2.3.0`.
+- **APK:** el workflow `Construir APK Android` compila el wrapper y publica la descarga directa de la version `v2.3.1`.
 
 El APK generado es `debug`, apropiado para uso personal. Publicar en Play Store requiere una compilacion `release` firmada con una clave privada.
 

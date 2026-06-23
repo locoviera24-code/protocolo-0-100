@@ -167,6 +167,19 @@
             android:textStyle="bold" />
 
         <TextView
+            android:id="@+id/widgetPreviousButton"
+            android:layout_width="0dp"
+            android:layout_height="32dp"
+            android:layout_marginStart="6dp"
+            android:layout_weight="1"
+            android:background="@drawable/widget_button_secondary"
+            android:gravity="center"
+            android:text="Atrás"
+            android:textColor="#eef5ff"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <TextView
             android:id="@+id/widgetOpenButton"
             android:layout_width="0dp"
             android:layout_height="32dp"

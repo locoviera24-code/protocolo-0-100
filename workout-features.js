@@ -473,7 +473,7 @@
     if(!exercise){ flash('Elegí un ejercicio para registrar.'); return; }
     const setNumber=Math.max(1,Number(document.getElementById('quickSetNumber').value)||((exercise.sets||[]).length+1));
     const reps=Math.max(0,Number(document.getElementById('quickReps').value)||0);
-    const weight=Math.max(0,Number(document.getElementById('quickWeight').value)||0);
+    const weight=Math.round(Math.max(0,Number(document.getElementById('quickWeight').value)||0)*2)/2;
     const bodyweight=document.getElementById('quickBodyweight').checked;
     const set={id:uid('set'),setNumber,reps,weight,rir:document.getElementById('quickRir').value===''?null:Math.max(0,Number(document.getElementById('quickRir').value)||0),rpe:document.getElementById('quickRpe').value===''?null:Math.max(0,Number(document.getElementById('quickRpe').value)||0),bodyweight,note:document.getElementById('quickNote').value.trim(),savedAt:new Date().toISOString(),volume:Math.round(reps*weight)};
     exercise.sets=exercise.sets||[];
@@ -637,7 +637,7 @@
         weight:Math.max(0,Math.round(quickWeight*2)/2),
         bodyweight:quickBodyweight,
         unit:s.unit,
-        weightStep:2.5,
+        weightStep:0.5,
         hintText:quickHint
       },
       workoutSession:session?clone(session):null,

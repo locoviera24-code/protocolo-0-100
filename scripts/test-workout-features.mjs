@@ -61,6 +61,7 @@ assert.equal(widgetState.schemaVersion, 2);
 assert.equal(widgetState.currentExerciseName, 'Apertura sentado / Peck deck');
 assert.equal(widgetState.quickLog.reps, 8);
 assert.equal(widgetState.quickLog.unit, 'kg');
+assert.equal(widgetState.quickLog.weightStep, 0.5);
 assert.ok(widgetState.weeklyWorkoutPlan.monday);
 assert.ok(widgetState.exerciseHistory);
 assert.ok(widgetState.exercises.length >= 9);

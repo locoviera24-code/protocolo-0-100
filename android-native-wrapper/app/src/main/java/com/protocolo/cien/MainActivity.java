@@ -40,6 +40,7 @@ public class MainActivity extends Activity {
     public static final String ACTION_WIDGET_WEIGHT_UP = "com.protocolo.cien.ACTION_WIDGET_WEIGHT_UP";
     public static final String ACTION_WIDGET_SAVE_SET = "com.protocolo.cien.ACTION_WIDGET_SAVE_SET";
     public static final String ACTION_WIDGET_REPEAT_LAST = "com.protocolo.cien.ACTION_WIDGET_REPEAT_LAST";
+    public static final String ACTION_WIDGET_PREVIOUS_EXERCISE = "com.protocolo.cien.ACTION_WIDGET_PREVIOUS_EXERCISE";
     public static final String ACTION_WIDGET_NEXT_EXERCISE = "com.protocolo.cien.ACTION_WIDGET_NEXT_EXERCISE";
     private static final int SPEECH_REQUEST_CODE = 4100;
     private WebView webView;
