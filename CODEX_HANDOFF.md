@@ -448,3 +448,58 @@ Campos esperados:
 - `FIREBASE_STORAGE_BUCKET`
 
 No usar claves privadas en frontend.
+
+## 19. Verificacion Firebase publicada
+
+Verificacion realizada el 2026-06-24 despues de publicar commit `09b23fe`
+(`Publica Gym Party con Firebase`) en `main`.
+
+Contexto detectado:
+
+- El workflow anterior exitoso de Pages estaba publicando `175addd` (`v2.3.2`).
+- Ese deployment no tenia `firebase-config.js` ni `gym-party.js`; ambos daban
+  404 en GitHub Pages.
+- Se corrigio subiendo el commit `09b23fe`, que agrega `gym-party.js`,
+  `firebase-config.js`, `scripts/write-firebase-config.ps1` y workflows
+  actualizados.
+
+GitHub Pages:
+
+- Workflow `Publicar PWA en GitHub Pages`, run `28121243409`.
+- Estado: `completed`, conclusion `success`.
+- URL verificada: `https://locoviera24-code.github.io/protocolo-0-100/`.
+- `/firebase-config.js`: HTTP 200, no es stub vacio, contiene `apiKey`,
+  `authDomain`, `projectId` y `appId`.
+- `/gym-party.js`: HTTP 200, contiene `window.GYM_PARTY_FEATURES`,
+  `effectiveFirebaseConfig` y colecciones Firestore.
+- `index.html`: carga `firebase-config.js` antes de `gym-party.js`.
+- No se encontraron `private_key`, `service_account`,
+  `-----BEGIN PRIVATE KEY-----`, `client_email` ni `firebase-adminsdk` en el
+  repo, salvo los strings prohibidos usados por `scripts/validate-app.ps1` para
+  validar que no aparezcan en `firebase-config.js`.
+
+Prueba real contra Firebase:
+
+- Config publicada detectada como real. Hash corto del `projectId` verificado:
+  `754839EE855E` (no guardar ni imprimir secrets).
+- Authentication anonimo: OK con dos usuarios anonimos.
+- Crear sala: OK.
+- Crear invite: OK.
+- Crear miembro owner: OK.
+- Segundo usuario leyendo sala antes de unirse: bloqueado por reglas, OK.
+- Segundo usuario lee invite por codigo: OK.
+- Segundo usuario se une con alias: OK.
+- Segundo usuario lee sala despues de unirse: OK.
+- Query de miembros por `partyId`: OK.
+- Escritura de `workout_sessions_shared`: OK.
+- Escritura de `workout_sets_shared`: OK.
+- Lectura cruzada de sesiones/series entre miembros: OK.
+- La sala/invite de prueba `party_codex_1782326425254` / `CX17823264` se
+  desactivo al final de la prueba; los documentos quedan en Firestore porque
+  las reglas no permiten delete.
+
+Backup:
+
+- La version publicada de `gym-party.js` contiene `exportableSettings`,
+  `delete value.firebaseConfig` y `delete next.firebaseConfig`.
+- `firebaseConfig` no debe salir en backups ni ser importado desde backups.
