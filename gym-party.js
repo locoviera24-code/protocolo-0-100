@@ -693,8 +693,18 @@
   function safetyNotice(){
     return `<div class="safetyNote">Esta función es para organizar y comparar entrenamientos de forma orientativa. No reemplaza asesoramiento de entrenador, médico o profesional de salud. Ajustá cargas según técnica, dolor, fatiga y seguridad.</div>`;
   }
-  function privacyChecks(prefix, value = defaultPrivacy){
+  function privacyChecks(prefix, value = defaultPrivacy, options = {}){
     const p = {...defaultPrivacy, ...value};
+    if(options.compact){
+      return `
+        <label class="check"><input type="checkbox" id="${prefix}ShareGym" ${p.shareGymData ? 'checked' : ''}><span>Compartir solo datos de entrenamiento con esta sala.</span></label>
+        <input type="checkbox" id="${prefix}SetDetails" ${p.shareSetDetails ? 'checked' : ''} class="hidden">
+        <input type="checkbox" id="${prefix}AggregateOnly" ${p.shareAggregateOnly ? 'checked' : ''} class="hidden">
+        <input type="checkbox" id="${prefix}HideWeights" ${p.hideAbsoluteWeights ? 'checked' : ''} class="hidden">
+        <input type="checkbox" id="${prefix}AnonymousAlias" ${p.anonymousAlias ? 'checked' : ''} class="hidden">
+        <input type="checkbox" id="${prefix}GeneralScore" ${p.shareGeneralScore ? 'checked' : ''} class="hidden">
+      `;
+    }
     return `
       <label class="check"><input type="checkbox" id="${prefix}ShareGym" ${p.shareGymData ? 'checked' : ''}><span>Compartir datos de gym con esta sala.</span></label>
       <label class="check"><input type="checkbox" id="${prefix}SetDetails" ${p.shareSetDetails ? 'checked' : ''}><span>Compartir detalle de series, reps y kilos.</span></label>
@@ -708,54 +718,66 @@
     const cfg = settings().firebaseConfig || {};
     const cfgText = Object.keys(cfg).length ? JSON.stringify(cfg, null, 2) : '';
     const cfgSource = firebaseConfigSource();
+    const backendDefault = cfgSource === 'missing' ? 'local' : 'firebase';
+    const onlineReady = cfgSource !== 'missing';
     const cfgStatus = cfgSource === 'bundled'
-      ? 'Firebase detectado desde firebase-config.js. Podés crear o unirte usando backend Firebase.'
+      ? 'Sala online lista: Firebase ya está configurado en esta versión.'
       : cfgSource === 'local'
-        ? 'Firebase guardado localmente en este dispositivo.'
-        : 'Firebase no configurado. El modo demo/local sigue disponible.';
+        ? 'Sala online lista: Firebase guardado localmente en este dispositivo.'
+        : 'Firebase no configurado. Podés probar demo/local, pero para invitar otro teléfono hace falta Firebase.';
     return `
       <div class="partyGrid">
         <div class="moduleCard partyHeroCard">
-          <h3>Entrenar juntos, medir mejor</h3>
-          <p class="muted small">Compará progreso con tu amigo sin convertirlo en una competencia tóxica. La comparación principal es contra tu semana pasada.</p>
+          <h3>Sesión privada compartida</h3>
+          <p class="muted small">Flujo simple: creás un código, se lo mandás a tu amigo y ambos registran entrenamiento. La app compara progreso sin lenguaje de culpa.</p>
+          <div class="auditItem good">${escape(cfgStatus)}</div>
+          <div class="entryList">
+            <div class="entryRow"><div><strong>1. Creá la sala</strong><div class="meta">Elegí tu alias y tocá crear código.</div></div><span class="statusChip good">online</span></div>
+            <div class="entryRow"><div><strong>2. Mandá el código</strong><div class="meta">Tu amigo abre la web en iPhone/Safari y entra con ese código.</div></div><span class="statusChip">privado</span></div>
+            <div class="entryRow"><div><strong>3. Registren entrenamientos</strong><div class="meta">Se sincronizan series, reps, kilos, volumen y progreso semanal.</div></div><span class="statusChip good">gym</span></div>
+          </div>
           ${privacyNotice()}
           ${safetyNotice()}
           <div class="buttons">
             <button type="button" class="good" data-gym-party-action="demo2">Probar modo demo</button>
-            <button type="button" class="secondary" data-gym-party-action="demo5">Demo con más miembros</button>
+            <button type="button" class="secondary" data-gym-party-action="demo5">Demo con más amigos</button>
           </div>
         </div>
         <div class="moduleCard">
-          <h3>Crear Gym Party</h3>
+          <h3>Crear código para mi amigo</h3>
+          <p class="muted small">Usá esta opción si vos vas a iniciar la sala. Después copiás el código y se lo enviás.</p>
           <div class="formGrid">
-            <div class="field"><label>Nombre de la sala</label><input type="text" id="gymPartyCreateName" placeholder="Ej. Torso con Juan"></div>
-            <div class="field"><label>Alias público</label><input type="text" id="gymPartyCreateAlias" placeholder="Ej. Nico"></div>
-            <div class="field"><label>Backend</label><select id="gymPartyCreateBackend"><option value="local">Local/mock en este dispositivo</option><option value="firebase">Firebase Auth + Firestore</option></select></div>
-            <div class="field"><label>Privacidad</label><select id="gymPartyCreatePrivacy"><option value="gym-only">Solo gym</option></select></div>
+            <div class="field"><label>Nombre de la sala</label><input type="text" id="gymPartyCreateName" placeholder="Ej. Entreno con Juan"></div>
+            <div class="field"><label>Tu alias visible</label><input type="text" id="gymPartyCreateAlias" placeholder="Ej. Nico"></div>
+            <input type="hidden" id="gymPartyCreateBackend" value="${backendDefault}">
+            <input type="hidden" id="gymPartyCreatePrivacy" value="gym-only">
           </div>
-          <div class="checks">${privacyChecks('create')}</div>
-          <div class="buttons"><button type="button" class="good" data-gym-party-action="create">Crear Gym Party</button></div>
+          <div class="checks">${privacyChecks('create', defaultPrivacy, {compact: true})}</div>
+          <div class="buttons"><button type="button" class="good" data-gym-party-action="create">${onlineReady ? 'Crear código privado' : 'Crear sala local/demo'}</button></div>
         </div>
         <div class="moduleCard">
-          <h3>Unirme con código</h3>
+          <h3>Entrar con código</h3>
+          <p class="muted small">Usá esta opción si tu amigo ya creó la sala y te pasó el código.</p>
           <div class="formGrid">
             <div class="field"><label>Código de invitación</label><input type="text" id="gymPartyJoinCode" placeholder="Ej. A1B2C3"></div>
-            <div class="field"><label>Alias público</label><input type="text" id="gymPartyJoinAlias" placeholder="Ej. Amigo"></div>
-            <div class="field"><label>Backend</label><select id="gymPartyJoinBackend"><option value="local">Local/mock</option><option value="firebase">Firebase</option></select></div>
+            <div class="field"><label>Tu alias visible</label><input type="text" id="gymPartyJoinAlias" placeholder="Ej. Juan"></div>
+            <input type="hidden" id="gymPartyJoinBackend" value="${backendDefault}">
           </div>
-          <div class="checks">${privacyChecks('join')}</div>
-          <div class="buttons"><button type="button" class="good" data-gym-party-action="join">Unirme</button></div>
+          <div class="checks">${privacyChecks('join', defaultPrivacy, {compact: true})}</div>
+          <div class="buttons"><button type="button" class="good" data-gym-party-action="join">Entrar a la sala</button></div>
         </div>
         <div class="moduleCard">
-          <h3>Firebase opcional</h3>
-          <p class="muted small">Para usar dos teléfonos reales, incluido iPhone/Safari, configurá Firebase Spark. La API key web es pública; las reglas de Firestore protegen los datos. Si firebase-config.js ya fue generado por GitHub Actions, no hace falta pegar JSON manual.</p>
-          <div class="field"><label>Configuración web JSON</label><textarea id="gymPartyFirebaseConfig" class="planEditorTextarea" placeholder='{"apiKey":"...","authDomain":"...","projectId":"...","appId":"..."}'>${escape(cfgText)}</textarea></div>
-          <div class="buttons">
-            <button type="button" class="secondary" data-gym-party-action="save-firebase">Guardar configuración Firebase</button>
-            <button type="button" class="secondary" data-gym-party-action="login-firebase">Probar login anónimo</button>
-            <button type="button" class="danger" data-gym-party-action="clear-firebase">Quitar configuración</button>
-          </div>
-          <div class="auditItem" id="gymPartyFirebaseStatus">${escape(cfgStatus)}</div>
+          <details>
+            <summary><strong>Configuración avanzada</strong></summary>
+            <p class="muted small">En la web publicada Firebase ya viene configurado. Esta sección queda solo para pruebas locales o diagnóstico.</p>
+            <div class="field"><label>Configuración web JSON</label><textarea id="gymPartyFirebaseConfig" class="planEditorTextarea" placeholder='{"apiKey":"...","authDomain":"...","projectId":"...","appId":"..."}'>${escape(cfgText)}</textarea></div>
+            <div class="buttons">
+              <button type="button" class="secondary" data-gym-party-action="save-firebase">Guardar configuración Firebase</button>
+              <button type="button" class="secondary" data-gym-party-action="login-firebase">Probar login anónimo</button>
+              <button type="button" class="danger" data-gym-party-action="clear-firebase">Quitar configuración</button>
+            </div>
+            <div class="auditItem" id="gymPartyFirebaseStatus">${escape(cfgStatus)}</div>
+          </details>
         </div>
       </div>
     `;
@@ -885,6 +907,7 @@
         ${inviteHint}
         <div class="buttons">
           <button type="button" class="secondary" data-gym-party-action="copy-code">Copiar código</button>
+          <button type="button" class="good" data-gym-party-action="share-code">Enviar código</button>
           <button type="button" class="good" data-gym-party-action="sync">Sincronizar ahora</button>
           <button type="button" class="secondary" data-gym-party-action="export-csv">Exportar CSV comparativo</button>
           <button type="button" class="secondary" data-gym-party-action="export-json">Exportar mis datos compartidos</button>
@@ -956,6 +979,33 @@
     if(!code) return;
     if(typeof navigator !== 'undefined' && navigator.clipboard?.writeText) navigator.clipboard.writeText(code).catch(() => {});
     flashMessage(`Código copiado: ${code}`);
+  }
+  function inviteUrl(code){
+    try{
+      const url = new URL(window.location.href);
+      url.searchParams.set('gymPartyCode', code);
+      url.hash = '';
+      return url.href;
+    }catch(e){
+      return '';
+    }
+  }
+  function inviteMessage(code){
+    const url = inviteUrl(code);
+    return `Sumate a mi Gym Party. Código: ${code}${url ? `\nLink: ${url}` : ''}`;
+  }
+  async function shareInviteCode(){
+    const code = currentParty()?.inviteCode || '';
+    if(!code) return;
+    const text = inviteMessage(code);
+    if(typeof navigator !== 'undefined' && navigator.share){
+      try{
+        await navigator.share({title: 'Gym Party', text, url: inviteUrl(code) || undefined});
+        return;
+      }catch(e){}
+    }
+    if(typeof navigator !== 'undefined' && navigator.clipboard?.writeText) navigator.clipboard.writeText(text).catch(() => {});
+    flashMessage(`Invitación copiada. Código: ${code}`);
   }
   function savePrivacy(){
     const m = activeMembership();
@@ -1222,6 +1272,7 @@
       else if(action === 'demo2') startDemo(2);
       else if(action === 'demo5') startDemo(5);
       else if(action === 'copy-code') copyInviteCode();
+      else if(action === 'share-code') shareInviteCode();
       else if(action === 'sync') syncNow().catch(error => flashMessage(firebaseError(error)));
       else if(action === 'export-csv') exportCsv();
       else if(action === 'export-json') exportJson();
@@ -1257,6 +1308,22 @@
       return result;
     };
   }
+  function applyInviteFromUrl(){
+    if(window.__gymPartyInviteApplied || typeof window.location === 'undefined' || typeof URLSearchParams === 'undefined') return;
+    const code = normalizeCode(new URLSearchParams(window.location.search || '').get('gymPartyCode'));
+    if(!code) return;
+    window.__gymPartyInviteApplied = true;
+    setTimeout(() => {
+      if(typeof window.setModule === 'function') window.setModule('gym-party');
+      else renderGymParty();
+      setTimeout(() => {
+        const input = document.getElementById('gymPartyJoinCode');
+        if(input) input.value = code;
+        const alias = document.getElementById('gymPartyJoinAlias');
+        if(alias) alias.focus();
+      }, 40);
+    }, 0);
+  }
 
   window.GYM_PARTY_FEATURES = {
     keys,
@@ -1278,5 +1345,6 @@
 
   setupEvents();
   installGymHook();
+  applyInviteFromUrl();
   if(document.getElementById('gymPartyRoot')) renderGymParty();
 })();

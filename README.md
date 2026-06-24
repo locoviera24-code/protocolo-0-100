@@ -54,6 +54,20 @@ Estados principales:
 - dashboard: miembros, codigo, sincronizacion, comparativas, graficas, ultimas
   sesiones compartidas, privacidad y exportacion.
 
+Acceso rapido:
+
+- boton **Gym Party** fijo en la barra superior;
+- tarjeta **Entrenar con un amigo** en la pantalla principal;
+- tarjeta **Sesion privada compartida** dentro de Gym.
+
+Flujo recomendado:
+
+1. Tocar **Gym Party**.
+2. En **Crear codigo para mi amigo**, escribir alias y crear codigo.
+3. Tocar **Enviar codigo** o **Copiar codigo**.
+4. El amigo abre el link/codigo desde iPhone, Safari o PWA.
+5. En **Entrar con codigo**, escribe alias y entra a la sala.
+
 El minimo esta pensado para 2 personas, pero internamente usa `members[]`,
 `partyId`, `userId`, sesiones y series por usuario. El limite recomendado es
 `MAX_GYM_PARTY_MEMBERS = 10`.
@@ -187,7 +201,7 @@ El APK resultante queda en `android-native-wrapper/app/build/outputs/apk/debug/a
 ## Publicacion
 
 - **PWA:** el workflow `Publicar PWA en GitHub Pages` publica los archivos raiz.
-- **APK:** el workflow `Construir APK Android` compila el wrapper y publica la descarga directa de la version `v2.4.0`.
+- **APK:** el workflow `Construir APK Android` compila el wrapper y publica la descarga directa de la version `v2.4.1`.
 
 El APK generado es `debug`, apropiado para uso personal. Publicar en Play Store requiere una compilacion `release` firmada con una clave privada.
 

@@ -162,6 +162,10 @@ foreach ($contract in @(
     'syncFromLocalWorkouts',
     'exportableSettings',
     'delete value.firebaseConfig',
+    'para mi amigo',
+    'Entrar con',
+    'data-gym-party-action="share-code"',
+    'gymPartyCode',
     'Firebase',
     'gym_parties',
     'workout_sessions_shared',
@@ -174,6 +178,8 @@ foreach ($contract in @(
 Assert-True ($html.Contains('data-module-target="gym-party"')) 'Falta entrada de navegacion Gym Party'
 Assert-True ($html.Contains('id="tab-gym-party"')) 'Falta pestaña Gym Party'
 Assert-True ($html.Contains('<script src="gym-party.js"></script>')) 'index.html no carga gym-party.js'
+Assert-True ($html.Contains('id="openGymPartyTopBtn"')) 'Falta boton superior visible de Gym Party'
+Assert-True ($html.Contains('data-open-gym-party')) 'Faltan tarjetas/accesos rapidos a Gym Party'
 
 $workoutLower = $workout.ToLowerInvariant()
 foreach ($term in @(

@@ -2,9 +2,9 @@
 
 Ultima actualizacion: 2026-06-24
 Rama esperada: `main`
-Version actual: `2.4.0`
-Android: `versionCode 12`, `versionName "2.4.0"`
-Service worker cache: `protocolo-0-100-pwa-v15`
+Version actual: `2.4.1`
+Android: `versionCode 13`, `versionName "2.4.1"`
+Service worker cache: `protocolo-0-100-pwa-v16`
 Backup consolidado: `schemaVersion: 3`
 
 Leer primero este archivo y luego `README.md`, `index.html`,
@@ -24,7 +24,7 @@ Estado actual:
 - Gym Party implementado como modulo web/PWA opcional.
 - Nutricion local/FDC opcional.
 - Backups JSON `schemaVersion: 3`.
-- PWA offline con cache v15.
+- PWA offline con cache v16.
 - APK con widget Android y permiso `INTERNET` para Firebase/Gym Party.
 
 ## 2. Funcionalidades ya existen
@@ -43,6 +43,8 @@ Estado actual:
 - Gym Party: sala privada local/demo/Firebase opcional, miembros, codigo de
   invitacion, privacidad opt-in, comparativas, graficas, retos sanos,
   exportacion y cola offline.
+- Accesos visibles a Gym Party: boton superior fijo, tarjeta en inicio y tarjeta
+  dentro de Gym. Ya no depende solo del menu lateral.
 - Nutricion: catalogo local, comidas, metas, FoodData Central opcional, cache,
   comidas frecuentes, diagnostico orientativo y CSV.
 - Progreso integral: Focus Coins locales, recompensas, rankings simulados y
@@ -68,12 +70,13 @@ Web:
 
 - `index.html`: agrega modulo `gym-party`, contenedor `tab-gym-party`,
   navegacion drawer, carga `firebase-config.js`, `gym-party.js` y activa
-  `renderGymParty`.
+  `renderGymParty`. Tambien agrega boton superior `Gym Party` y tarjetas de
+  acceso rapido.
 - `firebase-config.js`: stub seguro para config publica Firebase; Actions puede
   reemplazarlo desde secrets.
 - `gym-party.js`: nuevo modulo Gym Party.
-- `advanced-features.js`: version `2.4.0`, backup/importacion Gym Party.
-- `sw.js`: cache v15 e incluye `gym-party.js`.
+- `advanced-features.js`: version `2.4.1`, backup/importacion Gym Party.
+- `sw.js`: cache v16 e incluye `gym-party.js`.
 - `README.md`: documenta Gym Party, demo, Firebase, privacidad y pruebas.
 - `CODEX_HANDOFF.md`: este handoff.
 
@@ -91,8 +94,8 @@ Android:
 - `android-native-wrapper/app/src/main/java/com/protocolo/cien/MainActivity.java`:
   permite acceso universal desde archivos locales para que WebView pueda usar
   Firebase/FDC desde assets locales.
-- `android-native-wrapper/app/build.gradle`: `versionCode 12`,
-  `versionName 2.4.0`.
+- `android-native-wrapper/app/build.gradle`: `versionCode 13`,
+  `versionName 2.4.1`.
 - `android-native-wrapper/app/src/main/assets/*`: sincronizado desde raiz.
 
 Scripts/workflows:
@@ -106,7 +109,7 @@ Scripts/workflows:
 - `.github/workflows/*.yml`: corren `test-gym-party.mjs`.
 - `.github/workflows/deploy-pages.yml`: publica `workout-features.js`,
   `firebase-config.js` y `gym-party.js`.
-- `.github/workflows/build-debug-apk.yml`: release objetivo `v2.4.0`.
+- `.github/workflows/build-debug-apk.yml`: release objetivo `v2.4.1`.
 
 ## 5. Estructura datos/localStorage/Firebase
 
@@ -223,6 +226,20 @@ Funciones/exports:
 - `syncNow`
 - `hasFirebaseConfig`
 
+UX actual:
+
+- En la web se ve un boton `Gym Party` fijo en la barra superior.
+- En la pantalla principal aparece la tarjeta `Entrenar con un amigo`.
+- En Gym aparece la tarjeta `Sesion privada compartida`.
+- La pantalla inicial de Gym Party se redujo a dos acciones principales:
+  `Crear codigo para mi amigo` y `Entrar con codigo`.
+- Si `firebase-config.js` trae config real, el backend online queda
+  preseleccionado con inputs hidden; el usuario no ve el selector tecnico.
+- El dashboard incluye `Enviar codigo`, que usa Web Share API si existe o copia
+  una invitacion con link `?gymPartyCode=...`.
+- Al abrir un link con `?gymPartyCode=CODIGO`, la app abre Gym Party y precarga
+  el codigo en el formulario de union.
+
 Estados UI:
 
 - sin sala;
@@ -234,7 +251,7 @@ Estados UI:
 Dashboard:
 
 - nombre/codigo/miembros/sync;
-- copiar codigo;
+- copiar/enviar codigo;
 - salir de sala;
 - sincronizar ahora;
 - exportar CSV comparativo;
@@ -361,7 +378,7 @@ No borrar ni renombrar datos sin migracion.
 9. Revisar dashboard Gym Party.
 10. Exportar backup JSON y CSV comparativo.
 11. Si se publica APK, esperar workflow `Construir APK Android` y release
-    `v2.4.0`.
+    `v2.4.1`.
 
 ## 16. Como probar la app
 
@@ -388,11 +405,11 @@ Manual demo:
 
 Manual dos usuarios:
 
-1. Configurar Firebase con secrets `FIREBASE_*` o JSON local.
-2. Usuario A crea sala Firebase.
-3. Copiar codigo.
-4. Usuario B abre Safari/PWA en iPhone.
-5. Usuario B se une con codigo y alias.
+1. Tocar el boton superior `Gym Party`.
+2. Usuario A usa `Crear codigo para mi amigo`.
+3. Tocar `Enviar codigo` o `Copiar codigo`.
+4. Usuario B abre Safari/PWA en iPhone con el link o codigo.
+5. Usuario B usa `Entrar con codigo` y alias.
 6. Ambos registran entrenamientos.
 7. Tocar `Sincronizar ahora`.
 8. Comparar semana actual vs semana pasada.
@@ -421,7 +438,7 @@ Salida:
 android-native-wrapper/app/build/outputs/apk/debug/app-debug.apk
 ```
 
-GitHub Actions publica release `v2.4.0` si se empuja a `main`.
+GitHub Actions publica release `v2.4.1` si se empuja a `main`.
 
 ## 18. Como configurar Firebase
 

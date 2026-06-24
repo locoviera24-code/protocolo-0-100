@@ -203,6 +203,11 @@
     .menuBtn{width:42px; height:42px; padding:0; display:grid; place-items:center; background:#203451; color:#fff; border:1px solid var(--line); font-size:22px;}
     .moduleTopbar strong{font-size:17px; color:#fff;}
     .moduleTopbar span{font-size:12px; color:var(--muted);}
+    .moduleTopbar .topbarTitle{min-width:0; flex:1;}
+    .quickPartyBtn{white-space:nowrap; padding:9px 12px; border-radius:999px; background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#061522; border:0; font-weight:800; box-shadow:0 10px 26px rgba(114,214,255,.16);}
+    .homeShortcut{border:1px solid rgba(114,214,255,.34); background:linear-gradient(135deg,rgba(114,214,255,.12),rgba(152,245,194,.08)); border-radius:18px; padding:14px; margin-top:14px;}
+    .homeShortcut h3{margin:0 0 6px;}
+    .homeShortcut p{margin:0 0 11px;}
     .drawerBackdrop{position:fixed; inset:0; z-index:190; background:rgba(2,6,12,.66); opacity:0; pointer-events:none; transition:opacity .2s ease;}
     .sideDrawer{position:fixed; z-index:200; inset:0 auto 0 0; width:min(330px,86vw); padding:18px; background:linear-gradient(180deg,#14213a,#0b1220); border-right:1px solid var(--line); box-shadow:20px 0 55px rgba(0,0,0,.5); transform:translateX(-105%); transition:transform .24s ease; overflow:auto;}
     body.drawerOpen .drawerBackdrop{opacity:1; pointer-events:auto;}
@@ -269,7 +274,7 @@
     @media(max-width:800px){.moduleGrid{grid-template-columns:1fr}.quickStats{grid-template-columns:repeat(2,1fr)}}
     @media(max-width:800px){.coverageGrid,.recommendGrid,.sectionIntro,.scoreTiles,.fdcResultGrid{grid-template-columns:1fr}.integralHero{grid-template-columns:1fr}}
     @media(max-width:600px){.assistantPreviewGrid,.assistantCustomGrid{grid-template-columns:1fr 1fr}.assistantCustomGrid input:first-child{grid-column:1/-1}}
-    @media(max-width:480px){.quickStats{grid-template-columns:1fr}.macroRow{grid-template-columns:72px 1fr 76px}.entryRow{grid-template-columns:1fr}.entryRow button{justify-self:start}.assistantPreviewGrid{grid-template-columns:1fr}}
+    @media(max-width:480px){.quickStats{grid-template-columns:1fr}.macroRow{grid-template-columns:72px 1fr 76px}.entryRow{grid-template-columns:1fr}.entryRow button{justify-self:start}.assistantPreviewGrid{grid-template-columns:1fr}.moduleTopbar .topbarTitle span{display:none}.quickPartyBtn{font-size:12px;padding:8px 10px}}
 
     @media print{body{background:white;color:black}.panel,.stat,.phaseCard,.mini,.history{box-shadow:none;border-color:#ccc;background:white;color:black}.buttons,.tabs,#importFile{display:none!important}.app{max-width:100%;padding:0}.grid{display:block}.panel{page-break-inside:avoid;margin-bottom:14px}.muted,.small,label{color:#333}input,textarea,select{border-color:#aaa;color:black;background:white}}
   </style>
@@ -277,7 +282,8 @@
 <body>
   <div class="moduleTopbar">
     <button type="button" class="menuBtn" id="openDrawerBtn" aria-label="Abrir menú">☰</button>
-    <div><strong id="currentModuleTitle">Protocolo 0→100</strong><span id="currentModuleSubtitle">Atención, pantalla y hábitos diarios</span></div>
+    <div class="topbarTitle"><strong id="currentModuleTitle">Protocolo 0→100</strong><span id="currentModuleSubtitle">Atención, pantalla y hábitos diarios</span></div>
+    <button type="button" class="quickPartyBtn" id="openGymPartyTopBtn">Gym Party</button>
   </div>
   <div class="drawerBackdrop" id="drawerBackdrop"></div>
   <aside class="sideDrawer" id="sideDrawer" aria-label="Módulos de la aplicación">
@@ -328,6 +334,14 @@
               <div class="mini"><strong>Límite pantalla</strong><span id="limitText">Medir sin cambiar</span></div>
               <div class="mini"><strong>Lectura meta</strong><span id="readingTargetText">Elegir libro/cuaderno</span></div>
               <div class="mini"><strong>Corte nocturno</strong><span id="nightTargetText">Registrar sueño</span></div>
+            </div>
+          </div>
+
+          <div class="homeShortcut protocolOnly">
+            <h3>🤝 Entrenar con un amigo</h3>
+            <p class="muted small">Creá una sala privada, copiá el código y mandáselo a tu amigo. Ambos registran entrenamientos y ven comparativas sanas.</p>
+            <div class="buttons">
+              <button type="button" class="good" data-open-gym-party>Crear o unirme a Gym Party</button>
             </div>
           </div>
 
@@ -431,6 +445,14 @@
               <h3>🏋️ Entrenamiento y progresión</h3>
               <div class="muted small">Armá la sesión con plantillas o ejercicios propios. Registrá series, repeticiones, peso y esfuerzo para comparar tu progreso.</div>
               <div class="quickStats" id="gymStats"></div>
+            </div>
+
+            <div class="homeShortcut">
+              <h3>🤝 Sesión privada compartida</h3>
+              <p class="muted small">Para entrenar con un amigo: creás código, se lo mandás y la app sincroniza sesiones, series, reps y kilos.</p>
+              <div class="buttons">
+                <button type="button" class="good" data-open-gym-party>Abrir Gym Party</button>
+              </div>
             </div>
 
             <div class="moduleCard">
@@ -2246,9 +2268,11 @@ const requestUsageBtn=document.getElementById('requestUsageAccessBtn'); if(reque
 const installBtn=document.getElementById('installPwaBtn'); if(installBtn) installBtn.addEventListener('click', installPwa);
 const copyPhoneBtn=document.getElementById('copyPhoneToFormBtn'); if(copyPhoneBtn) copyPhoneBtn.addEventListener('click', copyPhoneMetricsToForm);
 document.getElementById('openDrawerBtn').addEventListener('click', openDrawer);
+document.getElementById('openGymPartyTopBtn').addEventListener('click', ()=>setModule('gym-party'));
 document.getElementById('closeDrawerBtn').addEventListener('click', closeDrawer);
 document.getElementById('drawerBackdrop').addEventListener('click', closeDrawer);
 document.querySelectorAll('[data-module-target]').forEach(btn=>btn.addEventListener('click',()=>setModule(btn.dataset.moduleTarget)));
+document.querySelectorAll('[data-open-gym-party]').forEach(btn=>btn.addEventListener('click',()=>setModule('gym-party')));
 document.getElementById('gymMuscle').addEventListener('change', populateGymExercises);
 document.getElementById('loadGymTemplateBtn').addEventListener('click', loadGymTemplate);
 document.getElementById('addGymExerciseBtn').addEventListener('click', addGymExercise);
