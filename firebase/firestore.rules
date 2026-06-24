@@ -1,0 +1,124 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function memberDocId(partyId) {
+      return partyId + "_" + request.auth.uid;
+    }
+
+    function memberPath(partyId) {
+      return /databases/$(database)/documents/gym_party_members/$(memberDocId(partyId));
+    }
+
+    function isMember(partyId) {
+      return signedIn()
+        && exists(memberPath(partyId))
+        && get(memberPath(partyId)).data.active == true;
+    }
+
+    function isOwner(partyId) {
+      return isMember(partyId)
+        && get(memberPath(partyId)).data.role == "owner";
+    }
+
+    function inviteIsValid() {
+      return signedIn()
+        && request.resource.data.inviteCode is string
+        && exists(/databases/$(database)/documents/gym_party_invites/$(request.resource.data.inviteCode))
+        && get(/databases/$(database)/documents/gym_party_invites/$(request.resource.data.inviteCode)).data.active == true
+        && get(/databases/$(database)/documents/gym_party_invites/$(request.resource.data.inviteCode)).data.partyId == request.resource.data.partyId;
+    }
+
+    match /users_public_profile/{uid} {
+      allow get: if signedIn();
+      allow list: if false;
+      allow create, update: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.uid == uid;
+      allow delete: if false;
+    }
+
+    match /gym_parties/{partyId} {
+      allow get: if signedIn() && isMember(partyId);
+      allow list: if false;
+      allow create: if signedIn()
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.active == true
+        && request.resource.data.maxMembers <= 10;
+      allow update: if (
+          isOwner(partyId)
+          && request.resource.data.maxMembers <= 10
+        ) || (
+          isMember(partyId)
+          && request.resource.data.diff(resource.data).changedKeys().hasOnly(["membersCount", "updatedAt"])
+          && request.resource.data.membersCount <= resource.data.maxMembers
+        );
+      allow delete: if false;
+    }
+
+    match /gym_party_invites/{inviteCode} {
+      allow get: if signedIn();
+      allow list: if false;
+      allow create: if signedIn()
+        && request.resource.data.inviteCode == inviteCode
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.active == true;
+      allow update: if signedIn()
+        && (
+          isOwner(resource.data.partyId)
+          || (
+            isMember(resource.data.partyId)
+            && request.resource.data.diff(resource.data).changedKeys().hasOnly(["membersCount", "updatedAt"])
+            && request.resource.data.membersCount <= resource.data.maxMembers
+          )
+        );
+      allow delete: if false;
+    }
+
+    match /gym_party_members/{memberId} {
+      allow get, list: if signedIn()
+        && (resource.data.userId == request.auth.uid || isMember(resource.data.partyId));
+      allow create: if signedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.id == memberId
+        && request.resource.data.active == true
+        && request.resource.data.shareGymData == true
+        && inviteIsValid();
+      allow update: if signedIn()
+        && (resource.data.userId == request.auth.uid || isOwner(resource.data.partyId))
+        && request.resource.data.partyId == resource.data.partyId
+        && request.resource.data.userId == resource.data.userId;
+      allow delete: if false;
+    }
+
+    match /workout_sessions_shared/{sessionId} {
+      allow get, list: if signedIn() && isMember(resource.data.partyId);
+      allow create, update: if signedIn()
+        && request.resource.data.id == sessionId
+        && request.resource.data.userId == request.auth.uid
+        && isMember(request.resource.data.partyId);
+      allow delete: if false;
+    }
+
+    match /workout_sets_shared/{setId} {
+      allow get, list: if signedIn() && isMember(resource.data.partyId);
+      allow create, update: if signedIn()
+        && request.resource.data.id == setId
+        && request.resource.data.userId == request.auth.uid
+        && isMember(request.resource.data.partyId);
+      allow delete: if false;
+    }
+
+    match /weekly_member_stats/{statId} {
+      allow get, list: if signedIn() && isMember(resource.data.partyId);
+      allow create, update: if signedIn()
+        && request.resource.data.userId == request.auth.uid
+        && isMember(request.resource.data.partyId);
+      allow delete: if false;
+    }
+  }
+}

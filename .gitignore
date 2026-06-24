@@ -8,6 +8,9 @@ dist/
 dist-pages/
 *.apk
 .tools/
+firebase-config.local.js
+firebase/.env
+firebase/.env.*
 
 # Editor / OS
 .idea/

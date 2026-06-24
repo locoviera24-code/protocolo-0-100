@@ -19,6 +19,8 @@ $html = Read-Utf8 'index.html'
 $nutrition = Read-Utf8 'nutrition-data.js'
 $fdc = Read-Utf8 'fdc-client.js'
 $workout = Read-Utf8 'workout-features.js'
+$firebaseConfig = Read-Utf8 'firebase-config.js'
+$gymParty = Read-Utf8 'gym-party.js'
 $advanced = Read-Utf8 'advanced-features.js'
 $serviceWorker = Read-Utf8 'sw.js'
 $manifestText = Read-Utf8 'manifest.webmanifest'
@@ -32,6 +34,7 @@ $apkWorkflow = Read-Utf8 '.github/workflows/build-debug-apk.yml'
 $validationWorkflow = Read-Utf8 '.github/workflows/validate-app.yml'
 $serviceWorkerTest = Read-Utf8 'scripts/test-service-worker.mjs'
 $workoutTest = Read-Utf8 'scripts/test-workout-features.mjs'
+$gymPartyTest = Read-Utf8 'scripts/test-gym-party.mjs'
 $readme = Read-Utf8 'README.md'
 $handoff = Read-Utf8 'CODEX_HANDOFF.md'
 
@@ -47,6 +50,7 @@ Assert-True ($duplicates.Count -eq 0) "Hay IDs HTML duplicados: $($duplicates -j
 
 $requiredFiles = @(
     'nutrition-data.js', 'fdc-client.js', 'workout-features.js', 'advanced-features.js',
+    'firebase-config.js', 'gym-party.js',
     'manifest.webmanifest', 'sw.js',
     'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetProvider.java',
     'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetUpdateService.java',
@@ -61,9 +65,15 @@ foreach ($file in $requiredFiles) {
     Assert-True (Test-Path -LiteralPath (Join-Path $repoRoot $file) -PathType Leaf) "Falta $file"
 }
 
-foreach ($script in @('nutrition-data.js', 'fdc-client.js', 'workout-features.js', 'advanced-features.js')) {
+foreach ($script in @('nutrition-data.js', 'fdc-client.js', 'workout-features.js', 'gym-party.js', 'advanced-features.js')) {
     Assert-True ($html.Contains("<script src=`"$script`"></script>")) "index.html no carga $script"
     Assert-True ($serviceWorker.Contains("'./$script'")) "sw.js no cachea $script"
+}
+Assert-True ($html.Contains('<script src="firebase-config.js"></script>')) 'index.html no carga firebase-config.js'
+Assert-True ($html.IndexOf('<script src="firebase-config.js"></script>') -lt $html.IndexOf('<script src="gym-party.js"></script>')) 'firebase-config.js debe cargarse antes de gym-party.js'
+Assert-True ($firebaseConfig.Contains('window.GYM_PARTY_FIREBASE_CONFIG')) 'firebase-config.js debe definir window.GYM_PARTY_FIREBASE_CONFIG'
+foreach ($forbidden in @('service_account', 'private_key', '-----BEGIN PRIVATE KEY-----')) {
+    Assert-True (-not $firebaseConfig.Contains($forbidden)) "firebase-config.js no debe contener $forbidden"
 }
 
 Assert-True ($manifest.start_url -eq './index.html') 'El manifest debe conservar start_url relativo para GitHub Pages'
@@ -131,6 +141,39 @@ foreach ($contract in @(
 )) {
     Assert-True ($advanced.Contains($contract)) "Falta contrato de backup gym/widget: $contract"
 }
+
+foreach ($contract in @(
+    'gymPartySettings',
+    'gymPartyMembership',
+    'sharedWorkoutSessions',
+    'sharedWorkoutSets',
+    'syncQueue',
+    'lastGymPartySyncAt',
+    'gymPartyDemoData'
+)) {
+    Assert-True ($advanced.Contains($contract)) "Falta contrato de backup Gym Party: $contract"
+}
+
+foreach ($contract in @(
+    'MAX_GYM_PARTY_MEMBERS = 10',
+    'window.GYM_PARTY_FEATURES',
+    'buildDemoData',
+    'calculatePartyStats',
+    'syncFromLocalWorkouts',
+    'exportableSettings',
+    'delete value.firebaseConfig',
+    'Firebase',
+    'gym_parties',
+    'workout_sessions_shared',
+    'workout_sets_shared',
+    'Solo se compartir',
+    'Modo demo'
+)) {
+    Assert-True ($gymParty.Contains($contract)) "Falta contrato Gym Party: $contract"
+}
+Assert-True ($html.Contains('data-module-target="gym-party"')) 'Falta entrada de navegacion Gym Party'
+Assert-True ($html.Contains('id="tab-gym-party"')) 'Falta pestaña Gym Party'
+Assert-True ($html.Contains('<script src="gym-party.js"></script>')) 'index.html no carga gym-party.js'
 
 $workoutLower = $workout.ToLowerInvariant()
 foreach ($term in @(
@@ -231,6 +274,11 @@ Assert-True (-not $fdc.Contains($demoToken)) 'No se debe publicar una API key de
 Assert-True ($html.Contains('Datos nutricionales ampliados basados en USDA FoodData Central')) 'Falta atribucion visible de USDA FoodData Central'
 
 Assert-True ($deployWorkflow.Contains('./scripts/validate-app.ps1')) 'El despliegue Pages debe validar la app antes de publicar'
+Assert-True ($deployWorkflow.Contains('gym-party.js')) 'El despliegue Pages debe publicar gym-party.js'
+Assert-True ($deployWorkflow.Contains('firebase-config.js')) 'El despliegue Pages debe publicar firebase-config.js'
+Assert-True ($deployWorkflow.Contains('write-firebase-config.ps1')) 'El despliegue Pages debe generar firebase-config.js desde secrets si existen'
+Assert-True ($deployWorkflow.Contains('workout-features.js')) 'El despliegue Pages debe publicar workout-features.js'
+Assert-True ($apkWorkflow.Contains('write-firebase-config.ps1')) 'El build APK debe generar firebase-config.js desde secrets si existen'
 Assert-True ($apkWorkflow.Contains('./scripts/validate-app.ps1 -CheckAndroidAssets')) 'El build APK debe validar los assets sincronizados'
 Assert-True ($validationWorkflow.Contains('./scripts/validate-app.ps1 -CheckAndroidAssets')) 'Falta validacion automatica de web y Android'
 foreach ($workflow in @($deployWorkflow, $apkWorkflow, $validationWorkflow)) {
@@ -240,9 +288,13 @@ Assert-True ($serviceWorkerTest.Contains('api.nal.usda.gov')) 'La prueba del ser
 Assert-True ($serviceWorkerTest.Contains('otra-app-cache')) 'La prueba del service worker debe proteger caches ajenos'
 foreach ($workflow in @($deployWorkflow, $apkWorkflow, $validationWorkflow)) {
     Assert-True ($workflow.Contains('node ./scripts/test-workout-features.mjs')) 'Cada workflow debe probar rutina semanal y estado widget'
+    Assert-True ($workflow.Contains('node ./scripts/test-gym-party.mjs')) 'Cada workflow debe probar Gym Party'
 }
 foreach ($contract in @('Torso A', 'Pierna A', 'Torso B', 'Pierna B', 'Torso C', 'Rutina propia', 'buildWorkoutWidgetState')) {
     Assert-True ($workoutTest.Contains($contract)) "Falta prueba workout: $contract"
+}
+foreach ($contract in @('MAX_GYM_PARTY_MEMBERS', 'buildDemoData(2)', 'buildDemoData(5)', 'calculatePartyStats', 'exportState')) {
+    Assert-True ($gymPartyTest.Contains($contract)) "Falta prueba Gym Party: $contract"
 }
 
 if ($CheckAndroidAssets) {

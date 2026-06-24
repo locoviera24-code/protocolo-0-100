@@ -11,10 +11,14 @@ on:
       - nutrition-data.js
       - fdc-client.js
       - workout-features.js
+      - gym-party.js
+      - firebase-config.js
       - advanced-features.js
       - manifest.webmanifest
       - sw.js
       - icons/**
+      - firebase/**
+      - scripts/write-firebase-config.ps1
       - .github/workflows/deploy-pages.yml
 
 permissions:
@@ -48,11 +52,25 @@ jobs:
       - name: Probar rutina semanal y estado widget
         run: node ./scripts/test-workout-features.mjs
 
+      - name: Probar Gym Party
+        run: node ./scripts/test-gym-party.mjs
+
       - name: Preparar archivos publicos
         run: |
           mkdir -p dist-pages/icons
-          cp index.html nutrition-data.js fdc-client.js advanced-features.js manifest.webmanifest sw.js dist-pages/
+          cp index.html nutrition-data.js fdc-client.js workout-features.js firebase-config.js gym-party.js advanced-features.js manifest.webmanifest sw.js dist-pages/
           cp icons/icon-192.png icons/icon-512.png dist-pages/icons/
+
+      - name: Generar configuracion Firebase opcional
+        shell: pwsh
+        env:
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+          FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
+          FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
+        run: ./scripts/write-firebase-config.ps1 -OutputPath dist-pages/firebase-config.js
 
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5

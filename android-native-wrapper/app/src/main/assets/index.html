@@ -215,11 +215,11 @@
     .drawerItem strong,.drawerItem span{display:block;}
     .drawerItem span{font-size:12px; color:var(--muted); margin-top:3px; line-height:1.3;}
     .drawerItem.active{background:linear-gradient(135deg,rgba(114,214,255,.20),rgba(152,245,194,.11)); border-color:rgba(114,214,255,.45);}
-    body[data-module="gym"] .protocolOnly,body[data-module="nutricion"] .protocolOnly{display:none!important;}
+    body[data-module="gym"] .protocolOnly,body[data-module="gym-party"] .protocolOnly,body[data-module="nutricion"] .protocolOnly{display:none!important;}
     body[data-module="progreso"] .protocolOnly{display:none!important;}
-    body[data-module="gym"] .grid,body[data-module="nutricion"] .grid,body[data-module="progreso"] .grid{display:block;}
-    body[data-module="gym"] .grid>.panel,body[data-module="nutricion"] .grid>.panel,body[data-module="progreso"] .grid>.panel{border:0;background:transparent;box-shadow:none;overflow:visible;}
-    body[data-module="gym"] .grid>.panel>.bd,body[data-module="nutricion"] .grid>.panel>.bd,body[data-module="progreso"] .grid>.panel>.bd{padding:0;}
+    body[data-module="gym"] .grid,body[data-module="gym-party"] .grid,body[data-module="nutricion"] .grid,body[data-module="progreso"] .grid{display:block;}
+    body[data-module="gym"] .grid>.panel,body[data-module="gym-party"] .grid>.panel,body[data-module="nutricion"] .grid>.panel,body[data-module="progreso"] .grid>.panel{border:0;background:transparent;box-shadow:none;overflow:visible;}
+    body[data-module="gym"] .grid>.panel>.bd,body[data-module="gym-party"] .grid>.panel>.bd,body[data-module="nutricion"] .grid>.panel>.bd,body[data-module="progreso"] .grid>.panel>.bd{padding:0;}
     .assistantBox{border:1px solid rgba(152,245,194,.30); background:linear-gradient(135deg,rgba(152,245,194,.10),rgba(114,214,255,.07)); border-radius:16px; padding:14px; margin-top:12px;}
     .assistantBox textarea{min-height:74px;}
     .assistantResult{margin-top:10px; display:grid; gap:7px;}
@@ -285,6 +285,7 @@
     <nav class="drawerNav">
       <button type="button" class="drawerItem active" data-module-target="protocolo"><span class="drawerIcon">📵</span><span><strong>Protocolo</strong><span>Pantalla, sueño, atención y hábitos.</span></span></button>
       <button type="button" class="drawerItem" data-module-target="gym"><span class="drawerIcon">🏋️</span><span><strong>Gym</strong><span>Rutinas, ejercicios y progresión.</span></span></button>
+      <button type="button" class="drawerItem" data-module-target="gym-party"><span class="drawerIcon">🤝</span><span><strong>Gym Party</strong><span>Sala privada, comparativas y progreso compartido.</span></span></button>
       <button type="button" class="drawerItem" data-module-target="nutricion"><span class="drawerIcon">🥗</span><span><strong>Nutrición</strong><span>Comidas, macros, agua y peso.</span></span></button>
       <button type="button" class="drawerItem" data-module-target="progreso"><span class="drawerIcon">📈</span><span><strong>Progreso y recompensas</strong><span>Score integral, Focus Coins y rankings.</span></span></button>
     </nav>
@@ -461,6 +462,14 @@
               <h3>Historial de entrenamiento</h3>
               <div class="history"><table id="gymHistoryTable"></table></div>
             </div>
+          </div>
+
+          <div id="tab-gym-party" class="hidden">
+            <div class="moduleHero">
+              <h3>🤝 Gym Party</h3>
+              <div class="muted small">Entrenar juntos, medir mejor. Compará progreso con un amigo sin convertirlo en una competencia tóxica.</div>
+            </div>
+            <div id="gymPartyRoot"></div>
           </div>
 
           <div id="tab-nutricion" class="hidden">
@@ -1817,6 +1826,7 @@ function setModule(module){
   const meta={
     protocolo:['Protocolo 0→100','Atención, pantalla y hábitos diarios'],
     gym:['Gym','Rutinas, ejercicios y progresión'],
+    'gym-party':['Gym Party','Sala privada y comparativas de entrenamiento'],
     nutricion:['Nutrición','Comidas, cobertura y recomendaciones'],
     progreso:['Progreso y recompensas','Score integral, Focus Coins y rankings']
   };
@@ -1834,11 +1844,12 @@ function setModule(module){
 function activateTab(tabName){
   if(['registro','dashboard','telefono','plan','guia'].includes(tabName)) lastProtocolTab=tabName;
   document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active', b.dataset.tab===tabName));
-  ['registro','dashboard','gym','nutricion','progreso','telefono','plan','guia'].forEach(t=>{
+  ['registro','dashboard','gym','gym-party','nutricion','progreso','telefono','plan','guia'].forEach(t=>{
     const el=document.getElementById('tab-'+t); if(el) el.classList.toggle('hidden', t!==tabName);
   });
   if(tabName==='dashboard') drawChart();
   if(tabName==='gym') renderGym();
+  if(tabName==='gym-party' && window.renderGymParty) window.renderGymParty();
   if(tabName==='nutricion') renderNutrition();
   if(tabName==='progreso' && window.renderAdvancedProgress) window.renderAdvancedProgress();
 }
@@ -2337,6 +2348,8 @@ setModule(localStorage.getItem(ACTIVE_MODULE_KEY)||'protocolo');
 maybeAutoShowActionModal();
 </script>
 <script src="workout-features.js"></script>
+<script src="firebase-config.js"></script>
+<script src="gym-party.js"></script>
 <script src="advanced-features.js"></script>
 </body>
 </html>

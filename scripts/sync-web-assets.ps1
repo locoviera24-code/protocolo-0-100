@@ -11,6 +11,8 @@ $relativeFiles = @(
     'nutrition-data.js',
     'fdc-client.js',
     'workout-features.js',
+    'firebase-config.js',
+    'gym-party.js',
     'advanced-features.js',
     'manifest.webmanifest',
     'sw.js',

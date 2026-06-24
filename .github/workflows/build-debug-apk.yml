@@ -31,6 +31,17 @@ jobs:
       - name: Instalar plataforma Android necesaria
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
 
+      - name: Generar configuracion Firebase opcional
+        shell: pwsh
+        env:
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+          FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
+          FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
+        run: ./scripts/write-firebase-config.ps1 -OutputPath firebase-config.js
+
       - name: Sincronizar app web dentro del APK
         shell: pwsh
         run: ./scripts/sync-web-assets.ps1
@@ -44,6 +55,9 @@ jobs:
 
       - name: Probar rutina semanal y estado widget
         run: node ./scripts/test-workout-features.mjs
+
+      - name: Probar Gym Party
+        run: node ./scripts/test-gym-party.mjs
 
       - name: Configurar Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -70,5 +84,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view v2.3.2 >/dev/null 2>&1 || gh release create v2.3.2 --title "Protocolo 0-100 v2.3.2" --notes "Widget Android nativo con series por ejercicio y por musculo, controles de peso precisos de 0.5 kg y ajuste rapido de 5 kg."
-          gh release upload v2.3.2 dist/protocolo-0-100-debug.apk --clobber
+          gh release view v2.4.0 >/dev/null 2>&1 || gh release create v2.4.0 --title "Protocolo 0-100 v2.4.0" --notes "Gym Party con modo demo, sala privada opcional, Firebase Spark preparado, comparativas semanales y backup integrado."
+          gh release upload v2.4.0 dist/protocolo-0-100-debug.apk --clobber
