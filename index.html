@@ -2256,8 +2256,16 @@ function copyPhoneMetricsToForm(){
   phoneMessage('ok','Métricas copiadas al formulario del día. Ahora guardá el registro.');
 }
 if('serviceWorker' in navigator && location.protocol !== 'file:'){
+  let serviceWorkerRefreshing=false;
+  navigator.serviceWorker.addEventListener('controllerchange', ()=>{
+    if(serviceWorkerRefreshing) return;
+    serviceWorkerRefreshing=true;
+    window.location.reload();
+  });
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('./sw.js').catch(()=>{});
+    navigator.serviceWorker.register('./sw.js').then(reg=>{
+      if(reg.update) reg.update().catch(()=>{});
+    }).catch(()=>{});
   });
 }
 
