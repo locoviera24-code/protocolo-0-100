@@ -2,9 +2,9 @@
 
 Ultima actualizacion: 2026-06-24
 Rama esperada: `main`
-Version actual: `2.4.2`
-Android: `versionCode 14`, `versionName "2.4.2"`
-Service worker cache: `protocolo-0-100-pwa-v17`
+Version actual: `2.4.3`
+Android: `versionCode 15`, `versionName "2.4.3"`
+Service worker cache: `protocolo-0-100-pwa-v18`
 Backup consolidado: `schemaVersion: 3`
 
 Leer primero este archivo y luego `README.md`, `index.html`,
@@ -24,7 +24,7 @@ Estado actual:
 - Gym Party implementado como modulo web/PWA opcional.
 - Nutricion local/FDC opcional.
 - Backups JSON `schemaVersion: 3`.
-- PWA offline con cache v17.
+- PWA offline con cache v18.
 - APK con widget Android y permiso `INTERNET` para Firebase/Gym Party.
 
 ## 2. Funcionalidades ya existen
@@ -75,8 +75,8 @@ Web:
 - `firebase-config.js`: stub seguro para config publica Firebase; Actions puede
   reemplazarlo desde secrets.
 - `gym-party.js`: nuevo modulo Gym Party.
-- `advanced-features.js`: version `2.4.2`, backup/importacion Gym Party.
-- `sw.js`: cache v17 e incluye `gym-party.js`.
+- `advanced-features.js`: version `2.4.3`, backup/importacion Gym Party.
+- `sw.js`: cache v18 e incluye `gym-party.js`.
 - `README.md`: documenta Gym Party, demo, Firebase, privacidad y pruebas.
 - `CODEX_HANDOFF.md`: este handoff.
 
@@ -94,8 +94,8 @@ Android:
 - `android-native-wrapper/app/src/main/java/com/protocolo/cien/MainActivity.java`:
   permite acceso universal desde archivos locales para que WebView pueda usar
   Firebase/FDC desde assets locales.
-- `android-native-wrapper/app/build.gradle`: `versionCode 14`,
-  `versionName 2.4.2`.
+- `android-native-wrapper/app/build.gradle`: `versionCode 15`,
+  `versionName 2.4.3`.
 - `android-native-wrapper/app/src/main/assets/*`: sincronizado desde raiz.
 
 Scripts/workflows:
@@ -109,7 +109,7 @@ Scripts/workflows:
 - `.github/workflows/*.yml`: corren `test-gym-party.mjs`.
 - `.github/workflows/deploy-pages.yml`: publica `workout-features.js`,
   `firebase-config.js` y `gym-party.js`.
-- `.github/workflows/build-debug-apk.yml`: release objetivo `v2.4.2`.
+- `.github/workflows/build-debug-apk.yml`: release objetivo `v2.4.3`.
 
 ## 5. Estructura datos/localStorage/Firebase
 
@@ -238,6 +238,10 @@ UX actual:
 - Si el usuario ya esta dentro de una sala/demo, el dashboard muestra
   `Crear sala nueva` para salir del estado actual y volver al formulario de
   creacion sin borrar entrenamientos locales.
+- En `2.4.3` se corrigio la creacion Firebase: antes se intentaba guardar
+  `members: undefined` en `gym_parties`, valor que el SDK web de Firestore
+  rechaza. Ahora se crea `partyDoc`, se elimina `members` y recien ahi se llama
+  `setDoc`.
 - El dashboard incluye `Enviar codigo`, que usa Web Share API si existe o copia
   una invitacion con link `?gymPartyCode=...`.
 - Al abrir un link con `?gymPartyCode=CODIGO`, la app abre Gym Party y precarga
@@ -381,7 +385,7 @@ No borrar ni renombrar datos sin migracion.
 9. Revisar dashboard Gym Party.
 10. Exportar backup JSON y CSV comparativo.
 11. Si se publica APK, esperar workflow `Construir APK Android` y release
-    `v2.4.2`.
+    `v2.4.3`.
 
 ## 16. Como probar la app
 
@@ -441,7 +445,7 @@ Salida:
 android-native-wrapper/app/build/outputs/apk/debug/app-debug.apk
 ```
 
-GitHub Actions publica release `v2.4.2` si se empuja a `main`.
+GitHub Actions publica release `v2.4.3` si se empuja a `main`.
 
 ## 18. Como configurar Firebase
 

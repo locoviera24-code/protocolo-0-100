@@ -1160,8 +1160,10 @@
       maxMembers: MAX_GYM_PARTY_MEMBERS,
       members: [member]
     };
+    const partyDoc = {...party};
+    delete partyDoc.members;
     await firestoreMod.setDoc(firestoreMod.doc(db, collections.publicProfiles, uidValue), {uid: uidValue, alias, avatar: '', createdAt: nowIso(), updatedAt: nowIso()}, {merge: true});
-    await firestoreMod.setDoc(firestoreMod.doc(db, collections.parties, partyId), {...party, members: undefined});
+    await firestoreMod.setDoc(firestoreMod.doc(db, collections.parties, partyId), partyDoc);
     await firestoreMod.setDoc(firestoreMod.doc(db, collections.invites, inviteCode), {inviteCode, partyId, partyName: name, createdBy: uidValue, createdAt: nowIso(), active: true, membersCount: 1, maxMembers: MAX_GYM_PARTY_MEMBERS});
     await firestoreMod.setDoc(firestoreMod.doc(db, collections.members, member.id), member);
     saveMembership({partyId, inviteCode, userId: uidValue, alias, role: 'owner', backendMode: 'firebase', active: true, privacy, joinedAt: nowIso(), party});
