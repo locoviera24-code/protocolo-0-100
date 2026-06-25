@@ -975,6 +975,46 @@
     syncFromLocalWorkouts({silent: true, queue: false});
     const data = partyData();
     root.innerHTML = data?.party ? dashboardHtml(data) : noRoomHtml();
+    bindGymPartyActionButtons(root);
+  }
+
+  function runGymPartyAction(action, event){
+    if(event){
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    if(action === 'create') createLocalParty();
+    else if(action === 'join') joinLocalParty();
+    else if(action === 'demo2') startDemo(2);
+    else if(action === 'demo5') startDemo(5);
+    else if(action === 'copy-code') copyInviteCode();
+    else if(action === 'share-code') shareInviteCode();
+    else if(action === 'sync') syncNow().catch(error => flashMessage(firebaseError(error)));
+    else if(action === 'export-csv') exportCsv();
+    else if(action === 'export-json') exportJson();
+    else if(action === 'save-privacy') savePrivacy();
+    else if(action === 'save-firebase') saveFirebaseConfig();
+    else if(action === 'clear-firebase') clearFirebaseConfig();
+    else if(action === 'login-firebase') testFirebaseLogin();
+    else if(action === 'new-room') newRoomFlow();
+    else if(action === 'leave') leaveParty();
+  }
+
+  function bindGymPartyActionButtons(root){
+    root.querySelectorAll('[data-party-help]').forEach(button => {
+      if(button.dataset.partyHelpBound === '1') return;
+      button.dataset.partyHelpBound = '1';
+      button.addEventListener('click', event => {
+        event.preventDefault();
+        event.stopPropagation();
+        showHelp(button.dataset.partyHelp);
+      });
+    });
+    root.querySelectorAll('[data-gym-party-action]').forEach(button => {
+      if(button.dataset.gymPartyBound === '1') return;
+      button.dataset.gymPartyBound = '1';
+      button.addEventListener('click', event => runGymPartyAction(button.dataset.gymPartyAction, event));
+    });
   }
 
   function copyInviteCode(){
@@ -1277,22 +1317,7 @@
       if(helpButtonEl){ event.preventDefault(); event.stopPropagation(); showHelp(helpButtonEl.dataset.partyHelp); return; }
       const button = event.target.closest('[data-gym-party-action]');
       if(!button) return;
-      const action = button.dataset.gymPartyAction;
-      if(action === 'create') createLocalParty();
-      else if(action === 'join') joinLocalParty();
-      else if(action === 'demo2') startDemo(2);
-      else if(action === 'demo5') startDemo(5);
-      else if(action === 'copy-code') copyInviteCode();
-      else if(action === 'share-code') shareInviteCode();
-      else if(action === 'sync') syncNow().catch(error => flashMessage(firebaseError(error)));
-      else if(action === 'export-csv') exportCsv();
-      else if(action === 'export-json') exportJson();
-      else if(action === 'save-privacy') savePrivacy();
-      else if(action === 'save-firebase') saveFirebaseConfig();
-      else if(action === 'clear-firebase') clearFirebaseConfig();
-      else if(action === 'login-firebase') testFirebaseLogin();
-      else if(action === 'new-room') newRoomFlow();
-      else if(action === 'leave') leaveParty();
+      runGymPartyAction(button.dataset.gymPartyAction, event);
     });
     document.addEventListener('change', event => {
       if(event.target && event.target.id === 'gymPartyExerciseSelect'){

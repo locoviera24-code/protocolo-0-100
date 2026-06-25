@@ -166,6 +166,8 @@ foreach ($contract in @(
     'Crear sala y generar',
     'Entrar con',
     'data-gym-party-action="share-code"',
+    'bindGymPartyActionButtons',
+    'runGymPartyAction',
     'gymPartyCode',
     'Firebase',
     'gym_parties',
