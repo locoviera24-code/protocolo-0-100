@@ -84,5 +84,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view v2.4.1 >/dev/null 2>&1 || gh release create v2.4.1 --title "Protocolo 0-100 v2.4.1" --notes "Gym Party mas visible e intuitivo: acceso directo, crear codigo, enviar invitacion y entrar con codigo."
-          gh release upload v2.4.1 dist/protocolo-0-100-debug.apk --clobber
+          gh release view v2.4.2 >/dev/null 2>&1 || gh release create v2.4.2 --title "Protocolo 0-100 v2.4.2" --notes "Gym Party con boton Crear sala nueva visible tambien cuando ya existe una sala activa."
+          gh release upload v2.4.2 dist/protocolo-0-100-debug.apk --clobber

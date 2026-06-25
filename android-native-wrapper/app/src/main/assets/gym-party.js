@@ -744,8 +744,8 @@
           </div>
         </div>
         <div class="moduleCard">
-          <h3>Crear código para mi amigo</h3>
-          <p class="muted small">Usá esta opción si vos vas a iniciar la sala. Después copiás el código y se lo enviás.</p>
+          <h3>Crear sala</h3>
+          <p class="muted small">Usá esta opción si vos vas a iniciar la sala. La app genera un código privado para enviárselo a tu amigo.</p>
           <div class="formGrid">
             <div class="field"><label>Nombre de la sala</label><input type="text" id="gymPartyCreateName" placeholder="Ej. Entreno con Juan"></div>
             <div class="field"><label>Tu alias visible</label><input type="text" id="gymPartyCreateAlias" placeholder="Ej. Nico"></div>
@@ -753,7 +753,7 @@
             <input type="hidden" id="gymPartyCreatePrivacy" value="gym-only">
           </div>
           <div class="checks">${privacyChecks('create', defaultPrivacy, {compact: true})}</div>
-          <div class="buttons"><button type="button" class="good" data-gym-party-action="create">${onlineReady ? 'Crear código privado' : 'Crear sala local/demo'}</button></div>
+          <div class="buttons"><button type="button" class="good" data-gym-party-action="create">${onlineReady ? 'Crear sala y generar código' : 'Crear sala local/demo'}</button></div>
         </div>
         <div class="moduleCard">
           <h3>Entrar con código</h3>
@@ -896,6 +896,7 @@
     const syncText = m.backendMode === 'demo' ? 'Modo demo: estos datos son ficticios.' : `${m.backendMode === 'firebase' ? 'Firebase' : 'Local/mock'} · ${syncQueue().length} pendiente(s) · último sync ${lastSyncAt() || 'sin sincronizar'}`;
     const maxWarning = members.length >= MAX_GYM_PARTY_MEMBERS ? `<div class="auditItem warn">Esta sala alcanzó el límite recomendado de 10 miembros para mantener la app rápida y clara.</div>` : '';
     const inviteHint = members.length === 1 ? `<div class="auditItem good">Invitá a un amigo para comparar progreso. Código: <strong>${escape(party.inviteCode)}</strong></div>` : '';
+    const currentRoomHint = `<div class="auditItem">Ya estás dentro de una sala. Si querés empezar desde cero, tocá <strong>Crear sala nueva</strong>.</div>`;
     return `
       <div class="moduleCard partyDashboardTop">
         <div class="actionFocusTop">
@@ -905,7 +906,9 @@
         ${m.backendMode === 'demo' ? '<div class="auditItem warn">Modo demo: estos datos son ficticios.</div>' : ''}
         ${maxWarning}
         ${inviteHint}
+        ${currentRoomHint}
         <div class="buttons">
+          <button type="button" class="good" data-gym-party-action="new-room">Crear sala nueva</button>
           <button type="button" class="secondary" data-gym-party-action="copy-code">Copiar código</button>
           <button type="button" class="good" data-gym-party-action="share-code">Enviar código</button>
           <button type="button" class="good" data-gym-party-action="sync">Sincronizar ahora</button>
@@ -1080,6 +1083,12 @@
     if(!ok) return;
     clearMembership();
     flashMessage('Saliste de la Gym Party en este dispositivo.');
+  }
+  function newRoomFlow(){
+    const ok = window.confirm ? window.confirm('Vas a salir de la sala actual en este dispositivo para crear una sala nueva. Tus entrenamientos locales no se borran.') : true;
+    if(!ok) return;
+    clearMembership();
+    flashMessage('Listo. Ahora podés crear una sala nueva y generar un código.');
   }
 
   async function loadFirebaseRuntime(){
@@ -1280,6 +1289,7 @@
       else if(action === 'save-firebase') saveFirebaseConfig();
       else if(action === 'clear-firebase') clearFirebaseConfig();
       else if(action === 'login-firebase') testFirebaseLogin();
+      else if(action === 'new-room') newRoomFlow();
       else if(action === 'leave') leaveParty();
     });
     document.addEventListener('change', event => {
