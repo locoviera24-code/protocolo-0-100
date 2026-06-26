@@ -71,6 +71,23 @@ assert.ok(widgetState.exerciseHistory);
 assert.ok(widgetState.exercises.length >= 9);
 assert.equal(store.has(workout.keys.weeklyWorkoutPlan), true);
 
+const {context: quickContext, store: quickStore} = createContext();
+const quickWorkout = quickContext.WORKOUT_FEATURES;
+const quickState = quickWorkout.getQuickWorkoutState({date: '2026-06-22'});
+assert.equal(quickState.title, widgetState.title);
+assert.equal(quickState.currentExerciseName, 'Apertura sentado / Peck deck');
+const quickSaved = quickWorkout.saveQuickSetPayload({
+  date: '2026-06-22',
+  exerciseId: quickState.currentExerciseId,
+  reps: 10,
+  weight: 20.5,
+  bodyweight: false
+});
+assert.equal(quickSaved.ok, true);
+assert.equal(quickSaved.set.weight, 20.5);
+assert.equal(quickWorkout.getQuickWorkoutState({date: '2026-06-22'}).currentExerciseSets, 1);
+assert.equal(JSON.parse(quickStore.get(quickWorkout.keys.workoutSessions))[0].routine.name, 'Torso A');
+
 const nativeExercise = {...workout.planForDate('2026-06-22').exercises[1], sets: [{
   id: 'set_android_test',
   setNumber: 1,

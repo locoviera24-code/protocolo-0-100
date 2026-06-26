@@ -479,6 +479,91 @@
     const id=select?.value || currentQuickExerciseId;
     return session?.exercises?.find(x=>x.id===id || x.exerciseId===id) || currentExercise(session);
   }
+  function getQuickWorkoutState({date=todayStr(),exerciseId=''}={}){
+    ensureWorkoutData();
+    const plan=planForDate(date);
+    const session=activeSession(date) || latestSessionForDate(date);
+    const source=session?.exercises?.length?session.exercises:plan.exercises||[];
+    const selectedId=exerciseId || currentQuickExerciseId || currentExercise(session)?.id || source.find(x=>!x.completed)?.id || source[0]?.id || source[0]?.exerciseId || '';
+    const exercise=source.find(x=>x.id===selectedId || x.exerciseId===selectedId) || source[0] || null;
+    const h=exercise?.exerciseId ? history()[exercise.exerciseId] : null;
+    const sets=exercise?.sets||[];
+    const last=sets[sets.length-1]||null;
+    const bodyweight=!!(exercise?.bodyweight || last?.bodyweight || h?.bodyweight);
+    const summary=session?sessionSummary(session):null;
+    return {
+      date,
+      plan:clone(plan),
+      session:session?clone(session):null,
+      type:plan.type,
+      title:`${plan.weekday} — ${plan.name}`,
+      routineName:plan.name,
+      muscles:plan.muscles||[],
+      message:plan.message||'',
+      suggestions:plan.suggestions||[],
+      exercises:source.map(ex=>({id:ex.id,exerciseId:ex.exerciseId,name:ex.name,muscle:ex.muscle,bodyweight:!!ex.bodyweight,completed:!!ex.completed,setsLogged:exerciseSetCount(ex)})),
+      currentExerciseId:exercise?.id||exercise?.exerciseId||'',
+      currentExerciseName:exercise?.name||'',
+      currentExerciseMuscle:exercise?.muscle||'',
+      currentExerciseSets:exerciseSetCount(exercise),
+      currentMuscleSets:muscleSetCount(source,exercise?.muscle),
+      nextSetNumber:(sets.length||0)+1,
+      suggestedReps:Number(last?.reps??h?.lastReps??8)||8,
+      suggestedWeight:Math.max(0,Math.round(Number(last?.weight??h?.lastWeight??0)*2)/2),
+      bodyweight,
+      unit:settings().unit,
+      history:h?clone(h):null,
+      summary:summary?clone(summary):null
+    };
+  }
+  function saveQuickSetPayload(payload={}){
+    const date=payload.date||todayStr();
+    const session=ensureSession(date);
+    if(!session) return {ok:false,reason:'rest',message:'Hoy toca descanso. Podés registrar movilidad suave si querés.'};
+    currentQuickExerciseId=payload.exerciseId||payload.currentExerciseId||currentQuickExerciseId;
+    let exercise=session.exercises.find(x=>x.id===currentQuickExerciseId || x.exerciseId===currentQuickExerciseId);
+    if(!exercise) exercise=currentExercise(session);
+    if(!exercise) return {ok:false,reason:'missing-exercise',message:'Elegí un ejercicio para registrar.'};
+    const setNumber=Math.max(1,Number(payload.setNumber)||((exercise.sets||[]).length+1));
+    const reps=Math.max(0,Number(payload.reps)||0);
+    const weight=Math.round(Math.max(0,Number(payload.weight)||0)*2)/2;
+    const bodyweight=!!payload.bodyweight;
+    const rir=payload.rir===''||payload.rir===undefined?null:Math.max(0,Number(payload.rir)||0);
+    const rpe=payload.rpe===''||payload.rpe===undefined?null:Math.max(0,Number(payload.rpe)||0);
+    const note=String(payload.note||'').trim();
+    const set={id:uid('set'),setNumber,reps,weight,rir,rpe,bodyweight,note,savedAt:new Date().toISOString(),volume:Math.round(reps*weight)};
+    exercise.sets=exercise.sets||[];
+    exercise.sets.push(set);
+    session.currentExerciseIndex=session.exercises.findIndex(x=>x.id===exercise.id);
+    currentQuickExerciseId=exercise.id;
+    session.summary=sessionSummary(session);
+    replaceSession(session);
+    return {ok:true,session:clone(session),exercise:clone(exercise),set:clone(set),state:getQuickWorkoutState({date,exerciseId:exercise.id})};
+  }
+  function completeQuickExercisePayload(payload={}){
+    const date=payload.date||todayStr();
+    const session=ensureSession(date);
+    if(!session) return {ok:false,reason:'rest',message:'Hoy toca descanso.'};
+    currentQuickExerciseId=payload.exerciseId||payload.currentExerciseId||currentQuickExerciseId;
+    const exercise=session.exercises.find(x=>x.id===currentQuickExerciseId || x.exerciseId===currentQuickExerciseId) || currentExercise(session);
+    if(!exercise) return {ok:false,reason:'missing-exercise',message:'Elegí un ejercicio.'};
+    exercise.completed=true;
+    const next=session.exercises.find(x=>!x.completed);
+    if(next){session.currentExerciseIndex=session.exercises.findIndex(x=>x.id===next.id);currentQuickExerciseId=next.id;}
+    session.summary=sessionSummary(session);
+    replaceSession(session);
+    return {ok:true,session:clone(session),exercise:clone(exercise),state:getQuickWorkoutState({date,exerciseId:currentQuickExerciseId})};
+  }
+  function finishWorkoutPayload(payload={}){
+    const date=payload.date||todayStr();
+    const session=activeSession(date) || latestSessionForDate(date);
+    if(!session) return {ok:false,reason:'missing-session',message:'Todavía no hay entrenamiento iniciado.'};
+    session.status='finalizado';
+    session.finishedAt=new Date().toISOString();
+    session.summary=sessionSummary(session);
+    replaceSession(session);
+    return {ok:true,session:clone(session),state:getQuickWorkoutState({date})};
+  }
   function saveQuickSet(){
     const session=selectedSessionForQuick();
     if(!session){ flash('Hoy toca descanso. Podés registrar movilidad suave si querés.'); return; }
@@ -708,7 +793,7 @@
     else if(action===actionWidgetSaveSet){syncWorkoutWidget();openGymToday();}
   }
 
-  window.WORKOUT_FEATURES={keys,dayOrder,defaultWeeklyPlan:clone(defaultWeeklyPlan),exerciseLibrary:clone(exerciseLibrary),dayKeyForDate,planForDate,buildWorkoutWidgetState,syncWorkoutWidget,importWidgetStateFromAndroid};
+  window.WORKOUT_FEATURES={keys,dayOrder,defaultWeeklyPlan:clone(defaultWeeklyPlan),exerciseLibrary:clone(exerciseLibrary),dayKeyForDate,planForDate,getQuickWorkoutState,saveQuickSetPayload,completeQuickExercisePayload,finishWorkoutPayload,buildWorkoutWidgetState,syncWorkoutWidget,importWidgetStateFromAndroid};
   window.openGymToday=openGymToday;
   window.openQuickSetLogger=openQuickSetLogger;
   window.handleAndroidWidgetIntent=(action,payload)=>handleAndroidWidgetIntent(action,payload||{});

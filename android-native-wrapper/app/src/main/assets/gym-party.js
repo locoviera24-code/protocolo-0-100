@@ -994,6 +994,72 @@
       ${safetyNotice()}
     `;
   }
+  function workoutApi(){ return window.WORKOUT_FEATURES || null; }
+  function selectedPartyExerciseId(){
+    return settings().partyQuickExerciseId || '';
+  }
+  function workoutQuickLoggerHtml(){
+    const api = workoutApi();
+    if(!api?.getQuickWorkoutState){
+      return `<div class="moduleCard"><h3>Registro rapido</h3><div class="emptyState">El modulo Gym se esta cargando. Volve a abrir Gym Party en unos segundos.</div></div>`;
+    }
+    const state = api.getQuickWorkoutState({exerciseId: selectedPartyExerciseId()});
+    const selectedId = selectedPartyExerciseId() || state.currentExerciseId;
+    if(state.type === 'rest'){
+      return `<div class="moduleCard partyWorkoutLogger">
+        <span class="partyStepPill">Rutina del widget</span>
+        <h3>${escape(state.title)}</h3>
+        <div class="partyTip">${escape(state.message || 'Hoy toca descanso.')}</div>
+        <div class="muted small">${escape((state.suggestions||[]).join(' · '))}</div>
+      </div>`;
+    }
+    const options = (state.exercises||[]).map(exercise => `<option value="${escape(exercise.id||exercise.exerciseId)}" ${selectedId===(exercise.id||exercise.exerciseId)?'selected':''}>${escape(exercise.name)} · ${exercise.setsLogged||0} serie(s)</option>`).join('');
+    const h = state.history;
+    const hint = h ? `Ultima vez: ${h.name} - ${h.lastWeight||0} ${state.unit} x ${h.lastReps||0} reps.` : 'Sin historial previo. Empeza conservador y prioriza tecnica.';
+    return `<div class="moduleCard partyWorkoutLogger">
+      <div class="actionFocusTop">
+        <div>
+          <span class="partyStepPill">Rutina del widget</span>
+          <h3>${escape(state.title)}</h3>
+          <div class="muted small">${escape((state.muscles||[]).join(' · '))}</div>
+        </div>
+        <span class="statusChip good">${escape(state.unit)}</span>
+      </div>
+      <div class="partyFormCard">
+        <div class="field"><label>Ejercicio</label><select id="partyQuickExerciseSelect">${options}</select></div>
+        <div class="partySetCounters">
+          <div><span>Este ejercicio</span><strong>${state.currentExerciseSets||0}</strong><small>series</small></div>
+          <div><span>${escape(state.currentExerciseMuscle||'Musculo')}</span><strong>${state.currentMuscleSets||0}</strong><small>series totales</small></div>
+        </div>
+        <div class="partyQuickInputs">
+          <div class="field"><label>Reps</label><input type="number" id="partyQuickReps" min="0" max="200" value="${escape(state.suggestedReps)}"></div>
+          <div class="field"><label>Kilos</label><input type="number" id="partyQuickWeight" min="0" step="0.5" value="${escape(state.suggestedWeight)}"></div>
+        </div>
+        <div class="partyWeightChips">
+          ${[0,5,10,20,40,60,80].map(value => `<button type="button" class="secondary" data-gym-party-weight="${value}">${value} kg</button>`).join('')}
+        </div>
+        <label class="check"><input type="checkbox" id="partyQuickBodyweight" ${state.bodyweight?'checked':''}><span>Peso corporal / lastre opcional.</span></label>
+        <details class="partyNestedFold">
+          <summary>Opcional</summary>
+          <div class="partyQuickInputs">
+            <div class="field"><label>RIR</label><input type="number" id="partyQuickRir" min="0" max="10" value="2"></div>
+            <div class="field"><label>RPE</label><input type="number" id="partyQuickRpe" min="0" max="10" step="0.5"></div>
+          </div>
+          <div class="field"><label>Nota</label><textarea id="partyQuickNote" placeholder="Tecnica, energia, ajuste..."></textarea></div>
+        </details>
+        <div class="auditItem">${escape(hint)}</div>
+        <div class="partyMainActions">
+          <button type="button" class="good" data-gym-party-action="party-save-set">Guardar serie</button>
+          <button type="button" class="secondary" data-gym-party-action="party-next-exercise">Siguiente</button>
+          <button type="button" class="secondary" data-gym-party-action="party-complete-exercise">Completar</button>
+        </div>
+        <div class="buttons partySecondaryActions">
+          <button type="button" class="secondary" data-gym-party-action="party-prev-exercise">Anterior</button>
+          <button type="button" class="warn" data-gym-party-action="party-finish-workout">Finalizar entrenamiento</button>
+        </div>
+      </div>
+    </div>`;
+  }
   function dashboardHtmlSimple(data){
     const m = activeMembership();
     const party = data.party;
@@ -1026,11 +1092,13 @@
         ${inviteHint}
         ${maxWarning}
         <div class="partyMainActions">
-          <button type="button" class="good" data-gym-party-action="open-gym">Registrar entrenamiento</button>
           <button type="button" class="good" data-gym-party-action="share-code">Enviar codigo</button>
+          <button type="button" class="secondary" data-gym-party-action="copy-code">Copiar codigo</button>
           <button type="button" class="secondary" data-gym-party-action="sync">Sincronizar</button>
         </div>
       </div>
+
+      ${workoutQuickLoggerHtml()}
 
       <div class="moduleCard partyQuickSummary">
         <h3>Esta semana</h3>
@@ -1128,7 +1196,15 @@
       .partyMainActions button{min-height:50px}
       .partyTip{border:1px solid rgba(114,214,255,.28);border-radius:14px;padding:10px 12px;background:rgba(114,214,255,.08);font-weight:750;margin-top:10px}
       .partyQuickSummary{margin-top:12px}
-      @media(max-width:850px){.partyGrid,.partyMembers,.partyChartGrid,.partyCompareGrid,.partyMiniSteps,.partyMainActions{grid-template-columns:1fr}.partyBarRow{grid-template-columns:92px minmax(0,1fr) 72px}.partyCodeBox{align-items:flex-start;flex-direction:column}.partyCodeBox strong{font-size:24px}}
+      .partyWorkoutLogger{margin-top:12px}
+      .partySetCounters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:10px 0}
+      .partySetCounters div{border:1px solid var(--line);border-radius:14px;padding:11px;background:rgba(255,255,255,.04)}
+      .partySetCounters span,.partySetCounters small{display:block;color:var(--muted);font-size:12px}.partySetCounters strong{display:block;font-size:28px;margin:3px 0}
+      .partyQuickInputs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+      .partyQuickInputs input{font-size:22px;font-weight:850;text-align:center;min-height:54px}
+      .partyWeightChips{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:10px 0}
+      .partyWeightChips button{min-height:42px}
+      @media(max-width:850px){.partyGrid,.partyMembers,.partyChartGrid,.partyCompareGrid,.partyMiniSteps,.partyMainActions,.partyQuickInputs,.partySetCounters{grid-template-columns:1fr}.partyWeightChips{grid-template-columns:repeat(2,minmax(0,1fr))}.partyBarRow{grid-template-columns:92px minmax(0,1fr) 72px}.partyCodeBox{align-items:flex-start;flex-direction:column}.partyCodeBox strong{font-size:24px}}
     `;
     document.head.appendChild(style);
   }
@@ -1163,6 +1239,11 @@
     else if(action === 'new-room') newRoomFlow();
     else if(action === 'leave') leaveParty();
     else if(action === 'open-gym' && typeof window.setModule === 'function') window.setModule('gym');
+    else if(action === 'party-save-set') savePartyWorkoutSet();
+    else if(action === 'party-next-exercise') movePartyWorkoutExercise(1);
+    else if(action === 'party-prev-exercise') movePartyWorkoutExercise(-1);
+    else if(action === 'party-complete-exercise') completePartyWorkoutExercise();
+    else if(action === 'party-finish-workout') finishPartyWorkout();
   }
 
   function bindGymPartyActionButtons(root){
@@ -1179,6 +1260,15 @@
       if(button.dataset.gymPartyBound === '1') return;
       button.dataset.gymPartyBound = '1';
       button.addEventListener('click', event => runGymPartyAction(button.dataset.gymPartyAction, event));
+    });
+    root.querySelectorAll('[data-gym-party-weight]').forEach(button => {
+      if(button.dataset.gymPartyWeightBound === '1') return;
+      button.dataset.gymPartyWeightBound = '1';
+      button.addEventListener('click', event => {
+        event.preventDefault();
+        const input = document.getElementById('partyQuickWeight');
+        if(input) input.value = button.dataset.gymPartyWeight;
+      });
     });
   }
 
@@ -1223,6 +1313,65 @@
     syncFromLocalWorkouts({silent: true});
     renderGymParty();
     flashMessage('Privacidad actualizada.');
+  }
+  function partyWorkoutSelectedExerciseId(){
+    return document.getElementById('partyQuickExerciseSelect')?.value || selectedPartyExerciseId();
+  }
+  function refreshPartyWorkoutShare(){
+    syncFromLocalWorkouts({silent: true});
+    const m = activeMembership();
+    if(m?.backendMode === 'firebase' && typeof navigator !== 'undefined' && navigator.onLine !== false){
+      syncFirebaseNow().catch(() => flashMessage('Guardado localmente. Se sincronizara al volver a intentar.'));
+    }
+  }
+  function savePartyWorkoutSet(){
+    const api = workoutApi();
+    if(!api?.saveQuickSetPayload){ flashMessage('Registro de gym no disponible todavia.'); return; }
+    const result = api.saveQuickSetPayload({
+      exerciseId: partyWorkoutSelectedExerciseId(),
+      reps: document.getElementById('partyQuickReps')?.value,
+      weight: document.getElementById('partyQuickWeight')?.value,
+      bodyweight: document.getElementById('partyQuickBodyweight')?.checked,
+      rir: document.getElementById('partyQuickRir')?.value,
+      rpe: document.getElementById('partyQuickRpe')?.value,
+      note: document.getElementById('partyQuickNote')?.value
+    });
+    if(!result.ok){ flashMessage(result.message || 'No se pudo guardar la serie.'); return; }
+    saveSettings({partyQuickExerciseId: result.state?.currentExerciseId || result.exercise?.id || partyWorkoutSelectedExerciseId()});
+    refreshPartyWorkoutShare();
+    renderGymParty();
+    flashMessage('Serie guardada en Gym Party.');
+  }
+  function movePartyWorkoutExercise(direction){
+    const api = workoutApi();
+    const state = api?.getQuickWorkoutState ? api.getQuickWorkoutState({exerciseId: partyWorkoutSelectedExerciseId()}) : null;
+    const list = safeArray(state?.exercises);
+    if(!list.length) return;
+    const current = partyWorkoutSelectedExerciseId() || state.currentExerciseId;
+    const index = Math.max(0, list.findIndex(exercise => (exercise.id || exercise.exerciseId) === current));
+    const nextIndex = Math.max(0, Math.min(list.length - 1, index + direction));
+    const next = list[nextIndex];
+    saveSettings({partyQuickExerciseId: next.id || next.exerciseId});
+    renderGymParty();
+  }
+  function completePartyWorkoutExercise(){
+    const api = workoutApi();
+    if(!api?.completeQuickExercisePayload){ flashMessage('Registro de gym no disponible todavia.'); return; }
+    const result = api.completeQuickExercisePayload({exerciseId: partyWorkoutSelectedExerciseId()});
+    if(!result.ok){ flashMessage(result.message || 'No se pudo completar el ejercicio.'); return; }
+    saveSettings({partyQuickExerciseId: result.state?.currentExerciseId || ''});
+    refreshPartyWorkoutShare();
+    renderGymParty();
+    flashMessage('Ejercicio completado.');
+  }
+  function finishPartyWorkout(){
+    const api = workoutApi();
+    if(!api?.finishWorkoutPayload){ flashMessage('Registro de gym no disponible todavia.'); return; }
+    const result = api.finishWorkoutPayload({});
+    if(!result.ok){ flashMessage(result.message || 'No se pudo finalizar.'); return; }
+    refreshPartyWorkoutShare();
+    renderGymParty();
+    flashMessage('Entrenamiento finalizado.');
   }
   async function syncNow(){
     const m = activeMembership();
@@ -1487,6 +1636,10 @@
     document.addEventListener('change', event => {
       if(event.target && event.target.id === 'gymPartyExerciseSelect'){
         saveSettings({selectedExerciseId: event.target.value});
+        renderGymParty();
+      }
+      if(event.target && event.target.id === 'partyQuickExerciseSelect'){
+        saveSettings({partyQuickExerciseId: event.target.value});
         renderGymParty();
       }
     });

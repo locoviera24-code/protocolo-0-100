@@ -51,7 +51,8 @@ Estados principales:
 - sin sala: pantalla simple con accion principal **Crear codigo para invitar**;
 - unirse: bloque plegado **Ya tengo un codigo**;
 - demo, privacidad, exportacion y Firebase: opciones plegadas para no saturar;
-- dashboard: codigo visible, registrar entrenamiento, enviar codigo y sincronizar;
+- dashboard: codigo visible, registro rapido directo de la rutina del dia,
+  enviar codigo y sincronizar;
 - metricas avanzadas: graficas, exportacion, privacidad y sesiones dentro de
   secciones plegadas.
 
@@ -68,6 +69,12 @@ Flujo recomendado:
 3. Tocar **Enviar codigo**.
 4. El amigo abre el link/codigo desde iPhone, Safari o PWA.
 5. En **Entrar con codigo**, escribe alias y entra a la sala.
+
+Desde el dashboard de Gym Party se puede registrar la serie sin volver al
+modulo Gym: elegir ejercicio de la rutina del dia, cargar reps/kilos y tocar
+**Guardar serie**. Esa rutina diaria usa la misma fuente que el widget Android:
+Lunes Torso A, Martes Pierna A, Miercoles Torso B, Jueves Pierna B, Viernes
+Torso C, Sabado descanso suave y Domingo revision/descanso.
 
 El minimo esta pensado para 2 personas, pero internamente usa `members[]`,
 `partyId`, `userId`, sesiones y series por usuario. El limite recomendado es
@@ -202,7 +209,7 @@ El APK resultante queda en `android-native-wrapper/app/build/outputs/apk/debug/a
 ## Publicacion
 
 - **PWA:** el workflow `Publicar PWA en GitHub Pages` publica los archivos raiz.
-- **APK:** el workflow `Construir APK Android` compila el wrapper y publica la descarga directa de la version `v2.4.7`.
+- **APK:** el workflow `Construir APK Android` compila el wrapper y publica la descarga directa de la version `v2.4.8`.
 
 El APK generado es `debug`, apropiado para uso personal. Publicar en Play Store requiere una compilacion `release` firmada con una clave privada.
 

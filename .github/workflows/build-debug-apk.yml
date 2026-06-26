@@ -84,5 +84,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view v2.4.7 >/dev/null 2>&1 || gh release create v2.4.7 --title "Protocolo 0-100 v2.4.7" --notes "Simplifica Gym Party con flujo principal claro y opciones avanzadas plegadas."
-          gh release upload v2.4.7 dist/protocolo-0-100-debug.apk --clobber
+          gh release view v2.4.8 >/dev/null 2>&1 || gh release create v2.4.8 --title "Protocolo 0-100 v2.4.8" --notes "Permite registrar ejercicios directamente desde Gym Party usando la rutina diaria del widget."
+          gh release upload v2.4.8 dist/protocolo-0-100-debug.apk --clobber
