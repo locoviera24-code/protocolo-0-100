@@ -84,5 +84,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view v2.4.6 >/dev/null 2>&1 || gh release create v2.4.6 --title "Protocolo 0-100 v2.4.6" --notes "Evita que el modal diario bloquee Gym Party y mantiene botones de sala reforzados."
-          gh release upload v2.4.6 dist/protocolo-0-100-debug.apk --clobber
+          gh release view v2.4.7 >/dev/null 2>&1 || gh release create v2.4.7 --title "Protocolo 0-100 v2.4.7" --notes "Simplifica Gym Party con flujo principal claro y opciones avanzadas plegadas."
+          gh release upload v2.4.7 dist/protocolo-0-100-debug.apk --clobber

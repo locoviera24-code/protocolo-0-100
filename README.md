@@ -48,11 +48,12 @@ Safari/PWA, navegador web y APK Android. No depende de `AndroidBridge`.
 
 Estados principales:
 
-- sin sala: crear Gym Party, unirse con codigo o probar demo;
-- crear sala: nombre, alias, privacidad y backend local/Firebase;
-- unirse: codigo de invitacion, alias y consentimiento;
-- dashboard: miembros, codigo, sincronizacion, comparativas, graficas, ultimas
-  sesiones compartidas, privacidad y exportacion.
+- sin sala: pantalla simple con accion principal **Crear codigo para invitar**;
+- unirse: bloque plegado **Ya tengo un codigo**;
+- demo, privacidad, exportacion y Firebase: opciones plegadas para no saturar;
+- dashboard: codigo visible, registrar entrenamiento, enviar codigo y sincronizar;
+- metricas avanzadas: graficas, exportacion, privacidad y sesiones dentro de
+  secciones plegadas.
 
 Acceso rapido:
 
@@ -63,8 +64,8 @@ Acceso rapido:
 Flujo recomendado:
 
 1. Tocar **Gym Party**.
-2. En **Crear codigo para mi amigo**, escribir alias y crear codigo.
-3. Tocar **Enviar codigo** o **Copiar codigo**.
+2. Escribir alias y tocar **Crear codigo para invitar**.
+3. Tocar **Enviar codigo**.
 4. El amigo abre el link/codigo desde iPhone, Safari o PWA.
 5. En **Entrar con codigo**, escribe alias y entra a la sala.
 
@@ -201,7 +202,7 @@ El APK resultante queda en `android-native-wrapper/app/build/outputs/apk/debug/a
 ## Publicacion
 
 - **PWA:** el workflow `Publicar PWA en GitHub Pages` publica los archivos raiz.
-- **APK:** el workflow `Construir APK Android` compila el wrapper y publica la descarga directa de la version `v2.4.6`.
+- **APK:** el workflow `Construir APK Android` compila el wrapper y publica la descarga directa de la version `v2.4.7`.
 
 El APK generado es `debug`, apropiado para uso personal. Publicar en Play Store requiere una compilacion `release` firmada con una clave privada.
 

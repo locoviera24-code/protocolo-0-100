@@ -782,6 +782,69 @@
       </div>
     `;
   }
+  function noRoomHtmlSimple(){
+    const cfg = settings().firebaseConfig || {};
+    const cfgText = Object.keys(cfg).length ? JSON.stringify(cfg, null, 2) : '';
+    const cfgSource = firebaseConfigSource();
+    const backendDefault = cfgSource === 'missing' ? 'local' : 'firebase';
+    const onlineReady = cfgSource !== 'missing';
+    const cfgStatus = onlineReady ? 'Online listo' : 'Modo local/demo';
+    return `
+      <div class="partySimpleShell">
+        <div class="moduleCard partyStartCard">
+          <span class="partyStepPill">${escape(cfgStatus)}</span>
+          <h2>Entrenar con un amigo</h2>
+          <p class="partyLead">Crea un codigo, mandaselo a tu amigo y listo.</p>
+          <div class="partyMiniSteps">
+            <span>1 Crear codigo</span>
+            <span>2 Enviar</span>
+            <span>3 Entrenar</span>
+          </div>
+          <div class="partyFormCard">
+            <h3>Crear mi sala</h3>
+            <div class="field"><label>Tu alias</label><input type="text" id="gymPartyCreateAlias" placeholder="Ej. Nico"></div>
+            <div class="field"><label>Nombre de sala <span class="muted small">(opcional)</span></label><input type="text" id="gymPartyCreateName" placeholder="Gym Party"></div>
+            <input type="hidden" id="gymPartyCreateBackend" value="${backendDefault}">
+            <input type="hidden" id="gymPartyCreatePrivacy" value="gym-only">
+            <div class="checks">${privacyChecks('create', defaultPrivacy, {compact: true})}</div>
+            <button type="button" class="good partyPrimaryAction" data-gym-party-action="create">${onlineReady ? 'Crear codigo para invitar' : 'Crear sala local/demo'}</button>
+          </div>
+          <details class="partyFold">
+            <summary>Ya tengo un codigo</summary>
+            <div class="partyFormCard flat">
+              <div class="field"><label>Codigo</label><input type="text" id="gymPartyJoinCode" placeholder="Ej. A1B2C3"></div>
+              <div class="field"><label>Tu alias</label><input type="text" id="gymPartyJoinAlias" placeholder="Ej. Juan"></div>
+              <input type="hidden" id="gymPartyJoinBackend" value="${backendDefault}">
+              <div class="checks">${privacyChecks('join', defaultPrivacy, {compact: true})}</div>
+              <button type="button" class="good partyPrimaryAction" data-gym-party-action="join">Entrar</button>
+            </div>
+          </details>
+          <details class="partyFold">
+            <summary>Probar demo</summary>
+            <div class="buttons partySecondaryActions">
+              <button type="button" class="secondary" data-gym-party-action="demo2">Demo simple</button>
+              <button type="button" class="secondary" data-gym-party-action="demo5">Demo grupo</button>
+            </div>
+          </details>
+          <details class="partyFold">
+            <summary>Privacidad y ajustes</summary>
+            ${privacyNotice()}
+            ${safetyNotice()}
+            <details class="partyNestedFold">
+              <summary>Firebase avanzado</summary>
+              <div class="field"><label>Configuracion web JSON</label><textarea id="gymPartyFirebaseConfig" class="planEditorTextarea" placeholder='{"apiKey":"...","authDomain":"...","projectId":"...","appId":"..."}'>${escape(cfgText)}</textarea></div>
+              <div class="buttons partySecondaryActions">
+                <button type="button" class="secondary" data-gym-party-action="save-firebase">Guardar Firebase</button>
+                <button type="button" class="secondary" data-gym-party-action="login-firebase">Probar login</button>
+                <button type="button" class="danger" data-gym-party-action="clear-firebase">Quitar Firebase</button>
+              </div>
+              <div class="auditItem" id="gymPartyFirebaseStatus">${escape(cfgStatus)}</div>
+            </details>
+          </details>
+        </div>
+      </div>
+    `;
+  }
   function memberCardsHtml(data, stats){
     const maxVolume = maxOf(stats, row => row.current.totalVolume);
     return `<div class="partyMembers">${stats.map(row => {
@@ -931,6 +994,86 @@
       ${safetyNotice()}
     `;
   }
+  function dashboardHtmlSimple(data){
+    const m = activeMembership();
+    const party = data.party;
+    const members = safeArray(data.members);
+    const stats = calculatePartyStats(data);
+    const self = stats.find(row => row.member.userId === m?.userId) || stats[0] || {current: {}};
+    const syncText = m.backendMode === 'demo'
+      ? 'Demo'
+      : `${m.backendMode === 'firebase' ? 'Online' : 'Local'} - ${syncQueue().length} pendiente(s)`;
+    const inviteHint = members.length === 1
+      ? `<div class="partyTip">Envia el codigo a tu amigo para empezar a comparar.</div>`
+      : '';
+    const maxWarning = members.length >= MAX_GYM_PARTY_MEMBERS
+      ? `<div class="auditItem warn">Limite recomendado alcanzado: 10 miembros.</div>`
+      : '';
+    return `
+      <div class="moduleCard partyDashboardTop partyDashboardSimple">
+        <div class="actionFocusTop">
+          <div>
+            <span class="partyStepPill">${escape(syncText)}</span>
+            <h2>${escape(party.name || 'Gym Party')}</h2>
+          </div>
+          <span class="statusChip good">${members.length}/${MAX_GYM_PARTY_MEMBERS}</span>
+        </div>
+        <div class="partyCodeBox">
+          <span>Codigo para invitar</span>
+          <strong id="gymPartyInviteCode">${escape(party.inviteCode || '')}</strong>
+        </div>
+        ${m.backendMode === 'demo' ? '<div class="partyTip">Demo: datos ficticios.</div>' : ''}
+        ${inviteHint}
+        ${maxWarning}
+        <div class="partyMainActions">
+          <button type="button" class="good" data-gym-party-action="open-gym">Registrar entrenamiento</button>
+          <button type="button" class="good" data-gym-party-action="share-code">Enviar codigo</button>
+          <button type="button" class="secondary" data-gym-party-action="sync">Sincronizar</button>
+        </div>
+      </div>
+
+      <div class="moduleCard partyQuickSummary">
+        <h3>Esta semana</h3>
+        <div class="partyCompareGrid">
+          <div class="partyCompareCard"><span>Sesiones</span><strong>${self.current.sessionsCount || 0}</strong><small>registradas</small></div>
+          <div class="partyCompareCard"><span>Series</span><strong>${self.current.totalSets || 0}</strong><small>totales</small></div>
+          <div class="partyCompareCard"><span>Volumen</span><strong>${formatNumber(self.current.totalVolume || 0)} kg</strong><small>reps x kg</small></div>
+          <div class="partyCompareCard"><span>Vs semana pasada</span><strong>${signed(self.changeVsPreviousWeek?.volumePct || 0, '%')}</strong><small>referencia personal</small></div>
+        </div>
+      </div>
+
+      ${stats.length === 2 ? twoMemberComparisonHtml(data, stats) : ''}
+      ${stats.length > 2 ? multiMemberHtml(data, stats) : ''}
+
+      <details class="moduleCard partyFoldCard">
+        <summary>Ver graficas y detalle</summary>
+        ${chartsHtml(data, stats)}
+        <div class="partyGrid">
+          ${exerciseProgressHtml(data)}
+          ${muscleVolumeHtml(data, stats)}
+        </div>
+        ${recentSessionsHtml(data)}
+      </details>
+
+      <details class="moduleCard partyFoldCard">
+        <summary>Mas opciones</summary>
+        <div class="buttons partySecondaryActions">
+          <button type="button" class="secondary" data-gym-party-action="copy-code">Copiar codigo</button>
+          <button type="button" class="secondary" data-gym-party-action="new-room">Crear sala nueva</button>
+          <button type="button" class="secondary" data-gym-party-action="export-csv">Exportar CSV</button>
+          <button type="button" class="secondary" data-gym-party-action="export-json">Exportar JSON</button>
+          <button type="button" class="danger" data-gym-party-action="leave">Salir</button>
+        </div>
+      </details>
+
+      <details class="moduleCard partyFoldCard">
+        <summary>Privacidad</summary>
+        <div class="checks">${privacyChecks('partyPrivacy', m.privacy || defaultPrivacy)}</div>
+        <div class="buttons"><button type="button" class="secondary" data-gym-party-action="save-privacy">Guardar privacidad</button></div>
+        <div class="muted small">No se comparten nutricion, sueno, ansiedad, pantalla, notas privadas ni correo visible por defecto.</div>
+      </details>
+    `;
+  }
   function privacyDashboardHtml(m){
     return `<div class="moduleCard">
       <h3>Privacidad de esta sala ${helpButton('privacy')}</h3>
@@ -964,7 +1107,28 @@
       .partyBar{height:15px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.07);overflow:hidden}
       .partyBar i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--accent),var(--accent2))}
       .gymPartyHelp{display:inline-grid;place-items:center;width:21px;height:21px;min-width:21px;padding:0;margin-left:4px;border-radius:999px;background:rgba(114,214,255,.12);color:#dff6ff;border:1px solid rgba(114,214,255,.34);font-size:12px}
-      @media(max-width:850px){.partyGrid,.partyMembers,.partyChartGrid,.partyCompareGrid{grid-template-columns:1fr}.partyBarRow{grid-template-columns:92px minmax(0,1fr) 72px}}
+      .partySimpleShell{max-width:760px;margin:0 auto}
+      .partyStartCard,.partyDashboardSimple{padding:18px}
+      .partyStartCard h2,.partyDashboardSimple h2{font-size:30px;margin:8px 0 6px}
+      .partyLead{font-size:17px;line-height:1.35;color:#e9f7ff;margin:0 0 14px}
+      .partyStepPill{display:inline-flex;align-items:center;width:max-content;border-radius:999px;padding:7px 10px;background:rgba(146,255,194,.16);border:1px solid rgba(146,255,194,.34);font-size:12px;font-weight:800;color:#dffff0}
+      .partyMiniSteps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:14px 0}
+      .partyMiniSteps span{border:1px solid var(--line);border-radius:14px;padding:10px;text-align:center;background:rgba(255,255,255,.04);font-weight:800;font-size:13px}
+      .partyFormCard{border:1px solid rgba(146,255,194,.28);border-radius:18px;padding:14px;background:rgba(146,255,194,.06);margin-top:12px}
+      .partyFormCard.flat{background:rgba(255,255,255,.04);border-color:var(--line)}
+      .partyPrimaryAction{width:100%;min-height:54px;font-size:16px;margin-top:8px}
+      .partyFold,.partyNestedFold{border:1px solid var(--line);border-radius:16px;padding:12px 14px;margin-top:12px;background:rgba(255,255,255,.035)}
+      .partyFold summary,.partyNestedFold summary,.partyFoldCard summary{cursor:pointer;font-weight:850}
+      .partyFoldCard{padding:14px 16px}
+      .partySecondaryActions{gap:8px;margin-top:12px}
+      .partySecondaryActions button{flex:1 1 150px}
+      .partyCodeBox{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid rgba(146,255,194,.34);border-radius:18px;padding:13px 14px;background:rgba(146,255,194,.08);margin:12px 0}
+      .partyCodeBox span{color:var(--muted);font-size:13px}.partyCodeBox strong{font-size:28px;letter-spacing:2px}
+      .partyMainActions{display:grid;grid-template-columns:1.2fr 1fr .8fr;gap:10px;margin-top:12px}
+      .partyMainActions button{min-height:50px}
+      .partyTip{border:1px solid rgba(114,214,255,.28);border-radius:14px;padding:10px 12px;background:rgba(114,214,255,.08);font-weight:750;margin-top:10px}
+      .partyQuickSummary{margin-top:12px}
+      @media(max-width:850px){.partyGrid,.partyMembers,.partyChartGrid,.partyCompareGrid,.partyMiniSteps,.partyMainActions{grid-template-columns:1fr}.partyBarRow{grid-template-columns:92px minmax(0,1fr) 72px}.partyCodeBox{align-items:flex-start;flex-direction:column}.partyCodeBox strong{font-size:24px}}
     `;
     document.head.appendChild(style);
   }
@@ -974,7 +1138,7 @@
     ensureStyles();
     syncFromLocalWorkouts({silent: true, queue: false});
     const data = partyData();
-    root.innerHTML = data?.party ? dashboardHtml(data) : noRoomHtml();
+    root.innerHTML = data?.party ? dashboardHtmlSimple(data) : noRoomHtmlSimple();
     bindGymPartyActionButtons(root);
   }
 
@@ -998,6 +1162,7 @@
     else if(action === 'login-firebase') testFirebaseLogin();
     else if(action === 'new-room') newRoomFlow();
     else if(action === 'leave') leaveParty();
+    else if(action === 'open-gym' && typeof window.setModule === 'function') window.setModule('gym');
   }
 
   function bindGymPartyActionButtons(root){
