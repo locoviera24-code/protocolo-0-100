@@ -185,6 +185,7 @@ Assert-True ($html.Contains('id="tab-gym-party"')) 'Falta pestaña Gym Party'
 Assert-True ($html.Contains('<script src="gym-party.js"></script>')) 'index.html no carga gym-party.js'
 Assert-True ($html.Contains('id="openGymPartyTopBtn"')) 'Falta boton superior visible de Gym Party'
 Assert-True ($html.Contains('data-open-gym-party')) 'Faltan tarjetas/accesos rapidos a Gym Party'
+Assert-True ($html.Contains("if(!force && activeModule!=='protocolo') return;")) 'El modal automatico de accion diaria no debe bloquear Gym Party'
 
 $workoutLower = $workout.ToLowerInvariant()
 foreach ($term in @(

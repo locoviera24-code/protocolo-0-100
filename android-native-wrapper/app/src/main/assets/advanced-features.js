@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const APP_VERSION='2.4.5';
+  const APP_VERSION='2.4.6';
   const APP_STATE_KEY='protocolo_0_100_state_v2';
   const SAVED_MEALS_KEY='protocolo_0_100_saved_meals_v1';
   const NUTRITION_PROFILE_KEY='protocolo_0_100_nutrition_profile_v1';

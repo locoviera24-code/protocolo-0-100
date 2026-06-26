@@ -1406,6 +1406,7 @@ function fillActionModal(){
 }
 function showActionModal(force=true){
   const bd = document.getElementById('actionModalBackdrop'); if(!bd) return;
+  if(!force && activeModule!=='protocolo') return;
   if(!force && checked('keyActionDone')) return;
   fillActionModal();
   bd.classList.remove('hidden');
