@@ -87,6 +87,25 @@ assert.equal(quickSaved.ok, true);
 assert.equal(quickSaved.set.weight, 20.5);
 assert.equal(quickWorkout.getQuickWorkoutState({date: '2026-06-22'}).currentExerciseSets, 1);
 assert.equal(JSON.parse(quickStore.get(quickWorkout.keys.workoutSessions))[0].routine.name, 'Torso A');
+const manualExercise = quickWorkout.addManualExercisePayload({
+  date: '2026-06-22',
+  name: 'Face pull',
+  muscle: 'Hombro',
+  bodyweight: false
+});
+assert.equal(manualExercise.ok, true);
+assert.equal(manualExercise.exercise.name, 'Face pull');
+assert.equal(manualExercise.state.currentExerciseName, 'Face pull');
+assert.equal(manualExercise.state.currentExerciseMuscle, 'Hombro');
+const manualSaved = quickWorkout.saveQuickSetPayload({
+  date: '2026-06-22',
+  exerciseId: manualExercise.exercise.id,
+  reps: 15,
+  weight: 12.5
+});
+assert.equal(manualSaved.ok, true);
+assert.equal(manualSaved.set.weight, 12.5);
+assert.equal(JSON.parse(quickStore.get(quickWorkout.keys.workoutSessions))[0].exercises.some(exercise => exercise.manual && exercise.name === 'Face pull'), true);
 
 const nativeExercise = {...workout.planForDate('2026-06-22').exercises[1], sets: [{
   id: 'set_android_test',
@@ -127,4 +146,4 @@ const {context: customContext} = createContext({
 });
 assert.equal(customContext.WORKOUT_FEATURES.planForDate('2026-06-22').name, 'Rutina propia');
 
-console.log('Workout features correcto: plan semanal, descanso, widget state, importacion directa y no sobrescritura.');
+console.log('Workout features correcto: plan semanal, descanso, widget state, ejercicio manual, importacion directa y no sobrescritura.');

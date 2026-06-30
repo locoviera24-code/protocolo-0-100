@@ -491,14 +491,17 @@
     const last=sets[sets.length-1]||null;
     const bodyweight=!!(exercise?.bodyweight || last?.bodyweight || h?.bodyweight);
     const summary=session?sessionSummary(session):null;
+    const effectiveType=session?.exercises?.length?'workout':plan.type;
+    const routineName=session?.routine?.name||plan.name;
+    const muscles=session?.routine?.muscles?.length?session.routine.muscles:(plan.muscles||[]);
     return {
       date,
       plan:clone(plan),
       session:session?clone(session):null,
-      type:plan.type,
-      title:`${plan.weekday} — ${plan.name}`,
-      routineName:plan.name,
-      muscles:plan.muscles||[],
+      type:effectiveType,
+      title:`${plan.weekday} — ${routineName}`,
+      routineName,
+      muscles,
       message:plan.message||'',
       suggestions:plan.suggestions||[],
       exercises:source.map(ex=>({id:ex.id,exerciseId:ex.exerciseId,name:ex.name,muscle:ex.muscle,bodyweight:!!ex.bodyweight,completed:!!ex.completed,setsLogged:exerciseSetCount(ex)})),
@@ -515,6 +518,59 @@
       history:h?clone(h):null,
       summary:summary?clone(summary):null
     };
+  }
+  function addManualExercisePayload(payload={}){
+    const date=payload.date||todayStr();
+    const name=String(payload.name||'').trim().replace(/\s+/g,' ');
+    if(!name) return {ok:false,reason:'missing-name',message:'Escribi el nombre del ejercicio.'};
+    const muscle=String(payload.muscle||'General').trim().replace(/\s+/g,' ')||'General';
+    const plan=planForDate(date);
+    let session=ensureSession(date);
+    if(!session){
+      session={
+        id:uid('workout'),
+        date,
+        dayKey:plan.dayKey,
+        weekday:plan.weekday,
+        routine:{dayKey:plan.dayKey,name:`${plan.name} + extra`,muscles:[muscle],exercises:[]},
+        startedAt:new Date().toISOString(),
+        finishedAt:null,
+        status:'en progreso',
+        currentExerciseIndex:0,
+        exercises:[],
+        notes:'Sesion extra creada desde Gym Party.',
+        subjectiveNote:'',
+        summary:null
+      };
+    }
+    const slug=normalizeText(name).replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')||'extra';
+    const libraryMatch=exerciseLibrary.find(exercise=>normalizeText(exercise.name)===normalizeText(name) || (exercise.aliases||[]).some(alias=>normalizeText(alias)===normalizeText(name)));
+    const exerciseId=libraryMatch?.id||`manual-${slug}`;
+    const exercise={
+      id:`${exerciseId}-${uid('manual')}`,
+      exerciseId,
+      name,
+      muscle:libraryMatch?.group||muscle,
+      type:libraryMatch?.type||'manual',
+      unit:libraryMatch?.unit||settings().unit,
+      bodyweight:!!payload.bodyweight || libraryMatch?.unit==='peso corporal',
+      notes:String(payload.notes||'Agregado manualmente desde Gym Party.').trim(),
+      order:(session.exercises||[]).length+1,
+      sets:[],
+      completed:false,
+      manual:true
+    };
+    session.exercises=session.exercises||[];
+    session.exercises.push(exercise);
+    session.currentExerciseIndex=session.exercises.length-1;
+    currentQuickExerciseId=exercise.id;
+    session.routine=session.routine||{name:plan.name,muscles:[],exercises:[]};
+    const muscles=new Set([...(session.routine.muscles||[]),exercise.muscle].filter(Boolean));
+    session.routine.muscles=[...muscles];
+    session.routine.exercises=[...(session.routine.exercises||[]),{...exercise,sets:undefined,completed:undefined}];
+    session.summary=sessionSummary(session);
+    replaceSession(session);
+    return {ok:true,session:clone(session),exercise:clone(exercise),state:getQuickWorkoutState({date,exerciseId:exercise.id})};
   }
   function saveQuickSetPayload(payload={}){
     const date=payload.date||todayStr();
@@ -793,7 +849,7 @@
     else if(action===actionWidgetSaveSet){syncWorkoutWidget();openGymToday();}
   }
 
-  window.WORKOUT_FEATURES={keys,dayOrder,defaultWeeklyPlan:clone(defaultWeeklyPlan),exerciseLibrary:clone(exerciseLibrary),dayKeyForDate,planForDate,getQuickWorkoutState,saveQuickSetPayload,completeQuickExercisePayload,finishWorkoutPayload,buildWorkoutWidgetState,syncWorkoutWidget,importWidgetStateFromAndroid};
+  window.WORKOUT_FEATURES={keys,dayOrder,defaultWeeklyPlan:clone(defaultWeeklyPlan),exerciseLibrary:clone(exerciseLibrary),dayKeyForDate,planForDate,getQuickWorkoutState,addManualExercisePayload,saveQuickSetPayload,completeQuickExercisePayload,finishWorkoutPayload,buildWorkoutWidgetState,syncWorkoutWidget,importWidgetStateFromAndroid};
   window.openGymToday=openGymToday;
   window.openQuickSetLogger=openQuickSetLogger;
   window.handleAndroidWidgetIntent=(action,payload)=>handleAndroidWidgetIntent(action,payload||{});

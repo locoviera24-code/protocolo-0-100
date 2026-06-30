@@ -645,6 +645,18 @@
     }
     return streak;
   }
+  function dailyWorkoutStreak(member, sessions, reference = todayStr()){
+    const dates = new Set(safeArray(sessions).filter(session => session.userId === member?.userId && session.date).map(session => String(session.date).slice(0,10)));
+    let cursor = reference;
+    if(!dates.has(cursor)) cursor = addDays(cursor, -1);
+    let streak = 0;
+    for(let i = 0; i < 365; i++){
+      if(!dates.has(cursor)) break;
+      streak += 1;
+      cursor = addDays(cursor, -1);
+    }
+    return streak;
+  }
   function calculatePartyStats(data, reference = todayStr()){
     const currentStart = weekStartStr(reference);
     const previousStart = previousWeekStart(currentStart);
@@ -951,6 +963,37 @@
     ];
     return `<div class="moduleCard"><h3>Retos sanos opcionales</h3><div class="badgeGrid">${challenges.map(([name,done]) => `<span class="badge ${done ? 'on' : ''}">${escape(name)}</span>`).join('')}</div><div class="muted small" style="margin-top:10px">No se premia sobreentrenar. Priorizar técnica antes que carga.</div></div>`;
   }
+  function gymPartyGameHtml(data, stats){
+    const m = activeMembership();
+    const self = stats.find(row => row.member.userId === m?.userId) || stats[0];
+    if(!self) return '';
+    const ownSessions = safeArray(data.sessions).filter(session => session.userId === self.member.userId);
+    const ownSets = safeArray(data.sets).filter(set => set.userId === self.member.userId);
+    const streak = dailyWorkoutStreak(self.member, ownSessions);
+    const weeklyScore = number(self.current.consistencyScore);
+    const points = weeklyScore + Math.min(90, number(self.current.totalSets) * 3) + Math.min(80, streak * 12);
+    const level = Math.max(1, Math.floor(points / 100) + 1);
+    const levelProgress = Math.max(8, Math.min(100, points % 100));
+    const badges = [
+      [`Racha ${streak} dia(s)`, streak >= 2],
+      ['Primera serie registrada', ownSets.length > 0],
+      ['3 sesiones esta semana', self.current.sessionsCount >= 3],
+      ['Registro completo', self.current.totalSets >= 6],
+      ['Mejora vs semana pasada', self.changeVsPreviousWeek?.volumePct > 0]
+    ];
+    const message = streak
+      ? 'Mantene la racha registrando al menos una sesion cuando toque entrenar.'
+      : 'Registra una serie para iniciar tu racha. Registrar ya cuenta como progreso.';
+    return `<div class="moduleCard partyGameCard">
+      <div class="actionFocusTop">
+        <div><span class="partyStepPill">Racha Gym Party</span><h3>Nivel ${level}</h3><div class="muted small">${escape(message)}</div></div>
+        <span class="statusChip good">${streak} dia(s)</span>
+      </div>
+      <div class="partyLevelBar"><i style="width:${levelProgress}%"></i></div>
+      <div class="badgeGrid partyBadgeTrack">${badges.map(([name,done]) => `<span class="badge ${done ? 'on' : ''}">${escape(name)}</span>`).join('')}</div>
+      <div class="muted small">La comparacion sana es contra tu semana pasada. Mas volumen no siempre significa mejor.</div>
+    </div>`;
+  }
   function dashboardHtml(data){
     const m = activeMembership();
     const party = data.party;
@@ -988,6 +1031,7 @@
         ${exerciseProgressHtml(data)}
         ${muscleVolumeHtml(data, stats)}
       </div>
+      ${gymPartyGameHtml(data, stats)}
       ${challengeHtml(stats)}
       ${privacyDashboardHtml(m)}
       ${recentSessionsHtml(data)}
@@ -1027,6 +1071,11 @@
       </div>
       <div class="partyFormCard">
         <div class="field"><label>Ejercicio</label><select id="partyQuickExerciseSelect">${options}</select></div>
+        <div class="partyWorkoutNav">
+          <button type="button" class="secondary" data-gym-party-action="party-prev-exercise">Atras</button>
+          <button type="button" class="secondary" data-gym-party-action="party-next-exercise">Siguiente</button>
+          <button type="button" class="secondary" data-gym-party-action="party-complete-exercise">Completar</button>
+        </div>
         <div class="partySetCounters">
           <div><span>Este ejercicio</span><strong>${state.currentExerciseSets||0}</strong><small>series</small></div>
           <div><span>${escape(state.currentExerciseMuscle||'Musculo')}</span><strong>${state.currentMuscleSets||0}</strong><small>series totales</small></div>
@@ -1039,6 +1088,15 @@
           ${[0,5,10,20,40,60,80].map(value => `<button type="button" class="secondary" data-gym-party-weight="${value}">${value} kg</button>`).join('')}
         </div>
         <label class="check"><input type="checkbox" id="partyQuickBodyweight" ${state.bodyweight?'checked':''}><span>Peso corporal / lastre opcional.</span></label>
+        <details class="partyNestedFold partyAddExerciseFold">
+          <summary>Agregar ejercicio extra</summary>
+          <div class="partyQuickInputs">
+            <div class="field"><label>Nombre</label><input type="text" id="partyManualExerciseName" placeholder="Ej. Face pull"></div>
+            <div class="field"><label>Musculo</label><input type="text" id="partyManualExerciseMuscle" placeholder="Ej. Hombro"></div>
+          </div>
+          <label class="check"><input type="checkbox" id="partyManualBodyweight"><span>Es peso corporal o sin kilos fijos.</span></label>
+          <button type="button" class="secondary partyInlineAction" data-gym-party-action="party-add-exercise">Agregar a este entrenamiento</button>
+        </details>
         <details class="partyNestedFold">
           <summary>Opcional</summary>
           <div class="partyQuickInputs">
@@ -1048,13 +1106,10 @@
           <div class="field"><label>Nota</label><textarea id="partyQuickNote" placeholder="Tecnica, energia, ajuste..."></textarea></div>
         </details>
         <div class="auditItem">${escape(hint)}</div>
-        <div class="partyMainActions">
-          <button type="button" class="good" data-gym-party-action="party-save-set">Guardar serie</button>
-          <button type="button" class="secondary" data-gym-party-action="party-next-exercise">Siguiente</button>
-          <button type="button" class="secondary" data-gym-party-action="party-complete-exercise">Completar</button>
+        <div class="partySaveRow">
+          <button type="button" class="good partyPrimaryAction" data-gym-party-action="party-save-set">Guardar serie</button>
         </div>
         <div class="buttons partySecondaryActions">
-          <button type="button" class="secondary" data-gym-party-action="party-prev-exercise">Anterior</button>
           <button type="button" class="warn" data-gym-party-action="party-finish-workout">Finalizar entrenamiento</button>
         </div>
       </div>
@@ -1099,6 +1154,8 @@
       </div>
 
       ${workoutQuickLoggerHtml()}
+
+      ${gymPartyGameHtml(data, stats)}
 
       <div class="moduleCard partyQuickSummary">
         <h3>Esta semana</h3>
@@ -1194,6 +1251,14 @@
       .partyCodeBox span{color:var(--muted);font-size:13px}.partyCodeBox strong{font-size:28px;letter-spacing:2px}
       .partyMainActions{display:grid;grid-template-columns:1.2fr 1fr .8fr;gap:10px;margin-top:12px}
       .partyMainActions button{min-height:50px}
+      .partyWorkoutNav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:10px 0}
+      .partyWorkoutNav button{min-height:48px;font-weight:850}
+      .partySaveRow{margin-top:12px}
+      .partyInlineAction{width:100%;min-height:46px;margin-top:8px}
+      .partyGameCard{border-color:rgba(146,255,194,.28)}
+      .partyLevelBar{height:14px;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:rgba(255,255,255,.07);margin:12px 0}
+      .partyLevelBar i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--accent2),var(--accent))}
+      .partyBadgeTrack{margin:10px 0}
       .partyTip{border:1px solid rgba(114,214,255,.28);border-radius:14px;padding:10px 12px;background:rgba(114,214,255,.08);font-weight:750;margin-top:10px}
       .partyQuickSummary{margin-top:12px}
       .partyWorkoutLogger{margin-top:12px}
@@ -1204,7 +1269,7 @@
       .partyQuickInputs input{font-size:22px;font-weight:850;text-align:center;min-height:54px}
       .partyWeightChips{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:10px 0}
       .partyWeightChips button{min-height:42px}
-      @media(max-width:850px){.partyGrid,.partyMembers,.partyChartGrid,.partyCompareGrid,.partyMiniSteps,.partyMainActions,.partyQuickInputs,.partySetCounters{grid-template-columns:1fr}.partyWeightChips{grid-template-columns:repeat(2,minmax(0,1fr))}.partyBarRow{grid-template-columns:92px minmax(0,1fr) 72px}.partyCodeBox{align-items:flex-start;flex-direction:column}.partyCodeBox strong{font-size:24px}}
+      @media(max-width:850px){.partyGrid,.partyMembers,.partyChartGrid,.partyCompareGrid,.partyMiniSteps,.partyMainActions,.partyWorkoutNav,.partyQuickInputs,.partySetCounters{grid-template-columns:1fr}.partyWeightChips{grid-template-columns:repeat(2,minmax(0,1fr))}.partyBarRow{grid-template-columns:92px minmax(0,1fr) 72px}.partyCodeBox{align-items:flex-start;flex-direction:column}.partyCodeBox strong{font-size:24px}}
     `;
     document.head.appendChild(style);
   }
@@ -1243,6 +1308,7 @@
     else if(action === 'party-next-exercise') movePartyWorkoutExercise(1);
     else if(action === 'party-prev-exercise') movePartyWorkoutExercise(-1);
     else if(action === 'party-complete-exercise') completePartyWorkoutExercise();
+    else if(action === 'party-add-exercise') addPartyManualExercise();
     else if(action === 'party-finish-workout') finishPartyWorkout();
   }
 
@@ -1323,6 +1389,19 @@
     if(m?.backendMode === 'firebase' && typeof navigator !== 'undefined' && navigator.onLine !== false){
       syncFirebaseNow().catch(() => flashMessage('Guardado localmente. Se sincronizara al volver a intentar.'));
     }
+  }
+  function addPartyManualExercise(){
+    const api = workoutApi();
+    if(!api?.addManualExercisePayload){ flashMessage('Agregar ejercicio no esta disponible todavia.'); return; }
+    const name = document.getElementById('partyManualExerciseName')?.value.trim() || '';
+    const muscle = document.getElementById('partyManualExerciseMuscle')?.value.trim() || 'General';
+    const bodyweight = !!document.getElementById('partyManualBodyweight')?.checked;
+    const result = api.addManualExercisePayload({name, muscle, bodyweight});
+    if(!result.ok){ flashMessage(result.message || 'No se pudo agregar el ejercicio.'); return; }
+    saveSettings({partyQuickExerciseId: result.exercise?.id || result.state?.currentExerciseId || ''});
+    refreshPartyWorkoutShare();
+    renderGymParty();
+    flashMessage('Ejercicio agregado. Ya podes registrar la serie.');
   }
   function savePartyWorkoutSet(){
     const api = workoutApi();
