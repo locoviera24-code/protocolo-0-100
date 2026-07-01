@@ -136,6 +136,7 @@
   function normalizeCode(value){ return String(value || '').replace(/[^A-Za-z0-9]/g,'').toUpperCase().slice(0,10); }
   function makeInviteCode(){ return normalizeCode(Math.random().toString(36).slice(2,8) + Date.now().toString(36).slice(-2)); }
   function cleanAlias(value){ return String(value || '').trim().replace(/\s+/g,' ').slice(0,32) || 'Atleta'; }
+  function cleanEmail(value){ return String(value || '').trim().toLowerCase().slice(0,120); }
   function nowIso(){ return new Date().toISOString(); }
   function number(value){ return Number.isFinite(Number(value)) ? Number(value) : 0; }
   function round(value, digits = 1){
@@ -212,6 +213,43 @@
   function privacyForShare(){
     const m = activeMembership();
     return {...defaultPrivacy, ...(m?.privacy || {})};
+  }
+  function privacyFromMember(member = {}){
+    return {
+      shareGymData: member.shareGymData !== false,
+      shareAggregateOnly: !!member.shareAggregateOnly,
+      shareSetDetails: member.shareSetDetails !== false,
+      hideAbsoluteWeights: !!member.hideAbsoluteWeights,
+      anonymousAlias: !!member.anonymousAlias,
+      shareGeneralScore: !!member.shareGeneralScore
+    };
+  }
+  function portableAccessCredentials(){
+    const email = cleanEmail(document.getElementById('gymPartyAccessEmail')?.value || '');
+    const password = String(document.getElementById('gymPartyAccessPassword')?.value || '');
+    if(!email || !email.includes('@')) return {ok: false, message: 'Escribi un email valido para recuperar el acceso.'};
+    if(password.length < 6) return {ok: false, message: 'La clave debe tener al menos 6 caracteres.'};
+    return {ok: true, email, password};
+  }
+  function portableAccessFormHtml({mode = 'restore'} = {}){
+    const savedEmail = cleanEmail(settings().portableAccessEmail || '');
+    const primaryAction = mode === 'link' ? 'link-access' : 'restore-access';
+    const primaryText = mode === 'link' ? 'Guardar acceso' : 'Entrar y restaurar sala';
+    const help = mode === 'link'
+      ? 'Vincula esta Gym Party a un email y clave para poder entrar desde otro telefono. El email no se comparte con tu amigo.'
+      : 'Usa el mismo email y clave que guardaste en tu dispositivo anterior para restaurar tu sala y datos compartidos.';
+    return `<div class="partyAccessBox">
+      <div class="muted small">${escape(help)}</div>
+      <div class="partyAccessGrid">
+        <div class="field"><label>Email de acceso</label><input type="email" id="gymPartyAccessEmail" autocomplete="email" value="${escape(savedEmail)}" placeholder="tu@email.com"></div>
+        <div class="field"><label>Clave</label><input type="password" id="gymPartyAccessPassword" autocomplete="${mode === 'link' ? 'new-password' : 'current-password'}" placeholder="Minimo 6 caracteres"></div>
+      </div>
+      <div class="buttons partySecondaryActions">
+        <button type="button" class="good" data-gym-party-action="${primaryAction}">${escape(primaryText)}</button>
+        ${mode === 'link' ? '<button type="button" class="secondary" data-gym-party-action="restore-access">Entrar con acceso existente</button>' : ''}
+      </div>
+      <div class="muted small">Si borras datos del sitio o cambias de dispositivo sin guardar este acceso, la sesion anonima anterior no se puede recuperar.</div>
+    </div>`;
   }
 
   function memberIdForLocalParty(partyId, userId){ return `${partyId}_${userId}`; }
@@ -875,6 +913,12 @@
               <input type="hidden" id="gymPartyJoinBackend" value="${backendDefault}">
               <div class="checks">${privacyChecks('join', defaultPrivacy, {compact: true})}</div>
               <button type="button" class="good partyPrimaryAction" data-gym-party-action="join">Entrar</button>
+            </div>
+          </details>
+          <details class="partyFold">
+            <summary>Entrar desde otro dispositivo</summary>
+            <div class="partyFormCard flat">
+              ${portableAccessFormHtml({mode: 'restore'})}
             </div>
           </details>
           <details class="partyFold">
@@ -1598,6 +1642,10 @@
           <button type="button" class="secondary" data-gym-party-action="export-json">Exportar JSON</button>
           <button type="button" class="danger" data-gym-party-action="leave">Salir</button>
         </div>
+        ${m.backendMode === 'firebase' ? `<details class="partyNestedFold">
+          <summary>Guardar acceso para otro dispositivo</summary>
+          ${portableAccessFormHtml({mode: 'link'})}
+        </details>` : '<div class="muted small">La recuperacion en otro dispositivo requiere sala online con Firebase.</div>'}
       </details>
 
       <details class="moduleCard partyFoldCard">
@@ -1665,6 +1713,9 @@
       .partyMainActions button{min-height:50px}
       .partyDateControls{display:grid;grid-template-columns:1fr;gap:8px;align-items:end;margin:0 0 10px}
       .partyDateControls .field{margin:0}
+      .partyAccessBox{display:grid;gap:9px}
+      .partyAccessGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+      .partyAccessGrid .field{margin:0}
       .partySaveRow{margin-top:12px}
       .partyInlineAction{width:100%;min-height:46px;margin-top:8px}
       .partyGameCard{border-color:rgba(146,255,194,.28)}
@@ -1727,7 +1778,7 @@
       .partyQuickInputs input{font-size:22px;font-weight:850;text-align:center;min-height:54px}
       .partyWeightChips{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:10px 0}
       .partyWeightChips button{min-height:42px}
-      @media(max-width:850px){.partyGrid,.partyMembers,.partyChartGrid,.partyCompareGrid,.partyCompareGrid.compact,.partyMiniSteps,.partyMainActions,.partyDateControls,.partyQuickInputs,.partySetCounters,.partySetRow,.partyMuscleMapShell,.partyMuscleChartGrid,.partyExerciseMetricGrid{grid-template-columns:1fr}.partySetRowActions{justify-content:stretch}.partySetRowActions button{flex:1}.partyHumanPanel{min-height:390px}.partyHumanCanvas{min-height:368px}.partyMuscleButton{min-width:104px;font-size:12px}.partyWeightChips{grid-template-columns:repeat(2,minmax(0,1fr))}.partyBarRow{grid-template-columns:92px minmax(0,1fr) 72px}.partyCodeBox{align-items:flex-start;flex-direction:column}.partyCodeBox strong{font-size:24px}}
+      @media(max-width:850px){.partyGrid,.partyMembers,.partyChartGrid,.partyCompareGrid,.partyCompareGrid.compact,.partyMiniSteps,.partyMainActions,.partyDateControls,.partyAccessGrid,.partyQuickInputs,.partySetCounters,.partySetRow,.partyMuscleMapShell,.partyMuscleChartGrid,.partyExerciseMetricGrid{grid-template-columns:1fr}.partySetRowActions{justify-content:stretch}.partySetRowActions button{flex:1}.partyHumanPanel{min-height:390px}.partyHumanCanvas{min-height:368px}.partyMuscleButton{min-width:104px;font-size:12px}.partyWeightChips{grid-template-columns:repeat(2,minmax(0,1fr))}.partyBarRow{grid-template-columns:92px minmax(0,1fr) 72px}.partyCodeBox{align-items:flex-start;flex-direction:column}.partyCodeBox strong{font-size:24px}}
     `;
     document.head.appendChild(style);
   }
@@ -1759,6 +1810,8 @@
     else if(action === 'save-firebase') saveFirebaseConfig();
     else if(action === 'clear-firebase') clearFirebaseConfig();
     else if(action === 'login-firebase') testFirebaseLogin();
+    else if(action === 'link-access') linkPortableAccess().catch(error => flashMessage(firebaseError(error)));
+    else if(action === 'restore-access') restorePortableAccess().catch(error => flashMessage(firebaseError(error)));
     else if(action === 'new-room') newRoomFlow();
     else if(action === 'leave') leaveParty();
     else if(action === 'open-gym' && typeof window.setModule === 'function') window.setModule('gym');
@@ -2081,6 +2134,11 @@
     return !!(config && config.apiKey && config.authDomain && config.projectId && config.appId);
   }
   function firebaseError(error){
+    const code = error?.code || '';
+    if(error?.message === 'EMAIL_AUTH_UNAVAILABLE') return 'El SDK de Firebase Auth no expuso email/clave en este navegador.';
+    if(code === 'auth/operation-not-allowed') return 'En Firebase Console falta activar Authentication > Sign-in method > Email/Password.';
+    if(code === 'auth/email-already-in-use' || code === 'auth/credential-already-in-use') return 'Ese email ya esta asociado a otro acceso. Usa Entrar con acceso existente o elegi otro email.';
+    if(code === 'auth/invalid-credential' || code === 'auth/wrong-password' || code === 'auth/user-not-found') return 'Email o clave incorrectos. Revisa el acceso guardado.';
     if(error?.message === 'FIREBASE_NOT_CONFIGURED') return 'Configurá Firebase antes de crear o unirte a una sala real.';
     if(error?.message === 'PARTY_NOT_FOUND') return 'No encontré una sala activa con ese código.';
     if(error?.message === 'PARTY_FULL') return 'Esta sala alcanzó el límite recomendado de 10 miembros para mantener la app rápida y clara.';
@@ -2095,6 +2153,89 @@
     }catch(error){
       flashMessage(firebaseError(error));
     }
+  }
+  async function linkPortableAccess(){
+    const m = activeMembership();
+    if(!m || m.backendMode !== 'firebase') throw new Error('Primero crea o unite a una Gym Party online.');
+    const credentials = portableAccessCredentials();
+    if(!credentials.ok) throw new Error(credentials.message);
+    const runtime = await loadFirebaseRuntime();
+    const {auth, authMod} = runtime;
+    assertFirebaseSessionMatchesMembership(auth, m);
+    if(!authMod.EmailAuthProvider || !authMod.linkWithCredential) throw new Error('EMAIL_AUTH_UNAVAILABLE');
+    const emailCredential = authMod.EmailAuthProvider.credential(credentials.email, credentials.password);
+    if(auth.currentUser?.isAnonymous){
+      await authMod.linkWithCredential(auth.currentUser, emailCredential);
+    }else if(cleanEmail(auth.currentUser?.email || '') !== credentials.email){
+      throw new Error('Ya hay otro email conectado en este navegador.');
+    }
+    saveSettings({portableAccessEmail: credentials.email, backendMode: 'firebase'});
+    await syncFirebaseNow({silent: true});
+    flashMessage('Acceso guardado. Ya podes entrar desde otro dispositivo con ese email y clave.');
+  }
+  async function restorePortableAccess(){
+    const credentials = portableAccessCredentials();
+    if(!credentials.ok) throw new Error(credentials.message);
+    const runtime = await loadFirebaseRuntime();
+    const {auth, authMod} = runtime;
+    if(!authMod.signInWithEmailAndPassword) throw new Error('EMAIL_AUTH_UNAVAILABLE');
+    await authMod.signInWithEmailAndPassword(auth, credentials.email, credentials.password);
+    saveSettings({portableAccessEmail: credentials.email, backendMode: 'firebase'});
+    await restoreFirebaseMembershipForCurrentUser(runtime);
+    renderGymParty();
+    flashMessage('Gym Party restaurada en este dispositivo.');
+  }
+  async function restoreFirebaseMembershipForCurrentUser(runtime = null){
+    const activeRuntime = runtime || await loadFirebaseRuntime();
+    const {db, auth, firestoreMod} = activeRuntime;
+    const uidValue = auth.currentUser?.uid || '';
+    if(!uidValue) throw new Error('No hay usuario Firebase activo.');
+    const memberQuery = firestoreMod.query(
+      firestoreMod.collection(db, collections.members),
+      firestoreMod.where('userId','==', uidValue),
+      firestoreMod.where('active','==', true),
+      firestoreMod.limit(MAX_GYM_PARTY_MEMBERS)
+    );
+    const memberSnap = await firestoreMod.getDocs(memberQuery);
+    const memberships = memberSnap.docs.map(docSnap => docSnap.data())
+      .sort((a,b) => String(b.joinedAt || '').localeCompare(String(a.joinedAt || '')));
+    const member = memberships[0];
+    if(!member) throw new Error('No encontre una Gym Party vinculada a este acceso.');
+    const partyRef = firestoreMod.doc(db, collections.parties, member.partyId);
+    const partySnap = await firestoreMod.getDoc(partyRef);
+    if(!partySnap.exists() || partySnap.data().active === false) throw new Error('PARTY_NOT_FOUND');
+    const membersQuery = firestoreMod.query(
+      firestoreMod.collection(db, collections.members),
+      firestoreMod.where('partyId','==', member.partyId),
+      firestoreMod.where('active','==', true),
+      firestoreMod.limit(MAX_GYM_PARTY_MEMBERS + 1)
+    );
+    const membersSnap = await firestoreMod.getDocs(membersQuery);
+    const members = membersSnap.docs.map(docSnap => docSnap.data());
+    const party = {
+      id: member.partyId,
+      ...partySnap.data(),
+      inviteCode: member.inviteCode || partySnap.data().inviteCode || '',
+      members,
+      membersCount: members.length,
+      maxMembers: partySnap.data().maxMembers || MAX_GYM_PARTY_MEMBERS
+    };
+    const privacy = privacyFromMember(member);
+    saveMembership({
+      partyId: member.partyId,
+      inviteCode: party.inviteCode,
+      userId: uidValue,
+      alias: member.aliasInParty || member.alias || cleanEmail(auth.currentUser.email || 'Atleta'),
+      role: member.role || 'member',
+      backendMode: 'firebase',
+      active: true,
+      privacy,
+      joinedAt: member.joinedAt || nowIso(),
+      party
+    });
+    syncFromLocalWorkouts({silent: true});
+    await syncFirebaseNow({silent: true});
+    return party;
   }
   async function createFirebaseParty({name, alias, privacy}){
     const runtime = await loadFirebaseRuntime();
@@ -2206,11 +2347,13 @@
   function exportableSettings(){
     const value = {...settings()};
     delete value.firebaseConfig;
+    delete value.portableAccessEmail;
     return value;
   }
   function importableSettings(value){
     const next = {...value};
     delete next.firebaseConfig;
+    delete next.portableAccessEmail;
     return next;
   }
   function exportState(){
@@ -2329,7 +2472,9 @@
     effectiveFirebaseConfig,
     firebaseConfigSource,
     waitForInitialAuth,
-    assertFirebaseSessionMatchesMembership
+    assertFirebaseSessionMatchesMembership,
+    restoreFirebaseMembershipForCurrentUser,
+    privacyFromMember
   };
   window.renderGymParty = renderGymParty;
 

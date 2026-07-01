@@ -2,9 +2,9 @@
 
 Ultima actualizacion: 2026-06-30
 Rama esperada: `main`
-Version actual: `2.5.7`
-Android: `versionCode 29`, `versionName "2.5.7"`
-Service worker cache: `protocolo-0-100-pwa-v32`
+Version actual: `2.5.8`
+Android: `versionCode 30`, `versionName "2.5.8"`
+Service worker cache: `protocolo-0-100-pwa-v33`
 Backup consolidado: `schemaVersion: 3`
 
 Leer primero este archivo y luego `README.md`, `index.html`,
@@ -24,7 +24,7 @@ Estado actual:
 - Gym Party implementado como modulo web/PWA opcional.
 - Nutricion local/FDC opcional.
 - Backups JSON `schemaVersion: 3`.
-- PWA offline con cache v32.
+- PWA offline con cache v33.
 - APK con widget Android y permiso `INTERNET` para Firebase/Gym Party.
 
 ## 2. Funcionalidades ya existen
@@ -54,9 +54,10 @@ Estado actual:
 ## 3. Funcionalidades en desarrollo
 
 - Firebase real para Gym Party esta preparado pero requiere proyecto Firebase,
-  Auth anonimo, Firestore y reglas. La config puede llegar por `firebase-config.js`
-  generado desde GitHub Secrets o por JSON pegado en la app. Sin configuracion,
-  funciona demo/local.
+  Auth anonimo, Email/Password para acceso portable entre dispositivos,
+  Firestore y reglas. La config puede llegar por `firebase-config.js` generado
+  desde GitHub Secrets o por JSON pegado en la app. Sin configuracion, funciona
+  demo/local.
 - Gym Party usa sincronizacion manual/por online event para ahorrar lecturas;
   listeners realtime permanentes quedan para futuro.
 - `weekly_member_stats` esta documentado y listo para cache futuro; hoy las
@@ -75,8 +76,8 @@ Web:
 - `firebase-config.js`: stub seguro para config publica Firebase; Actions puede
   reemplazarlo desde secrets.
 - `gym-party.js`: modulo Gym Party, registro rapido, graficas y edicion/eliminacion de series.
-- `advanced-features.js`: version `2.5.7`, backup/importacion Gym Party.
-- `sw.js`: cache v32 e incluye `gym-party.js`.
+- `advanced-features.js`: version `2.5.8`, backup/importacion Gym Party.
+- `sw.js`: cache v33 e incluye `gym-party.js`.
 - `README.md`: documenta Gym Party, demo, Firebase, privacidad y pruebas.
 - `CODEX_HANDOFF.md`: este handoff.
 
@@ -94,8 +95,8 @@ Android:
 - `android-native-wrapper/app/src/main/java/com/protocolo/cien/MainActivity.java`:
   permite acceso universal desde archivos locales para que WebView pueda usar
   Firebase/FDC desde assets locales.
-- `android-native-wrapper/app/build.gradle`: `versionCode 29`,
-  `versionName 2.5.7`.
+- `android-native-wrapper/app/build.gradle`: `versionCode 30`,
+  `versionName 2.5.8`.
 - `android-native-wrapper/app/src/main/assets/*`: sincronizado desde raiz.
 
 Scripts/workflows:
@@ -109,7 +110,7 @@ Scripts/workflows:
 - `.github/workflows/*.yml`: corren `test-gym-party.mjs`.
 - `.github/workflows/deploy-pages.yml`: publica `workout-features.js`,
   `firebase-config.js` y `gym-party.js`.
-- `.github/workflows/build-debug-apk.yml`: release objetivo `v2.5.7`.
+- `.github/workflows/build-debug-apk.yml`: release objetivo `v2.5.8`.
 
 ## 5. Estructura datos/localStorage/Firebase
 
@@ -342,6 +343,18 @@ UX actual:
   localStorage y ejecuta sincronizacion silenciosa. `syncFirebaseNow()` valida
   con `assertFirebaseSessionMatchesMembership()` que `auth.currentUser.uid`
   coincida con la membresia guardada antes de subir/leer datos.
+- En `2.5.8` se agrego acceso portable para cambio de dispositivo. En una sala
+  Firebase, `portableAccessFormHtml({mode:"link"})` muestra email/clave en
+  `Invitar amigo y administrar sala > Guardar acceso para otro dispositivo`.
+  `linkPortableAccess()` usa `EmailAuthProvider.credential()` y
+  `linkWithCredential()` para vincular el usuario anonimo actual sin cambiar su
+  UID. En otro dispositivo, `portableAccessFormHtml({mode:"restore"})` aparece
+  en `Entrar desde otro dispositivo`; `restorePortableAccess()` usa
+  `signInWithEmailAndPassword()` y `restoreFirebaseMembershipForCurrentUser()`
+  para buscar `gym_party_members` por `userId`, restaurar `gymPartyMembership`,
+  cargar miembros/sala y sincronizar. Requiere habilitar Email/Password en
+  Firebase Auth. El email no se guarda en Firestore ni backups; solo
+  `gymPartySettings.portableAccessEmail` queda local como comodidad.
 - El dashboard incluye `Enviar codigo`, que usa Web Share API si existe o copia
   una invitacion con link `?gymPartyCode=...`.
 - Al abrir un link con `?gymPartyCode=CODIGO`, la app abre Gym Party y precarga
@@ -426,7 +439,8 @@ arrastrar la configuracion Firebase en JSON compartidos.
 - Modo local/mock no sincroniza entre telefonos; para iPhone + Android usar
   Firebase.
 - APK usa WebView local y permiso Internet; probar Firebase en dispositivo real.
-- No hay Google login ni email/password en el MVP; se priorizo Auth anonimo.
+- No hay Google login. Desde `2.5.8` hay email/password opcional para vincular
+  la sesion anonima y restaurar la misma Gym Party en otro dispositivo.
 - No hay Cloud Functions ni contador transaccional fuerte para `membersCount`;
   para uso serio con muchas altas simultaneas, agregar transacciones.
 - `index.html` sigue monolitico.
@@ -484,7 +498,7 @@ No borrar ni renombrar datos sin migracion.
 9. Revisar dashboard Gym Party.
 10. Exportar backup JSON y CSV comparativo.
 11. Si se publica APK, esperar workflow `Construir APK Android` y release
-    `v2.5.7`.
+    `v2.5.8`.
 
 ## 16. Como probar la app
 
@@ -544,7 +558,7 @@ Salida:
 android-native-wrapper/app/build/outputs/apk/debug/app-debug.apk
 ```
 
-GitHub Actions publica release `v2.5.7` si se empuja a `main`.
+GitHub Actions publica release `v2.5.8` si se empuja a `main`.
 
 ## 18. Como configurar Firebase
 
@@ -554,12 +568,13 @@ Resumen:
 
 1. Crear proyecto Firebase.
 2. Activar Auth Anonymous.
-3. Crear Firestore production.
-4. Cargar config web por GitHub Secrets o en Gym Party.
-5. Publicar `firebase/firestore.rules`.
-6. Probar login anonimo.
-7. Crear sala.
-8. Invitar segundo usuario por codigo.
+3. Activar Email/Password si se quiere cambio de dispositivo con el mismo UID.
+4. Crear Firestore production.
+5. Cargar config web por GitHub Secrets o en Gym Party.
+6. Publicar `firebase/firestore.rules`.
+7. Probar login anonimo y, si aplica, guardar/restaurar acceso email/clave.
+8. Crear sala.
+9. Invitar segundo usuario por codigo.
 
 Campos esperados:
 
@@ -685,3 +700,25 @@ navegador/PWA, registra entrenamiento y cierra pestana/web, al volver conserva
 `sharedWorkoutSets` y la sesion anonima Firebase local. Si borra datos del sitio,
 usa modo privado o cambia de navegador/dispositivo, debe unirse otra vez con el
 codigo.
+
+## 23. Verificacion local 2.5.8
+
+Verificacion realizada el 2026-07-01:
+
+- `scripts/sync-web-assets.ps1`: OK, assets Android sincronizados desde raiz.
+- `scripts/validate-app.ps1 -CheckAndroidAssets`: OK, version `2.5.8`, cache
+  PWA `v33`, assets web/Android sincronizados.
+- `scripts/test-gym-party.mjs`: OK. Incluye contratos de acceso portable:
+  `EmailAuthProvider`, `linkWithCredential`, `signInWithEmailAndPassword`,
+  `restoreFirebaseMembershipForCurrentUser()` y exclusion de
+  `portableAccessEmail` en export/import.
+- `scripts/test-workout-features.mjs`: OK.
+- `scripts/test-service-worker.mjs`: OK.
+
+Resultado esperado para cambio de dispositivo: el usuario debe guardar acceso
+email/clave antes de migrar. Eso vincula el usuario anonimo existente y conserva
+el mismo UID. En el dispositivo nuevo, `Entrar desde otro dispositivo` restaura
+la membresia, sala, sesiones compartidas e historial sincronizado. Si nunca se
+guardo acceso y se perdio el dispositivo viejo, Firebase Anonymous no permite
+recuperar el UID anterior; solo queda unirse nuevamente con codigo o importar
+un backup manual.

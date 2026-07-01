@@ -84,5 +84,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view v2.5.7 >/dev/null 2>&1 || gh release create v2.5.7 --title "Protocolo 0-100 v2.5.7" --notes "Refuerza persistencia de Gym Party al cerrar y reabrir la web."
-          gh release upload v2.5.7 dist/protocolo-0-100-debug.apk --clobber
+          gh release view v2.5.8 >/dev/null 2>&1 || gh release create v2.5.8 --title "Protocolo 0-100 v2.5.8" --notes "Agrega acceso portable de Gym Party para cambiar de dispositivo."
+          gh release upload v2.5.8 dist/protocolo-0-100-debug.apk --clobber

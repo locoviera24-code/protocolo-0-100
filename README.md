@@ -147,18 +147,25 @@ Para usar dos telefonos reales, incluido iPhone + Android:
 1. Crear proyecto en Firebase.
 2. Activar Authentication.
 3. Habilitar login Anonymous.
-4. Activar Cloud Firestore.
-5. Publicar `firebase/firestore.rules`.
-6. Cargar la configuracion web de una de estas formas:
+4. Habilitar Email/Password si queres recuperar la misma Gym Party desde otro dispositivo.
+5. Activar Cloud Firestore.
+6. Publicar `firebase/firestore.rules`.
+7. Cargar la configuracion web de una de estas formas:
    - en GitHub Secrets para que Actions genere `firebase-config.js`;
    - o pegando el JSON en **Gym Party > Firebase opcional**.
-7. Crear sala Firebase y compartir el codigo.
+8. Crear sala Firebase y compartir el codigo.
 
 Al unirse con codigo desde el mismo navegador, Gym Party guarda la membresia y
 la sesion anonima de Firebase de forma local. Si tu amigo cierra Safari/Chrome,
 cierra la pestana o vuelve a abrir la PWA, la app restaura esa sala y sincroniza
 en segundo plano. Si usa modo privado, borra datos del sitio o cambia de
 navegador/dispositivo, debera unirse otra vez con el codigo.
+
+Para cambiar de dispositivo sin perder continuidad, primero abrir
+**Invitar amigo y administrar sala > Guardar acceso para otro dispositivo** y
+guardar email/clave. En el telefono nuevo usar **Entrar desde otro dispositivo**
+con ese email/clave. El email se usa solo para Firebase Auth; no se comparte con
+los miembros de la sala ni sale en backups.
 
 Secrets esperados para publicar web/APK ya configurados:
 
@@ -257,7 +264,7 @@ El APK resultante queda en `android-native-wrapper/app/build/outputs/apk/debug/a
 ## Publicacion
 
 - **PWA:** el workflow `Publicar PWA en GitHub Pages` publica los archivos raiz.
-- **APK:** el workflow `Construir APK Android` compila el wrapper y publica la descarga directa de la version `v2.5.7`.
+- **APK:** el workflow `Construir APK Android` compila el wrapper y publica la descarga directa de la version `v2.5.8`.
 
 El APK generado es `debug`, apropiado para uso personal. Publicar en Play Store requiere una compilacion `release` firmada con una clave privada.
 

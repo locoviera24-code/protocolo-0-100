@@ -2,18 +2,20 @@
 
 Gym Party funciona sin Firebase en modo local/demo, pero dos telefonos reales
 necesitan sincronizacion online. El MVP esta preparado para Firebase Spark:
-Authentication anonimo y Cloud Firestore. No usa Cloud Functions, Storage,
-imagenes ni videos.
+Authentication anonimo, Email/Password opcional para recuperar cuenta en otro
+dispositivo y Cloud Firestore. No usa Cloud Functions, Storage, imagenes ni
+videos.
 
 ## Pasos
 
 1. Crear proyecto en Firebase Console.
 2. Activar Authentication.
-3. En Authentication, habilitar proveedor **Anonymous**. Email/password puede
-   agregarse despues si se quiere cuenta recuperable.
-4. Crear Cloud Firestore en modo production.
-5. Copiar la configuracion web de Firebase.
-6. Cargar esa configuracion con uno de estos caminos:
+3. En Authentication, habilitar proveedor **Anonymous**.
+4. En Authentication, habilitar **Email/Password** si se quiere cambiar de
+   dispositivo manteniendo la misma Gym Party y el mismo usuario.
+5. Crear Cloud Firestore en modo production.
+6. Copiar la configuracion web de Firebase.
+7. Cargar esa configuracion con uno de estos caminos:
 
    - **GitHub Pages/APK recomendado:** crear secrets de GitHub con los nombres
      `FIREBASE_API_KEY`, `FIREBASE_AUTH_DOMAIN`, `FIREBASE_PROJECT_ID`,
@@ -34,10 +36,14 @@ imagenes ni videos.
 }
 ```
 
-7. Publicar reglas desde `firebase/firestore.rules`.
-8. Probar login anonimo desde la app.
-9. Crear sala Firebase.
-10. Copiar el codigo e invitar el segundo usuario desde iPhone/Safari/PWA.
+8. Publicar reglas desde `firebase/firestore.rules`.
+9. Probar login anonimo desde la app.
+10. Crear sala Firebase.
+11. Para migrar entre dispositivos, abrir **Invitar amigo y administrar sala >
+    Guardar acceso para otro dispositivo** y guardar email/clave.
+12. En el dispositivo nuevo, abrir **Entrar desde otro dispositivo** y entrar
+    con ese email/clave.
+13. Copiar el codigo e invitar el segundo usuario desde iPhone/Safari/PWA.
 
 `firebase-config.js` del repo es un stub seguro. Si faltan secrets, los
 workflows conservan ese stub y la app sigue funcionando en modo demo/local.

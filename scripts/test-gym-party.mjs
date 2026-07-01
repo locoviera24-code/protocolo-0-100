@@ -7,6 +7,10 @@ assert.match(source, /browserLocalPersistence/);
 assert.match(source, /setPersistence/);
 assert.match(source, /onAuthStateChanged/);
 assert.match(source, /resumeFirebaseMembership/);
+assert.match(source, /EmailAuthProvider/);
+assert.match(source, /linkWithCredential/);
+assert.match(source, /signInWithEmailAndPassword/);
+assert.match(source, /restoreFirebaseMembershipForCurrentUser/);
 
 function createContext() {
   const store = new Map();
@@ -69,6 +73,10 @@ const restoredAuth = await party.waitForInitialAuth({
   }
 }, {currentUser: null});
 assert.equal(restoredAuth.uid, 'restored_user');
+const privacyFromMember = party.privacyFromMember({shareGymData: true, shareSetDetails: false, hideAbsoluteWeights: true});
+assert.equal(privacyFromMember.shareGymData, true);
+assert.equal(privacyFromMember.shareSetDetails, false);
+assert.equal(privacyFromMember.hideAbsoluteWeights, true);
 
 const demo2 = party.buildDemoData(2);
 assert.equal(demo2.members.length, 2);
@@ -99,7 +107,7 @@ assert.equal(demo5.members.length, 5);
 assert.equal(party.calculatePartyStats(demo5, '2026-06-24').length, 5);
 
 party.importState({
-  gymPartySettings: {localUserId: 'user_test', firebaseConfig: {apiKey: 'should-not-export'}},
+  gymPartySettings: {localUserId: 'user_test', firebaseConfig: {apiKey: 'should-not-export'}, portableAccessEmail: 'private@example.com'},
   gymPartyMembership: {partyId: 'party_test', userId: 'user_test', active: true},
   sharedWorkoutSessions: [{id: 'session_test', partyId: 'party_test', userId: 'user_test', date: '2026-06-24'}],
   sharedWorkoutSets: [{id: 'set_test', partyId: 'party_test', sessionId: 'session_test', userId: 'user_test', reps: 8, weightKg: 20}],
@@ -110,6 +118,7 @@ party.importState({
 const exported = party.exportState();
 assert.equal(exported.gymPartySettings.localUserId, 'user_test');
 assert.equal(Object.hasOwn(exported.gymPartySettings, 'firebaseConfig'), false);
+assert.equal(Object.hasOwn(exported.gymPartySettings, 'portableAccessEmail'), false);
 assert.equal(exported.gymPartyMembership.partyId, 'party_test');
 assert.equal(exported.sharedWorkoutSessions[0].id, 'session_test');
 assert.equal(exported.sharedWorkoutSets[0].id, 'set_test');
