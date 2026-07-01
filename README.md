@@ -90,8 +90,10 @@ El registro rapido de Gym Party muestra arriba los botones **Atras**,
 Tambien permite **Agregar ejercicio extra** cuando se hace un movimiento fuera
 de la rutina habitual; ese ejercicio queda dentro de la misma `workoutSession`,
 entra al historial, al volumen, al backup y a la sincronizacion de la sala.
-El selector **Dia de entrenamiento** permite volver a ayer u otra fecha para
-editar ejercicios, series, reps y kilos de ese dia sin salir de Gym Party.
+El selector **Dia de entrenamiento** permite elegir ayer u otra fecha para
+editar ejercicios, series, reps y kilos de ese dia sin salir de Gym Party. En
+web se evita mostrar botones de atras/siguiente/completar ejercicio para que el
+registro sea mas directo: elegir fecha, elegir ejercicio, guardar serie.
 
 Debajo del resumen semanal hay un apartado **Editar series de la semana**. Desde
 ahi se puede abrir o eliminar cualquier serie registrada en la semana
@@ -180,6 +182,11 @@ gym esta habilitado, `gym-party.js` prepara sesiones y series compartidas. Si no
 hay conexion, deja operaciones en `syncQueue`; al volver online o tocar
 **Sincronizar ahora**, intenta subir a Firestore.
 
+La edicion semanal usa un selector de fecha directo. Al editar o eliminar una
+serie propia, Gym Party reconstruye los datos compartidos desde el registro
+local para que graficas, mapa muscular y lista semanal no muestren copias
+antiguas.
+
 Gym Party permite exportar CSV comparativo de la sala y JSON con mis datos
 compartidos. El CSV no incluye datos privados de nutricion, sueno, ansiedad,
 pantalla ni notas personales.
@@ -244,7 +251,7 @@ El APK resultante queda en `android-native-wrapper/app/build/outputs/apk/debug/a
 ## Publicacion
 
 - **PWA:** el workflow `Publicar PWA en GitHub Pages` publica los archivos raiz.
-- **APK:** el workflow `Construir APK Android` compila el wrapper y publica la descarga directa de la version `v2.5.4`.
+- **APK:** el workflow `Construir APK Android` compila el wrapper y publica la descarga directa de la version `v2.5.5`.
 
 El APK generado es `debug`, apropiado para uso personal. Publicar en Play Store requiere una compilacion `release` firmada con una clave privada.
 

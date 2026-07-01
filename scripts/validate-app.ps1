@@ -184,15 +184,12 @@ foreach ($contract in @(
     'selectedWorkoutDate',
     'partyDateControlsHtml',
     'partyWorkoutDateInput',
-    'party-prev-day',
-    'party-next-day',
     'weeklySetEditorHtml',
     'Editar series de la semana',
     'localExerciseId',
     'localSetId',
     'partySetRow',
     'partyManualExerciseName',
-    'partyWorkoutNav',
     'gymPartyGameHtml',
     'dailyWorkoutStreak',
     'muscleInsightModel',
@@ -223,6 +220,17 @@ foreach ($contract in @(
 }
 Assert-True (-not $gymParty.Contains('members: undefined')) 'Gym Party no debe enviar members: undefined a Firestore'
 Assert-True ($gymParty.Contains('delete partyDoc.members')) 'Gym Party debe eliminar members antes de crear gym_parties en Firestore'
+foreach ($removedAction in @(
+    'data-gym-party-action="party-prev-exercise"',
+    'data-gym-party-action="party-next-exercise"',
+    'data-gym-party-action="party-complete-exercise"',
+    'data-gym-party-action="party-prev-day"',
+    'data-gym-party-action="party-next-day"',
+    'data-gym-party-action="party-today"',
+    'partyWorkoutNav'
+)) {
+    Assert-True (-not $gymParty.Contains($removedAction)) "Gym Party no debe mostrar control removido: $removedAction"
+}
 Assert-True ($html.Contains('data-module-target="gym-party"')) 'Falta entrada de navegacion Gym Party'
 Assert-True ($html.Contains('id="tab-gym-party"')) 'Falta pestaña Gym Party'
 Assert-True ($html.Contains('<script src="gym-party.js"></script>')) 'index.html no carga gym-party.js'

@@ -632,8 +632,8 @@
     const sessions = local.map(session => sanitizeWorkoutSession(session, member, privacy));
     const sets = local.flatMap(session => sanitizeWorkoutSets(session, member, privacy));
     const deletedSets = localSetTombstones(sharedSets(), sessions, sets, member);
-    const withoutOwnSessions = sharedSessions().filter(row => !(row.partyId === m.partyId && row.userId === m.userId && row.source !== 'firebase'));
-    const withoutOwnSets = sharedSets().filter(row => !(row.partyId === m.partyId && row.userId === m.userId && row.source !== 'firebase'));
+    const withoutOwnSessions = sharedSessions().filter(row => !(row.partyId === m.partyId && row.userId === m.userId));
+    const withoutOwnSets = sharedSets().filter(row => !(row.partyId === m.partyId && row.userId === m.userId));
     saveSharedSessions(upsertById(withoutOwnSessions, sessions));
     saveSharedSets(upsertById(withoutOwnSets, [...sets, ...deletedSets]));
     if(queue && m.backendMode === 'firebase'){
@@ -1414,10 +1414,7 @@
   }
   function partyDateControlsHtml(date){
     return `<div class="partyDateControls">
-      <button type="button" class="secondary" data-gym-party-action="party-prev-day">Dia anterior</button>
       <div class="field"><label>Dia de entrenamiento</label><input type="date" id="partyWorkoutDateInput" value="${escape(date)}"></div>
-      <button type="button" class="secondary" data-gym-party-action="party-next-day">Dia siguiente</button>
-      <button type="button" class="secondary" data-gym-party-action="party-today">Hoy</button>
     </div>`;
   }
   function selectedPartyExerciseId(){
@@ -1480,11 +1477,6 @@
       <div class="partyFormCard">
         ${partyDateControlsHtml(date)}
         <div class="field"><label>Ejercicio</label><select id="partyQuickExerciseSelect">${options}</select></div>
-        <div class="partyWorkoutNav">
-          <button type="button" class="secondary" data-gym-party-action="party-prev-exercise">Atras</button>
-          <button type="button" class="secondary" data-gym-party-action="party-next-exercise">Siguiente</button>
-          <button type="button" class="secondary" data-gym-party-action="party-complete-exercise">Completar</button>
-        </div>
         <div class="partySetCounters">
           <div><span>Este ejercicio</span><strong>${state.currentExerciseSets||0}</strong><small>series</small></div>
           <div><span>${escape(state.currentExerciseMuscle||'Musculo')}</span><strong>${state.currentMuscleSets||0}</strong><small>series totales</small></div>
@@ -1534,6 +1526,7 @@
     const referenceDate = selectedWorkoutDate();
     const stats = calculatePartyStats(data, referenceDate);
     const self = stats.find(row => row.member.userId === m?.userId) || stats[0] || {current: {}};
+    const dateLabel = referenceDate === todayStr() ? 'Hoy' : referenceDate;
     const syncText = m.backendMode === 'demo'
       ? 'Demo'
       : `${m.backendMode === 'firebase' ? 'Online' : 'Local'} - ${syncQueue().length} pendiente(s)`;
@@ -1551,7 +1544,7 @@
             <h2>Registra tu entrenamiento</h2>
             <div class="muted small">${escape(party.name || 'Gym Party')} - ${members.length}/${MAX_GYM_PARTY_MEMBERS} miembro(s)</div>
           </div>
-          <span class="statusChip good">Hoy</span>
+          <span class="statusChip good">${escape(dateLabel)}</span>
         </div>
         ${m.backendMode === 'demo' ? '<div class="partyTip">Demo: datos ficticios.</div>' : ''}
         ${maxWarning}
@@ -1667,11 +1660,8 @@
       .partyCodeBox span{color:var(--muted);font-size:13px}.partyCodeBox strong{font-size:28px;letter-spacing:2px}
       .partyMainActions{display:grid;grid-template-columns:1.2fr 1fr .8fr;gap:10px;margin-top:12px}
       .partyMainActions button{min-height:50px}
-      .partyDateControls{display:grid;grid-template-columns:1fr 1.2fr 1fr .7fr;gap:8px;align-items:end;margin:0 0 10px}
-      .partyDateControls button{min-height:46px}
+      .partyDateControls{display:grid;grid-template-columns:1fr;gap:8px;align-items:end;margin:0 0 10px}
       .partyDateControls .field{margin:0}
-      .partyWorkoutNav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:10px 0}
-      .partyWorkoutNav button{min-height:48px;font-weight:850}
       .partySaveRow{margin-top:12px}
       .partyInlineAction{width:100%;min-height:46px;margin-top:8px}
       .partyGameCard{border-color:rgba(146,255,194,.28)}
@@ -1724,7 +1714,7 @@
       .partyQuickInputs input{font-size:22px;font-weight:850;text-align:center;min-height:54px}
       .partyWeightChips{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:10px 0}
       .partyWeightChips button{min-height:42px}
-      @media(max-width:850px){.partyGrid,.partyMembers,.partyChartGrid,.partyCompareGrid,.partyCompareGrid.compact,.partyMiniSteps,.partyMainActions,.partyDateControls,.partyWorkoutNav,.partyQuickInputs,.partySetCounters,.partySetRow,.partyMuscleMapShell,.partyMuscleChartGrid,.partyExerciseMetricGrid{grid-template-columns:1fr}.partySetRowActions{justify-content:stretch}.partySetRowActions button{flex:1}.partyHumanPanel{min-height:390px}.partyHumanCanvas{min-height:368px}.partyMuscleButton{min-width:104px;font-size:12px}.partyWeightChips{grid-template-columns:repeat(2,minmax(0,1fr))}.partyBarRow{grid-template-columns:92px minmax(0,1fr) 72px}.partyCodeBox{align-items:flex-start;flex-direction:column}.partyCodeBox strong{font-size:24px}}
+      @media(max-width:850px){.partyGrid,.partyMembers,.partyChartGrid,.partyCompareGrid,.partyCompareGrid.compact,.partyMiniSteps,.partyMainActions,.partyDateControls,.partyQuickInputs,.partySetCounters,.partySetRow,.partyMuscleMapShell,.partyMuscleChartGrid,.partyExerciseMetricGrid{grid-template-columns:1fr}.partySetRowActions{justify-content:stretch}.partySetRowActions button{flex:1}.partyHumanPanel{min-height:390px}.partyHumanCanvas{min-height:368px}.partyMuscleButton{min-width:104px;font-size:12px}.partyWeightChips{grid-template-columns:repeat(2,minmax(0,1fr))}.partyBarRow{grid-template-columns:92px minmax(0,1fr) 72px}.partyCodeBox{align-items:flex-start;flex-direction:column}.partyCodeBox strong{font-size:24px}}
     `;
     document.head.appendChild(style);
   }
@@ -1763,14 +1753,8 @@
     else if(action === 'party-edit-set') editPartyWorkoutSet(event);
     else if(action === 'party-delete-set') deletePartyWorkoutSet(event);
     else if(action === 'party-cancel-edit-set') cancelPartyWorkoutSetEdit();
-    else if(action === 'party-next-exercise') movePartyWorkoutExercise(1);
-    else if(action === 'party-prev-exercise') movePartyWorkoutExercise(-1);
-    else if(action === 'party-complete-exercise') completePartyWorkoutExercise();
     else if(action === 'party-add-exercise') addPartyManualExercise();
     else if(action === 'party-finish-workout') finishPartyWorkout();
-    else if(action === 'party-prev-day') movePartyWorkoutDate(-1);
-    else if(action === 'party-next-day') movePartyWorkoutDate(1);
-    else if(action === 'party-today') setPartyWorkoutDate(todayStr());
     else if(action === 'party-select-muscle') selectPartyMuscle(event);
     else if(action === 'party-focus-muscle-compare') selectPartyMuscle(event, {flash: true});
     else if(action === 'party-compare-exercise') comparePartyExercise(event);
@@ -1850,9 +1834,6 @@
   function setPartyWorkoutDate(date){
     saveSettings({partyWorkoutDate: date || todayStr(), partyQuickExerciseId: '', partyEditingSetId: '', graphsOpen: settings().graphsOpen});
     renderGymParty();
-  }
-  function movePartyWorkoutDate(delta){
-    setPartyWorkoutDate(addDays(selectedWorkoutDate(), delta));
   }
   function refreshPartyWorkoutShare(){
     syncFromLocalWorkouts({silent: true});
@@ -1943,28 +1924,6 @@
   function cancelPartyWorkoutSetEdit(){
     saveSettings({partyEditingSetId: ''});
     renderGymParty();
-  }
-  function movePartyWorkoutExercise(direction){
-    const api = workoutApi();
-    const state = api?.getQuickWorkoutState ? api.getQuickWorkoutState({date: selectedWorkoutDate(), exerciseId: partyWorkoutSelectedExerciseId()}) : null;
-    const list = safeArray(state?.exercises);
-    if(!list.length) return;
-    const current = partyWorkoutSelectedExerciseId() || state.currentExerciseId;
-    const index = Math.max(0, list.findIndex(exercise => (exercise.id || exercise.exerciseId) === current));
-    const nextIndex = Math.max(0, Math.min(list.length - 1, index + direction));
-    const next = list[nextIndex];
-    saveSettings({partyQuickExerciseId: next.id || next.exerciseId, partyEditingSetId: ''});
-    renderGymParty();
-  }
-  function completePartyWorkoutExercise(){
-    const api = workoutApi();
-    if(!api?.completeQuickExercisePayload){ flashMessage('Registro de gym no disponible todavia.'); return; }
-    const result = api.completeQuickExercisePayload({date: selectedWorkoutDate(), exerciseId: partyWorkoutSelectedExerciseId()});
-    if(!result.ok){ flashMessage(result.message || 'No se pudo completar el ejercicio.'); return; }
-    saveSettings({partyQuickExerciseId: result.state?.currentExerciseId || '', partyEditingSetId: ''});
-    refreshPartyWorkoutShare();
-    renderGymParty();
-    flashMessage('Ejercicio completado.');
   }
   function finishPartyWorkout(){
     const api = workoutApi();
