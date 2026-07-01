@@ -86,6 +86,10 @@ Documento: `workout_sets_shared/{partyId}_{userId}_{localSessionId}_{exerciseId}
 - `isBodyweight`
 - `date`
 - `createdAt`
+- `updatedAt`
+- `deleted`: boolean opcional. Cuando una serie se elimina en la app, se marca
+  como `true` para ocultarla de graficas/metrica y sincronizar el cambio sin
+  requerir `delete` fisico en Firestore.
 
 ## gym_party_invites
 

@@ -51,8 +51,9 @@ Estados principales:
 - sin sala: pantalla simple con accion principal **Crear codigo para invitar**;
 - unirse: bloque plegado **Ya tengo un codigo**;
 - demo, privacidad, exportacion y Firebase: opciones plegadas para no saturar;
-- dashboard: codigo visible, registro rapido directo de la rutina del dia,
-  enviar codigo y sincronizar;
+- dashboard: registro rapido directo de la rutina del dia y resumen semanal;
+- invitacion/codigo/sincronizacion: apartado plegado para usarlo solo cuando
+  hace falta invitar o administrar la sala;
 - metricas avanzadas: graficas, exportacion, privacidad y sesiones dentro de
   secciones plegadas.
 
@@ -76,11 +77,13 @@ modulo Gym: elegir ejercicio de la rutina del dia, cargar reps/kilos y tocar
 Lunes Torso A, Martes Pierna A, Miercoles Torso B, Jueves Pierna B, Viernes
 Torso C, Sabado descanso suave y Domingo revision/descanso.
 
-La vista principal se mantiene deliberadamente limpia: codigo para invitar,
-registro del entrenamiento y resumen semanal. Las graficas, racha, sesiones
-recientes, exportacion y privacidad quedan en secciones plegadas. Cada serie
-guardada aparece como una tarjeta compacta con **Editar** y **Eliminar**, para
-corregir reps/kilos/RIR/RPE/nota sin rehacer el entrenamiento.
+La vista principal se mantiene deliberadamente limpia: foco en registrar el
+entrenamiento y revisar el resumen semanal. El codigo para invitar, sincronizar,
+exportar y administrar sala queda en **Invitar amigo y administrar sala**,
+plegado por defecto. Las graficas, racha, sesiones recientes, exportacion y
+privacidad quedan en secciones plegadas. Cada serie guardada aparece como una
+tarjeta compacta con **Editar** y **Eliminar**, para corregir
+reps/kilos/RIR/RPE/nota sin rehacer el entrenamiento.
 
 El registro rapido de Gym Party muestra arriba los botones **Atras**,
 **Siguiente** y **Completar** para no tener que buscarlos dentro del formulario.
@@ -233,7 +236,7 @@ El APK resultante queda en `android-native-wrapper/app/build/outputs/apk/debug/a
 ## Publicacion
 
 - **PWA:** el workflow `Publicar PWA en GitHub Pages` publica los archivos raiz.
-- **APK:** el workflow `Construir APK Android` compila el wrapper y publica la descarga directa de la version `v2.5.2`.
+- **APK:** el workflow `Construir APK Android` compila el wrapper y publica la descarga directa de la version `v2.5.3`.
 
 El APK generado es `debug`, apropiado para uso personal. Publicar en Play Store requiere una compilacion `release` firmada con una clave privada.
 

@@ -2,9 +2,9 @@
 
 Ultima actualizacion: 2026-06-30
 Rama esperada: `main`
-Version actual: `2.5.2`
-Android: `versionCode 24`, `versionName "2.5.2"`
-Service worker cache: `protocolo-0-100-pwa-v27`
+Version actual: `2.5.3`
+Android: `versionCode 25`, `versionName "2.5.3"`
+Service worker cache: `protocolo-0-100-pwa-v28`
 Backup consolidado: `schemaVersion: 3`
 
 Leer primero este archivo y luego `README.md`, `index.html`,
@@ -24,7 +24,7 @@ Estado actual:
 - Gym Party implementado como modulo web/PWA opcional.
 - Nutricion local/FDC opcional.
 - Backups JSON `schemaVersion: 3`.
-- PWA offline con cache v27.
+- PWA offline con cache v28.
 - APK con widget Android y permiso `INTERNET` para Firebase/Gym Party.
 
 ## 2. Funcionalidades ya existen
@@ -75,8 +75,8 @@ Web:
 - `firebase-config.js`: stub seguro para config publica Firebase; Actions puede
   reemplazarlo desde secrets.
 - `gym-party.js`: modulo Gym Party, registro rapido, graficas y edicion/eliminacion de series.
-- `advanced-features.js`: version `2.5.2`, backup/importacion Gym Party.
-- `sw.js`: cache v27 e incluye `gym-party.js`.
+- `advanced-features.js`: version `2.5.3`, backup/importacion Gym Party.
+- `sw.js`: cache v28 e incluye `gym-party.js`.
 - `README.md`: documenta Gym Party, demo, Firebase, privacidad y pruebas.
 - `CODEX_HANDOFF.md`: este handoff.
 
@@ -94,8 +94,8 @@ Android:
 - `android-native-wrapper/app/src/main/java/com/protocolo/cien/MainActivity.java`:
   permite acceso universal desde archivos locales para que WebView pueda usar
   Firebase/FDC desde assets locales.
-- `android-native-wrapper/app/build.gradle`: `versionCode 24`,
-  `versionName 2.5.2`.
+- `android-native-wrapper/app/build.gradle`: `versionCode 25`,
+  `versionName 2.5.3`.
 - `android-native-wrapper/app/src/main/assets/*`: sincronizado desde raiz.
 
 Scripts/workflows:
@@ -109,7 +109,7 @@ Scripts/workflows:
 - `.github/workflows/*.yml`: corren `test-gym-party.mjs`.
 - `.github/workflows/deploy-pages.yml`: publica `workout-features.js`,
   `firebase-config.js` y `gym-party.js`.
-- `.github/workflows/build-debug-apk.yml`: release objetivo `v2.5.2`.
+- `.github/workflows/build-debug-apk.yml`: release objetivo `v2.5.3`.
 
 ## 5. Estructura datos/localStorage/Firebase
 
@@ -296,6 +296,15 @@ UX actual:
   `party-cancel-edit-set`. `workout-features.js` expone
   `updateQuickSetPayload` y `deleteQuickSetPayload`; no agrega claves nuevas de
   localStorage y reutiliza `workoutSessions`.
+- En `2.5.3` se redujo mas la friccion visual de Gym Party: el encabezado ya no
+  muestra codigo ni botones sociales; solo muestra estado, sala y foco de
+  accion. El codigo, enviar/copiar, sincronizar, exportar, crear nueva sala y
+  salir quedan en `Invitar amigo y administrar sala`, plegado por defecto. Se
+  corrigio el bug donde al eliminar una serie no se actualizaban las metricas
+  inferiores: `partyData()` filtra `deleted`, `syncFromLocalWorkouts()` genera
+  tombstones con `deleted: true` mediante `localSetTombstones()`, y
+  `scripts/test-gym-party.mjs` cubre que volumen/series visibles bajen despues
+  de eliminar. Firestore no borra documentos fisicamente; marca sets eliminados.
 - El dashboard incluye `Enviar codigo`, que usa Web Share API si existe o copia
   una invitacion con link `?gymPartyCode=...`.
 - Al abrir un link con `?gymPartyCode=CODIGO`, la app abre Gym Party y precarga
@@ -311,14 +320,15 @@ Estados UI:
 
 Dashboard:
 
-- pantalla principal limpia con codigo, enviar/copiar codigo, sincronizar,
-  registro rapido y resumen semanal;
+- pantalla principal limpia con estado de sala, foco de accion, registro rapido
+  y resumen semanal;
 - registro rapido con selector de ejercicio, atras/siguiente/completar,
   contadores de series por ejercicio y por musculo, chips de peso, agregar
   ejercicio extra y tarjetas de series guardadas;
 - cada serie guardada se puede editar o eliminar desde Gym Party;
-- graficas, mapa muscular, comparativas, racha, sesiones recientes, exportacion,
-  privacidad y salir/crear nueva sala quedan en `details` plegados;
+- codigo, enviar/copiar codigo, sincronizar, exportacion, salir/crear nueva sala,
+  graficas, mapa muscular, comparativas, racha, sesiones recientes y privacidad
+  quedan en `details` plegados;
 - Yo vs Amigo cuando hay dos miembros y vista de grupo para 3 a 10 miembros;
 - volumen semanal, series semanales, sesiones por semana, cambio vs semana
   anterior, progreso por ejercicio y volumen por musculo.
@@ -435,7 +445,7 @@ No borrar ni renombrar datos sin migracion.
 9. Revisar dashboard Gym Party.
 10. Exportar backup JSON y CSV comparativo.
 11. Si se publica APK, esperar workflow `Construir APK Android` y release
-    `v2.5.2`.
+    `v2.5.3`.
 
 ## 16. Como probar la app
 
@@ -495,7 +505,7 @@ Salida:
 android-native-wrapper/app/build/outputs/apk/debug/app-debug.apk
 ```
 
-GitHub Actions publica release `v2.5.2` si se empuja a `main`.
+GitHub Actions publica release `v2.5.3` si se empuja a `main`.
 
 ## 18. Como configurar Firebase
 

@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'protocolo-0-100-pwa-';
-const CACHE_NAME = `${CACHE_PREFIX}v27`;
+const CACHE_NAME = `${CACHE_PREFIX}v28`;
 const CORE_ASSETS = ['./', './index.html', './nutrition-data.js', './fdc-client.js', './workout-features.js', './gym-party.js', './advanced-features.js', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
 const CORE_URLS = new Set(CORE_ASSETS.map(asset => new URL(asset, self.location.href).href));
 

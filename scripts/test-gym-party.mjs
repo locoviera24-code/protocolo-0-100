@@ -101,4 +101,72 @@ assert.equal(exported.sharedWorkoutSets[0].id, 'set_test');
 assert.equal(exported.syncQueue[0].id, 'session:session_test');
 assert.equal(exported.gymPartyDemoData.party.id, 'demo_party');
 
-console.log('Gym Party correcto: demo 2 miembros, demo multi-miembro, estadisticas y backup/importacion.');
+const {context: syncContext, store: syncStore} = createContext();
+const syncParty = syncContext.GYM_PARTY_FEATURES;
+const localSession = {
+  id: 'local_session',
+  date: '2026-06-24',
+  weekday: 'Miercoles',
+  routine: {name: 'Torso B'},
+  startedAt: '2026-06-24T10:00:00.000Z',
+  status: 'en progreso',
+  summary: {totalSets: 1, totalReps: 8, totalVolume: 160, exercisesCompleted: 1},
+  exercises: [{
+    id: 'press-banca-row',
+    exerciseId: 'press-banca',
+    name: 'Press de banca',
+    muscle: 'Pecho',
+    sets: [{id: 'set_keep', setNumber: 1, reps: 8, weight: 20, savedAt: '2026-06-24T10:05:00.000Z'}]
+  }]
+};
+syncStore.set('protocolo_0_100_workout_sessions_v1', JSON.stringify([localSession]));
+syncParty.importState({
+  gymPartySettings: {localUserId: 'user_test'},
+  gymPartyMembership: {
+    partyId: 'party_test',
+    userId: 'user_test',
+    active: true,
+    backendMode: 'firebase',
+    privacy: {shareGymData: true, shareSetDetails: true}
+  },
+  sharedWorkoutSessions: [],
+  sharedWorkoutSets: [
+    {
+      id: 'party_test_user_test_local_session_press-banca-row_set_keep',
+      partyId: 'party_test',
+      sessionId: 'party_test_user_test_local_session',
+      userId: 'user_test',
+      exerciseId: 'press-banca',
+      reps: 8,
+      weightKg: 20,
+      source: 'firebase'
+    },
+    {
+      id: 'party_test_user_test_local_session_press-banca-row_set_deleted',
+      partyId: 'party_test',
+      sessionId: 'party_test_user_test_local_session',
+      userId: 'user_test',
+      exerciseId: 'press-banca',
+      reps: 10,
+      weightKg: 40,
+      source: 'firebase'
+    }
+  ],
+  syncQueue: []
+});
+syncParty.syncFromLocalWorkouts({silent: true});
+const synced = syncParty.exportState();
+const deletedSet = synced.sharedWorkoutSets.find(row => row.id.endsWith('set_deleted'));
+assert.equal(deletedSet.deleted, true);
+assert.equal(deletedSet.pendingSync, true);
+assert.ok(synced.syncQueue.some(op => op.id === `set:${deletedSet.id}` && op.payload.deleted === true));
+const visibleStats = syncParty.calculatePartyStats({
+  party: {id: 'party_test'},
+  members: [{id: 'party_test_user_test', partyId: 'party_test', userId: 'user_test', aliasInParty: 'Yo'}],
+  sessions: synced.sharedWorkoutSessions,
+  sets: synced.sharedWorkoutSets.filter(row => !row.deleted)
+}, '2026-06-24');
+assert.equal(visibleStats[0].current.totalSets, 1);
+assert.equal(visibleStats[0].current.totalVolume, 160);
+
+console.log('Gym Party correcto: demo 2 miembros, demo multi-miembro, estadisticas, tombstones de series eliminadas y backup/importacion.');

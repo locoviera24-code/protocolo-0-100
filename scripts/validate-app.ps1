@@ -160,12 +160,16 @@ foreach ($contract in @(
     'buildDemoData',
     'calculatePartyStats',
     'syncFromLocalWorkouts',
+    'localSetTombstones',
     'exportableSettings',
     'delete value.firebaseConfig',
+    '!s.deleted',
     'Crear sala nueva',
     'Crear sala y generar',
     'noRoomHtmlSimple',
     'dashboardHtmlSimple',
+    'partyFocusHint',
+    'Invitar amigo y administrar sala',
     'partyPrimaryAction',
     'workoutQuickLoggerHtml',
     'data-gym-party-action="party-save-set"',
@@ -341,7 +345,7 @@ foreach ($workflow in @($deployWorkflow, $apkWorkflow, $validationWorkflow)) {
 foreach ($contract in @('Torso A', 'Pierna A', 'Torso B', 'Pierna B', 'Torso C', 'Rutina propia', 'buildWorkoutWidgetState', 'updateQuickSetPayload', 'deleteQuickSetPayload')) {
     Assert-True ($workoutTest.Contains($contract)) "Falta prueba workout: $contract"
 }
-foreach ($contract in @('MAX_GYM_PARTY_MEMBERS', 'buildDemoData(2)', 'buildDemoData(5)', 'calculatePartyStats', 'muscleInsightModel', 'exportState')) {
+foreach ($contract in @('MAX_GYM_PARTY_MEMBERS', 'buildDemoData(2)', 'buildDemoData(5)', 'calculatePartyStats', 'muscleInsightModel', 'exportState', 'set_deleted', 'payload.deleted')) {
     Assert-True ($gymPartyTest.Contains($contract)) "Falta prueba Gym Party: $contract"
 }
 

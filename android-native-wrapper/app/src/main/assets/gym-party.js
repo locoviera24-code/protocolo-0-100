@@ -236,7 +236,7 @@
     }
     const party = currentParty();
     const sessions = sharedSessions().filter(s => s.partyId === m.partyId);
-    const sets = sharedSets().filter(s => s.partyId === m.partyId);
+    const sets = sharedSets().filter(s => s.partyId === m.partyId && !s.deleted);
     const members = safeArray(party?.members);
     return {party, members, sessions, sets, demo: false};
   }
@@ -569,6 +569,21 @@
     safeArray(rows).forEach(row => map.set(row.id, {...(map.get(row.id) || {}), ...row}));
     return [...map.values()].sort((a,b) => String(a.date || a.createdAt || '').localeCompare(String(b.date || b.createdAt || '')));
   }
+  function localSetTombstones(existingSets, currentSessions, currentSets, member){
+    if(member.backendMode !== 'firebase') return [];
+    const currentSessionIds = new Set(currentSessions.map(row => row.id));
+    const currentSetIds = new Set(currentSets.map(row => row.id));
+    return safeArray(existingSets)
+      .filter(row => row.partyId === member.partyId && row.userId === member.userId)
+      .filter(row => currentSessionIds.has(row.sessionId) && !currentSetIds.has(row.id) && !row.deleted)
+      .map(row => ({
+        ...row,
+        deleted: true,
+        pendingSync: true,
+        source: 'local',
+        updatedAt: nowIso()
+      }));
+  }
   function queueUpserts(type, rows){
     const queue = syncQueue();
     const map = new Map(queue.map(op => [op.id, op]));
@@ -587,13 +602,14 @@
     const local = localWorkoutSessions();
     const sessions = local.map(session => sanitizeWorkoutSession(session, member, privacy));
     const sets = local.flatMap(session => sanitizeWorkoutSets(session, member, privacy));
+    const deletedSets = localSetTombstones(sharedSets(), sessions, sets, member);
     const withoutOwnSessions = sharedSessions().filter(row => !(row.partyId === m.partyId && row.userId === m.userId && row.source !== 'firebase'));
     const withoutOwnSets = sharedSets().filter(row => !(row.partyId === m.partyId && row.userId === m.userId && row.source !== 'firebase'));
     saveSharedSessions(upsertById(withoutOwnSessions, sessions));
-    saveSharedSets(upsertById(withoutOwnSets, sets));
+    saveSharedSets(upsertById(withoutOwnSets, [...sets, ...deletedSets]));
     if(queue && m.backendMode === 'firebase'){
       queueUpserts('session', sessions);
-      queueUpserts('set', sets);
+      queueUpserts('set', [...sets, ...deletedSets]);
     }
     if(!silent && sessions.length) flashMessage('Entrenamientos de gym preparados para compartir.');
     return {sessions, sets};
@@ -1454,7 +1470,7 @@
       ? 'Demo'
       : `${m.backendMode === 'firebase' ? 'Online' : 'Local'} - ${syncQueue().length} pendiente(s)`;
     const inviteHint = members.length === 1
-      ? `<div class="partyTip">Envia el codigo a tu amigo para empezar a comparar.</div>`
+      ? `<div class="partyTip">Cuando quieras sumar a tu amigo, desplega este apartado y envia el codigo.</div>`
       : '';
     const maxWarning = members.length >= MAX_GYM_PARTY_MEMBERS
       ? `<div class="auditItem warn">Limite recomendado alcanzado: 10 miembros.</div>`
@@ -1463,23 +1479,15 @@
       <div class="moduleCard partyDashboardTop partyDashboardSimple">
         <div class="actionFocusTop">
           <div>
-            <span class="partyStepPill">${escape(syncText)}</span>
-            <h2>${escape(party.name || 'Gym Party')}</h2>
+            <span class="partyStepPill">Gym Party - ${escape(syncText)}</span>
+            <h2>Registra tu entrenamiento</h2>
+            <div class="muted small">${escape(party.name || 'Gym Party')} - ${members.length}/${MAX_GYM_PARTY_MEMBERS} miembro(s)</div>
           </div>
-          <span class="statusChip good">${members.length}/${MAX_GYM_PARTY_MEMBERS}</span>
-        </div>
-        <div class="partyCodeBox">
-          <span>Codigo para invitar</span>
-          <strong id="gymPartyInviteCode">${escape(party.inviteCode || '')}</strong>
+          <span class="statusChip good">Hoy</span>
         </div>
         ${m.backendMode === 'demo' ? '<div class="partyTip">Demo: datos ficticios.</div>' : ''}
-        ${inviteHint}
         ${maxWarning}
-        <div class="partyMainActions">
-          <button type="button" class="good" data-gym-party-action="share-code">Enviar codigo</button>
-          <button type="button" class="secondary" data-gym-party-action="copy-code">Copiar codigo</button>
-          <button type="button" class="secondary" data-gym-party-action="sync">Sincronizar</button>
-        </div>
+        <div class="partyFocusHint">Foco: guarda la serie actual. Lo social y las graficas quedan abajo, plegados.</div>
       </div>
 
       ${workoutQuickLoggerHtml()}
@@ -1509,9 +1517,16 @@
       </details>
 
       <details class="moduleCard partyFoldCard">
-        <summary>Mas opciones</summary>
+        <summary>Invitar amigo y administrar sala</summary>
+        ${inviteHint}
+        <div class="partyCodeBox">
+          <span>Codigo para invitar</span>
+          <strong id="gymPartyInviteCode">${escape(party.inviteCode || '')}</strong>
+        </div>
         <div class="buttons partySecondaryActions">
+          <button type="button" class="good" data-gym-party-action="share-code">Enviar codigo</button>
           <button type="button" class="secondary" data-gym-party-action="copy-code">Copiar codigo</button>
+          <button type="button" class="secondary" data-gym-party-action="sync">Sincronizar</button>
           <button type="button" class="secondary" data-gym-party-action="new-room">Crear sala nueva</button>
           <button type="button" class="secondary" data-gym-party-action="export-csv">Exportar CSV</button>
           <button type="button" class="secondary" data-gym-party-action="export-json">Exportar JSON</button>
@@ -1571,6 +1586,7 @@
       .partyFormCard{border:1px solid rgba(146,255,194,.28);border-radius:18px;padding:14px;background:rgba(146,255,194,.06);margin-top:12px}
       .partyFormCard.flat{background:rgba(255,255,255,.04);border-color:var(--line)}
       .partyDashboardSimple,.partyWorkoutLogger,.partyQuickSummary,.partyFoldCard{box-shadow:0 12px 34px rgba(0,0,0,.14)}
+      .partyFocusHint{border:1px solid rgba(146,255,194,.24);border-radius:14px;padding:10px 12px;background:rgba(146,255,194,.065);color:#dffff0;font-size:13px;font-weight:750;margin-top:12px}
       .partyPrimaryAction{width:100%;min-height:54px;font-size:16px;margin-top:8px}
       .partyFold,.partyNestedFold{border:1px solid var(--line);border-radius:16px;padding:12px 14px;margin-top:12px;background:rgba(255,255,255,.035)}
       .partyFold summary,.partyNestedFold summary,.partyFoldCard summary{cursor:pointer;font-weight:850}
