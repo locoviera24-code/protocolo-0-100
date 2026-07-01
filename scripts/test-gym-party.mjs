@@ -66,6 +66,12 @@ assert.equal(stats2.length, 2);
 assert.ok(stats2.every(row => row.current.sessionsCount >= 1));
 assert.ok(stats2.every(row => row.current.totalSets >= 1));
 assert.ok(stats2.every(row => typeof row.changeVsPreviousWeek.volumePct === 'number'));
+const muscleModel = party.muscleInsightModel(demo2, stats2, 'Pecho', '2026-06-24');
+assert.equal(muscleModel.selected, 'Pecho');
+assert.ok(muscleModel.currentTotal.sets >= 1);
+assert.ok(muscleModel.exerciseRows.some(row => row.name === 'Press de banca'));
+assert.equal(muscleModel.memberRows.length, 2);
+assert.ok(muscleModel.totalMusclesWithData >= 2);
 
 const demo5 = party.buildDemoData(5);
 assert.equal(demo5.members.length, 5);

@@ -906,6 +906,178 @@
   function rankingList(title, rows, data, valueFn){
     return `<div class="entryList"><h3>${escape(title)}</h3>${rows.map((row,index) => `<div class="entryRow"><div><strong>${index + 1}. ${escape(memberDisplayName(row.member, data))}</strong><div class="meta">Comparación sana y orientativa.</div></div><span class="statusChip good">${escape(valueFn(row))}</span></div>`).join('')}</div>`;
   }
+  const muscleMapTargets = [
+    {key:'Pecho', label:'Pecho', x:50, y:29, labelX:7, labelY:16, anchorX:28, anchorY:24},
+    {key:'Espalda', label:'Espalda', x:50, y:39, labelX:70, labelY:18, anchorX:70, anchorY:26},
+    {key:'Hombro', label:'Hombro', x:33, y:31, labelX:7, labelY:34, anchorX:28, anchorY:38},
+    {key:'Biceps', label:'Biceps', x:26, y:43, labelX:5, labelY:52, anchorX:27, anchorY:55},
+    {key:'Triceps', label:'Triceps', x:74, y:43, labelX:70, labelY:42, anchorX:70, anchorY:47},
+    {key:'Cuadriceps / pierna', label:'Cuadriceps', x:43, y:67, labelX:5, labelY:70, anchorX:29, anchorY:73},
+    {key:'Aductores', label:'Aductores', x:51, y:69, labelX:70, labelY:62, anchorX:70, anchorY:66},
+    {key:'Pantorrillas', label:'Pantorrillas', x:43, y:88, labelX:6, labelY:88, anchorX:29, anchorY:91},
+    {key:'Tibial anterior', label:'Tibial', x:57, y:84, labelX:70, labelY:82, anchorX:70, anchorY:86}
+  ];
+  function normalizeTextBasic(value){
+    return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+  }
+  function canonicalMuscleName(value){
+    const text = normalizeTextBasic(value);
+    if(!text) return 'General';
+    if(text.includes('pecho')) return 'Pecho';
+    if(text.includes('espalda') || text.includes('dorsal') || text.includes('jalon') || text.includes('remo')) return 'Espalda';
+    if(text.includes('hombro') || text.includes('deltoide')) return 'Hombro';
+    if(text.includes('biceps') || text.includes('braquial')) return 'Biceps';
+    if(text.includes('triceps')) return 'Triceps';
+    if(text.includes('cuadriceps') || text.includes('pierna') || text.includes('prensa')) return 'Cuadriceps / pierna';
+    if(text.includes('aductor')) return 'Aductores';
+    if(text.includes('pantorrilla') || text.includes('soleo') || text.includes('gemelo')) return 'Pantorrillas';
+    if(text.includes('tibial')) return 'Tibial anterior';
+    if(text.includes('movilidad') || text.includes('recuperacion')) return 'Movilidad';
+    return String(value || 'General').trim() || 'General';
+  }
+  function setVolume(set){ return number(set.reps) * number(set.weightKg); }
+  function emptyMuscleTotals(key){
+    return {key, sets:0, reps:0, volume:0, exercises:new Set(), best:null};
+  }
+  function addSetToMuscleTotals(total, set){
+    total.sets += 1;
+    total.reps += number(set.reps);
+    total.volume += setVolume(set);
+    if(set.exerciseName || set.exerciseId) total.exercises.add(set.exerciseName || set.exerciseId);
+    const score = setVolume(set) || number(set.reps);
+    if(!total.best || score > total.best.score) total.best = {...set, score};
+    return total;
+  }
+  function finalizeMuscleTotals(total){
+    return {
+      ...total,
+      volume: Math.round(total.volume),
+      exercisesCount: total.exercises.size,
+      exercises: [...total.exercises].sort()
+    };
+  }
+  function muscleInsightModel(data, stats = calculatePartyStats(data), selectedMuscle = '', reference = todayStr()){
+    const currentStart = weekStartStr(reference);
+    const previousStart = previousWeekStart(currentStart);
+    const members = safeArray(data?.members);
+    const sets = safeArray(data?.sets).map(set => ({...set, canonicalMuscle: canonicalMuscleName(set.muscleGroup)}));
+    const targetKeys = muscleMapTargets.map(item => item.key);
+    const currentByMuscle = {};
+    sets.filter(set => inWeek(set.date, currentStart)).forEach(set => {
+      const key = set.canonicalMuscle;
+      currentByMuscle[key] = addSetToMuscleTotals(currentByMuscle[key] || emptyMuscleTotals(key), set);
+    });
+    targetKeys.forEach(key => { if(!currentByMuscle[key]) currentByMuscle[key] = emptyMuscleTotals(key); });
+    const muscleRows = Object.values(currentByMuscle).map(finalizeMuscleTotals).sort((a,b) => b.sets - a.sets || b.volume - a.volume || a.key.localeCompare(b.key));
+    const firstWithData = muscleRows.find(row => row.sets > 0)?.key || targetKeys[0];
+    const selected = muscleRows.some(row => row.key === selectedMuscle) ? selectedMuscle : firstWithData;
+    const currentSets = sets.filter(set => set.canonicalMuscle === selected && inWeek(set.date, currentStart));
+    const previousSets = sets.filter(set => set.canonicalMuscle === selected && inWeek(set.date, previousStart));
+    const currentTotal = finalizeMuscleTotals(currentSets.reduce((total,set) => addSetToMuscleTotals(total,set), emptyMuscleTotals(selected)));
+    const previousTotal = finalizeMuscleTotals(previousSets.reduce((total,set) => addSetToMuscleTotals(total,set), emptyMuscleTotals(selected)));
+    const exerciseMap = {};
+    currentSets.forEach(set => {
+      const key = set.exerciseId || set.exerciseName || 'ejercicio';
+      if(!exerciseMap[key]) exerciseMap[key] = {id:key, name:set.exerciseName || set.exerciseId || 'Ejercicio', sets:0, reps:0, volume:0, best:null};
+      exerciseMap[key].sets += 1;
+      exerciseMap[key].reps += number(set.reps);
+      exerciseMap[key].volume += setVolume(set);
+      const score = setVolume(set) || number(set.reps);
+      if(!exerciseMap[key].best || score > exerciseMap[key].best.score) exerciseMap[key].best = {...set, score};
+    });
+    const exerciseRows = Object.values(exerciseMap).map(row => ({...row, volume:Math.round(row.volume)})).sort((a,b) => b.sets - a.sets || b.volume - a.volume);
+    const memberRows = members.map(member => {
+      const currentMemberSets = currentSets.filter(set => set.userId === member.userId);
+      const previousMemberSets = previousSets.filter(set => set.userId === member.userId);
+      const total = finalizeMuscleTotals(currentMemberSets.reduce((acc,set) => addSetToMuscleTotals(acc,set), emptyMuscleTotals(selected)));
+      const previous = finalizeMuscleTotals(previousMemberSets.reduce((acc,set) => addSetToMuscleTotals(acc,set), emptyMuscleTotals(selected)));
+      return {
+        member,
+        label: memberDisplayName(member, data),
+        sets: total.sets,
+        reps: total.reps,
+        volume: total.volume,
+        exercisesCount: total.exercisesCount,
+        changeVsPreviousWeek: percentChange(total.volume || total.sets, previous.volume || previous.sets)
+      };
+    }).sort((a,b) => b.sets - a.sets || b.volume - a.volume);
+    return {
+      selected,
+      currentStart,
+      previousStart,
+      muscleRows,
+      currentTotal,
+      previousTotal,
+      exerciseRows,
+      memberRows,
+      totalMusclesWithData: muscleRows.filter(row => row.sets > 0).length,
+      hasData: currentSets.length > 0 || sets.length > 0,
+      changeVsPreviousWeek: {
+        sets: currentTotal.sets - previousTotal.sets,
+        volumePct: percentChange(currentTotal.volume, previousTotal.volume)
+      }
+    };
+  }
+  function partyHumanSvg(model){
+    const byKey = new Map(model.muscleRows.map(row => [row.key, row]));
+    const maxSets = Math.max(1, ...model.muscleRows.map(row => row.sets));
+    return `<div class="partyHumanCanvas">
+      <svg class="partyHumanSvg" viewBox="0 0 100 110" role="img" aria-label="Mapa muscular semanal">
+        <defs>
+          <linearGradient id="partyBodyGlow" x1="0" x2="1"><stop offset="0%" stop-color="#72d6ff"/><stop offset="100%" stop-color="#92ffc2"/></linearGradient>
+        </defs>
+        <ellipse class="partyBodyPart" cx="50" cy="13" rx="8" ry="9"></ellipse>
+        <path class="partyBodyPart" d="M38 25 Q50 19 62 25 L66 54 Q58 63 50 63 Q42 63 34 54 Z"></path>
+        <path class="partyBodyPart" d="M35 29 Q22 36 24 56 Q25 65 31 63 Q31 49 39 39 Z"></path>
+        <path class="partyBodyPart" d="M65 29 Q78 36 76 56 Q75 65 69 63 Q69 49 61 39 Z"></path>
+        <path class="partyBodyPart" d="M40 62 Q34 78 37 101 Q43 103 46 99 Q45 82 50 66 Z"></path>
+        <path class="partyBodyPart" d="M60 62 Q66 78 63 101 Q57 103 54 99 Q55 82 50 66 Z"></path>
+        ${muscleMapTargets.map(target => {
+          const row = byKey.get(target.key) || {sets:0};
+          const active = target.key === model.selected;
+          const opacity = Math.max(.18, Math.min(1, row.sets / maxSets));
+          return `<line class="partyMuscleLine ${active ? 'on' : ''}" x1="${target.x}" y1="${target.y}" x2="${target.anchorX}" y2="${target.anchorY}"></line><circle class="partyMuscleDot ${active ? 'on' : ''}" cx="${target.x}" cy="${target.y}" r="${active ? 4.3 : 3.2}" style="opacity:${opacity}"></circle>`;
+        }).join('')}
+      </svg>
+      ${muscleMapTargets.map(target => {
+        const row = byKey.get(target.key) || {sets:0, volume:0};
+        const active = target.key === model.selected;
+        return `<button type="button" class="partyMuscleButton ${active ? 'on' : ''}" style="left:${target.labelX}%;top:${target.labelY}%" data-gym-party-action="party-select-muscle" data-gym-party-muscle="${escape(target.key)}"><strong>${escape(target.label)}</strong><span>${row.sets || 0} series</span></button>`;
+      }).join('')}
+    </div>`;
+  }
+  function muscleMapHtml(data, stats){
+    const model = muscleInsightModel(data, stats, settings().selectedMuscleGroup || '');
+    const maxMemberSets = Math.max(1, ...model.memberRows.map(row => row.sets));
+    const topExercises = model.exerciseRows.slice(0,5);
+    const exerciseText = topExercises.length
+      ? topExercises.map(row => `<div class="entryRow"><div><strong>${escape(row.name)}</strong><div class="meta">${row.sets} series - ${row.reps} reps - ${formatNumber(row.volume)} kg</div></div><span class="statusChip good">${row.best ? `${row.best.reps} reps` : 'registro'}</span></div>`).join('')
+      : '<div class="emptyState">Todavia no hay ejercicios compartidos para este musculo esta semana.</div>';
+    return `<div class="moduleCard partyMuscleMapCard" id="partyMuscleMap">
+      <div class="actionFocusTop">
+        <div><span class="partyStepPill">Mapa muscular</span><h3>Analisis por musculo</h3><div class="muted small">Toca un musculo para ver series semanales, ejercicios y comparacion por miembro.</div></div>
+        <span class="statusChip good">${model.totalMusclesWithData} activo(s)</span>
+      </div>
+      <div class="partyMuscleMapShell">
+        <div class="partyHumanPanel">${partyHumanSvg(model)}</div>
+        <div class="partyMuscleInsight">
+          <div class="actionFocusTop"><div><span class="muted small">Foco seleccionado</span><h3>${escape(model.selected)}</h3></div><button type="button" class="secondary" data-gym-party-action="party-focus-muscle-compare" data-gym-party-muscle="${escape(model.selected)}">Comparar</button></div>
+          <div class="partyCompareGrid compact">
+            <div class="partyCompareCard"><span>Series semana</span><strong>${model.currentTotal.sets}</strong><small>${signed(model.changeVsPreviousWeek.sets)} vs previa</small></div>
+            <div class="partyCompareCard"><span>Ejercicios</span><strong>${model.currentTotal.exercisesCount}</strong><small>distintos</small></div>
+            <div class="partyCompareCard"><span>Reps</span><strong>${model.currentTotal.reps}</strong><small>registradas</small></div>
+            <div class="partyCompareCard"><span>Volumen</span><strong>${formatNumber(model.currentTotal.volume)} kg</strong><small>${signed(model.changeVsPreviousWeek.volumePct, '%')} vs previa</small></div>
+          </div>
+          <div class="partyMuscleCompare">
+            <h3>Comparacion por miembro</h3>
+            <div class="comparisonBars">${model.memberRows.map(row => bar(row.sets, maxMemberSets, `${row.label} - ${row.exercisesCount} ej.`, ' series')).join('') || '<div class="emptyState">Sin miembros para comparar.</div>'}</div>
+          </div>
+          <div class="entryList partyMuscleExerciseList"><h3>Ejercicios del musculo</h3>${exerciseText}</div>
+          <div class="muted small">Mas series o volumen no siempre significa mejor. Usalo para ver equilibrio y tendencia, no para forzar carga.</div>
+        </div>
+      </div>
+    </div>`;
+  }
   function chartsHtml(data, stats){
     const maxVolume = maxOf(stats, row => row.current.totalVolume);
     const maxSets = maxOf(stats, row => row.current.totalSets);
@@ -1026,6 +1198,7 @@
       ${memberCardsHtml(data, stats)}
       ${twoMemberComparisonHtml(data, stats)}
       ${multiMemberHtml(data, stats)}
+      ${muscleMapHtml(data, stats)}
       ${chartsHtml(data, stats)}
       <div class="partyGrid">
         ${exerciseProgressHtml(data)}
@@ -1167,6 +1340,8 @@
         </div>
       </div>
 
+      ${muscleMapHtml(data, stats)}
+
       ${stats.length === 2 ? twoMemberComparisonHtml(data, stats) : ''}
       ${stats.length > 2 ? multiMemberHtml(data, stats) : ''}
 
@@ -1226,6 +1401,7 @@
       .partyMembers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}
       .partyMemberCard,.partyCompareCard{border:1px solid var(--line);border-radius:16px;padding:13px;background:rgba(255,255,255,.04)}
       .partyCompareGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+      .partyCompareGrid.compact{grid-template-columns:repeat(2,minmax(0,1fr))}
       .partyCompareCard span{display:block;color:var(--muted);font-size:12px}.partyCompareCard strong{display:block;font-size:26px;margin:6px 0}.partyCompareCard small{color:var(--muted);line-height:1.35}
       .partyChartGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
       .partyBarRow{display:grid;grid-template-columns:110px minmax(0,1fr) 86px;gap:9px;align-items:center;font-size:12px;margin:8px 0}
@@ -1259,6 +1435,23 @@
       .partyLevelBar{height:14px;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:rgba(255,255,255,.07);margin:12px 0}
       .partyLevelBar i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--accent2),var(--accent))}
       .partyBadgeTrack{margin:10px 0}
+      .partyDashboardTop,.partyMuscleMapCard,.partyQuickSummary{background:linear-gradient(180deg,rgba(114,214,255,.08),rgba(146,255,194,.035))}
+      .partyMuscleMapCard{border-color:rgba(114,214,255,.25);overflow:hidden}
+      .partyMuscleMapShell{display:grid;grid-template-columns:minmax(280px,.9fr) minmax(0,1.1fr);gap:14px;align-items:stretch;margin-top:12px}
+      .partyHumanPanel{border:1px solid rgba(114,214,255,.23);border-radius:20px;background:radial-gradient(circle at 50% 18%,rgba(114,214,255,.18),rgba(255,255,255,.035) 42%,rgba(0,0,0,.08));padding:12px;min-height:430px}
+      .partyHumanCanvas{position:relative;min-height:408px}
+      .partyHumanSvg{position:absolute;inset:0;width:100%;height:100%;filter:drop-shadow(0 16px 26px rgba(0,0,0,.24))}
+      .partyBodyPart{fill:rgba(255,255,255,.045);stroke:rgba(223,246,255,.42);stroke-width:1.1}
+      .partyMuscleLine{stroke:rgba(114,214,255,.34);stroke-width:1.2;stroke-dasharray:4 4}
+      .partyMuscleLine.on{stroke:url(#partyBodyGlow);stroke-width:2.1;stroke-dasharray:none}
+      .partyMuscleDot{fill:url(#partyBodyGlow);stroke:rgba(255,255,255,.75);stroke-width:.7}
+      .partyMuscleDot.on{filter:drop-shadow(0 0 8px rgba(146,255,194,.7))}
+      .partyMuscleButton{position:absolute;transform:translate(-4px,-50%);min-width:116px;text-align:left;border:1px solid rgba(114,214,255,.28);border-radius:14px;background:rgba(8,18,28,.78);backdrop-filter:blur(8px);padding:8px 10px;color:#e9f7ff}
+      .partyMuscleButton strong,.partyMuscleButton span{display:block}
+      .partyMuscleButton span{font-size:11px;color:var(--muted);margin-top:2px}
+      .partyMuscleButton.on{border-color:rgba(146,255,194,.75);background:linear-gradient(135deg,rgba(146,255,194,.20),rgba(114,214,255,.14));box-shadow:0 0 0 1px rgba(146,255,194,.16),0 14px 30px rgba(0,0,0,.22)}
+      .partyMuscleInsight{display:grid;gap:12px}
+      .partyMuscleCompare,.partyMuscleExerciseList{border:1px solid var(--line);border-radius:16px;padding:12px;background:rgba(255,255,255,.035)}
       .partyTip{border:1px solid rgba(114,214,255,.28);border-radius:14px;padding:10px 12px;background:rgba(114,214,255,.08);font-weight:750;margin-top:10px}
       .partyQuickSummary{margin-top:12px}
       .partyWorkoutLogger{margin-top:12px}
@@ -1269,7 +1462,7 @@
       .partyQuickInputs input{font-size:22px;font-weight:850;text-align:center;min-height:54px}
       .partyWeightChips{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:10px 0}
       .partyWeightChips button{min-height:42px}
-      @media(max-width:850px){.partyGrid,.partyMembers,.partyChartGrid,.partyCompareGrid,.partyMiniSteps,.partyMainActions,.partyWorkoutNav,.partyQuickInputs,.partySetCounters{grid-template-columns:1fr}.partyWeightChips{grid-template-columns:repeat(2,minmax(0,1fr))}.partyBarRow{grid-template-columns:92px minmax(0,1fr) 72px}.partyCodeBox{align-items:flex-start;flex-direction:column}.partyCodeBox strong{font-size:24px}}
+      @media(max-width:850px){.partyGrid,.partyMembers,.partyChartGrid,.partyCompareGrid,.partyCompareGrid.compact,.partyMiniSteps,.partyMainActions,.partyWorkoutNav,.partyQuickInputs,.partySetCounters,.partyMuscleMapShell{grid-template-columns:1fr}.partyHumanPanel{min-height:390px}.partyHumanCanvas{min-height:368px}.partyMuscleButton{min-width:104px;font-size:12px}.partyWeightChips{grid-template-columns:repeat(2,minmax(0,1fr))}.partyBarRow{grid-template-columns:92px minmax(0,1fr) 72px}.partyCodeBox{align-items:flex-start;flex-direction:column}.partyCodeBox strong{font-size:24px}}
     `;
     document.head.appendChild(style);
   }
@@ -1310,6 +1503,8 @@
     else if(action === 'party-complete-exercise') completePartyWorkoutExercise();
     else if(action === 'party-add-exercise') addPartyManualExercise();
     else if(action === 'party-finish-workout') finishPartyWorkout();
+    else if(action === 'party-select-muscle') selectPartyMuscle(event);
+    else if(action === 'party-focus-muscle-compare') selectPartyMuscle(event, {flash: true});
   }
 
   function bindGymPartyActionButtons(root){
@@ -1389,6 +1584,13 @@
     if(m?.backendMode === 'firebase' && typeof navigator !== 'undefined' && navigator.onLine !== false){
       syncFirebaseNow().catch(() => flashMessage('Guardado localmente. Se sincronizara al volver a intentar.'));
     }
+  }
+  function selectPartyMuscle(event, options = {}){
+    const button = event?.target?.closest?.('[data-gym-party-muscle]');
+    const muscle = button?.dataset?.gymPartyMuscle || settings().selectedMuscleGroup || 'Pecho';
+    saveSettings({selectedMuscleGroup: muscle});
+    renderGymParty();
+    if(options.flash) flashMessage(`Comparacion actualizada: ${muscle}.`);
   }
   function addPartyManualExercise(){
     const api = workoutApi();
@@ -1766,6 +1968,7 @@
     FIREBASE_SDK_VERSION,
     buildDemoData,
     calculatePartyStats,
+    muscleInsightModel,
     exportState,
     importState,
     renderGymParty,

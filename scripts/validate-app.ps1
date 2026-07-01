@@ -174,6 +174,11 @@ foreach ($contract in @(
     'partyWorkoutNav',
     'gymPartyGameHtml',
     'dailyWorkoutStreak',
+    'muscleInsightModel',
+    'muscleMapHtml',
+    'partyHumanSvg',
+    'data-gym-party-action="party-select-muscle"',
+    'partyMuscleMapCard',
     'data-gym-party-weight="${value}"',
     'Entrar con',
     'data-gym-party-action="share-code"',
@@ -321,7 +326,7 @@ foreach ($workflow in @($deployWorkflow, $apkWorkflow, $validationWorkflow)) {
 foreach ($contract in @('Torso A', 'Pierna A', 'Torso B', 'Pierna B', 'Torso C', 'Rutina propia', 'buildWorkoutWidgetState')) {
     Assert-True ($workoutTest.Contains($contract)) "Falta prueba workout: $contract"
 }
-foreach ($contract in @('MAX_GYM_PARTY_MEMBERS', 'buildDemoData(2)', 'buildDemoData(5)', 'calculatePartyStats', 'exportState')) {
+foreach ($contract in @('MAX_GYM_PARTY_MEMBERS', 'buildDemoData(2)', 'buildDemoData(5)', 'calculatePartyStats', 'muscleInsightModel', 'exportState')) {
     Assert-True ($gymPartyTest.Contains($contract)) "Falta prueba Gym Party: $contract"
 }
 

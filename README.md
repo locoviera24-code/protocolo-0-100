@@ -86,6 +86,12 @@ Gym Party incluye una tarjeta de racha y nivel: cuenta dias consecutivos con
 sesiones registradas, muestra insignias sanas y usa como referencia principal
 la comparacion contra tu propia semana anterior.
 
+La seccion **Mapa muscular** muestra un cuerpo humano estilizado con lineas a
+los grupos musculares principales. Al tocar un musculo se ven series semanales,
+ejercicios registrados, reps, volumen y comparacion por miembro. El objetivo es
+detectar equilibrio de rutina y tendencia semanal, no perseguir mas volumen a
+cualquier costo.
+
 El minimo esta pensado para 2 personas, pero internamente usa `members[]`,
 `partyId`, `userId`, sesiones y series por usuario. El limite recomendado es
 `MAX_GYM_PARTY_MEMBERS = 10`.
@@ -219,7 +225,7 @@ El APK resultante queda en `android-native-wrapper/app/build/outputs/apk/debug/a
 ## Publicacion
 
 - **PWA:** el workflow `Publicar PWA en GitHub Pages` publica los archivos raiz.
-- **APK:** el workflow `Construir APK Android` compila el wrapper y publica la descarga directa de la version `v2.4.9`.
+- **APK:** el workflow `Construir APK Android` compila el wrapper y publica la descarga directa de la version `v2.5.0`.
 
 El APK generado es `debug`, apropiado para uso personal. Publicar en Play Store requiere una compilacion `release` firmada con una clave privada.
 
