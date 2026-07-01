@@ -169,7 +169,13 @@ foreach ($contract in @(
     'partyPrimaryAction',
     'workoutQuickLoggerHtml',
     'data-gym-party-action="party-save-set"',
+    'data-gym-party-action="party-edit-set"',
+    'data-gym-party-action="party-delete-set"',
+    'data-gym-party-action="party-cancel-edit-set"',
     'data-gym-party-action="party-add-exercise"',
+    'partySetRowsHtml',
+    'partyEditingSetId',
+    'partySetRow',
     'partyManualExerciseName',
     'partyWorkoutNav',
     'gymPartyGameHtml',
@@ -240,6 +246,9 @@ foreach ($contract in @(
     'getQuickWorkoutState',
     'addManualExercisePayload',
     'saveQuickSetPayload',
+    'updateQuickSetPayload',
+    'deleteQuickSetPayload',
+    'currentSets',
     'completeQuickExercisePayload',
     'finishWorkoutPayload',
     'importWidgetStateFromAndroid',
@@ -329,7 +338,7 @@ foreach ($workflow in @($deployWorkflow, $apkWorkflow, $validationWorkflow)) {
     Assert-True ($workflow.Contains('node ./scripts/test-workout-features.mjs')) 'Cada workflow debe probar rutina semanal y estado widget'
     Assert-True ($workflow.Contains('node ./scripts/test-gym-party.mjs')) 'Cada workflow debe probar Gym Party'
 }
-foreach ($contract in @('Torso A', 'Pierna A', 'Torso B', 'Pierna B', 'Torso C', 'Rutina propia', 'buildWorkoutWidgetState')) {
+foreach ($contract in @('Torso A', 'Pierna A', 'Torso B', 'Pierna B', 'Torso C', 'Rutina propia', 'buildWorkoutWidgetState', 'updateQuickSetPayload', 'deleteQuickSetPayload')) {
     Assert-True ($workoutTest.Contains($contract)) "Falta prueba workout: $contract"
 }
 foreach ($contract in @('MAX_GYM_PARTY_MEMBERS', 'buildDemoData(2)', 'buildDemoData(5)', 'calculatePartyStats', 'muscleInsightModel', 'exportState')) {

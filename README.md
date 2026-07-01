@@ -76,6 +76,12 @@ modulo Gym: elegir ejercicio de la rutina del dia, cargar reps/kilos y tocar
 Lunes Torso A, Martes Pierna A, Miercoles Torso B, Jueves Pierna B, Viernes
 Torso C, Sabado descanso suave y Domingo revision/descanso.
 
+La vista principal se mantiene deliberadamente limpia: codigo para invitar,
+registro del entrenamiento y resumen semanal. Las graficas, racha, sesiones
+recientes, exportacion y privacidad quedan en secciones plegadas. Cada serie
+guardada aparece como una tarjeta compacta con **Editar** y **Eliminar**, para
+corregir reps/kilos/RIR/RPE/nota sin rehacer el entrenamiento.
+
 El registro rapido de Gym Party muestra arriba los botones **Atras**,
 **Siguiente** y **Completar** para no tener que buscarlos dentro del formulario.
 Tambien permite **Agregar ejercicio extra** cuando se hace un movimiento fuera
@@ -227,7 +233,7 @@ El APK resultante queda en `android-native-wrapper/app/build/outputs/apk/debug/a
 ## Publicacion
 
 - **PWA:** el workflow `Publicar PWA en GitHub Pages` publica los archivos raiz.
-- **APK:** el workflow `Construir APK Android` compila el wrapper y publica la descarga directa de la version `v2.5.1`.
+- **APK:** el workflow `Construir APK Android` compila el wrapper y publica la descarga directa de la version `v2.5.2`.
 
 El APK generado es `debug`, apropiado para uso personal. Publicar en Play Store requiere una compilacion `release` firmada con una clave privada.
 

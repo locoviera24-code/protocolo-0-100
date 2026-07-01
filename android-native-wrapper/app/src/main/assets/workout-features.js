@@ -508,6 +508,7 @@
       currentExerciseId:exercise?.id||exercise?.exerciseId||'',
       currentExerciseName:exercise?.name||'',
       currentExerciseMuscle:exercise?.muscle||'',
+      currentSets:sets.map(set=>clone(set)),
       currentExerciseSets:exerciseSetCount(exercise),
       currentMuscleSets:muscleSetCount(source,exercise?.muscle),
       nextSetNumber:(sets.length||0)+1,
@@ -595,6 +596,51 @@
     session.summary=sessionSummary(session);
     replaceSession(session);
     return {ok:true,session:clone(session),exercise:clone(exercise),set:clone(set),state:getQuickWorkoutState({date,exerciseId:exercise.id})};
+  }
+  function updateQuickSetPayload(payload={}){
+    const date=payload.date||todayStr();
+    const session=activeSession(date) || latestSessionForDate(date);
+    if(!session) return {ok:false,reason:'missing-session',message:'Todavia no hay entrenamiento iniciado.'};
+    currentQuickExerciseId=payload.exerciseId||payload.currentExerciseId||currentQuickExerciseId;
+    const exercise=session.exercises.find(x=>x.id===currentQuickExerciseId || x.exerciseId===currentQuickExerciseId) || currentExercise(session);
+    if(!exercise) return {ok:false,reason:'missing-exercise',message:'Elegi un ejercicio.'};
+    const sets=exercise.sets||[];
+    const setId=String(payload.setId||'');
+    const setNumber=Number(payload.setNumber);
+    const set=(setId?sets.find(item=>String(item.id||'')===setId):null) || (Number.isFinite(setNumber)?sets.find(item=>Number(item.setNumber)===setNumber):null);
+    if(!set) return {ok:false,reason:'missing-set',message:'No encontre esa serie.'};
+    set.reps=Math.max(0,Number(payload.reps)||0);
+    set.weight=Math.round(Math.max(0,Number(payload.weight)||0)*2)/2;
+    set.bodyweight=!!payload.bodyweight;
+    set.rir=payload.rir===''||payload.rir===undefined?null:Math.max(0,Number(payload.rir)||0);
+    set.rpe=payload.rpe===''||payload.rpe===undefined?null:Math.max(0,Number(payload.rpe)||0);
+    set.note=String(payload.note||'').trim();
+    set.volume=Math.round(set.reps*set.weight);
+    set.editedAt=new Date().toISOString();
+    session.currentExerciseIndex=session.exercises.findIndex(x=>x.id===exercise.id);
+    currentQuickExerciseId=exercise.id;
+    session.summary=sessionSummary(session);
+    replaceSession(session);
+    return {ok:true,session:clone(session),exercise:clone(exercise),set:clone(set),state:getQuickWorkoutState({date,exerciseId:exercise.id})};
+  }
+  function deleteQuickSetPayload(payload={}){
+    const date=payload.date||todayStr();
+    const session=activeSession(date) || latestSessionForDate(date);
+    if(!session) return {ok:false,reason:'missing-session',message:'Todavia no hay entrenamiento iniciado.'};
+    currentQuickExerciseId=payload.exerciseId||payload.currentExerciseId||currentQuickExerciseId;
+    const exercise=session.exercises.find(x=>x.id===currentQuickExerciseId || x.exerciseId===currentQuickExerciseId) || currentExercise(session);
+    if(!exercise) return {ok:false,reason:'missing-exercise',message:'Elegi un ejercicio.'};
+    const before=exercise.sets||[];
+    const setId=String(payload.setId||'');
+    const setNumber=Number(payload.setNumber);
+    const next=before.filter(item=>!((setId && String(item.id||'')===setId) || (Number.isFinite(setNumber) && Number(item.setNumber)===setNumber)));
+    if(next.length===before.length) return {ok:false,reason:'missing-set',message:'No encontre esa serie.'};
+    exercise.sets=next.map((set,index)=>({...set,setNumber:index+1}));
+    session.currentExerciseIndex=session.exercises.findIndex(x=>x.id===exercise.id);
+    currentQuickExerciseId=exercise.id;
+    session.summary=sessionSummary(session);
+    replaceSession(session);
+    return {ok:true,session:clone(session),exercise:clone(exercise),state:getQuickWorkoutState({date,exerciseId:exercise.id})};
   }
   function completeQuickExercisePayload(payload={}){
     const date=payload.date||todayStr();
@@ -849,7 +895,7 @@
     else if(action===actionWidgetSaveSet){syncWorkoutWidget();openGymToday();}
   }
 
-  window.WORKOUT_FEATURES={keys,dayOrder,defaultWeeklyPlan:clone(defaultWeeklyPlan),exerciseLibrary:clone(exerciseLibrary),dayKeyForDate,planForDate,getQuickWorkoutState,addManualExercisePayload,saveQuickSetPayload,completeQuickExercisePayload,finishWorkoutPayload,buildWorkoutWidgetState,syncWorkoutWidget,importWidgetStateFromAndroid};
+  window.WORKOUT_FEATURES={keys,dayOrder,defaultWeeklyPlan:clone(defaultWeeklyPlan),exerciseLibrary:clone(exerciseLibrary),dayKeyForDate,planForDate,getQuickWorkoutState,addManualExercisePayload,saveQuickSetPayload,updateQuickSetPayload,deleteQuickSetPayload,completeQuickExercisePayload,finishWorkoutPayload,buildWorkoutWidgetState,syncWorkoutWidget,importWidgetStateFromAndroid};
   window.openGymToday=openGymToday;
   window.openQuickSetLogger=openQuickSetLogger;
   window.handleAndroidWidgetIntent=(action,payload)=>handleAndroidWidgetIntent(action,payload||{});

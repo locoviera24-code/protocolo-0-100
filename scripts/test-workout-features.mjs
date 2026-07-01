@@ -85,7 +85,28 @@ const quickSaved = quickWorkout.saveQuickSetPayload({
 });
 assert.equal(quickSaved.ok, true);
 assert.equal(quickSaved.set.weight, 20.5);
-assert.equal(quickWorkout.getQuickWorkoutState({date: '2026-06-22'}).currentExerciseSets, 1);
+const quickAfterSave = quickWorkout.getQuickWorkoutState({date: '2026-06-22', exerciseId: quickState.currentExerciseId});
+assert.equal(quickAfterSave.currentExerciseSets, 1);
+assert.equal(quickAfterSave.currentSets.length, 1);
+const quickUpdated = quickWorkout.updateQuickSetPayload({
+  date: '2026-06-22',
+  exerciseId: quickState.currentExerciseId,
+  setId: quickSaved.set.id,
+  reps: 9,
+  weight: 22.5,
+  bodyweight: false
+});
+assert.equal(quickUpdated.ok, true);
+assert.equal(quickUpdated.set.reps, 9);
+assert.equal(quickUpdated.set.weight, 22.5);
+assert.equal(quickWorkout.getQuickWorkoutState({date: '2026-06-22', exerciseId: quickState.currentExerciseId}).currentSets[0].weight, 22.5);
+const quickDeleted = quickWorkout.deleteQuickSetPayload({
+  date: '2026-06-22',
+  exerciseId: quickState.currentExerciseId,
+  setId: quickSaved.set.id
+});
+assert.equal(quickDeleted.ok, true);
+assert.equal(quickDeleted.state.currentExerciseSets, 0);
 assert.equal(JSON.parse(quickStore.get(quickWorkout.keys.workoutSessions))[0].routine.name, 'Torso A');
 const manualExercise = quickWorkout.addManualExercisePayload({
   date: '2026-06-22',
@@ -146,4 +167,4 @@ const {context: customContext} = createContext({
 });
 assert.equal(customContext.WORKOUT_FEATURES.planForDate('2026-06-22').name, 'Rutina propia');
 
-console.log('Workout features correcto: plan semanal, descanso, widget state, ejercicio manual, importacion directa y no sobrescritura.');
+console.log('Workout features correcto: plan semanal, descanso, widget state, editar/eliminar serie, ejercicio manual, importacion directa y no sobrescritura.');
