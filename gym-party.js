@@ -956,6 +956,88 @@
       exercises: [...total.exercises].sort()
     };
   }
+  function totalsFromSets(key, rows){
+    return finalizeMuscleTotals(safeArray(rows).reduce((total,set) => addSetToMuscleTotals(total,set), emptyMuscleTotals(key)));
+  }
+  function bestWeightFromSets(rows){
+    const values = safeArray(rows).map(set => number(set.weightKg)).filter(value => value > 0);
+    return values.length ? Math.max(...values) : 0;
+  }
+  function bestStrengthSet(rows){
+    return safeArray(rows).slice().sort((a,b) => {
+      const weightDiff = number(b.weightKg) - number(a.weightKg);
+      if(weightDiff) return weightDiff;
+      return number(b.reps) - number(a.reps);
+    })[0] || null;
+  }
+  function strengthSetText(set){
+    if(!set) return 'Sin dato';
+    const weight = number(set.weightKg);
+    return weight ? `${round(weight,1)} kg x ${number(set.reps)} reps` : `${number(set.reps)} reps peso corporal`;
+  }
+  function weekLabel(start, currentStart){
+    if(start === currentStart) return 'Esta';
+    const d = dateFromString(start);
+    return `${pad(d.getDate())}/${pad(d.getMonth()+1)}`;
+  }
+  function exerciseSummaryRows(currentSets, previousSets){
+    const map = {};
+    function rowFor(set){
+      const key = set.exerciseId || set.exerciseName || 'ejercicio';
+      if(!map[key]){
+        map[key] = {
+          id:key,
+          name:set.exerciseName || set.exerciseId || 'Ejercicio',
+          currentSets:0,
+          previousSets:0,
+          currentReps:0,
+          previousReps:0,
+          currentVolume:0,
+          previousVolume:0,
+          currentRows:[],
+          previousRows:[]
+        };
+      }
+      return map[key];
+    }
+    safeArray(currentSets).forEach(set => {
+      const row = rowFor(set);
+      row.currentSets += 1;
+      row.currentReps += number(set.reps);
+      row.currentVolume += setVolume(set);
+      row.currentRows.push(set);
+    });
+    safeArray(previousSets).forEach(set => {
+      const row = rowFor(set);
+      row.previousSets += 1;
+      row.previousReps += number(set.reps);
+      row.previousVolume += setVolume(set);
+      row.previousRows.push(set);
+    });
+    return Object.values(map).map(row => {
+      const currentBestSet = bestStrengthSet(row.currentRows);
+      const previousBestSet = bestStrengthSet(row.previousRows);
+      const currentBestWeight = bestWeightFromSets(row.currentRows);
+      const previousBestWeight = bestWeightFromSets(row.previousRows);
+      return {
+        ...row,
+        sets: row.currentSets,
+        reps: row.currentReps,
+        volume: Math.round(row.currentVolume),
+        previousVolume: Math.round(row.previousVolume),
+        currentVolume: Math.round(row.currentVolume),
+        currentBestSet,
+        previousBestSet,
+        best: currentBestSet,
+        currentBestWeight,
+        previousBestWeight,
+        bestWeightDelta: round(currentBestWeight - previousBestWeight, 1),
+        setsDelta: row.currentSets - row.previousSets,
+        repsDelta: row.currentReps - row.previousReps,
+        volumeChangePct: percentChange(row.currentVolume, row.previousVolume)
+      };
+    }).sort((a,b) => b.currentSets - a.currentSets || b.currentVolume - a.currentVolume || b.currentBestWeight - a.currentBestWeight);
+  }
   function muscleInsightModel(data, stats = calculatePartyStats(data), selectedMuscle = '', reference = todayStr()){
     const currentStart = weekStartStr(reference);
     const previousStart = previousWeekStart(currentStart);
@@ -973,24 +1055,32 @@
     const selected = muscleRows.some(row => row.key === selectedMuscle) ? selectedMuscle : firstWithData;
     const currentSets = sets.filter(set => set.canonicalMuscle === selected && inWeek(set.date, currentStart));
     const previousSets = sets.filter(set => set.canonicalMuscle === selected && inWeek(set.date, previousStart));
-    const currentTotal = finalizeMuscleTotals(currentSets.reduce((total,set) => addSetToMuscleTotals(total,set), emptyMuscleTotals(selected)));
-    const previousTotal = finalizeMuscleTotals(previousSets.reduce((total,set) => addSetToMuscleTotals(total,set), emptyMuscleTotals(selected)));
-    const exerciseMap = {};
-    currentSets.forEach(set => {
-      const key = set.exerciseId || set.exerciseName || 'ejercicio';
-      if(!exerciseMap[key]) exerciseMap[key] = {id:key, name:set.exerciseName || set.exerciseId || 'Ejercicio', sets:0, reps:0, volume:0, best:null};
-      exerciseMap[key].sets += 1;
-      exerciseMap[key].reps += number(set.reps);
-      exerciseMap[key].volume += setVolume(set);
-      const score = setVolume(set) || number(set.reps);
-      if(!exerciseMap[key].best || score > exerciseMap[key].best.score) exerciseMap[key].best = {...set, score};
+    const currentTotal = totalsFromSets(selected, currentSets);
+    const previousTotal = totalsFromSets(selected, previousSets);
+    const weeklyRows = Array.from({length:6}, (_, index) => {
+      const weekStart = addDays(currentStart, (index - 5) * 7);
+      const weekSets = sets.filter(set => set.canonicalMuscle === selected && inWeek(set.date, weekStart));
+      const total = totalsFromSets(selected, weekSets);
+      const bestSet = bestStrengthSet(weekSets);
+      return {
+        weekStart,
+        label: weekLabel(weekStart, currentStart),
+        sets: total.sets,
+        reps: total.reps,
+        volume: total.volume,
+        bestWeight: bestWeightFromSets(weekSets),
+        bestSet,
+        bestSetText: strengthSetText(bestSet)
+      };
     });
-    const exerciseRows = Object.values(exerciseMap).map(row => ({...row, volume:Math.round(row.volume)})).sort((a,b) => b.sets - a.sets || b.volume - a.volume);
+    const exerciseRows = exerciseSummaryRows(currentSets, previousSets);
     const memberRows = members.map(member => {
       const currentMemberSets = currentSets.filter(set => set.userId === member.userId);
       const previousMemberSets = previousSets.filter(set => set.userId === member.userId);
-      const total = finalizeMuscleTotals(currentMemberSets.reduce((acc,set) => addSetToMuscleTotals(acc,set), emptyMuscleTotals(selected)));
-      const previous = finalizeMuscleTotals(previousMemberSets.reduce((acc,set) => addSetToMuscleTotals(acc,set), emptyMuscleTotals(selected)));
+      const total = totalsFromSets(selected, currentMemberSets);
+      const previous = totalsFromSets(selected, previousMemberSets);
+      const bestWeight = bestWeightFromSets(currentMemberSets);
+      const previousBestWeight = bestWeightFromSets(previousMemberSets);
       return {
         member,
         label: memberDisplayName(member, data),
@@ -998,6 +1088,8 @@
         reps: total.reps,
         volume: total.volume,
         exercisesCount: total.exercisesCount,
+        bestWeight,
+        bestWeightDelta: round(bestWeight - previousBestWeight, 1),
         changeVsPreviousWeek: percentChange(total.volume || total.sets, previous.volume || previous.sets)
       };
     }).sort((a,b) => b.sets - a.sets || b.volume - a.volume);
@@ -1008,6 +1100,7 @@
       muscleRows,
       currentTotal,
       previousTotal,
+      weeklyRows,
       exerciseRows,
       memberRows,
       totalMusclesWithData: muscleRows.filter(row => row.sets > 0).length,
@@ -1025,13 +1118,23 @@
       <svg class="partyHumanSvg" viewBox="0 0 100 110" role="img" aria-label="Mapa muscular semanal">
         <defs>
           <linearGradient id="partyBodyGlow" x1="0" x2="1"><stop offset="0%" stop-color="#72d6ff"/><stop offset="100%" stop-color="#92ffc2"/></linearGradient>
+          <linearGradient id="partyBodySkin" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="rgba(255,255,255,.16)"/><stop offset="100%" stop-color="rgba(255,255,255,.045)"/></linearGradient>
         </defs>
-        <ellipse class="partyBodyPart" cx="50" cy="13" rx="8" ry="9"></ellipse>
-        <path class="partyBodyPart" d="M38 25 Q50 19 62 25 L66 54 Q58 63 50 63 Q42 63 34 54 Z"></path>
-        <path class="partyBodyPart" d="M35 29 Q22 36 24 56 Q25 65 31 63 Q31 49 39 39 Z"></path>
-        <path class="partyBodyPart" d="M65 29 Q78 36 76 56 Q75 65 69 63 Q69 49 61 39 Z"></path>
-        <path class="partyBodyPart" d="M40 62 Q34 78 37 101 Q43 103 46 99 Q45 82 50 66 Z"></path>
-        <path class="partyBodyPart" d="M60 62 Q66 78 63 101 Q57 103 54 99 Q55 82 50 66 Z"></path>
+        <ellipse class="partyBodyPart head" cx="50" cy="10" rx="7.4" ry="8.4"></ellipse>
+        <path class="partyBodyPart neck" d="M44 18 Q50 21 56 18 L58 25 Q50 29 42 25 Z"></path>
+        <path class="partyBodyPart torso" d="M29 29 Q38 23 50 24 Q62 23 71 29 Q66 43 63 57 Q59 68 50 70 Q41 68 37 57 Q34 43 29 29 Z"></path>
+        <path class="partyBodyShade" d="M36 31 Q43 28 49 34 L49 47 Q41 45 34 39 Z"></path>
+        <path class="partyBodyShade" d="M64 31 Q57 28 51 34 L51 47 Q59 45 66 39 Z"></path>
+        <path class="partyBodyShade" d="M42 50 Q50 54 58 50 L55 64 Q50 67 45 64 Z"></path>
+        <path class="partyBodyPart arm" d="M29 31 Q19 39 21 55 Q22 66 28 67 Q29 55 35 39 Z"></path>
+        <path class="partyBodyPart forearm" d="M27 64 Q20 73 22 86 Q26 90 31 85 Q31 73 32 66 Z"></path>
+        <path class="partyBodyPart arm" d="M71 31 Q81 39 79 55 Q78 66 72 67 Q71 55 65 39 Z"></path>
+        <path class="partyBodyPart forearm" d="M73 64 Q80 73 78 86 Q74 90 69 85 Q69 73 68 66 Z"></path>
+        <path class="partyBodyPart pelvis" d="M39 68 Q50 73 61 68 L65 78 Q57 84 50 83 Q43 84 35 78 Z"></path>
+        <path class="partyBodyPart leg" d="M38 78 Q32 91 35 106 Q41 108 45 104 Q45 91 50 82 Z"></path>
+        <path class="partyBodyPart leg" d="M62 78 Q68 91 65 106 Q59 108 55 104 Q55 91 50 82 Z"></path>
+        <path class="partyBodyShade" d="M36 82 Q42 86 44 101 Q39 104 36 101 Q34 90 36 82 Z"></path>
+        <path class="partyBodyShade" d="M64 82 Q58 86 56 101 Q61 104 64 101 Q66 90 64 82 Z"></path>
         ${muscleMapTargets.map(target => {
           const row = byKey.get(target.key) || {sets:0};
           const active = target.key === model.selected;
@@ -1046,12 +1149,33 @@
       }).join('')}
     </div>`;
   }
+  function weekBarHtml(rows, key, unit = ''){
+    const max = Math.max(1, ...safeArray(rows).map(row => number(row[key])));
+    return `<div class="partyWeekBars">${safeArray(rows).map(row => {
+      const value = number(row[key]);
+      const height = Math.max(5, Math.min(100, (value / max) * 100));
+      return `<div class="partyWeekBarItem"><div class="partyWeekBar"><i style="height:${height}%"></i></div><span>${escape(row.label)}</span><strong>${escape(formatNumber(value))}${unit}</strong></div>`;
+    }).join('')}</div>`;
+  }
   function muscleMapHtml(data, stats){
     const model = muscleInsightModel(data, stats, settings().selectedMuscleGroup || '');
     const maxMemberSets = Math.max(1, ...model.memberRows.map(row => row.sets));
     const topExercises = model.exerciseRows.slice(0,5);
+    const selectedExercise = settings().selectedExerciseId || '';
     const exerciseText = topExercises.length
-      ? topExercises.map(row => `<div class="entryRow"><div><strong>${escape(row.name)}</strong><div class="meta">${row.sets} series - ${row.reps} reps - ${formatNumber(row.volume)} kg</div></div><span class="statusChip good">${row.best ? `${row.best.reps} reps` : 'registro'}</span></div>`).join('')
+      ? topExercises.map(row => `<div class="partyExerciseCompareCard ${selectedExercise === row.id ? 'on' : ''}">
+          <div class="actionFocusTop">
+            <div><strong>${escape(row.name)}</strong><div class="meta">Esta semana vs semana anterior</div></div>
+            <button type="button" class="secondary" data-gym-party-action="party-compare-exercise" data-gym-party-exercise="${escape(row.id)}" data-gym-party-muscle="${escape(model.selected)}">Comparar ejercicio</button>
+          </div>
+          <div class="partyExerciseMetricGrid">
+            <div><span>Series</span><strong>${row.currentSets}</strong><small>${signed(row.setsDelta)}</small></div>
+            <div><span>Reps</span><strong>${row.currentReps}</strong><small>${signed(row.repsDelta)}</small></div>
+            <div><span>Mejor peso</span><strong>${row.currentBestWeight ? `${formatNumber(row.currentBestWeight)} kg` : 'peso corporal'}</strong><small>${row.bestWeightDelta ? signed(row.bestWeightDelta, ' kg') : '0 kg'}</small></div>
+            <div><span>Volumen</span><strong>${formatNumber(row.currentVolume)} kg</strong><small>${signed(row.volumeChangePct, '%')}</small></div>
+          </div>
+          <div class="muted small">Mejor serie: ${escape(strengthSetText(row.currentBestSet))}. Previa: ${escape(strengthSetText(row.previousBestSet))}.</div>
+        </div>`).join('')
       : '<div class="emptyState">Todavia no hay ejercicios compartidos para este musculo esta semana.</div>';
     return `<div class="moduleCard partyMuscleMapCard" id="partyMuscleMap">
       <div class="actionFocusTop">
@@ -1068,11 +1192,16 @@
             <div class="partyCompareCard"><span>Reps</span><strong>${model.currentTotal.reps}</strong><small>registradas</small></div>
             <div class="partyCompareCard"><span>Volumen</span><strong>${formatNumber(model.currentTotal.volume)} kg</strong><small>${signed(model.changeVsPreviousWeek.volumePct, '%')} vs previa</small></div>
           </div>
+          <div class="partyMuscleChartGrid">
+            <div class="partyMiniChart"><h3>Series por semana</h3>${weekBarHtml(model.weeklyRows, 'sets')}</div>
+            <div class="partyMiniChart"><h3>Volumen por semana</h3>${weekBarHtml(model.weeklyRows, 'volume', ' kg')}</div>
+            <div class="partyMiniChart"><h3>Mejor peso registrado</h3>${weekBarHtml(model.weeklyRows, 'bestWeight', ' kg')}</div>
+          </div>
           <div class="partyMuscleCompare">
             <h3>Comparacion por miembro</h3>
-            <div class="comparisonBars">${model.memberRows.map(row => bar(row.sets, maxMemberSets, `${row.label} - ${row.exercisesCount} ej.`, ' series')).join('') || '<div class="emptyState">Sin miembros para comparar.</div>'}</div>
+            <div class="comparisonBars">${model.memberRows.map(row => bar(row.sets, maxMemberSets, `${row.label} - ${row.exercisesCount} ej. - ${formatNumber(row.bestWeight)} kg`, ' series')).join('') || '<div class="emptyState">Sin miembros para comparar.</div>'}</div>
           </div>
-          <div class="entryList partyMuscleExerciseList"><h3>Ejercicios del musculo</h3>${exerciseText}</div>
+          <div class="partyMuscleExerciseList"><h3>Ejercicios del musculo</h3>${exerciseText}</div>
           <div class="muted small">Mas series o volumen no siempre significa mejor. Usalo para ver equilibrio y tendencia, no para forzar carga.</div>
         </div>
       </div>
@@ -1198,7 +1327,6 @@
       ${memberCardsHtml(data, stats)}
       ${twoMemberComparisonHtml(data, stats)}
       ${multiMemberHtml(data, stats)}
-      ${muscleMapHtml(data, stats)}
       ${chartsHtml(data, stats)}
       <div class="partyGrid">
         ${exerciseProgressHtml(data)}
@@ -1340,13 +1468,12 @@
         </div>
       </div>
 
-      ${muscleMapHtml(data, stats)}
-
       ${stats.length === 2 ? twoMemberComparisonHtml(data, stats) : ''}
       ${stats.length > 2 ? multiMemberHtml(data, stats) : ''}
 
-      <details class="moduleCard partyFoldCard">
-        <summary>Ver graficas y detalle</summary>
+      <details class="moduleCard partyFoldCard" ${settings().graphsOpen ? 'open' : ''}>
+        <summary>Ver graficas, mapa muscular y comparaciones</summary>
+        ${muscleMapHtml(data, stats)}
         ${chartsHtml(data, stats)}
         <div class="partyGrid">
           ${exerciseProgressHtml(data)}
@@ -1441,7 +1568,9 @@
       .partyHumanPanel{border:1px solid rgba(114,214,255,.23);border-radius:20px;background:radial-gradient(circle at 50% 18%,rgba(114,214,255,.18),rgba(255,255,255,.035) 42%,rgba(0,0,0,.08));padding:12px;min-height:430px}
       .partyHumanCanvas{position:relative;min-height:408px}
       .partyHumanSvg{position:absolute;inset:0;width:100%;height:100%;filter:drop-shadow(0 16px 26px rgba(0,0,0,.24))}
-      .partyBodyPart{fill:rgba(255,255,255,.045);stroke:rgba(223,246,255,.42);stroke-width:1.1}
+      .partyBodyPart{fill:url(#partyBodySkin);stroke:rgba(223,246,255,.42);stroke-width:1.1}
+      .partyBodyPart.head{fill:rgba(255,255,255,.13)}
+      .partyBodyShade{fill:rgba(114,214,255,.075);stroke:rgba(146,255,194,.16);stroke-width:.7}
       .partyMuscleLine{stroke:rgba(114,214,255,.34);stroke-width:1.2;stroke-dasharray:4 4}
       .partyMuscleLine.on{stroke:url(#partyBodyGlow);stroke-width:2.1;stroke-dasharray:none}
       .partyMuscleDot{fill:url(#partyBodyGlow);stroke:rgba(255,255,255,.75);stroke-width:.7}
@@ -1451,7 +1580,18 @@
       .partyMuscleButton span{font-size:11px;color:var(--muted);margin-top:2px}
       .partyMuscleButton.on{border-color:rgba(146,255,194,.75);background:linear-gradient(135deg,rgba(146,255,194,.20),rgba(114,214,255,.14));box-shadow:0 0 0 1px rgba(146,255,194,.16),0 14px 30px rgba(0,0,0,.22)}
       .partyMuscleInsight{display:grid;gap:12px}
-      .partyMuscleCompare,.partyMuscleExerciseList{border:1px solid var(--line);border-radius:16px;padding:12px;background:rgba(255,255,255,.035)}
+      .partyMuscleCompare,.partyMuscleExerciseList,.partyMiniChart{border:1px solid var(--line);border-radius:16px;padding:12px;background:rgba(255,255,255,.035)}
+      .partyMuscleChartGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+      .partyWeekBars{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px;align-items:end;min-height:130px;margin-top:8px}
+      .partyWeekBarItem{display:grid;grid-template-rows:1fr auto auto;gap:5px;align-items:end;text-align:center;font-size:11px;color:var(--muted)}
+      .partyWeekBar{height:92px;border:1px solid rgba(114,214,255,.22);border-radius:12px;background:rgba(255,255,255,.04);display:flex;align-items:end;overflow:hidden}
+      .partyWeekBar i{display:block;width:100%;border-radius:12px 12px 0 0;background:linear-gradient(180deg,var(--accent),var(--accent2))}
+      .partyWeekBarItem strong{color:#e9f7ff;font-size:11px}
+      .partyExerciseCompareCard{border:1px solid var(--line);border-radius:16px;padding:12px;background:rgba(255,255,255,.035);margin-top:10px}
+      .partyExerciseCompareCard.on{border-color:rgba(146,255,194,.62);background:rgba(146,255,194,.08)}
+      .partyExerciseMetricGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:10px 0}
+      .partyExerciseMetricGrid div{border:1px solid rgba(255,255,255,.08);border-radius:13px;padding:9px;background:rgba(0,0,0,.10)}
+      .partyExerciseMetricGrid span,.partyExerciseMetricGrid small{display:block;color:var(--muted);font-size:11px}.partyExerciseMetricGrid strong{display:block;font-size:18px;margin:3px 0;color:#fff}
       .partyTip{border:1px solid rgba(114,214,255,.28);border-radius:14px;padding:10px 12px;background:rgba(114,214,255,.08);font-weight:750;margin-top:10px}
       .partyQuickSummary{margin-top:12px}
       .partyWorkoutLogger{margin-top:12px}
@@ -1462,7 +1602,7 @@
       .partyQuickInputs input{font-size:22px;font-weight:850;text-align:center;min-height:54px}
       .partyWeightChips{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:10px 0}
       .partyWeightChips button{min-height:42px}
-      @media(max-width:850px){.partyGrid,.partyMembers,.partyChartGrid,.partyCompareGrid,.partyCompareGrid.compact,.partyMiniSteps,.partyMainActions,.partyWorkoutNav,.partyQuickInputs,.partySetCounters,.partyMuscleMapShell{grid-template-columns:1fr}.partyHumanPanel{min-height:390px}.partyHumanCanvas{min-height:368px}.partyMuscleButton{min-width:104px;font-size:12px}.partyWeightChips{grid-template-columns:repeat(2,minmax(0,1fr))}.partyBarRow{grid-template-columns:92px minmax(0,1fr) 72px}.partyCodeBox{align-items:flex-start;flex-direction:column}.partyCodeBox strong{font-size:24px}}
+      @media(max-width:850px){.partyGrid,.partyMembers,.partyChartGrid,.partyCompareGrid,.partyCompareGrid.compact,.partyMiniSteps,.partyMainActions,.partyWorkoutNav,.partyQuickInputs,.partySetCounters,.partyMuscleMapShell,.partyMuscleChartGrid,.partyExerciseMetricGrid{grid-template-columns:1fr}.partyHumanPanel{min-height:390px}.partyHumanCanvas{min-height:368px}.partyMuscleButton{min-width:104px;font-size:12px}.partyWeightChips{grid-template-columns:repeat(2,minmax(0,1fr))}.partyBarRow{grid-template-columns:92px minmax(0,1fr) 72px}.partyCodeBox{align-items:flex-start;flex-direction:column}.partyCodeBox strong{font-size:24px}}
     `;
     document.head.appendChild(style);
   }
@@ -1505,6 +1645,7 @@
     else if(action === 'party-finish-workout') finishPartyWorkout();
     else if(action === 'party-select-muscle') selectPartyMuscle(event);
     else if(action === 'party-focus-muscle-compare') selectPartyMuscle(event, {flash: true});
+    else if(action === 'party-compare-exercise') comparePartyExercise(event);
   }
 
   function bindGymPartyActionButtons(root){
@@ -1588,9 +1729,18 @@
   function selectPartyMuscle(event, options = {}){
     const button = event?.target?.closest?.('[data-gym-party-muscle]');
     const muscle = button?.dataset?.gymPartyMuscle || settings().selectedMuscleGroup || 'Pecho';
-    saveSettings({selectedMuscleGroup: muscle});
+    saveSettings({selectedMuscleGroup: muscle, graphsOpen: true});
     renderGymParty();
     if(options.flash) flashMessage(`Comparacion actualizada: ${muscle}.`);
+  }
+  function comparePartyExercise(event){
+    const button = event?.target?.closest?.('[data-gym-party-exercise]');
+    const exerciseId = button?.dataset?.gymPartyExercise || '';
+    const muscle = button?.dataset?.gymPartyMuscle || settings().selectedMuscleGroup || '';
+    if(!exerciseId) return;
+    saveSettings({selectedExerciseId: exerciseId, selectedMuscleGroup: muscle, graphsOpen: true});
+    renderGymParty();
+    flashMessage('Comparacion por ejercicio actualizada.');
   }
   function addPartyManualExercise(){
     const api = workoutApi();

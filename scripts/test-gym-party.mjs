@@ -72,6 +72,12 @@ assert.ok(muscleModel.currentTotal.sets >= 1);
 assert.ok(muscleModel.exerciseRows.some(row => row.name === 'Press de banca'));
 assert.equal(muscleModel.memberRows.length, 2);
 assert.ok(muscleModel.totalMusclesWithData >= 2);
+assert.equal(muscleModel.weeklyRows.length, 6);
+assert.ok(muscleModel.weeklyRows.some(row => row.bestWeight >= 50));
+const pressRow = muscleModel.exerciseRows.find(row => row.name === 'Press de banca');
+assert.ok(pressRow.currentSets >= 1);
+assert.ok(pressRow.currentBestWeight >= 50);
+assert.equal(typeof pressRow.bestWeightDelta, 'number');
 
 const demo5 = party.buildDemoData(5);
 assert.equal(demo5.members.length, 5);
