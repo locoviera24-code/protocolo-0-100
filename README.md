@@ -90,6 +90,14 @@ El registro rapido de Gym Party muestra arriba los botones **Atras**,
 Tambien permite **Agregar ejercicio extra** cuando se hace un movimiento fuera
 de la rutina habitual; ese ejercicio queda dentro de la misma `workoutSession`,
 entra al historial, al volumen, al backup y a la sincronizacion de la sala.
+El selector **Dia de entrenamiento** permite volver a ayer u otra fecha para
+editar ejercicios, series, reps y kilos de ese dia sin salir de Gym Party.
+
+Debajo del resumen semanal hay un apartado **Editar series de la semana**. Desde
+ahi se puede abrir o eliminar cualquier serie registrada en la semana
+seleccionada. Al eliminar una serie, el resumen semanal, sesiones recientes,
+graficas y mapa muscular se recalculan desde las series visibles; los totales
+viejos de la sesion no se reutilizan.
 
 Gym Party incluye una tarjeta de racha y nivel: cuenta dias consecutivos con
 sesiones registradas, muestra insignias sanas y usa como referencia principal
@@ -236,7 +244,7 @@ El APK resultante queda en `android-native-wrapper/app/build/outputs/apk/debug/a
 ## Publicacion
 
 - **PWA:** el workflow `Publicar PWA en GitHub Pages` publica los archivos raiz.
-- **APK:** el workflow `Construir APK Android` compila el wrapper y publica la descarga directa de la version `v2.5.3`.
+- **APK:** el workflow `Construir APK Android` compila el wrapper y publica la descarga directa de la version `v2.5.4`.
 
 El APK generado es `debug`, apropiado para uso personal. Publicar en Play Store requiere una compilacion `release` firmada con una clave privada.
 

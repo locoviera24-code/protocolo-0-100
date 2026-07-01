@@ -110,7 +110,7 @@ const localSession = {
   routine: {name: 'Torso B'},
   startedAt: '2026-06-24T10:00:00.000Z',
   status: 'en progreso',
-  summary: {totalSets: 1, totalReps: 8, totalVolume: 160, exercisesCompleted: 1},
+  summary: {totalSets: 2, totalReps: 18, totalVolume: 560, exercisesCompleted: 1},
   exercises: [{
     id: 'press-banca-row',
     exerciseId: 'press-banca',
@@ -164,7 +164,7 @@ const visibleStats = syncParty.calculatePartyStats({
   party: {id: 'party_test'},
   members: [{id: 'party_test_user_test', partyId: 'party_test', userId: 'user_test', aliasInParty: 'Yo'}],
   sessions: synced.sharedWorkoutSessions,
-  sets: synced.sharedWorkoutSets.filter(row => !row.deleted)
+  sets: synced.sharedWorkoutSets
 }, '2026-06-24');
 assert.equal(visibleStats[0].current.totalSets, 1);
 assert.equal(visibleStats[0].current.totalVolume, 160);

@@ -75,6 +75,8 @@ Documento: `workout_sets_shared/{partyId}_{userId}_{localSessionId}_{exerciseId}
 - `partyId`
 - `sessionId`
 - `userId`
+- `localExerciseId`
+- `localSetId`
 - `exerciseId`
 - `exerciseName`
 - `muscleGroup`
