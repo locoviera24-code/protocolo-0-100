@@ -1422,8 +1422,10 @@
   }
   function partySetRowsHtml(state, editingSetId = ''){
     const sets = safeArray(state.currentSets);
-    if(!sets.length) return '<div class="partySetList empty">Todavia no hay series en este ejercicio.</div>';
-    return `<div class="partySetList">${sets.map(set => {
+    if(!sets.length) return '<div class="partyLoggedSets"><div class="partyLoggedSetsHeader"><strong>Series guardadas</strong><span>Sin series en este ejercicio.</span></div></div>';
+    return `<div class="partyLoggedSets">
+      <div class="partyLoggedSetsHeader"><strong>Series guardadas</strong><span>${sets.length} en este ejercicio</span></div>
+      <div class="partySetList compact">${sets.map(set => {
       const active = set.id === editingSetId;
       const weight = number(set.weight);
       const meta = `${number(set.reps)} reps - ${weight ? `${round(weight,1)} ${state.unit}` : 'peso corporal'}${set.rir !== null && set.rir !== undefined ? ` - RIR ${set.rir}` : ''}`;
@@ -1434,7 +1436,8 @@
           <button type="button" class="danger" data-gym-party-action="party-delete-set" data-party-set-id="${escape(set.id)}">Eliminar</button>
         </div>
       </div>`;
-    }).join('')}</div>`;
+    }).join('')}</div>
+    </div>`;
   }
   function workoutQuickLoggerHtml(){
     const api = workoutApi();
@@ -1477,10 +1480,6 @@
       <div class="partyFormCard">
         ${partyDateControlsHtml(date)}
         <div class="field"><label>Ejercicio</label><select id="partyQuickExerciseSelect">${options}</select></div>
-        <div class="partySetCounters">
-          <div><span>Este ejercicio</span><strong>${state.currentExerciseSets||0}</strong><small>series</small></div>
-          <div><span>${escape(state.currentExerciseMuscle||'Musculo')}</span><strong>${state.currentMuscleSets||0}</strong><small>series totales</small></div>
-        </div>
         <div class="partyQuickInputs">
           <div class="field"><label>Reps</label><input type="number" id="partyQuickReps" min="0" max="200" value="${escape(repsValue)}"></div>
           <div class="field"><label>Kilos</label><input type="number" id="partyQuickWeight" min="0" step="0.5" value="${escape(weightValue)}"></div>
@@ -1490,16 +1489,6 @@
         </div>
         <label class="check"><input type="checkbox" id="partyQuickBodyweight" ${bodyweightValue?'checked':''}><span>Peso corporal / lastre opcional.</span></label>
         ${editingSet ? '<div class="auditItem good">Editando una serie guardada. Guardar cambios no crea una serie nueva.</div>' : ''}
-        ${partySetRowsHtml(state, editingSetId)}
-        <details class="partyNestedFold partyAddExerciseFold">
-          <summary>Agregar ejercicio extra</summary>
-          <div class="partyQuickInputs">
-            <div class="field"><label>Nombre</label><input type="text" id="partyManualExerciseName" placeholder="Ej. Face pull"></div>
-            <div class="field"><label>Musculo</label><input type="text" id="partyManualExerciseMuscle" placeholder="Ej. Hombro"></div>
-          </div>
-          <label class="check"><input type="checkbox" id="partyManualBodyweight"><span>Es peso corporal o sin kilos fijos.</span></label>
-          <button type="button" class="secondary partyInlineAction" data-gym-party-action="party-add-exercise">Agregar a este entrenamiento</button>
-        </details>
         <details class="partyNestedFold">
           <summary>Opcional</summary>
           <div class="partyQuickInputs">
@@ -1516,6 +1505,20 @@
           ${editingSet ? '<button type="button" class="secondary" data-gym-party-action="party-cancel-edit-set">Cancelar edicion</button>' : ''}
           <button type="button" class="warn" data-gym-party-action="party-finish-workout">Finalizar entrenamiento</button>
         </div>
+        <div class="partySetCounters compact">
+          <div><span>Este ejercicio</span><strong>${state.currentExerciseSets||0}</strong><small>series</small></div>
+          <div><span>${escape(state.currentExerciseMuscle||'Musculo')}</span><strong>${state.currentMuscleSets||0}</strong><small>series totales</small></div>
+        </div>
+        ${partySetRowsHtml(state, editingSetId)}
+        <details class="partyNestedFold partyAddExerciseFold">
+          <summary>Agregar ejercicio extra</summary>
+          <div class="partyQuickInputs">
+            <div class="field"><label>Nombre</label><input type="text" id="partyManualExerciseName" placeholder="Ej. Face pull"></div>
+            <div class="field"><label>Musculo</label><input type="text" id="partyManualExerciseMuscle" placeholder="Ej. Hombro"></div>
+          </div>
+          <label class="check"><input type="checkbox" id="partyManualBodyweight"><span>Es peso corporal o sin kilos fijos.</span></label>
+          <button type="button" class="secondary partyInlineAction" data-gym-party-action="party-add-exercise">Agregar a este entrenamiento</button>
+        </details>
       </div>
     </div>`;
   }
@@ -1704,12 +1707,22 @@
       .partySetCounters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:10px 0}
       .partySetCounters div{border:1px solid var(--line);border-radius:14px;padding:11px;background:rgba(255,255,255,.04)}
       .partySetCounters span,.partySetCounters small{display:block;color:var(--muted);font-size:12px}.partySetCounters strong{display:block;font-size:28px;margin:3px 0}
+      .partySetCounters.compact{gap:8px;margin:12px 0 6px}
+      .partySetCounters.compact div{padding:8px 10px;border-radius:12px;background:rgba(255,255,255,.028)}
+      .partySetCounters.compact strong{font-size:19px;margin:1px 0}.partySetCounters.compact span,.partySetCounters.compact small{font-size:11px}
+      .partyLoggedSets{border-top:1px solid rgba(255,255,255,.08);margin:10px 0 4px;padding-top:9px}
+      .partyLoggedSetsHeader{display:flex;align-items:center;justify-content:space-between;gap:10px;color:var(--muted);font-size:12px}
+      .partyLoggedSetsHeader strong{color:#e9f7ff;font-size:13px}.partyLoggedSetsHeader span{font-size:11px}
       .partySetList{display:grid;gap:8px;margin:10px 0}
+      .partySetList.compact{gap:6px;margin:7px 0 0}
       .partySetList.empty{border:1px dashed rgba(255,255,255,.12);border-radius:14px;padding:10px;color:var(--muted);background:rgba(255,255,255,.025)}
       .partySetRow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;border:1px solid rgba(255,255,255,.10);border-radius:14px;padding:9px 10px;background:rgba(0,0,0,.10)}
+      .partySetList.compact .partySetRow{padding:7px 8px;border-radius:12px;background:rgba(0,0,0,.07)}
       .partySetRow.editing{border-color:rgba(146,255,194,.62);background:rgba(146,255,194,.08)}
       .partySetRow strong,.partySetRow span{display:block}.partySetRow span{color:var(--muted);font-size:12px;margin-top:2px}
+      .partySetList.compact .partySetRow strong{font-size:13px}.partySetList.compact .partySetRow span{font-size:11px}
       .partySetRowActions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.partySetRowActions button{min-height:34px;padding:7px 10px;font-size:12px}
+      .partySetList.compact .partySetRowActions button{min-height:30px;padding:6px 8px;font-size:11px}
       .partyQuickInputs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
       .partyQuickInputs input{font-size:22px;font-weight:850;text-align:center;min-height:54px}
       .partyWeightChips{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:10px 0}
