@@ -2,9 +2,9 @@
 
 Ultima actualizacion: 2026-06-30
 Rama esperada: `main`
-Version actual: `2.5.6`
-Android: `versionCode 28`, `versionName "2.5.6"`
-Service worker cache: `protocolo-0-100-pwa-v31`
+Version actual: `2.5.7`
+Android: `versionCode 29`, `versionName "2.5.7"`
+Service worker cache: `protocolo-0-100-pwa-v32`
 Backup consolidado: `schemaVersion: 3`
 
 Leer primero este archivo y luego `README.md`, `index.html`,
@@ -24,7 +24,7 @@ Estado actual:
 - Gym Party implementado como modulo web/PWA opcional.
 - Nutricion local/FDC opcional.
 - Backups JSON `schemaVersion: 3`.
-- PWA offline con cache v31.
+- PWA offline con cache v32.
 - APK con widget Android y permiso `INTERNET` para Firebase/Gym Party.
 
 ## 2. Funcionalidades ya existen
@@ -75,8 +75,8 @@ Web:
 - `firebase-config.js`: stub seguro para config publica Firebase; Actions puede
   reemplazarlo desde secrets.
 - `gym-party.js`: modulo Gym Party, registro rapido, graficas y edicion/eliminacion de series.
-- `advanced-features.js`: version `2.5.6`, backup/importacion Gym Party.
-- `sw.js`: cache v31 e incluye `gym-party.js`.
+- `advanced-features.js`: version `2.5.7`, backup/importacion Gym Party.
+- `sw.js`: cache v32 e incluye `gym-party.js`.
 - `README.md`: documenta Gym Party, demo, Firebase, privacidad y pruebas.
 - `CODEX_HANDOFF.md`: este handoff.
 
@@ -94,8 +94,8 @@ Android:
 - `android-native-wrapper/app/src/main/java/com/protocolo/cien/MainActivity.java`:
   permite acceso universal desde archivos locales para que WebView pueda usar
   Firebase/FDC desde assets locales.
-- `android-native-wrapper/app/build.gradle`: `versionCode 28`,
-  `versionName 2.5.6`.
+- `android-native-wrapper/app/build.gradle`: `versionCode 29`,
+  `versionName 2.5.7`.
 - `android-native-wrapper/app/src/main/assets/*`: sincronizado desde raiz.
 
 Scripts/workflows:
@@ -109,7 +109,7 @@ Scripts/workflows:
 - `.github/workflows/*.yml`: corren `test-gym-party.mjs`.
 - `.github/workflows/deploy-pages.yml`: publica `workout-features.js`,
   `firebase-config.js` y `gym-party.js`.
-- `.github/workflows/build-debug-apk.yml`: release objetivo `v2.5.6`.
+- `.github/workflows/build-debug-apk.yml`: release objetivo `v2.5.7`.
 
 ## 5. Estructura datos/localStorage/Firebase
 
@@ -334,6 +334,14 @@ UX actual:
   `Guardar serie`. Debajo quedan `partySetCounters compact` y
   `partySetRowsHtml()` como resumen compacto de series guardadas. `Agregar
   ejercicio extra` queda plegado mas abajo para no empujar la accion principal.
+- En `2.5.7` se reforzo persistencia de Gym Party para cerrar/reabrir web:
+  `loadFirebaseRuntime()` llama `ensurePersistentAnonymousAuth()`, que fija
+  `browserLocalPersistence`, espera restauracion con `waitForInitialAuth()` y
+  solo crea un usuario anonimo nuevo si no habia sesion persistida. Al arrancar,
+  `resumeFirebaseMembership()` detecta `gymPartyMembership` Firebase en
+  localStorage y ejecuta sincronizacion silenciosa. `syncFirebaseNow()` valida
+  con `assertFirebaseSessionMatchesMembership()` que `auth.currentUser.uid`
+  coincida con la membresia guardada antes de subir/leer datos.
 - El dashboard incluye `Enviar codigo`, que usa Web Share API si existe o copia
   una invitacion con link `?gymPartyCode=...`.
 - Al abrir un link con `?gymPartyCode=CODIGO`, la app abre Gym Party y precarga
@@ -476,7 +484,7 @@ No borrar ni renombrar datos sin migracion.
 9. Revisar dashboard Gym Party.
 10. Exportar backup JSON y CSV comparativo.
 11. Si se publica APK, esperar workflow `Construir APK Android` y release
-    `v2.5.6`.
+    `v2.5.7`.
 
 ## 16. Como probar la app
 
@@ -536,7 +544,7 @@ Salida:
 android-native-wrapper/app/build/outputs/apk/debug/app-debug.apk
 ```
 
-GitHub Actions publica release `v2.5.6` si se empuja a `main`.
+GitHub Actions publica release `v2.5.7` si se empuja a `main`.
 
 ## 18. Como configurar Firebase
 
@@ -656,3 +664,24 @@ Verificacion realizada el 2026-07-01:
 Cambio UX principal: el formulario de Gym Party ahora prioriza reps/kilos y
 `Guardar serie` arriba; las series ya guardadas aparecen despues como resumen
 compacto (`partyLoggedSets`, `partySetList compact`) junto a contadores reducidos.
+
+## 22. Verificacion local 2.5.7
+
+Verificacion realizada el 2026-07-01:
+
+- `scripts/sync-web-assets.ps1`: OK, assets Android sincronizados desde raiz.
+- `scripts/validate-app.ps1 -CheckAndroidAssets`: OK, version `2.5.7`, cache
+  PWA `v32`, assets web/Android sincronizados.
+- `scripts/test-gym-party.mjs`: OK. Incluye contratos de persistencia Firebase:
+  `browserLocalPersistence`, `setPersistence`, `onAuthStateChanged`,
+  `resumeFirebaseMembership` y validacion de UID con
+  `assertFirebaseSessionMatchesMembership()`.
+- `scripts/test-workout-features.mjs`: OK.
+- `scripts/test-service-worker.mjs`: OK.
+
+Resultado esperado para usuario invitado: si se une con codigo en el mismo
+navegador/PWA, registra entrenamiento y cierra pestana/web, al volver conserva
+`gymPartyMembership`, `workoutSessions`, `sharedWorkoutSessions`,
+`sharedWorkoutSets` y la sesion anonima Firebase local. Si borra datos del sitio,
+usa modo privado o cambia de navegador/dispositivo, debe unirse otra vez con el
+codigo.

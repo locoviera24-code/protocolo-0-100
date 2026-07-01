@@ -3,6 +3,10 @@ import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
 
 const source = await readFile(new URL('../gym-party.js', import.meta.url), 'utf8');
+assert.match(source, /browserLocalPersistence/);
+assert.match(source, /setPersistence/);
+assert.match(source, /onAuthStateChanged/);
+assert.match(source, /resumeFirebaseMembership/);
 
 function createContext() {
   const store = new Map();
@@ -23,6 +27,8 @@ function createContext() {
     navigator: {onLine: true},
     alert() {},
     confirm() { return true; },
+    setTimeout,
+    clearTimeout,
     todayStr() { return '2026-06-24'; },
     uid(prefix) { return `${prefix}_test`; },
     escapeHtml(value) { return String(value ?? ''); },
@@ -54,6 +60,15 @@ context.GYM_PARTY_FIREBASE_CONFIG = {
 };
 assert.equal(party.firebaseConfigSource(), 'bundled');
 assert.equal(party.effectiveFirebaseConfig().projectId, 'demo');
+assert.doesNotThrow(() => party.assertFirebaseSessionMatchesMembership({currentUser: {uid: 'user_ok'}}, {backendMode: 'firebase', userId: 'user_ok'}));
+assert.throws(() => party.assertFirebaseSessionMatchesMembership({currentUser: {uid: 'other_user'}}, {backendMode: 'firebase', userId: 'user_ok'}), /sesion anonima original/);
+const restoredAuth = await party.waitForInitialAuth({
+  onAuthStateChanged(auth, next) {
+    next({uid: 'restored_user'});
+    return () => {};
+  }
+}, {currentUser: null});
+assert.equal(restoredAuth.uid, 'restored_user');
 
 const demo2 = party.buildDemoData(2);
 assert.equal(demo2.members.length, 2);

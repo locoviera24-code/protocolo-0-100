@@ -154,6 +154,12 @@ Para usar dos telefonos reales, incluido iPhone + Android:
    - o pegando el JSON en **Gym Party > Firebase opcional**.
 7. Crear sala Firebase y compartir el codigo.
 
+Al unirse con codigo desde el mismo navegador, Gym Party guarda la membresia y
+la sesion anonima de Firebase de forma local. Si tu amigo cierra Safari/Chrome,
+cierra la pestana o vuelve a abrir la PWA, la app restaura esa sala y sincroniza
+en segundo plano. Si usa modo privado, borra datos del sitio o cambia de
+navegador/dispositivo, debera unirse otra vez con el codigo.
+
 Secrets esperados para publicar web/APK ya configurados:
 
 - `FIREBASE_API_KEY`
@@ -251,7 +257,7 @@ El APK resultante queda en `android-native-wrapper/app/build/outputs/apk/debug/a
 ## Publicacion
 
 - **PWA:** el workflow `Publicar PWA en GitHub Pages` publica los archivos raiz.
-- **APK:** el workflow `Construir APK Android` compila el wrapper y publica la descarga directa de la version `v2.5.6`.
+- **APK:** el workflow `Construir APK Android` compila el wrapper y publica la descarga directa de la version `v2.5.7`.
 
 El APK generado es `debug`, apropiado para uso personal. Publicar en Play Store requiere una compilacion `release` firmada con una clave privada.
 

@@ -1852,7 +1852,7 @@
     syncFromLocalWorkouts({silent: true});
     const m = activeMembership();
     if(m?.backendMode === 'firebase' && typeof navigator !== 'undefined' && navigator.onLine !== false){
-      syncFirebaseNow().catch(() => flashMessage('Guardado localmente. Se sincronizara al volver a intentar.'));
+      syncFirebaseNow({silent: true}).catch(() => flashMessage('Guardado localmente. Se sincronizara al volver a intentar.'));
     }
   }
   function selectPartyMuscle(event, options = {}){
@@ -2034,11 +2034,48 @@
       const app = appMod.getApps().find(item => item.name === 'gym-party') || appMod.initializeApp(config, 'gym-party');
       const auth = authMod.getAuth(app);
       const db = firestoreMod.getFirestore(app);
-      if(!auth.currentUser) await authMod.signInAnonymously(auth);
+      await ensurePersistentAnonymousAuth(authMod, auth);
       firebaseRuntime = {app, auth, db, appMod, authMod, firestoreMod};
       return firebaseRuntime;
     })();
     return firebaseInitPromise;
+  }
+  async function ensurePersistentAnonymousAuth(authMod, auth){
+    if(authMod.setPersistence && authMod.browserLocalPersistence){
+      try{
+        await authMod.setPersistence(auth, authMod.browserLocalPersistence);
+      }catch(error){
+        if(typeof console !== 'undefined') console.warn('Firebase Auth local persistence unavailable', error);
+      }
+    }
+    const restored = await waitForInitialAuth(authMod, auth);
+    if(restored) return restored;
+    const credential = await authMod.signInAnonymously(auth);
+    return credential?.user || auth.currentUser;
+  }
+  function waitForInitialAuth(authMod, auth){
+    if(auth.currentUser) return Promise.resolve(auth.currentUser);
+    if(typeof authMod.onAuthStateChanged !== 'function') return Promise.resolve(null);
+    return new Promise(resolve => {
+      let settled = false;
+      let unsubscribe = null;
+      const finish = user => {
+        if(settled) return;
+        settled = true;
+        clearTimeout(timer);
+        if(unsubscribe) unsubscribe();
+        else setTimeout(() => { if(unsubscribe) unsubscribe(); }, 0);
+        resolve(user || auth.currentUser || null);
+      };
+      const timer = setTimeout(() => finish(auth.currentUser || null), 1800);
+      unsubscribe = authMod.onAuthStateChanged(auth, finish, () => finish(auth.currentUser || null));
+    });
+  }
+  function assertFirebaseSessionMatchesMembership(auth, m){
+    const uidValue = auth?.currentUser?.uid || '';
+    if(m?.backendMode === 'firebase' && m.userId && uidValue && uidValue !== m.userId){
+      throw new Error('Este navegador perdio la sesion anonima original. Tus entrenamientos locales siguen guardados; para volver a sincronizar, unite otra vez con el codigo de la sala.');
+    }
   }
   function hasFirebaseConfig(config){
     return !!(config && config.apiKey && config.authDomain && config.projectId && config.appId);
@@ -2097,7 +2134,7 @@
     saveMembership({partyId, inviteCode, userId: uidValue, alias, role: 'owner', backendMode: 'firebase', active: true, privacy, joinedAt: nowIso(), party});
     saveSettings({backendMode: 'firebase'});
     syncFromLocalWorkouts({silent: true});
-    await syncFirebaseNow();
+    await syncFirebaseNow({silent: true});
     renderGymParty();
     flashMessage('Gym Party Firebase creada. Copia el código para invitar.');
   }
@@ -2136,15 +2173,16 @@
     const partyWithMembers = {...party, members: nextMembers, membersCount: nextMembers.length, maxMembers: party.maxMembers || MAX_GYM_PARTY_MEMBERS};
     saveMembership({partyId: invite.partyId, inviteCode: code, userId: auth.currentUser.uid, alias, role: member.role, backendMode: 'firebase', active: true, privacy, joinedAt: nowIso(), party: partyWithMembers});
     saveSettings({backendMode: 'firebase'});
-    await syncFirebaseNow();
+    await syncFirebaseNow({silent: true});
     renderGymParty();
     flashMessage('Te uniste a la Gym Party Firebase.');
   }
-  async function syncFirebaseNow(){
+  async function syncFirebaseNow({silent = false} = {}){
     const m = activeMembership();
     if(!m || m.backendMode !== 'firebase') return;
     const runtime = await loadFirebaseRuntime();
-    const {db, firestoreMod} = runtime;
+    const {db, auth, firestoreMod} = runtime;
+    assertFirebaseSessionMatchesMembership(auth, m);
     const queue = syncQueue();
     for(const op of queue){
       await firestoreMod.setDoc(firestoreMod.doc(db, op.collection, op.payload.id), {...op.payload, pendingSync: false, updatedAt: nowIso()}, {merge: true});
@@ -2162,7 +2200,7 @@
     const party = {...(m.party || currentParty() || {}), members, membersCount: members.length, maxMembers: MAX_GYM_PARTY_MEMBERS};
     saveMembership({...m, party, updatedAt: nowIso()});
     setLastSync();
-    flashMessage('Gym Party sincronizada.');
+    if(!silent) flashMessage('Gym Party sincronizada.');
   }
 
   function exportableSettings(){
@@ -2256,6 +2294,23 @@
       }, 40);
     }, 0);
   }
+  function resumeFirebaseMembership(){
+    if(window.__gymPartyResumeSyncStarted) return;
+    const m = activeMembership();
+    if(!m || m.backendMode !== 'firebase') return;
+    if(typeof navigator !== 'undefined' && navigator.onLine === false) return;
+    window.__gymPartyResumeSyncStarted = true;
+    setTimeout(() => {
+      syncFromLocalWorkouts({silent: true});
+      syncFirebaseNow({silent: true})
+        .then(() => {
+          if(document.getElementById('gymPartyRoot')) renderGymParty();
+        })
+        .catch(error => {
+          if(typeof console !== 'undefined') console.warn('Gym Party resume sync failed', error);
+        });
+    }, 250);
+  }
 
   window.GYM_PARTY_FEATURES = {
     keys,
@@ -2272,12 +2327,15 @@
     syncNow,
     hasFirebaseConfig,
     effectiveFirebaseConfig,
-    firebaseConfigSource
+    firebaseConfigSource,
+    waitForInitialAuth,
+    assertFirebaseSessionMatchesMembership
   };
   window.renderGymParty = renderGymParty;
 
   setupEvents();
   installGymHook();
   applyInviteFromUrl();
+  resumeFirebaseMembership();
   if(document.getElementById('gymPartyRoot')) renderGymParty();
 })();
