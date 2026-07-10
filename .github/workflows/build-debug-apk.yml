@@ -8,7 +8,7 @@ on:
       - master
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build-apk:
@@ -68,6 +68,9 @@ jobs:
       - name: Probar seguridad del WebView Android
         run: node ./scripts/test-android-webview-security.mjs
 
+      - name: Probar contratos de release Android
+        run: node ./scripts/test-android-release.mjs
+
       - name: Configurar Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
@@ -88,10 +91,3 @@ jobs:
           name: protocolo-0-100-apk
           path: dist/protocolo-0-100-debug.apk
           retention-days: 30
-
-      - name: Publicar APK como descarga directa
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release view v2.5.8 >/dev/null 2>&1 || gh release create v2.5.8 --title "Protocolo 0-100 v2.5.8" --notes "Agrega acceso portable de Gym Party para cambiar de dispositivo."
-          gh release upload v2.5.8 dist/protocolo-0-100-debug.apk --clobber

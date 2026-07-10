@@ -57,5 +57,8 @@ jobs:
       - name: Probar seguridad del WebView Android
         run: node ./scripts/test-android-webview-security.mjs
 
+      - name: Probar contratos de release Android
+        run: node ./scripts/test-android-release.mjs
+
       - name: Probar reglas Firestore en Emulator
         run: npm run test:rules

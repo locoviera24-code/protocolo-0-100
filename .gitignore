@@ -8,6 +8,8 @@ node_modules/
 dist/
 dist-pages/
 *.apk
+*.jks
+*.keystore
 .tools/
 firebase-config.local.js
 firebase/.env

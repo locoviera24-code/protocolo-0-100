@@ -35,6 +35,7 @@ $widgetUpdater = Read-Utf8 'android-native-wrapper/app/src/main/java/com/protoco
 $deployWorkflow = Read-Utf8 '.github/workflows/deploy-pages.yml'
 $apkWorkflow = Read-Utf8 '.github/workflows/build-debug-apk.yml'
 $validationWorkflow = Read-Utf8 '.github/workflows/validate-app.yml'
+$releaseWorkflow = Read-Utf8 '.github/workflows/build-release-apk.yml'
 $serviceWorkerTest = Read-Utf8 'scripts/test-service-worker.mjs'
 $workoutTest = Read-Utf8 'scripts/test-workout-features.mjs'
 $gymPartyTest = Read-Utf8 'scripts/test-gym-party.mjs'
@@ -43,6 +44,7 @@ $firestoreRules = Read-Utf8 'firebase/firestore.rules'
 $firestoreRulesTest = Read-Utf8 'firebase/rules.test.mjs'
 $gymPartySyncTest = Read-Utf8 'scripts/test-gym-party-sync.mjs'
 $androidSecurityTest = Read-Utf8 'scripts/test-android-webview-security.mjs'
+$androidReleaseTest = Read-Utf8 'scripts/test-android-release.mjs'
 $readme = Read-Utf8 'README.md'
 $handoff = Read-Utf8 'CODEX_HANDOFF.md'
 
@@ -60,6 +62,7 @@ $requiredFiles = @(
     'nutrition-data.js', 'fdc-client.js', 'workout-metrics.js', 'workout-ranking.js', 'workout-features.js', 'advanced-features.js',
     'firebase-config.js', 'gym-party-sync.js', 'gym-party.js',
     'scripts/test-android-webview-security.mjs',
+    'scripts/test-android-release.mjs',
     'manifest.webmanifest', 'sw.js',
     'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetProvider.java',
     'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetUpdateService.java',
@@ -108,7 +111,8 @@ $appVersion = $appVersionMatch.Groups[1].Value
 $androidVersion = $androidVersionMatch.Groups[1].Value
 $cacheVersion = $cacheVersionMatch.Groups[1].Value
 Assert-True ($appVersion -eq $androidVersion) "Version web $appVersion y Android $androidVersion no coinciden"
-Assert-True ($apkWorkflow.Contains("v$appVersion")) "El workflow APK no publica v$appVersion"
+Assert-True ($releaseWorkflow.Contains('VERSION_NAME')) 'El workflow release debe obtener versionName dinamicamente'
+Assert-True ($releaseWorkflow.Contains('protocolo-0-100-v${VERSION_NAME}-release.apk')) 'El APK release debe llevar la version en el nombre'
 Assert-True ($readme.Contains("v$appVersion")) "README.md no menciona v$appVersion"
 Assert-True ($handoff.Contains($appVersion)) "CODEX_HANDOFF.md no menciona la version $appVersion"
 Assert-True ($handoff.Contains("protocolo-0-100-pwa-v$cacheVersion")) "CODEX_HANDOFF.md no menciona el cache PWA v$cacheVersion"
@@ -310,6 +314,11 @@ foreach ($contract in @('WebViewAssetLoader','appassets.androidplatform.net','se
 Assert-True (-not $mainActivity.Contains('loadUrl("file:')) 'MainActivity no debe cargar la app mediante file://'
 Assert-True ($androidBuild.Contains("androidx.webkit:webkit:1.15.0")) 'Falta dependencia AndroidX WebKit compatible con minSdk 23'
 Assert-True ($androidManifest.Contains('android.webkit.WebView.EnableSafeBrowsing')) 'Falta Safe Browsing en AndroidManifest'
+foreach ($contract in @('assembleRelease','ANDROID_KEYSTORE_BASE64','ANDROID_KEYSTORE_PASSWORD','ANDROID_KEY_ALIAS','ANDROID_KEY_PASSWORD','sha256sum','gh release create','workflow_dispatch')) {
+    Assert-True ($releaseWorkflow.Contains($contract)) "Falta contrato de APK release: $contract"
+}
+Assert-True (-not $apkWorkflow.Contains('gh release')) 'El workflow debug no debe publicar GitHub Releases'
+Assert-True ($androidReleaseTest.Contains('Release Android separado')) 'Falta prueba de separacion debug/release'
 Assert-True (-not $gymParty.Contains('members: undefined')) 'Gym Party no debe enviar members: undefined a Firestore'
 Assert-True ($gymParty.Contains('delete partyDoc.members')) 'Gym Party debe eliminar members antes de crear gym_parties en Firestore'
 foreach ($removedAction in @(
@@ -471,6 +480,7 @@ foreach ($workflow in @($deployWorkflow, $apkWorkflow, $validationWorkflow)) {
     Assert-True ($workflow.Contains('node ./scripts/test-gym-party.mjs')) 'Cada workflow debe probar Gym Party'
     Assert-True ($workflow.Contains('node ./scripts/test-gym-party-sync.mjs')) 'Cada workflow debe probar sync incremental'
     Assert-True ($workflow.Contains('node ./scripts/test-android-webview-security.mjs')) 'Cada workflow debe probar seguridad WebView Android'
+    Assert-True ($workflow.Contains('node ./scripts/test-android-release.mjs')) 'Cada workflow debe probar contratos de release Android'
 }
 foreach ($contract in @('Torso A', 'Pierna A', 'Torso B', 'Pierna B', 'Torso C', 'Rutina propia', 'buildWorkoutWidgetState', 'updateQuickSetPayload', 'deleteQuickSetPayload')) {
     Assert-True ($workoutTest.Contains($contract)) "Falta prueba workout: $contract"

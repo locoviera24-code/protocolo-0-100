@@ -67,6 +67,9 @@ jobs:
       - name: Probar seguridad del WebView Android
         run: node ./scripts/test-android-webview-security.mjs
 
+      - name: Probar contratos de release Android
+        run: node ./scripts/test-android-release.mjs
+
       - name: Preparar archivos publicos
         run: |
           mkdir -p dist-pages/icons
