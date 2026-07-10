@@ -74,6 +74,18 @@ try{
   await assertFails(setDoc(doc(memberDb,'workout_sets_shared','negative_set'),{...ownerSet,id:'negative_set',userId:'member',reps:-1}));
   const joined=await getDoc(doc(memberDb,'gym_party_members','party_secure_member'));
   assert.equal(joined.data().role,'member');
+  await assertSucceeds(runTransaction(memberDb,async transaction=>{
+    const memberRef=doc(memberDb,'gym_party_members','party_secure_member');
+    const partyRef=doc(memberDb,'gym_parties','party_secure');
+    const inviteRef=doc(memberDb,'gym_party_invites','SAFE10');
+    const memberSnap=await transaction.get(memberRef);
+    const partySnap=await transaction.get(partyRef);
+    const inviteSnap=await transaction.get(inviteRef);
+    transaction.update(memberRef,{active:false,updatedAt:now});
+    transaction.update(partyRef,{membersCount:partySnap.data().membersCount-1,updatedAt:now});
+    transaction.update(inviteRef,{membersCount:inviteSnap.data().membersCount-1,updatedAt:now});
+    assert.equal(memberSnap.data().active,true);
+  }));
   console.log('Firestore Rules correctas: owner atomico, union valida y seis negativas criticas denegadas.');
 }finally{
   await env.cleanup();

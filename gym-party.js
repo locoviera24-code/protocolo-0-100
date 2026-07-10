@@ -285,7 +285,7 @@
     const party = currentParty();
     const rawSets = sharedSets().filter(s => s.partyId === m.partyId);
     const sets = rawSets.filter(s => !s.deleted);
-    const sessions = normalizeSessionsFromSets(sharedSessions().filter(s => s.partyId === m.partyId), rawSets);
+    const sessions = normalizeSessionsFromSets(sharedSessions().filter(s => s.partyId === m.partyId && !s.deletedAt), rawSets);
     const members = safeArray(party?.members);
     return {party, members, sessions, sets, demo: false};
   }
@@ -325,12 +325,14 @@
       createdBy: userId,
       createdAt: nowIso(),
       active: true,
+      inviteActive: true,
+      inviteUses: 0,
       privacyMode: 'gym-only',
       membersCount: 1,
       maxMembers: MAX_GYM_PARTY_MEMBERS,
       members: [member]
     };
-    saveSettings({backendMode: 'local', localParties: {...s.localParties, [partyId]: party}});
+    saveSettings({backendMode: 'local',pendingInviteCode:'',localParties:{...s.localParties,[partyId]:party}});
     saveMembership({partyId, inviteCode, userId, alias, role: 'owner', backendMode: 'local', active: true, privacy, joinedAt: nowIso(), party});
     syncFromLocalWorkouts({silent: true});
     renderGymParty();
@@ -351,7 +353,10 @@
     const s = settings();
     const party = Object.values(s.localParties || {}).find(item => normalizeCode(item.inviteCode) === code);
     if(!party){ flashMessage('Ese código no existe en este dispositivo. Para unirse desde otro teléfono configurá Firebase.'); return; }
-    if(!party.active){ flashMessage('La sala no está activa.'); return; }
+    if(!party.active||party.inviteActive===false){ flashMessage('La sala o su codigo de invitacion no estan activos.'); return; }
+    if(party.inviteExpiresAt&&party.inviteExpiresAt<todayStr()){flashMessage('Ese codigo de invitacion ya vencio.');return;}
+    if(party.inviteMaxUses&&Number(party.inviteUses||0)>=Number(party.inviteMaxUses)){flashMessage('Ese codigo alcanzo su limite de usos.');return;}
+    if(window.confirm&&!window.confirm(`Vas a unirte a "${party.name||'Gym Party'}". ¿Continuar?`)) return;
     if((party.members || []).length >= MAX_GYM_PARTY_MEMBERS){
       flashMessage('Esta sala alcanzó el límite recomendado de 10 miembros para mantener la app rápida y clara.');
       return;
@@ -365,9 +370,10 @@
     }
     const member = {id: memberIdForLocalParty(party.id, userId), partyId: party.id, userId, aliasInParty: alias, role: 'member', joinedAt: nowIso(), active: true, ...privacy};
     member.inviteCode = party.inviteCode;
-    const nextParty = {...party, members: [...(party.members || []), member], membersCount: (party.members || []).length + 1};
+    const nextParty = {...party, members: [...(party.members || []), member], membersCount: (party.members || []).length + 1,inviteUses:Number(party.inviteUses||0)+1};
     saveSettings({localParties: {...s.localParties, [party.id]: nextParty}});
     saveMembership({partyId: party.id, inviteCode: party.inviteCode, userId, alias, role: 'member', backendMode: 'local', active: true, privacy, joinedAt: nowIso(), party: nextParty});
+    saveSettings({pendingInviteCode:''});
     syncFromLocalWorkouts({silent: true});
     renderGymParty();
     flashMessage('Te uniste a la Gym Party local.');
@@ -932,6 +938,7 @@
     const backendDefault = cfgSource === 'missing' ? 'local' : 'firebase';
     const onlineReady = cfgSource !== 'missing';
     const cfgStatus = onlineReady ? 'Online listo' : 'Modo local/demo';
+    const pendingCode=normalizeCode(settings().pendingInviteCode||'');
     return `
       <div class="partySimpleShell">
         <div class="moduleCard partyStartCard">
@@ -952,10 +959,10 @@
             <div class="checks">${privacyChecks('create', defaultPrivacy, {compact: true})}</div>
             <button type="button" class="good partyPrimaryAction" data-gym-party-action="create">${onlineReady ? 'Crear codigo para invitar' : 'Crear sala local/demo'}</button>
           </div>
-          <details class="partyFold">
+          <details class="partyFold" ${pendingCode?'open':''}>
             <summary>Ya tengo un codigo</summary>
             <div class="partyFormCard flat">
-              <div class="field"><label>Codigo</label><input type="text" id="gymPartyJoinCode" placeholder="Ej. A1B2C3"></div>
+              <div class="field"><label>Codigo</label><input type="text" id="gymPartyJoinCode" value="${escape(pendingCode)}" placeholder="Ej. A1B2C3"></div>
               <div class="field"><label>Tu alias</label><input type="text" id="gymPartyJoinAlias" placeholder="Ej. Juan"></div>
               <input type="hidden" id="gymPartyJoinBackend" value="${backendDefault}">
               <div class="checks">${privacyChecks('join', defaultPrivacy, {compact: true})}</div>
@@ -1718,12 +1725,28 @@
           <button type="button" class="secondary" data-gym-party-action="new-room">Crear sala nueva</button>
           <button type="button" class="secondary" data-gym-party-action="export-csv">Exportar CSV</button>
           <button type="button" class="secondary" data-gym-party-action="export-json">Exportar JSON</button>
-          <button type="button" class="danger" data-gym-party-action="leave">Salir</button>
         </div>
+        ${m.role==='owner'?`<details class="partyNestedFold">
+          <summary>Gestionar codigo de invitacion</summary>
+          <div class="partyQuickInputs">
+            <div class="field"><label>Expiracion</label><select id="gymPartyInviteExpiry"><option value="">Sin expiracion</option><option value="7">7 dias</option><option value="30">30 dias</option><option value="90">90 dias</option></select></div>
+            <div class="field"><label>Limite de usos</label><input type="number" id="gymPartyInviteMaxUses" min="1" max="100" placeholder="Sin limite"></div>
+          </div>
+          <div class="buttons partySecondaryActions"><button type="button" class="secondary" data-gym-party-action="regenerate-invite">Regenerar codigo</button><button type="button" class="danger" data-gym-party-action="revoke-invite">Revocar codigo actual</button></div>
+          <div class="muted small">Regenerar invalida el codigo anterior. Solo el owner puede hacerlo.</div>
+        </details>`:''}
         ${m.backendMode === 'firebase' ? `<details class="partyNestedFold">
           <summary>Guardar acceso para otro dispositivo</summary>
           ${portableAccessFormHtml({mode: 'link'})}
         </details>` : '<div class="muted small">La recuperacion en otro dispositivo requiere sala online con Firebase.</div>'}
+        <details class="partyNestedFold">
+          <summary>Salir o borrar datos compartidos</summary>
+          <div class="buttons partySecondaryActions">
+            <button type="button" class="secondary" data-gym-party-action="leave-device">Salir solo de este dispositivo</button>
+            ${m.backendMode==='firebase'?'<button type="button" class="danger" data-gym-party-action="leave-remote">Desactivar mi membresia en Firebase</button><button type="button" class="danger" data-gym-party-action="leave-delete-shared">Eliminar mis datos compartidos y salir</button>':''}
+          </div>
+          <div class="muted small">Tus rutinas, sesiones y series locales permanecen en este dispositivo. Salir solo del dispositivo no borra lo que ya se compartio en Firestore.</div>
+        </details>
       </details>
 
       <details class="moduleCard partyFoldCard">
@@ -1891,7 +1914,11 @@
     else if(action === 'link-access') linkPortableAccess().catch(error => flashMessage(firebaseError(error)));
     else if(action === 'restore-access') restorePortableAccess().catch(error => flashMessage(firebaseError(error)));
     else if(action === 'new-room') newRoomFlow();
-    else if(action === 'leave') leaveParty();
+    else if(action === 'leave'||action === 'leave-device') leavePartyDevice();
+    else if(action === 'leave-remote') deactivateFirebaseMembership().catch(error=>flashMessage(firebaseError(error)));
+    else if(action === 'leave-delete-shared') deleteSharedDataAndLeave().catch(error=>flashMessage(firebaseError(error)));
+    else if(action === 'regenerate-invite') regenerateInvite().catch(error=>flashMessage(firebaseError(error)));
+    else if(action === 'revoke-invite') revokeInvite().catch(error=>flashMessage(firebaseError(error)));
     else if(action === 'open-gym' && typeof window.setModule === 'function') window.setModule('gym');
     else if(action === 'party-save-set') savePartyWorkoutSet();
     else if(action === 'party-edit-set') editPartyWorkoutSet(event);
@@ -1933,6 +1960,7 @@
   function copyInviteCode(){
     const code = currentParty()?.inviteCode || '';
     if(!code) return;
+    if(currentParty()?.inviteActive===false){flashMessage('El codigo actual esta revocado. Regenera uno nuevo antes de enviarlo.');return;}
     if(typeof navigator !== 'undefined' && navigator.clipboard?.writeText) navigator.clipboard.writeText(code).catch(() => {});
     flashMessage(`Código copiado: ${code}`);
   }
@@ -1953,6 +1981,7 @@
   async function shareInviteCode(){
     const code = currentParty()?.inviteCode || '';
     if(!code) return;
+    if(currentParty()?.inviteActive===false){flashMessage('El codigo esta revocado. Regenera uno nuevo antes de enviarlo.');return;}
     const text = inviteMessage(code);
     if(typeof navigator !== 'undefined' && navigator.share){
       try{
@@ -2153,11 +2182,97 @@
     renderGymParty();
     flashMessage('Configuración Firebase quitada.');
   }
-  function leaveParty(){
-    const ok = window.confirm ? window.confirm('Vas a salir de la sala en este dispositivo. Tus entrenamientos locales no se borran.') : true;
+  function leavePartyDevice(){
+    const ok = window.confirm ? window.confirm('Vas a salir solo en este dispositivo. Tus entrenamientos locales y los datos ya compartidos en Firestore no se borran.') : true;
     if(!ok) return;
     clearMembership();
-    flashMessage('Saliste de la Gym Party en este dispositivo.');
+    flashMessage('Saliste de la Gym Party solo en este dispositivo.');
+  }
+  function inviteOptionsFromUi(){
+    const days=Math.max(0,Number(document.getElementById('gymPartyInviteExpiry')?.value)||0);
+    const maxUses=Math.max(0,Math.min(100,Number(document.getElementById('gymPartyInviteMaxUses')?.value)||0));
+    return {days,maxUses};
+  }
+  async function regenerateInvite(){
+    const m=activeMembership(); if(!m||m.role!=='owner') throw new Error('Solo el owner puede regenerar invitaciones.');
+    if(window.confirm&&!window.confirm('El codigo anterior dejara de funcionar. ¿Regenerar ahora?')) return;
+    const options=inviteOptionsFromUi();
+    if(m.backendMode==='demo') throw new Error('El modo demo no administra invitaciones reales.');
+    if(m.backendMode==='local'){
+      const s=settings(),party=currentParty(),code=makeInviteCode();
+      const nextParty={...party,inviteCode:code,inviteActive:true,inviteUses:0,inviteMaxUses:options.maxUses||null,inviteExpiresAt:options.days?addDays(todayStr(),options.days):null};
+      saveSettings({localParties:{...s.localParties,[party.id]:nextParty},pendingInviteCode:''});
+      saveMembership({...m,inviteCode:code,party:nextParty,updatedAt:nowIso()}); renderGymParty(); flashMessage(`Nuevo codigo: ${code}`); return;
+    }
+    const runtime=await loadFirebaseRuntime(); const {db,auth,firestoreMod}=runtime; assertFirebaseSessionMatchesMembership(auth,m);
+    const partyRef=firestoreMod.doc(db,collections.parties,m.partyId),partySnap=await firestoreMod.getDoc(partyRef);
+    if(!partySnap.exists()) throw new Error('PARTY_NOT_FOUND');
+    let code='';
+    for(let attempt=0;attempt<4&&!code;attempt++){
+      const candidate=makeInviteCode(); const existing=await firestoreMod.getDoc(firestoreMod.doc(db,collections.invites,candidate)); if(!existing.exists()) code=candidate;
+    }
+    if(!code) throw new Error('No pude generar un codigo unico. Intenta otra vez.');
+    const party=partySnap.data(),timestamp=firestoreMod.serverTimestamp(),invite={inviteCode:code,partyId:m.partyId,partyName:party.name||'Gym Party',createdBy:m.userId,createdAt:timestamp,updatedAt:timestamp,active:true,membersCount:Number(party.membersCount)||1,maxMembers:Number(party.maxMembers)||MAX_GYM_PARTY_MEMBERS,uses:0};
+    if(options.maxUses) invite.maxUses=options.maxUses;
+    if(options.days) invite.expiresAt=firestoreMod.Timestamp.fromDate(new Date(Date.now()+options.days*86400000));
+    const batch=firestoreMod.writeBatch(db);
+    batch.set(firestoreMod.doc(db,collections.invites,code),invite);
+    if(party.inviteCode) batch.update(firestoreMod.doc(db,collections.invites,party.inviteCode),{active:false,updatedAt:timestamp});
+    batch.update(partyRef,{inviteCode:code,updatedAt:timestamp});
+    await batch.commit();
+    const localParty={...(m.party||{}),...party,inviteCode:code,inviteActive:true};
+    saveMembership({...m,inviteCode:code,party:localParty,updatedAt:nowIso()}); saveSettings({pendingInviteCode:''}); renderGymParty(); flashMessage(`Nuevo codigo creado: ${code}`);
+  }
+  async function revokeInvite(){
+    const m=activeMembership(); if(!m||m.role!=='owner') throw new Error('Solo el owner puede revocar invitaciones.');
+    if(window.confirm&&!window.confirm('Nadie podra unirse con el codigo actual. ¿Revocarlo?')) return;
+    if(m.backendMode==='demo') throw new Error('El modo demo no administra invitaciones reales.');
+    if(m.backendMode==='local'){
+      const s=settings(),party=currentParty(),nextParty={...party,inviteActive:false}; saveSettings({localParties:{...s.localParties,[party.id]:nextParty}}); saveMembership({...m,party:nextParty,updatedAt:nowIso()}); renderGymParty(); flashMessage('Codigo revocado.'); return;
+    }
+    const runtime=await loadFirebaseRuntime(); const {db,auth,firestoreMod}=runtime; assertFirebaseSessionMatchesMembership(auth,m);
+    const code=currentParty()?.inviteCode||m.inviteCode; if(!code) return;
+    await firestoreMod.updateDoc(firestoreMod.doc(db,collections.invites,code),{active:false,updatedAt:firestoreMod.serverTimestamp()});
+    saveMembership({...m,party:{...(m.party||{}),inviteActive:false},updatedAt:nowIso()}); renderGymParty(); flashMessage('Codigo revocado. Regenera uno cuando quieras volver a invitar.');
+  }
+  async function deactivateFirebaseMembership({skipConfirm=false}={}){
+    const m=activeMembership(); if(!m||m.backendMode!=='firebase') throw new Error('No hay membresia Firebase activa.');
+    const owner=m.role==='owner';
+    if(!skipConfirm&&window.confirm&&!window.confirm(owner?'Al ser owner, se desactivara toda la sala y el codigo. Tus entrenamientos locales permanecen. ¿Continuar?':'Se desactivara tu membresia remota. Tus entrenamientos locales permanecen. ¿Continuar?')) return;
+    const runtime=await loadFirebaseRuntime(); const {db,auth,firestoreMod}=runtime; assertFirebaseSessionMatchesMembership(auth,m);
+    const memberRef=firestoreMod.doc(db,collections.members,memberIdForLocalParty(m.partyId,m.userId)),partyRef=firestoreMod.doc(db,collections.parties,m.partyId);
+    const partyBefore=await firestoreMod.getDoc(partyRef),code=partyBefore.data()?.inviteCode||currentParty()?.inviteCode||m.inviteCode,inviteRef=code?firestoreMod.doc(db,collections.invites,code):null;
+    if(owner){
+      const batch=firestoreMod.writeBatch(db),timestamp=firestoreMod.serverTimestamp();
+      batch.update(memberRef,{active:false,updatedAt:timestamp}); batch.update(partyRef,{active:false,updatedAt:timestamp}); if(inviteRef) batch.update(inviteRef,{active:false,updatedAt:timestamp}); await batch.commit();
+    }else{
+      await firestoreMod.runTransaction(db,async transaction=>{
+        const memberSnap=await transaction.get(memberRef),partySnap=await transaction.get(partyRef),inviteSnap=inviteRef?await transaction.get(inviteRef):null;
+        if(!memberSnap.exists()||memberSnap.data().active===false) return;
+        const timestamp=firestoreMod.serverTimestamp(),nextCount=Math.max(0,Number(partySnap.data()?.membersCount||1)-1);
+        transaction.update(memberRef,{active:false,updatedAt:timestamp}); transaction.update(partyRef,{membersCount:nextCount,updatedAt:timestamp}); if(inviteSnap?.exists()) transaction.update(inviteRef,{membersCount:nextCount,updatedAt:timestamp});
+      });
+    }
+    saveSharedSessions(sharedSessions().filter(row=>row.partyId!==m.partyId)); saveSharedSets(sharedSets().filter(row=>row.partyId!==m.partyId)); localStorage.removeItem(keys.membership); renderGymParty(); flashMessage(owner?'Sala desactivada. Tus entrenamientos locales permanecen.':'Membresia Firebase desactivada. Tus entrenamientos locales permanecen.');
+  }
+  async function tombstoneOwnSharedCollection(runtime,collectionName,extraFields){
+    const m=activeMembership(),{db,firestoreMod}=runtime; let cursor=null;
+    do{
+      const constraints=[firestoreMod.where('partyId','==',m.partyId),firestoreMod.where('userId','==',m.userId),firestoreMod.orderBy(firestoreMod.documentId()),firestoreMod.limit(350)];
+      if(cursor) constraints.splice(3,0,firestoreMod.startAfter(cursor));
+      const snap=await firestoreMod.getDocs(firestoreMod.query(firestoreMod.collection(db,collectionName),...constraints));
+      if(snap.empty) break;
+      const batch=firestoreMod.writeBatch(db),timestamp=firestoreMod.serverTimestamp(); snap.docs.forEach(docSnap=>batch.update(docSnap.ref,{...extraFields,deletedAt:timestamp,updatedAt:timestamp})); await batch.commit();
+      cursor=snap.docs.length===350?snap.docs[snap.docs.length-1]:null;
+    }while(cursor);
+  }
+  async function deleteSharedDataAndLeave(){
+    const m=activeMembership(); if(!m||m.backendMode!=='firebase') throw new Error('No hay membresia Firebase activa.');
+    if(window.confirm&&!window.confirm('Se ocultaran y marcaran como eliminadas tus sesiones y series compartidas. Tus entrenamientos locales NO se borran. ¿Continuar?')) return;
+    const runtime=await loadFirebaseRuntime();
+    await tombstoneOwnSharedCollection(runtime,collections.sets,{deleted:true});
+    await tombstoneOwnSharedCollection(runtime,collections.sessions,{});
+    await deactivateFirebaseMembership({skipConfirm:true});
   }
   function newRoomFlow(){
     const ok = window.confirm ? window.confirm('Vas a salir de la sala actual en este dispositivo para crear una sala nueva. Tus entrenamientos locales no se borran.') : true;
@@ -2309,7 +2424,7 @@
     const party = {
       id: member.partyId,
       ...partySnap.data(),
-      inviteCode: member.inviteCode || partySnap.data().inviteCode || '',
+      inviteCode: partySnap.data().inviteCode || member.inviteCode || '',
       members,
       membersCount: members.length,
       maxMembers: partySnap.data().maxMembers || MAX_GYM_PARTY_MEMBERS
@@ -2380,6 +2495,9 @@
     const runtime = await loadFirebaseRuntime();
     const {db, auth, firestoreMod} = runtime;
     const inviteRef = firestoreMod.doc(db, collections.invites, code);
+    const preflight=await firestoreMod.getDoc(inviteRef);
+    if(!preflight.exists()||preflight.data().active===false) throw new Error('PARTY_NOT_FOUND');
+    if(window.confirm&&!window.confirm(`Vas a unirte a "${preflight.data().partyName||'Gym Party'}". ¿Continuar?`)) return;
     let invite=null;
     let member=null;
     await firestoreMod.runTransaction(db,async transaction=>{
@@ -2412,7 +2530,7 @@
     const nextMembers = upsertById(members, [member]);
     const partyWithMembers = {...party, members: nextMembers, membersCount: nextMembers.length, maxMembers: party.maxMembers || MAX_GYM_PARTY_MEMBERS};
     saveMembership({partyId: invite.partyId, inviteCode: code, userId: auth.currentUser.uid, alias, role: member.role, backendMode: 'firebase', active: true, privacy, joinedAt: nowIso(), party: partyWithMembers});
-    saveSettings({backendMode: 'firebase'});
+    saveSettings({backendMode: 'firebase',pendingInviteCode:''});
     await syncFirebaseNow({silent: true});
     renderGymParty();
     flashMessage('Te uniste a la Gym Party Firebase.');
@@ -2431,13 +2549,13 @@
     const membersQuery = firestoreMod.query(firestoreMod.collection(db, collections.members), firestoreMod.where('partyId','==', m.partyId), firestoreMod.where('active','==', true), firestoreMod.limit(MAX_GYM_PARTY_MEMBERS + 1));
     const sessionsQuery = firestoreMod.query(firestoreMod.collection(db, collections.sessions), firestoreMod.where('partyId','==', m.partyId), firestoreMod.limit(240));
     const setsQuery = firestoreMod.query(firestoreMod.collection(db, collections.sets), firestoreMod.where('partyId','==', m.partyId), firestoreMod.limit(2000));
-    const [membersSnap, sessionsSnap, setsSnap] = await Promise.all([firestoreMod.getDocs(membersQuery), firestoreMod.getDocs(sessionsQuery), firestoreMod.getDocs(setsQuery)]);
+    const [partySnap,membersSnap,sessionsSnap,setsSnap]=await Promise.all([firestoreMod.getDoc(firestoreMod.doc(db,collections.parties,m.partyId)),firestoreMod.getDocs(membersQuery),firestoreMod.getDocs(sessionsQuery),firestoreMod.getDocs(setsQuery)]);
     const members = membersSnap.docs.map(docSnap => docSnap.data());
     const remoteSessions = sessionsSnap.docs.map(docSnap => ({...docSnap.data(), source: 'firebase', pendingSync: false}));
     const remoteSets = setsSnap.docs.map(docSnap => ({...docSnap.data(), source: 'firebase', pendingSync: false}));
     saveSharedSessions(upsertById(sharedSessions().filter(row => row.partyId !== m.partyId), remoteSessions));
     saveSharedSets(upsertById(sharedSets().filter(row => row.partyId !== m.partyId), remoteSets));
-    const party = {...(m.party || currentParty() || {}), members, membersCount: members.length, maxMembers: MAX_GYM_PARTY_MEMBERS};
+    const party = {...(m.party||currentParty()||{}),...(partySnap.exists()?partySnap.data():{}),members,membersCount:members.length,maxMembers:partySnap.data()?.maxMembers||MAX_GYM_PARTY_MEMBERS};
     saveMembership({...m, party, updatedAt: nowIso()});
     setLastSync();
     if(!silent) flashMessage('Gym Party sincronizada.');
@@ -2447,12 +2565,14 @@
     const value = {...settings()};
     delete value.firebaseConfig;
     delete value.portableAccessEmail;
+    delete value.pendingInviteCode;
     return value;
   }
   function importableSettings(value){
     const next = {...value};
     delete next.firebaseConfig;
     delete next.portableAccessEmail;
+    delete next.pendingInviteCode;
     return next;
   }
   function exportState(){
@@ -2536,6 +2656,12 @@
     const code = normalizeCode(new URLSearchParams(window.location.search || '').get('gymPartyCode'));
     if(!code) return;
     window.__gymPartyInviteApplied = true;
+    saveSettings({pendingInviteCode:code});
+    try{
+      const cleanUrl=new URL(window.location.href);
+      cleanUrl.searchParams.delete('gymPartyCode');
+      window.history?.replaceState?.(window.history.state,'',`${cleanUrl.pathname}${cleanUrl.search}${cleanUrl.hash}`);
+    }catch(error){}
     setTimeout(() => {
       if(typeof window.setModule === 'function') window.setModule('gym-party');
       else renderGymParty();

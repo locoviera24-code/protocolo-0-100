@@ -72,6 +72,16 @@ service cloud.firestore {
         && getAfter(ownMemberPath(partyId)).data.role == "member";
     }
 
+    function leavingSelf(partyId) {
+      return signedIn()
+        && exists(ownMemberPath(partyId))
+        && get(ownMemberPath(partyId)).data.active == true
+        && get(ownMemberPath(partyId)).data.role == "member"
+        && existsAfter(ownMemberPath(partyId))
+        && getAfter(ownMemberPath(partyId)).data.active == false
+        && getAfter(ownMemberPath(partyId)).data.role == "member";
+    }
+
     function validParty(data, partyId) {
       return data.keys().hasOnly([
           "id", "name", "inviteCode", "createdBy", "createdAt", "updatedAt",
@@ -279,6 +289,10 @@ service cloud.firestore {
           (joiningSelf(partyId)
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["membersCount", "updatedAt"])
             && request.resource.data.membersCount == resource.data.membersCount + 1)
+          ||
+          (leavingSelf(partyId)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["membersCount", "updatedAt"])
+            && request.resource.data.membersCount == resource.data.membersCount - 1)
         );
       allow delete: if false;
     }
@@ -307,6 +321,11 @@ service cloud.firestore {
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["membersCount", "uses", "updatedAt"])
             && request.resource.data.membersCount == resource.data.membersCount + 1
             && request.resource.data.uses == resource.data.uses + 1)
+          ||
+          (leavingSelf(resource.data.partyId)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["membersCount", "updatedAt"])
+            && request.resource.data.membersCount == resource.data.membersCount - 1
+            && request.resource.data.uses == resource.data.uses)
         );
       allow delete: if false;
     }

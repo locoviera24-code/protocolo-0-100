@@ -11,6 +11,13 @@ assert.match(source, /EmailAuthProvider/);
 assert.match(source, /linkWithCredential/);
 assert.match(source, /signInWithEmailAndPassword/);
 assert.match(source, /restoreFirebaseMembershipForCurrentUser/);
+assert.match(source, /history\?\.replaceState/);
+assert.match(source, /searchParams\.delete\('gymPartyCode'\)/);
+assert.match(source, /regenerateInvite/);
+assert.match(source, /revokeInvite/);
+assert.match(source, /deactivateFirebaseMembership/);
+assert.match(source, /deleteSharedDataAndLeave/);
+assert.match(source, /tombstoneOwnSharedCollection/);
 
 function createContext() {
   const store = new Map();
@@ -113,7 +120,7 @@ const noPrevious=party.calculatePartyStats({
 assert.equal(noPrevious[0].changeVsPreviousWeek.volumePct,null);
 
 party.importState({
-  gymPartySettings: {localUserId: 'user_test', firebaseConfig: {apiKey: 'should-not-export'}, portableAccessEmail: 'private@example.com'},
+  gymPartySettings: {localUserId: 'user_test', firebaseConfig: {apiKey: 'should-not-export'}, portableAccessEmail: 'private@example.com',pendingInviteCode:'SECRET10'},
   gymPartyMembership: {partyId: 'party_test', userId: 'user_test', active: true},
   sharedWorkoutSessions: [{id: 'session_test', partyId: 'party_test', userId: 'user_test', date: '2026-06-24'}],
   sharedWorkoutSets: [{id: 'set_test', partyId: 'party_test', sessionId: 'session_test', userId: 'user_test', reps: 8, weightKg: 20}],
@@ -125,6 +132,7 @@ const exported = party.exportState();
 assert.equal(exported.gymPartySettings.localUserId, 'user_test');
 assert.equal(Object.hasOwn(exported.gymPartySettings, 'firebaseConfig'), false);
 assert.equal(Object.hasOwn(exported.gymPartySettings, 'portableAccessEmail'), false);
+assert.equal(Object.hasOwn(exported.gymPartySettings, 'pendingInviteCode'), false);
 assert.equal(exported.gymPartyMembership.partyId, 'party_test');
 assert.equal(exported.sharedWorkoutSessions[0].id, 'session_test');
 assert.equal(exported.sharedWorkoutSets[0].id, 'set_test');
