@@ -11,6 +11,7 @@ on:
       - nutrition-data.js
       - fdc-client.js
       - workout-features.js
+      - workout-ranking.js
       - gym-party.js
       - firebase-config.js
       - advanced-features.js
@@ -58,7 +59,7 @@ jobs:
       - name: Preparar archivos publicos
         run: |
           mkdir -p dist-pages/icons
-          cp index.html nutrition-data.js fdc-client.js workout-features.js firebase-config.js gym-party.js advanced-features.js manifest.webmanifest sw.js dist-pages/
+          cp index.html nutrition-data.js fdc-client.js workout-ranking.js workout-features.js firebase-config.js gym-party.js advanced-features.js manifest.webmanifest sw.js dist-pages/
           cp icons/icon-192.png icons/icon-512.png dist-pages/icons/
 
       - name: Generar configuracion Firebase opcional

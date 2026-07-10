@@ -1500,7 +1500,14 @@
         <div class="muted small">${escape((state.suggestions||[]).join(' · '))}</div>
       </div>`;
     }
-    const options = (state.exercises||[]).map(exercise => `<option value="${escape(exercise.id||exercise.exerciseId)}" ${selectedId===(exercise.id||exercise.exerciseId)?'selected':''}>${escape(exercise.name)} · ${exercise.setsLogged||0} serie(s)</option>`).join('');
+    const exerciseSearch=settings().partyExerciseSearch||'';
+    const ranked=api.rankExercisesForContext?.({date,query:exerciseSearch,currentPlan:state.plan})||{groups:[{label:'Rutina de hoy',items:state.exercises||[]}]};
+    const options = ranked.groups.map(group=>`<optgroup label="${escape(group.label)}">${group.items.map(exercise=>{
+      const active=(state.exercises||[]).find(item=>item.exerciseId===exercise.exerciseId || item.id===exercise.id);
+      const value=active?(active.id||active.exerciseId):`library:${exercise.exerciseId||exercise.id}`;
+      const sets=active?.setsLogged||0;
+      return `<option value="${escape(value)}" ${selectedId===value||selectedId===(active?.id||active?.exerciseId)?'selected':''}>${escape(exercise.name)}${sets?` · ${sets} serie(s)`:''}</option>`;
+    }).join('')}</optgroup>`).join('');
     const library = safeArray(api.exerciseLibrary).concat(safeArray(api.getExerciseLibrary?.())).filter((exercise,index,rows)=>rows.findIndex(item=>item.id===exercise.id)===index);
     const libraryOptions = library.map(exercise=>`<option value="${escape(exercise.name)}">${escape(exercise.group||'General')}</option>`).join('');
     const positionOptions = [`<option value="">Al final</option>`,...(state.exercises||[]).map(exercise=>`<option value="${escape(exercise.id||exercise.exerciseId)}">Despues de ${escape(exercise.name)}</option>`)].join('');
@@ -1527,6 +1534,7 @@
       </div>
       <div class="partyFormCard">
         ${partyDateControlsHtml(date)}
+        <div class="field"><label>Buscar ejercicio</label><input type="search" id="partyExerciseSearch" value="${escape(exerciseSearch)}" autocomplete="off" placeholder="Nombre o alias"></div>
         <div class="field"><label>Ejercicio</label><select id="partyQuickExerciseSelect">${options}</select></div>
         <div class="partyQuickInputs">
           <div class="field"><label>Reps</label><input type="number" id="partyQuickReps" min="0" max="200" value="${escape(repsValue)}"></div>
@@ -2418,7 +2426,18 @@
         renderGymParty();
       }
       if(event.target && event.target.id === 'partyQuickExerciseSelect'){
-        saveSettings({partyQuickExerciseId: event.target.value, partyEditingSetId: ''});
+        const value=event.target.value;
+        if(value.startsWith('library:')){
+          const api=workoutApi();
+          const exercise=api?.getExerciseLibrary?.().find(item=>item.id===value.slice(8));
+          const result=exercise?api.addManualExercisePayload({date:selectedWorkoutDate(),name:exercise.name,muscle:exercise.group,type:exercise.type,unit:exercise.unit,bodyweight:exercise.bodyweight||exercise.unit==='peso corporal',persistScope:'session',rememberForWeekday:false,saveToLibrary:false}):null;
+          saveSettings({partyQuickExerciseId:result?.exercise?.id||'',partyEditingSetId:''});
+          if(result?.ok) refreshPartyWorkoutShare();
+        }else saveSettings({partyQuickExerciseId:value,partyEditingSetId:''});
+        renderGymParty();
+      }
+      if(event.target && event.target.id === 'partyExerciseSearch'){
+        saveSettings({partyExerciseSearch:event.target.value||'',partyQuickExerciseId:'',partyEditingSetId:''});
         renderGymParty();
       }
       if(event.target && event.target.id === 'partyWorkoutDateInput'){

@@ -6,6 +6,7 @@
     workoutSessions:'protocolo_0_100_workout_sessions_v1',
     exerciseHistory:'protocolo_0_100_exercise_history_v1',
     exerciseLibrary:'protocolo_0_100_exercise_library_v1',
+    exercisePreferences:'protocolo_0_100_exercise_preferences_v1',
     gymSettings:'protocolo_0_100_gym_settings_v1',
     workoutWidgetState:'protocolo_0_100_workout_widget_state_v1'
   };
@@ -123,6 +124,7 @@
     if(!localStorage.getItem(keys.exerciseHistory)) setLocalData(keys.exerciseHistory,{});
     if(!localStorage.getItem(keys.workoutSessions)) setLocalData(keys.workoutSessions,[]);
     if(!localStorage.getItem(keys.gymSettings)) setLocalData(keys.gymSettings,settings());
+    if(!localStorage.getItem(keys.exercisePreferences)) setLocalData(keys.exercisePreferences,{schemaVersion:1,exercises:{},updatedAt:null});
   }
   function weeklyPlan(){ return getLocalData(keys.weeklyWorkoutPlan,clone(defaultWeeklyPlan)); }
   function saveWeeklyPlan(plan){ setLocalData(keys.weeklyWorkoutPlan,plan); syncWorkoutWidget(); }
@@ -248,6 +250,24 @@
     if(byId) return byId;
     return session.exercises[Math.min(session.currentExerciseIndex||0,session.exercises.length-1)] || session.exercises.find(x=>!x.completed) || session.exercises[0];
   }
+  function recordExercisePreference(session,exercise){
+    if(!window.WORKOUT_RANKING?.recordExerciseUse||!session||!exercise) return;
+    window.WORKOUT_RANKING.recordExerciseUse({
+      exerciseId:exercise.exerciseId||exercise.id,
+      date:session.date,
+      dayKey:session.dayKey||dayKeyForDate(session.date),
+      routineName:session.routine?.name||session.routineName||'Entrenamiento',
+      lastPosition:Math.max(0,session.exercises?.findIndex(item=>item.id===exercise.id)??0)
+    });
+  }
+  function rankExercisesForContext(options={}){
+    const date=options.date||todayStr();
+    const plan=options.currentPlan||planForDate(date);
+    if(!window.WORKOUT_RANKING?.rankExercisesForContext){
+      return {groups:[{id:'today',label:'Rutina de hoy',items:clone(plan.exercises||[])}],items:clone(plan.exercises||[])};
+    }
+    return window.WORKOUT_RANKING.rankExercisesForContext({...options,date,dayKey:options.dayKey||dayKeyForDate(date),routineName:options.routineName||plan.name,currentPlan:plan,library:options.library||libraryData()});
+  }
   function exerciseVolume(exercise){ return (exercise.sets||[]).reduce((sum,set)=>sum+(Number(set.reps)||0)*(Number(set.weight)||0),0); }
   function exerciseSetCount(exercise){ return exercise?.sets?.length||0; }
   function muscleSetCount(exercises,muscle){
@@ -368,6 +388,7 @@
         <h3>Registro rápido de serie</h3>
         <div class="quickLogger">
           <div class="formGrid">
+            <div class="field"><label>Buscar ejercicio</label><input type="search" id="quickExerciseSearch" autocomplete="off" placeholder="Nombre o alias"></div>
             <div class="field"><label>Ejercicio actual</label><select id="quickExerciseSelect"></select></div>
             <div class="field"><label>Número de serie</label><input type="number" id="quickSetNumber" min="1" value="1"></div>
             <div class="field"><label>Repeticiones</label><input type="number" id="quickReps" min="0" max="200" value="8"></div>
@@ -427,7 +448,8 @@
     document.getElementById('startTodayWorkoutBtn')?.addEventListener('click',()=>openQuickSetLogger());
     document.getElementById('openQuickLoggerBtn')?.addEventListener('click',()=>openQuickSetLogger());
     document.getElementById('manualWidgetUpdateBtn')?.addEventListener('click',()=>{syncWorkoutWidget();flash('Widget actualizado con los datos actuales.');});
-    document.getElementById('quickExerciseSelect')?.addEventListener('change',event=>{currentQuickExerciseId=event.target.value;renderQuickLogger();});
+    document.getElementById('quickExerciseSelect')?.addEventListener('change',event=>selectQuickExerciseValue(event.target.value));
+    document.getElementById('quickExerciseSearch')?.addEventListener('input',renderQuickLogger);
     document.getElementById('saveQuickSetBtn')?.addEventListener('click',saveQuickSet);
     document.getElementById('repeatLastSetBtn')?.addEventListener('click',repeatLastSet);
     document.getElementById('previousExerciseBtn')?.addEventListener('click',previousExercise);
@@ -484,7 +506,13 @@
     const select=document.getElementById('quickExerciseSelect'); if(!select) return;
     const session=activeSession(date) || latestSessionForDate(date);
     const source=session?.exercises?.length?session.exercises:plan.exercises;
-    select.innerHTML=(source||[]).map(exercise=>`<option value="${escapeHtml(exercise.id||exercise.exerciseId)}">${escapeHtml(exercise.name)}</option>`).join('');
+    const query=document.getElementById('quickExerciseSearch')?.value||'';
+    const ranking=rankExercisesForContext({date,currentPlan:plan,query});
+    select.innerHTML=ranking.groups.map(group=>`<optgroup label="${escapeHtml(group.label)}">${group.items.map(exercise=>{
+      const active=(source||[]).find(item=>item.exerciseId===exercise.exerciseId);
+      const value=active?(active.id||active.exerciseId):`library:${exercise.exerciseId}`;
+      return `<option value="${escapeHtml(value)}">${escapeHtml(exercise.name)}</option>`;
+    }).join('')}</optgroup>`).join('');
     if(!currentQuickExerciseId && source?.[0]) currentQuickExerciseId=source[0].id||source[0].exerciseId;
     if(currentQuickExerciseId) select.value=currentQuickExerciseId;
     const exercise=(source||[]).find(x=>(x.id||x.exerciseId)===select.value) || source?.[0];
@@ -509,6 +537,17 @@
     }
     const show=settings().showRir;
     ['quickRir','quickRpe'].forEach(id=>{const field=document.getElementById(id)?.closest('.field'); if(field) field.classList.toggle('hidden',!show);});
+  }
+  function selectQuickExerciseValue(value){
+    if(String(value||'').startsWith('library:')){
+      const libraryId=String(value).slice(8);
+      const library=libraryData().find(exercise=>exercise.id===libraryId);
+      if(library){
+        const result=addManualExercisePayload({date:todayStr(),name:library.name,muscle:library.group,type:library.type,unit:library.unit,bodyweight:library.bodyweight||library.unit==='peso corporal',persistScope:'session',rememberForWeekday:false,saveToLibrary:false});
+        if(result.ok) currentQuickExerciseId=result.exercise.id;
+      }
+    }else currentQuickExerciseId=value;
+    renderQuickLogger();
   }
   function openGymToday(){
     setModule('gym');
@@ -704,6 +743,7 @@
     const set={id:uid('set'),setNumber,reps,weight,rir,rpe,bodyweight,note,savedAt:new Date().toISOString(),volume:Math.round(reps*weight)};
     exercise.sets=exercise.sets||[];
     exercise.sets.push(set);
+    recordExercisePreference(session,exercise);
     session.currentExerciseIndex=session.exercises.findIndex(x=>x.id===exercise.id);
     currentQuickExerciseId=exercise.id;
     session.summary=sessionSummary(session);
@@ -791,6 +831,7 @@
     const set={id:uid('set'),setNumber,reps,weight,rir:document.getElementById('quickRir').value===''?null:Math.max(0,Number(document.getElementById('quickRir').value)||0),rpe:document.getElementById('quickRpe').value===''?null:Math.max(0,Number(document.getElementById('quickRpe').value)||0),bodyweight,note:document.getElementById('quickNote').value.trim(),savedAt:new Date().toISOString(),volume:Math.round(reps*weight)};
     exercise.sets=exercise.sets||[];
     exercise.sets.push(set);
+    recordExercisePreference(session,exercise);
     session.currentExerciseIndex=session.exercises.findIndex(x=>x.id===exercise.id);
     session.summary=sessionSummary(session);
     replaceSession(session);
@@ -1008,7 +1049,7 @@
     else if(action===actionWidgetSaveSet){syncWorkoutWidget();openGymToday();}
   }
 
-  window.WORKOUT_FEATURES={keys,dayOrder,defaultWeeklyPlan:clone(defaultWeeklyPlan),exerciseLibrary:clone(exerciseLibrary),getExerciseLibrary:()=>clone(libraryData()),dayKeyForDate,planForDate,getQuickWorkoutState,addManualExercisePayload,saveQuickSetPayload,updateQuickSetPayload,deleteQuickSetPayload,completeQuickExercisePayload,finishWorkoutPayload,buildWorkoutWidgetState,syncWorkoutWidget,importWidgetStateFromAndroid};
+  window.WORKOUT_FEATURES={keys,dayOrder,defaultWeeklyPlan:clone(defaultWeeklyPlan),exerciseLibrary:clone(exerciseLibrary),getExerciseLibrary:()=>clone(libraryData()),dayKeyForDate,planForDate,rankExercisesForContext,getQuickWorkoutState,addManualExercisePayload,saveQuickSetPayload,updateQuickSetPayload,deleteQuickSetPayload,completeQuickExercisePayload,finishWorkoutPayload,buildWorkoutWidgetState,syncWorkoutWidget,importWidgetStateFromAndroid};
   window.openGymToday=openGymToday;
   window.openQuickSetLogger=openQuickSetLogger;
   window.handleAndroidWidgetIntent=(action,payload)=>handleAndroidWidgetIntent(action,payload||{});

@@ -18,6 +18,7 @@ function Assert-True([bool]$condition, [string]$message) {
 $html = Read-Utf8 'index.html'
 $nutrition = Read-Utf8 'nutrition-data.js'
 $fdc = Read-Utf8 'fdc-client.js'
+$workoutRanking = Read-Utf8 'workout-ranking.js'
 $workout = Read-Utf8 'workout-features.js'
 $firebaseConfig = Read-Utf8 'firebase-config.js'
 $gymParty = Read-Utf8 'gym-party.js'
@@ -49,7 +50,7 @@ $duplicates = $staticIds | Group-Object | Where-Object Count -gt 1 | Select-Obje
 Assert-True ($duplicates.Count -eq 0) "Hay IDs HTML duplicados: $($duplicates -join ', ')"
 
 $requiredFiles = @(
-    'nutrition-data.js', 'fdc-client.js', 'workout-features.js', 'advanced-features.js',
+    'nutrition-data.js', 'fdc-client.js', 'workout-ranking.js', 'workout-features.js', 'advanced-features.js',
     'firebase-config.js', 'gym-party.js',
     'manifest.webmanifest', 'sw.js',
     'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetProvider.java',
@@ -65,7 +66,7 @@ foreach ($file in $requiredFiles) {
     Assert-True (Test-Path -LiteralPath (Join-Path $repoRoot $file) -PathType Leaf) "Falta $file"
 }
 
-foreach ($script in @('nutrition-data.js', 'fdc-client.js', 'workout-features.js', 'gym-party.js', 'advanced-features.js')) {
+foreach ($script in @('nutrition-data.js', 'fdc-client.js', 'workout-ranking.js', 'workout-features.js', 'gym-party.js', 'advanced-features.js')) {
     Assert-True ($html.Contains("<script src=`"$script`"></script>")) "index.html no carga $script"
     Assert-True ($serviceWorker.Contains("'./$script'")) "sw.js no cachea $script"
 }
@@ -137,9 +138,26 @@ foreach ($contract in @(
     'exerciseHistory:',
     'exerciseLibrary:',
     'gymSettings:',
-    'workoutWidgetState:'
+    'workoutWidgetState:',
+    'exercisePreferences:'
 )) {
     Assert-True ($advanced.Contains($contract)) "Falta contrato de backup gym/widget: $contract"
+}
+
+foreach ($contract in @(
+    'protocolo_0_100_exercise_preferences_v1',
+    'recordExerciseUse',
+    'rankExercisesForContext',
+    'usesByWeekday',
+    'usesByRoutine',
+    'lastUsedAt',
+    'favorite',
+    'hidden',
+    'Rutina de hoy',
+    'Frecuentes de este dia',
+    'Todos los ejercicios'
+)) {
+    Assert-True ($workoutRanking.Contains($contract)) "Falta contrato de ranking de ejercicios: $contract"
 }
 
 foreach ($contract in @(

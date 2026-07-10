@@ -3,6 +3,7 @@ import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
 
 const source = await readFile(new URL('../workout-features.js', import.meta.url), 'utf8');
+const rankingSource = await readFile(new URL('../workout-ranking.js', import.meta.url), 'utf8');
 
 function createContext(preloaded = {}, today = '2026-06-22') {
   const store = new Map(Object.entries(preloaded));
@@ -37,7 +38,9 @@ function createContext(preloaded = {}, today = '2026-06-22') {
     GYM_SESSIONS_KEY: 'protocolo_0_100_gym_sessions_v1'
   };
   context.window = context;
-  vm.runInContext(source, vm.createContext(context), {filename: 'workout-features.js'});
+  const vmContext=vm.createContext(context);
+  vm.runInContext(rankingSource, vmContext, {filename: 'workout-ranking.js'});
+  vm.runInContext(source, vmContext, {filename: 'workout-features.js'});
   return {context, store};
 }
 
@@ -85,6 +88,7 @@ const quickSaved = quickWorkout.saveQuickSetPayload({
 });
 assert.equal(quickSaved.ok, true);
 assert.equal(quickSaved.set.weight, 20.5);
+assert.equal(JSON.parse(quickStore.get(quickWorkout.keys.exercisePreferences)).exercises['peck-deck'].totalUses, 1);
 const quickAfterSave = quickWorkout.getQuickWorkoutState({date: '2026-06-22', exerciseId: quickState.currentExerciseId});
 assert.equal(quickAfterSave.currentExerciseSets, 1);
 assert.equal(quickAfterSave.currentSets.length, 1);
@@ -187,5 +191,16 @@ const {context: customContext} = createContext({
   protocolo_0_100_weekly_workout_plan_v1: JSON.stringify(customPlan)
 });
 assert.equal(customContext.WORKOUT_FEATURES.planForDate('2026-06-22').name, 'Rutina propia');
+
+const {context: rankContext,store:rankStore}=createContext({},'2026-08-10');
+for(const date of ['2026-07-13','2026-07-20','2026-07-27','2026-08-03','2026-08-10']) rankContext.WORKOUT_RANKING.recordExerciseUse({exerciseId:'press-banca',date,dayKey:'monday',routineName:'Torso A'});
+rankContext.WORKOUT_RANKING.recordExerciseUse({exerciseId:'curl-martillo',date:'2026-08-04',dayKey:'tuesday',routineName:'Extra'});
+const rankedMonday=rankContext.WORKOUT_FEATURES.rankExercisesForContext({date:'2026-08-10',currentPlan:{name:'Lunes libre',exercises:[]}});
+assert.ok(rankedMonday.items.findIndex(item=>item.exerciseId==='press-banca')<rankedMonday.items.findIndex(item=>item.exerciseId==='curl-martillo'));
+assert.equal(rankedMonday.items.find(item=>item.exerciseId==='curl-martillo').weekdayUses,0);
+const rankedPlan=rankContext.WORKOUT_FEATURES.rankExercisesForContext({date:'2026-08-10',currentPlan:rankContext.WORKOUT_FEATURES.defaultWeeklyPlan.monday});
+assert.equal(rankedPlan.groups[0].label,'Rutina de hoy');
+assert.ok(rankedPlan.groups[0].items.some(item=>item.exerciseId==='peck-deck'));
+assert.ok(rankStore.get('protocolo_0_100_exercise_preferences_v1'));
 
 console.log('Workout features correcto: plan semanal, persistencia weekday/biblioteca, deduplicacion, widget state, editar/eliminar serie e importacion directa.');
