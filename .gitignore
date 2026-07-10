@@ -7,6 +7,9 @@ android-native-wrapper/local.properties
 node_modules/
 dist/
 dist-pages/
+test-results/
+playwright-report/
+blob-report/
 *.apk
 *.jks
 *.keystore

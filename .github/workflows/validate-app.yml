@@ -35,6 +35,13 @@ jobs:
       - name: Instalar pruebas Firebase
         run: npm ci
 
+      - name: Instalar navegadores Playwright
+        run: npx playwright install --with-deps chromium webkit
+
+      - name: Sincronizar assets web para Android
+        shell: pwsh
+        run: ./scripts/sync-web-assets.ps1
+
       - name: Comprobar estructura, datos, PWA y assets Android
         shell: pwsh
         run: ./scripts/validate-app.ps1 -CheckAndroidAssets
@@ -63,5 +70,45 @@ jobs:
       - name: Probar accesibilidad web y movil
         run: node ./scripts/test-accessibility.mjs
 
+      - name: Probar flujos Android e iPhone con Playwright
+        run: npm run test:e2e
+
       - name: Probar reglas Firestore en Emulator
         run: npm run test:rules
+
+      - name: Configurar Java 17 para Android
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Configurar Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Instalar plataforma Android necesaria
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Crear firma efimera solo para validar release
+        shell: bash
+        run: |
+          keytool -genkeypair -v -keystore "$RUNNER_TEMP/test-release.jks" -storepass test-password -alias test-key -keypass test-password -keyalg RSA -keysize 2048 -validity 2 -dname "CN=CI Test,OU=CI,O=Protocolo,L=Asuncion,C=PY"
+          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/test-release.jks" >> "$GITHUB_ENV"
+          echo "ANDROID_KEYSTORE_PASSWORD=test-password" >> "$GITHUB_ENV"
+          echo "ANDROID_KEY_ALIAS=test-key" >> "$GITHUB_ENV"
+          echo "ANDROID_KEY_PASSWORD=test-password" >> "$GITHUB_ENV"
+
+      - name: Configurar Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+
+      - name: Compilar release Android de prueba
+        working-directory: android-native-wrapper
+        run: gradle :app:assembleRelease --stacktrace
+
+      - name: Verificar APK release de prueba
+        run: test -s android-native-wrapper/app/build/outputs/apk/release/app-release.apk
+
+      - name: Eliminar firma efimera
+        if: always()
+        run: rm -f "$RUNNER_TEMP/test-release.jks"

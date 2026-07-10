@@ -46,6 +46,8 @@ $gymPartySyncTest = Read-Utf8 'scripts/test-gym-party-sync.mjs'
 $androidSecurityTest = Read-Utf8 'scripts/test-android-webview-security.mjs'
 $androidReleaseTest = Read-Utf8 'scripts/test-android-release.mjs'
 $accessibilityTest = Read-Utf8 'scripts/test-accessibility.mjs'
+$playwrightConfig = Read-Utf8 'playwright.config.mjs'
+$playwrightGymTest = Read-Utf8 'tests/e2e/gym-flow.spec.mjs'
 $readme = Read-Utf8 'README.md'
 $handoff = Read-Utf8 'CODEX_HANDOFF.md'
 
@@ -65,6 +67,7 @@ $requiredFiles = @(
     'scripts/test-android-webview-security.mjs',
     'scripts/test-android-release.mjs',
     'scripts/test-accessibility.mjs',
+    'scripts/serve-static.mjs', 'playwright.config.mjs', 'tests/e2e/gym-flow.spec.mjs',
     'manifest.webmanifest', 'sw.js',
     'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetProvider.java',
     'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetUpdateService.java',
@@ -347,6 +350,15 @@ foreach ($contract in @('globalLiveRegion',':focus-visible','prefers-reduced-mot
 }
 Assert-True ($accessibilityTest.Contains('Accesibilidad correcta')) 'Falta prueba automatica de accesibilidad'
 Assert-True ($releaseWorkflow.Contains('node ./scripts/test-accessibility.mjs')) 'El release Android debe probar accesibilidad web'
+foreach ($contract in @('android-chromium','iphone-webkit','Pixel 7','iPhone 13','browserName','serviceWorkers')) {
+    Assert-True ($playwrightConfig.Contains($contract)) "Falta configuracion Playwright: $contract"
+}
+foreach ($contract in @('Face pull','partyManualRememberWeekday','2026-07-13','Editar serie 1 de Face pull','Eliminar serie 1 de Face pull','party-undo-delete-set','setOffline(true)','gymPartyCode','not.toHaveURL','memberCount','manifest.webmanifest')) {
+    Assert-True ($playwrightGymTest.Contains($contract)) "Falta cobertura E2E: $contract"
+}
+foreach ($contract in @('npm run test:e2e','playwright install --with-deps chromium webkit',':app:assembleRelease','test-release.jks','ANDROID_KEYSTORE_PATH')) {
+    Assert-True ($validationWorkflow.Contains($contract)) "Falta validacion real en CI: $contract"
+}
 Assert-True (-not $gymParty.Contains('members: undefined')) 'Gym Party no debe enviar members: undefined a Firestore'
 Assert-True ($gymParty.Contains('delete partyDoc.members')) 'Gym Party debe eliminar members antes de crear gym_parties en Firestore'
 foreach ($removedAction in @(
