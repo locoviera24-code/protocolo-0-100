@@ -332,7 +332,7 @@
   function sessionSummary(session){
     const exercises=session.exercises||[];
     const allSets=exercises.flatMap(e=>(e.sets||[]).map(set=>({...set,exerciseName:e.name,exerciseId:e.exerciseId})));
-    const totalVolume=allSets.reduce((sum,set)=>sum+(Number(set.reps)||0)*(Number(set.weight)||0),0);
+    const metric=window.WORKOUT_METRICS?.calculateSessionMetrics?.(session)||{totalSets:allSets.length,totalReps:allSets.reduce((sum,set)=>sum+(Number(set.reps)||0),0),externalLoadVolume:allSets.reduce((sum,set)=>sum+(Number(set.reps)||0)*(Number(set.weight)||0),0),bodyweightReps:0,addedLoadReps:0,addedLoadVolume:0,bestWeight:0,bestSetVolume:0,maxReps:0};
     const start=session.startedAt?new Date(session.startedAt):null,finish=session.finishedAt?new Date(session.finishedAt):new Date();
     const duration=start?Math.max(0,Math.round((finish-start)/60000)):0;
     const bestByExercise={};
@@ -344,8 +344,16 @@
       durationMinutes:duration,
       completedExercises:exercises.filter(e=>e.completed || (e.sets||[]).length>0).length,
       totalExercises:exercises.length,
-      totalSets:allSets.length,
-      totalVolume:Math.round(totalVolume),
+      totalSets:metric.totalSets,
+      totalReps:metric.totalReps,
+      totalVolume:Math.round(metric.externalLoadVolume),
+      externalLoadVolume:Math.round(metric.externalLoadVolume),
+      bodyweightReps:metric.bodyweightReps,
+      addedLoadReps:metric.addedLoadReps,
+      addedLoadVolume:metric.addedLoadVolume,
+      bestWeight:metric.bestWeight,
+      bestSetVolume:metric.bestSetVolume,
+      maxReps:metric.maxReps,
       bestByExercise,
       compliance:exercises.length?Math.round((exercises.filter(e=>e.completed || (e.sets||[]).length>0).length/exercises.length)*100):0,
       subjectiveNote:session.subjectiveNote||''
@@ -358,6 +366,7 @@
       if(!sets.length) return;
       const last=sets[sets.length-1];
       const best=sets.slice().sort((a,b)=>((Number(b.reps)||0)*(Number(b.weight)||0))-((Number(a.reps)||0)*(Number(a.weight)||0)) || (Number(b.reps)||0)-(Number(a.reps)||0))[0] || last;
+      const metric=window.WORKOUT_METRICS?.calculateExerciseMetrics?.(exercise)||{};
       map[exercise.exerciseId]={
         exerciseId:exercise.exerciseId,
         name:exercise.name,
@@ -366,6 +375,13 @@
         lastSets:sets.length,
         bestSet:{reps:Number(best.reps)||0,weight:Number(best.weight)||0,volume:(Number(best.reps)||0)*(Number(best.weight)||0),bodyweight:!!best.bodyweight},
         previousVolume:exerciseVolume(exercise),
+        externalLoadVolume:metric.externalLoadVolume||0,
+        bodyweightReps:metric.bodyweightReps||0,
+        addedLoadVolume:metric.addedLoadVolume||0,
+        bestWeight:metric.bestWeight||0,
+        bestSetVolume:metric.bestSetVolume||0,
+        maxReps:metric.maxReps||0,
+        estimated1RM:metric.estimated1RM??null,
         lastDate:session.date,
         bodyweight:!!exercise.bodyweight
       };
@@ -598,7 +614,8 @@
       return `<div class="workoutExerciseCard ${done?'done':''} ${cur?'current':''}"><strong>${escapeHtml(exercise.name)}</strong><div class="meta">${escapeHtml(exercise.muscle)} · ${sets} serie(s) registradas${exercise.bodyweight?' · peso corporal':''}</div></div>`;
     }).join('');
     const completed=summary?.completedExercises||0,total=exercises.length,totalSets=summary?.totalSets||0,volume=summary?.totalVolume||0,compliance=summary?.compliance||0;
-    progress.innerHTML=[['Ejercicios',`${completed}/${total}`],['Series',totalSets],['Volumen',`${volume.toLocaleString()} ${settingsValue.unit}`],['Cumplimiento',`${compliance}%`]].map(statCard).join('');
+    const progressText=window.WORKOUT_METRICS?.formatProgress?.(summary||{},settingsValue.unit)||`${volume.toLocaleString()} ${settingsValue.unit}`;
+    progress.innerHTML=[['Ejercicios',`${completed}/${total}`],['Series',totalSets],['Progreso',progressText],['Cumplimiento',`${compliance}%`]].map(statCard).join('');
     if(score) score.textContent=`Score gym ${Math.min(100,Math.round((completed/Math.max(1,total))*70 + Math.min(30,totalSets*2)))}/100`;
     if(lever) lever.textContent=totalSets?'Según lo registrado, priorizá técnica antes que carga y registrá la siguiente serie.':'Palanca física de hoy: registrar pesos para medir progreso.';
   }

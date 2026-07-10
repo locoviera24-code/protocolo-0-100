@@ -12,6 +12,7 @@ on:
       - fdc-client.js
       - workout-features.js
       - workout-ranking.js
+      - workout-metrics.js
       - gym-party.js
       - firebase-config.js
       - advanced-features.js
@@ -53,13 +54,16 @@ jobs:
       - name: Probar rutina semanal y estado widget
         run: node ./scripts/test-workout-features.mjs
 
+      - name: Probar metricas de gimnasio
+        run: node ./scripts/test-workout-metrics.mjs
+
       - name: Probar Gym Party
         run: node ./scripts/test-gym-party.mjs
 
       - name: Preparar archivos publicos
         run: |
           mkdir -p dist-pages/icons
-          cp index.html nutrition-data.js fdc-client.js workout-ranking.js workout-features.js firebase-config.js gym-party.js advanced-features.js manifest.webmanifest sw.js dist-pages/
+          cp index.html nutrition-data.js fdc-client.js workout-metrics.js workout-ranking.js workout-features.js firebase-config.js gym-party.js advanced-features.js manifest.webmanifest sw.js dist-pages/
           cp icons/icon-192.png icons/icon-512.png dist-pages/icons/
 
       - name: Generar configuracion Firebase opcional

@@ -105,6 +105,12 @@ assert.equal(typeof pressRow.bestWeightDelta, 'number');
 const demo5 = party.buildDemoData(5);
 assert.equal(demo5.members.length, 5);
 assert.equal(party.calculatePartyStats(demo5, '2026-06-24').length, 5);
+const noPrevious=party.calculatePartyStats({
+  members:[{userId:'solo',aliasInParty:'Yo'}],
+  sessions:[{id:'current',userId:'solo',date:'2026-06-24',totalSets:1,totalReps:8,totalVolume:160}],
+  sets:[{id:'current-set',sessionId:'current',userId:'solo',date:'2026-06-24',reps:8,weightKg:20}]
+},'2026-06-24');
+assert.equal(noPrevious[0].changeVsPreviousWeek.volumePct,null);
 
 party.importState({
   gymPartySettings: {localUserId: 'user_test', firebaseConfig: {apiKey: 'should-not-export'}, portableAccessEmail: 'private@example.com'},

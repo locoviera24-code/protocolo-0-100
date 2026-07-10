@@ -144,7 +144,8 @@
     return Math.round(number(value) * p) / p;
   }
   function percentChange(current, previous){
-    if(!previous) return current ? 100 : 0;
+    if(window.WORKOUT_METRICS?.percentChange) return window.WORKOUT_METRICS.percentChange(current,previous);
+    if(!previous) return null;
     return round(((current - previous) / previous) * 100, 1);
   }
 
@@ -502,10 +503,17 @@
     const allSets = exercises.flatMap(exercise => safeArray(exercise.sets).map(set => ({...set, exercise})));
     const totalReps = allSets.reduce((sum, set) => sum + number(set.reps), 0);
     const totalVolume = allSets.reduce((sum, set) => sum + number(set.reps) * number(set.weight), 0);
+    const metric=window.WORKOUT_METRICS?.calculateSessionMetrics?.(session)||{};
     return {
       totalSets: allSets.length,
       totalReps,
       totalVolume: Math.round(totalVolume),
+      externalLoadVolume:Math.round(metric.externalLoadVolume??totalVolume),
+      bodyweightReps:number(metric.bodyweightReps),
+      addedLoadVolume:number(metric.addedLoadVolume),
+      bestWeight:number(metric.bestWeight),
+      bestSetVolume:number(metric.bestSetVolume),
+      maxReps:number(metric.maxReps),
       exercisesCompleted: exercises.filter(exercise => exercise.completed || safeArray(exercise.sets).length > 0).length
     };
   }
@@ -529,6 +537,12 @@
       totalSets: number(summary.totalSets),
       totalReps: number(summary.totalReps) || totalRepsForSession(session),
       totalVolume: hide ? null : number(summary.totalVolume),
+      externalLoadVolume:hide?null:number(summary.externalLoadVolume??summary.totalVolume),
+      bodyweightReps:number(summary.bodyweightReps),
+      addedLoadVolume:hide?null:number(summary.addedLoadVolume),
+      bestWeight:hide?null:number(summary.bestWeight),
+      bestSetVolume:hide?null:number(summary.bestSetVolume),
+      maxReps:number(summary.maxReps),
       createdAt: session.startedAt || session.savedAt || nowIso(),
       updatedAt: nowIso(),
       source: 'local',
@@ -627,11 +641,18 @@
       const exercises = new Set(sets.map(set => set.exerciseId || set.exerciseName).filter(Boolean));
       const totalReps = sets.reduce((sum,set) => sum + number(set.reps), 0);
       const totalVolume = sets.reduce((sum,set) => sum + number(set.reps) * number(set.weightKg), 0);
+      const metric=window.WORKOUT_METRICS?.calculateSetsMetrics?.(sets.map(set=>({reps:set.reps,weightKg:set.weightKg,isBodyweight:set.isBodyweight})))||{};
       return {
         ...session,
         totalSets: sets.length,
         totalReps,
         totalVolume: Math.round(totalVolume),
+        externalLoadVolume:Math.round(metric.externalLoadVolume??totalVolume),
+        bodyweightReps:number(metric.bodyweightReps),
+        addedLoadVolume:number(metric.addedLoadVolume),
+        bestWeight:number(metric.bestWeight),
+        bestSetVolume:number(metric.bestSetVolume),
+        maxReps:number(metric.maxReps),
         exercisesCompleted: exercises.size
       };
     });
@@ -689,6 +710,14 @@
     const totalSets = weekSets.length || weekSessions.reduce((sum, session) => sum + number(session.totalSets), 0);
     const totalReps = weekSets.reduce((sum, set) => sum + number(set.reps), 0) || weekSessions.reduce((sum, session) => sum + number(session.totalReps), 0);
     const totalVolume = weekSets.reduce((sum, set) => sum + number(set.reps) * number(set.weightKg), 0) || weekSessions.reduce((sum, session) => sum + number(session.totalVolume), 0);
+    const setMetrics=window.WORKOUT_METRICS?.calculateSetsMetrics?.(weekSets.map(set=>({reps:set.reps,weightKg:set.weightKg,isBodyweight:set.isBodyweight})))||{bodyweightReps:weekSets.filter(set=>set.isBodyweight&&!number(set.weightKg)).reduce((sum,set)=>sum+number(set.reps),0),addedLoadVolume:weekSets.filter(set=>set.isBodyweight).reduce((sum,set)=>sum+number(set.reps)*number(set.weightKg),0),bestWeight:Math.max(0,...weekSets.map(set=>number(set.weightKg))),bestSetVolume:Math.max(0,...weekSets.map(set=>number(set.reps)*number(set.weightKg))),maxReps:Math.max(0,...weekSets.map(set=>number(set.reps)))};
+    if(!weekSets.length){
+      setMetrics.bodyweightReps=weekSessions.reduce((sum,session)=>sum+number(session.bodyweightReps),0);
+      setMetrics.addedLoadVolume=weekSessions.reduce((sum,session)=>sum+number(session.addedLoadVolume),0);
+      setMetrics.bestWeight=Math.max(0,...weekSessions.map(session=>number(session.bestWeight)));
+      setMetrics.bestSetVolume=Math.max(0,...weekSessions.map(session=>number(session.bestSetVolume)));
+      setMetrics.maxReps=Math.max(0,...weekSessions.map(session=>number(session.maxReps)));
+    }
     const exercises = new Set(weekSets.map(set => set.exerciseId || set.exerciseName).filter(Boolean));
     const muscleVolume = {};
     weekSets.forEach(set => {
@@ -711,7 +740,15 @@
       totalReps,
       totalVolume: Math.round(totalVolume),
       exercisesCount: exercises.size || weekSessions.reduce((sum, session) => sum + number(session.exercisesCompleted), 0),
-      consistencyScore: Math.min(100, Math.round(weekSessions.length * 28 + Math.min(16, totalSets))),
+      consistencyScore: window.WORKOUT_METRICS?.consistency?.({plannedSessions:5,registeredSessions:weekSessions.length,plannedExercises:Math.max(weekSessions.length,weekSessions.reduce((sum,session)=>sum+number(session.exercisesCompleted),0)),completedExercises:weekSessions.reduce((sum,session)=>sum+number(session.exercisesCompleted),0),scheduledRestDays:2}).score ?? Math.min(100,Math.round(weekSessions.length*28)),
+      plannedSessions:5,
+      registeredSessions:weekSessions.length,
+      scheduledRestDays:2,
+      bodyweightReps:setMetrics.bodyweightReps||0,
+      addedLoadVolume:setMetrics.addedLoadVolume||0,
+      bestWeight:setMetrics.bestWeight||0,
+      bestSetVolume:setMetrics.bestSetVolume||0,
+      maxReps:setMetrics.maxReps||0,
       muscleVolume,
       bestByExercise,
       weekStart: start
@@ -776,6 +813,7 @@
     return Math.round(number(value)).toLocaleString();
   }
   function signed(value, suffix = ''){
+    if(value===null||value===undefined||Number.isNaN(Number(value))) return 'Sin base anterior';
     const n = number(value);
     if(!n) return `0${suffix}`;
     return `${n > 0 ? '+' : ''}${round(n, 1)}${suffix}`;
@@ -957,7 +995,7 @@
           ${statCard('Sesiones semana', row.current.sessionsCount, 'consistency')}
           ${statCard('Series', row.current.totalSets, 'sets')}
           ${statCard('Reps', row.current.totalReps, 'reps')}
-          ${statCard('Volumen', `${formatNumber(row.current.totalVolume)} kg`, 'volume')}
+          ${statCard('Progreso', metricVolumeText(row.current), 'volume')}
         </div>
         <div class="comparisonBars">${bar(row.current.totalVolume, maxVolume, 'Volumen', ' kg')}</div>
         <div class="muted small">Cambio vs semana pasada: volumen ${signed(row.changeVsPreviousWeek.volumePct, '%')} · series ${signed(row.changeVsPreviousWeek.setsPct, '%')}.</div>
@@ -973,8 +1011,8 @@
     return `<div class="moduleCard">
       <h3>Yo vs Amigo · comparación útil</h3>
       <div class="partyCompareGrid">
-        <div class="partyCompareCard"><span>Yo</span><strong>${formatNumber(av)} kg</strong><small>${a.current.sessionsCount} sesiones · ${a.current.totalSets} series</small></div>
-        <div class="partyCompareCard"><span>Amigo</span><strong>${formatNumber(bv)} kg</strong><small>${b.current.sessionsCount} sesiones · ${b.current.totalSets} series</small></div>
+        <div class="partyCompareCard"><span>Yo</span><strong>${metricVolumeText(a.current)}</strong><small>${a.current.sessionsCount} sesiones · ${a.current.totalSets} series</small></div>
+        <div class="partyCompareCard"><span>Amigo</span><strong>${metricVolumeText(b.current)}</strong><small>${b.current.sessionsCount} sesiones · ${b.current.totalSets} series</small></div>
         <div class="partyCompareCard"><span>Diferencia visible</span><strong>${signed(diff)} kg</strong><small>Más volumen no siempre significa mejor.</small></div>
         <div class="partyCompareCard"><span>Cambio propio</span><strong>${signed(a.changeVsPreviousWeek.volumePct, '%')}</strong><small>Tu referencia principal es tu semana pasada.</small></div>
       </div>
@@ -1027,12 +1065,15 @@
   }
   function setVolume(set){ return number(set.reps) * number(set.weightKg); }
   function emptyMuscleTotals(key){
-    return {key, sets:0, reps:0, volume:0, exercises:new Set(), best:null};
+    return {key, sets:0, reps:0, volume:0, externalLoadVolume:0, bodyweightReps:0, addedLoadVolume:0, exercises:new Set(), best:null};
   }
   function addSetToMuscleTotals(total, set){
     total.sets += 1;
     total.reps += number(set.reps);
     total.volume += setVolume(set);
+    total.externalLoadVolume += setVolume(set);
+    if(set.isBodyweight&&!number(set.weightKg)) total.bodyweightReps += number(set.reps);
+    if(set.isBodyweight&&number(set.weightKg)>0) total.addedLoadVolume += setVolume(set);
     if(set.exerciseName || set.exerciseId) total.exercises.add(set.exerciseName || set.exerciseId);
     const score = setVolume(set) || number(set.reps);
     if(!total.best || score > total.best.score) total.best = {...set, score};
@@ -1042,6 +1083,8 @@
     return {
       ...total,
       volume: Math.round(total.volume),
+      externalLoadVolume:Math.round(total.externalLoadVolume),
+      addedLoadVolume:Math.round(total.addedLoadVolume),
       exercisesCount: total.exercises.size,
       exercises: [...total.exercises].sort()
     };
@@ -1121,7 +1164,8 @@
         best: currentBestSet,
         currentBestWeight,
         previousBestWeight,
-        bestWeightDelta: round(currentBestWeight - previousBestWeight, 1),
+        hasPrevious:row.previousRows.length>0,
+        bestWeightDelta:row.previousRows.length?round(currentBestWeight - previousBestWeight, 1):null,
         setsDelta: row.currentSets - row.previousSets,
         repsDelta: row.currentReps - row.previousReps,
         volumeChangePct: percentChange(row.currentVolume, row.previousVolume)
@@ -1180,7 +1224,7 @@
         exercisesCount: total.exercisesCount,
         bestWeight,
         bestWeightDelta: round(bestWeight - previousBestWeight, 1),
-        changeVsPreviousWeek: percentChange(total.volume || total.sets, previous.volume || previous.sets)
+        changeVsPreviousWeek: percentChange(total.volume || total.bodyweightReps || total.reps, previous.volume || previous.bodyweightReps || previous.reps)
       };
     }).sort((a,b) => b.sets - a.sets || b.volume - a.volume);
     return {
@@ -1261,7 +1305,7 @@
           <div class="partyExerciseMetricGrid">
             <div><span>Series</span><strong>${row.currentSets}</strong><small>${signed(row.setsDelta)}</small></div>
             <div><span>Reps</span><strong>${row.currentReps}</strong><small>${signed(row.repsDelta)}</small></div>
-            <div><span>Mejor peso</span><strong>${row.currentBestWeight ? `${formatNumber(row.currentBestWeight)} kg` : 'peso corporal'}</strong><small>${row.bestWeightDelta ? signed(row.bestWeightDelta, ' kg') : '0 kg'}</small></div>
+            <div><span>Mejor peso</span><strong>${row.currentBestWeight ? `${formatNumber(row.currentBestWeight)} kg` : 'peso corporal'}</strong><small>${signed(row.bestWeightDelta, ' kg')}</small></div>
             <div><span>Volumen</span><strong>${formatNumber(row.currentVolume)} kg</strong><small>${signed(row.volumeChangePct, '%')}</small></div>
           </div>
           <div class="muted small">Mejor serie: ${escape(strengthSetText(row.currentBestSet))}. Previa: ${escape(strengthSetText(row.previousBestSet))}.</div>
@@ -1280,7 +1324,7 @@
             <div class="partyCompareCard"><span>Series semana</span><strong>${model.currentTotal.sets}</strong><small>${signed(model.changeVsPreviousWeek.sets)} vs previa</small></div>
             <div class="partyCompareCard"><span>Ejercicios</span><strong>${model.currentTotal.exercisesCount}</strong><small>distintos</small></div>
             <div class="partyCompareCard"><span>Reps</span><strong>${model.currentTotal.reps}</strong><small>registradas</small></div>
-            <div class="partyCompareCard"><span>Volumen</span><strong>${formatNumber(model.currentTotal.volume)} kg</strong><small>${signed(model.changeVsPreviousWeek.volumePct, '%')} vs previa</small></div>
+            <div class="partyCompareCard"><span>Progreso</span><strong>${metricVolumeText(model.currentTotal)}</strong><small>${signed(model.changeVsPreviousWeek.volumePct, '%')} vs previa</small></div>
           </div>
           <div class="partyMuscleChartGrid">
             <div class="partyMiniChart"><h3>Series por semana</h3>${weekBarHtml(model.weeklyRows, 'sets')}</div>
@@ -1301,12 +1345,14 @@
     const maxVolume = maxOf(stats, row => row.current.totalVolume);
     const maxSets = maxOf(stats, row => row.current.totalSets);
     const maxSessions = maxOf(stats, row => row.current.sessionsCount);
+    const maxBodyweightReps=maxOf(stats,row=>row.current.bodyweightReps);
     return `<div class="moduleCard">
       <h3>Gráficas comparativas</h3>
       <div class="partyChartGrid">
         <div><h3>Volumen semanal ${helpButton('volume')}</h3><div class="comparisonBars">${stats.map(row => bar(row.current.totalVolume, maxVolume, memberDisplayName(row.member, data), ' kg')).join('')}</div></div>
         <div><h3>Series semanales ${helpButton('sets')}</h3><div class="comparisonBars">${stats.map(row => bar(row.current.totalSets, maxSets, memberDisplayName(row.member, data))).join('')}</div></div>
         <div><h3>Sesiones por semana ${helpButton('consistency')}</h3><div class="comparisonBars">${stats.map(row => bar(row.current.sessionsCount, maxSessions, memberDisplayName(row.member, data))).join('')}</div></div>
+        <div><h3>Reps de peso corporal ${helpButton('reps')}</h3><div class="comparisonBars">${stats.map(row => bar(row.current.bodyweightReps, maxBodyweightReps, memberDisplayName(row.member, data), ' reps')).join('')}</div></div>
         <div><h3>Cambio vs semana anterior ${helpButton('change')}</h3><div class="comparisonBars">${stats.map(row => bar(Math.abs(row.changeVsPreviousWeek.volumePct), 100, `${memberDisplayName(row.member, data)} ${signed(row.changeVsPreviousWeek.volumePct, '%')}`)).join('')}</div></div>
       </div>
       <div class="muted small">Compartir progreso, no competir a ciegas. La constancia también cuenta.</div>
@@ -1460,6 +1506,13 @@
     return `<div class="partyDateControls">
       <div class="field"><label>Dia de entrenamiento</label><input type="date" id="partyWorkoutDateInput" value="${escape(date)}"></div>
     </div>`;
+  }
+  function metricVolumeText(metric){
+    const volume=number(metric?.totalVolume??metric?.volume??metric?.externalLoadVolume);
+    const bodyweight=number(metric?.bodyweightReps);
+    if(volume&&bodyweight) return `${formatNumber(volume)} kg · ${formatNumber(bodyweight)} reps PC`;
+    if(bodyweight) return `${formatNumber(bodyweight)} reps peso corporal`;
+    return `${formatNumber(volume)} kg`;
   }
   function selectedPartyExerciseId(){
     return settings().partyQuickExerciseId || '';
@@ -1621,8 +1674,8 @@
         <div class="partyCompareGrid">
           <div class="partyCompareCard"><span>Sesiones</span><strong>${self.current.sessionsCount || 0}</strong><small>registradas</small></div>
           <div class="partyCompareCard"><span>Series</span><strong>${self.current.totalSets || 0}</strong><small>totales</small></div>
-          <div class="partyCompareCard"><span>Volumen</span><strong>${formatNumber(self.current.totalVolume || 0)} kg</strong><small>reps x kg</small></div>
-          <div class="partyCompareCard"><span>Vs semana pasada</span><strong>${signed(self.changeVsPreviousWeek?.volumePct || 0, '%')}</strong><small>referencia personal</small></div>
+          <div class="partyCompareCard"><span>Progreso</span><strong>${metricVolumeText(self.current)}</strong><small>carga externa y peso corporal</small></div>
+          <div class="partyCompareCard"><span>Vs semana pasada</span><strong>${signed(self.changeVsPreviousWeek?.volumePct, '%')}</strong><small>referencia personal</small></div>
         </div>
       </div>
 
@@ -1684,7 +1737,7 @@
     const rows = safeArray(data.sessions).slice().sort((a,b) => String(b.date).localeCompare(String(a.date))).slice(0,8);
     return `<div class="moduleCard"><h3>Últimas sesiones compartidas</h3><div class="entryList">${rows.map(session => {
       const member = safeArray(data.members).find(item => item.userId === session.userId) || {};
-      return `<div class="entryRow"><div><strong>${escape(memberDisplayName(member, data))} · ${escape(session.routineName)}</strong><div class="meta">${escape(session.date)} · ${session.totalSets} series · ${session.totalReps || 0} reps · volumen ${formatNumber(session.totalVolume)} kg</div></div><span class="statusChip good">${escape(session.source || 'sync')}</span></div>`;
+      return `<div class="entryRow"><div><strong>${escape(memberDisplayName(member, data))} · ${escape(session.routineName)}</strong><div class="meta">${escape(session.date)} · ${session.totalSets} series · ${session.totalReps || 0} reps · ${escape(metricVolumeText(session))}</div></div><span class="statusChip good">${escape(session.source || 'sync')}</span></div>`;
     }).join('') || '<div class="emptyState">Todavía no hay sesiones compartidas.</div>'}</div></div>`;
   }
 

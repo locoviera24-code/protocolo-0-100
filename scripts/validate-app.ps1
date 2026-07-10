@@ -18,6 +18,7 @@ function Assert-True([bool]$condition, [string]$message) {
 $html = Read-Utf8 'index.html'
 $nutrition = Read-Utf8 'nutrition-data.js'
 $fdc = Read-Utf8 'fdc-client.js'
+$workoutMetrics = Read-Utf8 'workout-metrics.js'
 $workoutRanking = Read-Utf8 'workout-ranking.js'
 $workout = Read-Utf8 'workout-features.js'
 $firebaseConfig = Read-Utf8 'firebase-config.js'
@@ -36,6 +37,7 @@ $validationWorkflow = Read-Utf8 '.github/workflows/validate-app.yml'
 $serviceWorkerTest = Read-Utf8 'scripts/test-service-worker.mjs'
 $workoutTest = Read-Utf8 'scripts/test-workout-features.mjs'
 $gymPartyTest = Read-Utf8 'scripts/test-gym-party.mjs'
+$workoutMetricsTest = Read-Utf8 'scripts/test-workout-metrics.mjs'
 $readme = Read-Utf8 'README.md'
 $handoff = Read-Utf8 'CODEX_HANDOFF.md'
 
@@ -50,7 +52,7 @@ $duplicates = $staticIds | Group-Object | Where-Object Count -gt 1 | Select-Obje
 Assert-True ($duplicates.Count -eq 0) "Hay IDs HTML duplicados: $($duplicates -join ', ')"
 
 $requiredFiles = @(
-    'nutrition-data.js', 'fdc-client.js', 'workout-ranking.js', 'workout-features.js', 'advanced-features.js',
+    'nutrition-data.js', 'fdc-client.js', 'workout-metrics.js', 'workout-ranking.js', 'workout-features.js', 'advanced-features.js',
     'firebase-config.js', 'gym-party.js',
     'manifest.webmanifest', 'sw.js',
     'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetProvider.java',
@@ -66,9 +68,13 @@ foreach ($file in $requiredFiles) {
     Assert-True (Test-Path -LiteralPath (Join-Path $repoRoot $file) -PathType Leaf) "Falta $file"
 }
 
-foreach ($script in @('nutrition-data.js', 'fdc-client.js', 'workout-ranking.js', 'workout-features.js', 'gym-party.js', 'advanced-features.js')) {
+foreach ($script in @('nutrition-data.js', 'fdc-client.js', 'workout-metrics.js', 'workout-ranking.js', 'workout-features.js', 'gym-party.js', 'advanced-features.js')) {
     Assert-True ($html.Contains("<script src=`"$script`"></script>")) "index.html no carga $script"
     Assert-True ($serviceWorker.Contains("'./$script'")) "sw.js no cachea $script"
+}
+
+foreach ($contract in @('calculateSetMetrics','calculateSetsMetrics','bodyweightReps','addedLoadVolume','estimatedOneRepMax','Sin series registradas')) {
+    Assert-True ($workoutMetrics.Contains($contract)) "Falta contrato de metricas de gym: $contract"
 }
 Assert-True ($html.Contains('<script src="firebase-config.js"></script>')) 'index.html no carga firebase-config.js'
 Assert-True ($html.IndexOf('<script src="firebase-config.js"></script>') -lt $html.IndexOf('<script src="gym-party.js"></script>')) 'firebase-config.js debe cargarse antes de gym-party.js'
@@ -401,8 +407,12 @@ foreach ($workflow in @($deployWorkflow, $apkWorkflow, $validationWorkflow)) {
 }
 Assert-True ($serviceWorkerTest.Contains('api.nal.usda.gov')) 'La prueba del service worker debe cubrir llamadas FDC'
 Assert-True ($serviceWorkerTest.Contains('otra-app-cache')) 'La prueba del service worker debe proteger caches ajenos'
+foreach ($contract in @('32 reps de peso corporal','addedLoadVolume','percentChange(100,0),null','estimatedOneRepMax')) {
+    Assert-True ($workoutMetricsTest.Contains($contract)) "Falta prueba de metricas de gym: $contract"
+}
 foreach ($workflow in @($deployWorkflow, $apkWorkflow, $validationWorkflow)) {
     Assert-True ($workflow.Contains('node ./scripts/test-workout-features.mjs')) 'Cada workflow debe probar rutina semanal y estado widget'
+    Assert-True ($workflow.Contains('node ./scripts/test-workout-metrics.mjs')) 'Cada workflow debe probar metricas de gimnasio'
     Assert-True ($workflow.Contains('node ./scripts/test-gym-party.mjs')) 'Cada workflow debe probar Gym Party'
 }
 foreach ($contract in @('Torso A', 'Pierna A', 'Torso B', 'Pierna B', 'Torso C', 'Rutina propia', 'buildWorkoutWidgetState', 'updateQuickSetPayload', 'deleteQuickSetPayload')) {

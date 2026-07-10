@@ -30,5 +30,8 @@ jobs:
       - name: Probar rutina semanal y estado widget
         run: node ./scripts/test-workout-features.mjs
 
+      - name: Probar metricas de gimnasio
+        run: node ./scripts/test-workout-metrics.mjs
+
       - name: Probar Gym Party
         run: node ./scripts/test-gym-party.mjs

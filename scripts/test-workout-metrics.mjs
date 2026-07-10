@@ -1,0 +1,31 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import vm from 'node:vm';
+
+const source=await readFile(new URL('../workout-metrics.js',import.meta.url),'utf8');
+const context={window:null};context.window=context;
+vm.runInContext(source,vm.createContext(context),{filename:'workout-metrics.js'});
+const metrics=context.WORKOUT_METRICS;
+
+const bodyweight=metrics.calculateSetsMetrics([
+  {reps:10,weight:0,bodyweight:true},
+  {reps:12,weight:0,bodyweight:true},
+  {reps:10,weight:0,bodyweight:true}
+]);
+assert.equal(bodyweight.totalSets,3);
+assert.equal(bodyweight.totalReps,32);
+assert.equal(bodyweight.bodyweightReps,32);
+assert.equal(bodyweight.externalLoadVolume,0);
+assert.equal(metrics.formatProgress(bodyweight),'32 reps de peso corporal');
+
+const weighted=metrics.calculateSetsMetrics([{reps:8,weight:5,bodyweight:true},{reps:8,weight:5,bodyweight:true}]);
+assert.equal(weighted.addedLoadVolume,80);
+assert.equal(weighted.addedLoadReps,16);
+assert.equal(metrics.percentChange(100,0),null);
+assert.equal(metrics.percentChange(120,100),20);
+assert.equal(metrics.estimatedOneRepMax(60,8),76);
+const consistency=metrics.consistency({plannedSessions:5,registeredSessions:3,plannedExercises:9,completedExercises:7,scheduledRestDays:2});
+assert.equal(consistency.scheduledRestDays,2);
+assert.ok(consistency.score>0&&consistency.score<100);
+
+console.log('Metricas de gym correctas: carga externa, peso corporal, lastre, base anterior, 1RM y constancia.');
