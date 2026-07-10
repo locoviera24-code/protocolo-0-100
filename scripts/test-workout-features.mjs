@@ -4,6 +4,9 @@ import vm from 'node:vm';
 
 const source = await readFile(new URL('../workout-features.js', import.meta.url), 'utf8');
 const rankingSource = await readFile(new URL('../workout-ranking.js', import.meta.url), 'utf8');
+const storeSource = await readFile(new URL('../workout-store.js', import.meta.url), 'utf8');
+const planSource = await readFile(new URL('../workout-plan.js', import.meta.url), 'utf8');
+const uiSource = await readFile(new URL('../workout-ui.js', import.meta.url), 'utf8');
 assert.match(source,/planExerciseEditorCard/);
 assert.match(source,/Edición avanzada en texto/);
 assert.match(source,/data-plan-field="targetSets"/);
@@ -54,6 +57,9 @@ function createContext(preloaded = {}, today = '2026-06-22') {
   };
   context.window = context;
   const vmContext=vm.createContext(context);
+  vm.runInContext(storeSource, vmContext, {filename: 'workout-store.js'});
+  vm.runInContext(planSource, vmContext, {filename: 'workout-plan.js'});
+  vm.runInContext(uiSource, vmContext, {filename: 'workout-ui.js'});
   vm.runInContext(rankingSource, vmContext, {filename: 'workout-ranking.js'});
   vm.runInContext(source, vmContext, {filename: 'workout-features.js'});
   return {context, store};

@@ -65,6 +65,9 @@ jobs:
       - name: Probar contratos de release Android
         run: node ./scripts/test-android-release.mjs
 
+      - name: Probar limites modulares
+        run: npm run test:modules
+
       - name: Probar accesibilidad web y movil
         run: node ./scripts/test-accessibility.mjs
 

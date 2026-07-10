@@ -149,6 +149,7 @@
     return Math.round(number(value) * p) / p;
   }
   function percentChange(current, previous){
+    if(window.GYM_PARTY_METRICS?.percentChange) return window.GYM_PARTY_METRICS.percentChange(current,previous);
     if(window.WORKOUT_METRICS?.percentChange) return window.WORKOUT_METRICS.percentChange(current,previous);
     if(!previous) return null;
     return round(((current - previous) / previous) * 100, 1);
@@ -183,6 +184,7 @@
     return {};
   }
   function firebaseConfigSource(){
+    if(window.FIREBASE_SERVICE?.configSource) return window.FIREBASE_SERVICE.configSource(settings().firebaseConfig||{},window.GYM_PARTY_FIREBASE_CONFIG||{});
     if(hasFirebaseConfig(settings().firebaseConfig || {})) return 'local';
     if(hasFirebaseConfig(window.GYM_PARTY_FIREBASE_CONFIG || {})) return 'bundled';
     return 'missing';
@@ -750,10 +752,11 @@
     const weekSessions = sessions.filter(session => session.userId === member.userId && inWeek(session.date, start));
     const ids = new Set(weekSessions.map(session => session.id));
     const weekSets = sets.filter(set => set.userId === member.userId && (ids.has(set.sessionId) || inWeek(set.date, start)));
-    const totalSets = weekSets.length || weekSessions.reduce((sum, session) => sum + number(session.totalSets), 0);
-    const totalReps = weekSets.reduce((sum, set) => sum + number(set.reps), 0) || weekSessions.reduce((sum, session) => sum + number(session.totalReps), 0);
-    const totalVolume = weekSets.reduce((sum, set) => sum + number(set.reps) * number(set.weightKg), 0) || weekSessions.reduce((sum, session) => sum + number(session.totalVolume), 0);
-    const setMetrics=window.WORKOUT_METRICS?.calculateSetsMetrics?.(weekSets.map(set=>({reps:set.reps,weightKg:set.weightKg,isBodyweight:set.isBodyweight})))||{bodyweightReps:weekSets.filter(set=>set.isBodyweight&&!number(set.weightKg)).reduce((sum,set)=>sum+number(set.reps),0),addedLoadVolume:weekSets.filter(set=>set.isBodyweight).reduce((sum,set)=>sum+number(set.reps)*number(set.weightKg),0),bestWeight:Math.max(0,...weekSets.map(set=>number(set.weightKg))),bestSetVolume:Math.max(0,...weekSets.map(set=>number(set.reps)*number(set.weightKg))),maxReps:Math.max(0,...weekSets.map(set=>number(set.reps)))};
+    const aggregate=window.GYM_PARTY_METRICS?.aggregateSets?.(weekSets)||null;
+    const totalSets = weekSets.length ? (aggregate?.totalSets??weekSets.length) : weekSessions.reduce((sum, session) => sum + number(session.totalSets), 0);
+    const totalReps = weekSets.length ? (aggregate?.totalReps??weekSets.reduce((sum, set) => sum + number(set.reps), 0)) : weekSessions.reduce((sum, session) => sum + number(session.totalReps), 0);
+    const totalVolume = weekSets.length ? (aggregate?.totalVolume??weekSets.reduce((sum, set) => sum + number(set.reps) * number(set.weightKg), 0)) : weekSessions.reduce((sum, session) => sum + number(session.totalVolume), 0);
+    const setMetrics=aggregate||window.WORKOUT_METRICS?.calculateSetsMetrics?.(weekSets.map(set=>({reps:set.reps,weightKg:set.weightKg,isBodyweight:set.isBodyweight})))||{bodyweightReps:weekSets.filter(set=>set.isBodyweight&&!number(set.weightKg)).reduce((sum,set)=>sum+number(set.reps),0),addedLoadVolume:weekSets.filter(set=>set.isBodyweight).reduce((sum,set)=>sum+number(set.reps)*number(set.weightKg),0),bestWeight:Math.max(0,...weekSets.map(set=>number(set.weightKg))),bestSetVolume:Math.max(0,...weekSets.map(set=>number(set.reps)*number(set.weightKg))),maxReps:Math.max(0,...weekSets.map(set=>number(set.reps)))};
     if(!weekSets.length){
       setMetrics.bodyweightReps=weekSessions.reduce((sum,session)=>sum+number(session.bodyweightReps),0);
       setMetrics.addedLoadVolume=weekSessions.reduce((sum,session)=>sum+number(session.addedLoadVolume),0);
@@ -762,19 +765,15 @@
       setMetrics.maxReps=Math.max(0,...weekSessions.map(session=>number(session.maxReps)));
     }
     const exercises = new Set(weekSets.map(set => set.exerciseId || set.exerciseName).filter(Boolean));
-    const muscleVolume = {};
-    weekSets.forEach(set => {
+    const muscleVolume = aggregate?.muscleVolume||{};
+    const bestByExercise = aggregate?.bestByExercise||{};
+    if(!aggregate) weekSets.forEach(set => {
       const muscle = set.muscleGroup || 'General';
       muscleVolume[muscle] = (muscleVolume[muscle] || 0) + number(set.reps) * number(set.weightKg);
-    });
-    const bestByExercise = {};
-    weekSets.forEach(set => {
       const key = set.exerciseId || set.exerciseName;
       const volume = number(set.reps) * number(set.weightKg);
       const score = volume || number(set.reps);
-      if(!bestByExercise[key] || score > bestByExercise[key].score){
-        bestByExercise[key] = {...set, score, volume};
-      }
+      if(!bestByExercise[key] || score > bestByExercise[key].score) bestByExercise[key] = {...set, score, volume};
     });
     return {
       member,
@@ -834,7 +833,7 @@
         member,
         current,
         previous,
-        changeVsPreviousWeek: {
+        changeVsPreviousWeek: window.GYM_PARTY_METRICS?.changes?.(current,previous)||{
           sessions: current.sessionsCount - previous.sessionsCount,
           volumePct: percentChange(current.totalVolume, previous.totalVolume),
           setsPct: percentChange(current.totalSets, previous.totalSets)
@@ -862,6 +861,7 @@
     return `${n > 0 ? '+' : ''}${round(n, 1)}${suffix}`;
   }
   function statCard(label, value, helpId){
+    if(window.GYM_PARTY_UI?.statCard) return window.GYM_PARTY_UI.statCard(label,value,helpId);
     return `<div class="quickStat"><span>${escape(label)} ${helpId ? `<button type="button" class="gymPartyHelp" data-party-help="${helpId}">?</button>` : ''}</span><strong>${escape(value)}</strong></div>`;
   }
   function privacyNotice(){
@@ -1402,7 +1402,7 @@
       <div class="muted small">Compartir progreso, no competir a ciegas. La constancia también cuenta.</div>
     </div>`;
   }
-  function helpButton(id){ return `<button type="button" class="gymPartyHelp" data-party-help="${id}">?</button>`; }
+  function helpButton(id){ return window.GYM_PARTY_UI?.helpButton?.(id)??`<button type="button" class="gymPartyHelp" data-party-help="${id}">?</button>`; }
   function exerciseProgressHtml(data){
     const sets = safeArray(data.sets).filter(set => !set.deleted);
     const options = [...new Map(sets.map(set => [set.exerciseId || set.exerciseName, set.exerciseName || set.exerciseId])).entries()];
@@ -1716,9 +1716,10 @@
     const dateLabel = referenceDate === todayStr() ? 'Hoy' : referenceDate;
     const syncCounts=syncEngine()?.stateCounts?.([...safeArray(data.sessions),...safeArray(data.sets)])||{};
     const syncError=settings().syncLastError||'';
-    const syncText = m.backendMode === 'demo'
-      ? 'Demo'
-      : `${m.backendMode === 'firebase' ? 'Online' : 'Local'} - ${syncQueue().length} pendiente(s)${syncCounts.conflict?` - ${syncCounts.conflict} conflicto(s) resuelto(s)`:''}`;
+    const syncText = window.GYM_PARTY_UI?.syncLabel?.({backendMode:m.backendMode,pending:syncQueue().length,conflicts:syncCounts.conflict||0})
+      ?? (m.backendMode === 'demo'
+        ? 'Demo'
+        : `${m.backendMode === 'firebase' ? 'Online' : 'Local'} - ${syncQueue().length} pendiente(s)${syncCounts.conflict?` - ${syncCounts.conflict} conflicto(s) resuelto(s)`:''}`);
     const inviteHint = members.length === 1
       ? `<div class="partyTip">Cuando quieras sumar a tu amigo, desplega este apartado y envia el codigo.</div>`
       : '';
@@ -1951,8 +1952,9 @@
     ensureStyles();
     syncFromLocalWorkouts({silent: true, queue: false});
     const data = partyData();
-    root.innerHTML = data?.party ? dashboardHtmlSimple(data) : noRoomHtmlSimple();
-    bindGymPartyActionButtons(root);
+    const html=data?.party ? dashboardHtmlSimple(data) : noRoomHtmlSimple();
+    if(window.GYM_PARTY_UI?.renderRoot) window.GYM_PARTY_UI.renderRoot(root,html,bindGymPartyActionButtons);
+    else{root.innerHTML=html;bindGymPartyActionButtons(root);}
     setTimeout(updatePartyRestTimer,0);
   }
 
@@ -2374,6 +2376,12 @@
     firebaseInitPromise = (async () => {
       const config = effectiveFirebaseConfig();
       if(!hasFirebaseConfig(config)) throw new Error('FIREBASE_NOT_CONFIGURED');
+      if(window.FIREBASE_SERVICE?.load){
+        const runtime=await window.FIREBASE_SERVICE.load({version:FIREBASE_SDK_VERSION,config,name:'gym-party'});
+        await ensurePersistentAnonymousAuth(runtime.authMod,runtime.auth);
+        firebaseRuntime=runtime;
+        return firebaseRuntime;
+      }
       const base = `https://www.gstatic.com/firebasejs/${FIREBASE_SDK_VERSION}`;
       const [appMod, authMod, firestoreMod] = await Promise.all([
         import(`${base}/firebase-app.js`),
@@ -2427,6 +2435,7 @@
     }
   }
   function hasFirebaseConfig(config){
+    if(window.FIREBASE_SERVICE?.hasConfig) return window.FIREBASE_SERVICE.hasConfig(config);
     return !!(config && config.apiKey && config.authDomain && config.projectId && config.appId);
   }
   function firebaseError(error){

@@ -4,6 +4,9 @@ import vm from 'node:vm';
 
 const source = await readFile(new URL('../gym-party.js', import.meta.url), 'utf8');
 const syncSource=await readFile(new URL('../gym-party-sync.js',import.meta.url),'utf8');
+const firebaseServiceSource=await readFile(new URL('../firebase-service.js',import.meta.url),'utf8');
+const metricsSource=await readFile(new URL('../gym-party-metrics.js',import.meta.url),'utf8');
+const uiSource=await readFile(new URL('../gym-party-ui.js',import.meta.url),'utf8');
 assert.match(source, /browserLocalPersistence/);
 assert.match(source, /setPersistence/);
 assert.match(source, /onAuthStateChanged/);
@@ -49,7 +52,10 @@ function createContext() {
   };
   context.window = context;
   const vmContext=vm.createContext(context);
+  vm.runInContext(firebaseServiceSource,vmContext,{filename:'firebase-service.js'});
   vm.runInContext(syncSource,vmContext,{filename:'gym-party-sync.js'});
+  vm.runInContext(metricsSource,vmContext,{filename:'gym-party-metrics.js'});
+  vm.runInContext(uiSource,vmContext,{filename:'gym-party-ui.js'});
   vm.runInContext(source,vmContext,{filename:'gym-party.js'});
   return {context, store};
 }

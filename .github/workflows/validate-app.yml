@@ -61,6 +61,9 @@ jobs:
       - name: Probar sincronizacion incremental
         run: node ./scripts/test-gym-party-sync.mjs
 
+      - name: Probar limites modulares
+        run: npm run test:modules
+
       - name: Probar seguridad del WebView Android
         run: node ./scripts/test-android-webview-security.mjs
 

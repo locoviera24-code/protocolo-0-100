@@ -91,11 +91,14 @@
   function restDay(key,name,message,suggestions){
     return {dayKey:key,weekday:dayLabels[key],name,type:'rest',muscles:['Recuperación'],message,suggestions:[...suggestions],exercises:[]};
   }
-  function clone(value){ return JSON.parse(JSON.stringify(value)); }
-  function normalizeText(value){ return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim(); }
-  function normalizeExerciseName(value){ return normalizeText(value).replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim(); }
+  function clone(value){ return window.WORKOUT_STORE?.clone?.(value)??JSON.parse(JSON.stringify(value)); }
+  function readStore(key,fallback){return window.WORKOUT_STORE?.read?.(key,fallback)??getLocalData(key,fallback);}
+  function writeStore(key,value){return window.WORKOUT_STORE?.write?.(key,value)??setLocalData(key,value);}
+  function normalizeText(value){ return window.WORKOUT_PLAN?.normalizeText?.(value)??String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim(); }
+  function normalizeExerciseName(value){ return window.WORKOUT_PLAN?.normalizeExerciseName?.(value)??normalizeText(value).replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim(); }
   function exerciseAliases(exercise){ return [exercise?.name,...(exercise?.aliases||[])].map(normalizeExerciseName).filter(Boolean); }
   function sameExercise(a,b){
+    if(window.WORKOUT_PLAN?.sameExercise)return window.WORKOUT_PLAN.sameExercise(a,b);
     if(!a||!b) return false;
     if(a.exerciseId && b.exerciseId && a.exerciseId===b.exerciseId) return true;
     if(a.id && b.id && a.id===b.id) return true;
@@ -116,32 +119,37 @@
   }
   function dateFromString(value){ const [y,m,d]=String(value||todayStr()).split('-').map(Number); return new Date(y,m-1,d); }
   function dayKeyForDate(dateString=todayStr()){
+    if(window.WORKOUT_PLAN?.dayKeyForDate)return window.WORKOUT_PLAN.dayKeyForDate(dateString);
     const jsDay=dateFromString(dateString).getDay();
     return ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][jsDay];
   }
   function settings(){
-    return {...{widgetEnabled:true,showRir:true,unit:'kg',mode:'simple',showRestDays:true,restTimerEnabled:false,restSeconds:90,hapticEnabled:true},...getLocalData(keys.gymSettings,{})};
+    return {...{widgetEnabled:true,showRir:true,unit:'kg',mode:'simple',showRestDays:true,restTimerEnabled:false,restSeconds:90,hapticEnabled:true},...readStore(keys.gymSettings,{})};
   }
   function saveSettings(next){
-    setLocalData(keys.gymSettings,{...settings(),...next});
+    writeStore(keys.gymSettings,{...settings(),...next});
     syncWorkoutWidget();
   }
   function ensureWorkoutData(){
-    if(!localStorage.getItem(keys.weeklyWorkoutPlan)) setLocalData(keys.weeklyWorkoutPlan,clone(defaultWeeklyPlan));
-    if(!localStorage.getItem(keys.exerciseLibrary)) setLocalData(keys.exerciseLibrary,clone(exerciseLibrary));
-    if(!localStorage.getItem(keys.exerciseHistory)) setLocalData(keys.exerciseHistory,{});
-    if(!localStorage.getItem(keys.workoutSessions)) setLocalData(keys.workoutSessions,[]);
-    if(!localStorage.getItem(keys.gymSettings)) setLocalData(keys.gymSettings,settings());
-    if(!localStorage.getItem(keys.exercisePreferences)) setLocalData(keys.exercisePreferences,{schemaVersion:1,exercises:{},updatedAt:null});
+    const store=window.WORKOUT_STORE;
+    if(store){store.ensure(keys.weeklyWorkoutPlan,clone(defaultWeeklyPlan));store.ensure(keys.exerciseLibrary,clone(exerciseLibrary));store.ensure(keys.exerciseHistory,{});store.ensure(keys.workoutSessions,[]);store.ensure(keys.gymSettings,settings());store.ensure(keys.exercisePreferences,{schemaVersion:1,exercises:{},updatedAt:null});}
+    else{
+      if(!localStorage.getItem(keys.weeklyWorkoutPlan)) writeStore(keys.weeklyWorkoutPlan,clone(defaultWeeklyPlan));
+      if(!localStorage.getItem(keys.exerciseLibrary)) writeStore(keys.exerciseLibrary,clone(exerciseLibrary));
+      if(!localStorage.getItem(keys.exerciseHistory)) writeStore(keys.exerciseHistory,{});
+      if(!localStorage.getItem(keys.workoutSessions)) writeStore(keys.workoutSessions,[]);
+      if(!localStorage.getItem(keys.gymSettings)) writeStore(keys.gymSettings,settings());
+      if(!localStorage.getItem(keys.exercisePreferences)) writeStore(keys.exercisePreferences,{schemaVersion:1,exercises:{},updatedAt:null});
+    }
     migrateExerciseLibrary();
   }
-  function weeklyPlan(){ return getLocalData(keys.weeklyWorkoutPlan,clone(defaultWeeklyPlan)); }
-  function saveWeeklyPlan(plan){ setLocalData(keys.weeklyWorkoutPlan,plan); syncWorkoutWidget(); }
-  function libraryData(){ return getLocalData(keys.exerciseLibrary,clone(exerciseLibrary)); }
-  function saveLibraryData(value){ setLocalData(keys.exerciseLibrary,value); }
+  function weeklyPlan(){ return readStore(keys.weeklyWorkoutPlan,clone(defaultWeeklyPlan)); }
+  function saveWeeklyPlan(plan){ writeStore(keys.weeklyWorkoutPlan,plan); syncWorkoutWidget(); }
+  function libraryData(){ return readStore(keys.exerciseLibrary,clone(exerciseLibrary)); }
+  function saveLibraryData(value){ writeStore(keys.exerciseLibrary,value); }
   function migrateExerciseLibrary(){
-    const existing=getLocalData(keys.exerciseLibrary,[]);
-    const meta=getLocalData(keys.exerciseLibraryMeta,null);
+    const existing=readStore(keys.exerciseLibrary,[]);
+    const meta=readStore(keys.exerciseLibraryMeta,null);
     if(meta?.libraryVersion>=EXERCISE_LIBRARY_VERSION&&existing.length) return existing;
     const byId=new Map();
     existing.forEach((exercise,index)=>{
@@ -185,7 +193,7 @@
       if(preferred!==duplicate){const index=merged.indexOf(duplicate);merged[index]=preferred;}
     });
     saveLibraryData(merged);
-    setLocalData(keys.exerciseLibraryMeta,{schemaVersion:1,libraryVersion:EXERCISE_LIBRARY_VERSION,migratedAt:new Date().toISOString(),officialCount:exerciseLibrary.length,customCount:merged.filter(item=>item.custom||item.origin==='custom').length});
+    writeStore(keys.exerciseLibraryMeta,{schemaVersion:1,libraryVersion:EXERCISE_LIBRARY_VERSION,migratedAt:new Date().toISOString(),officialCount:exerciseLibrary.length,customCount:merged.filter(item=>item.custom||item.origin==='custom').length});
     return merged;
   }
   function mergeLibraryRecords(primary,secondary){
@@ -221,10 +229,10 @@
     return {exercise:created,created:true,library};
   }
   function planForDate(date=todayStr()){ return weeklyPlan()[dayKeyForDate(date)] || defaultWeeklyPlan[dayKeyForDate(date)]; }
-  function sessions(){ return getLocalData(keys.workoutSessions,[]); }
-  function saveSessions(value){ setLocalData(keys.workoutSessions,value); }
-  function history(){ return getLocalData(keys.exerciseHistory,{}); }
-  function saveHistory(value){ setLocalData(keys.exerciseHistory,value); }
+  function sessions(){ return readStore(keys.workoutSessions,[]); }
+  function saveSessions(value){ writeStore(keys.workoutSessions,value); }
+  function history(){ return readStore(keys.exerciseHistory,{}); }
+  function saveHistory(value){ writeStore(keys.exerciseHistory,value); }
   function maybeImportWidgetStateFromAndroid(){
     if(importingNativeWidgetState) return false;
     if(!window.AndroidBridge || typeof window.AndroidBridge.getWorkoutWidgetData!=='function') return false;
@@ -646,7 +654,9 @@
     if(score) score.textContent=`Score gym ${Math.min(100,Math.round((completed/Math.max(1,total))*70 + Math.min(30,totalSets*2)))}/100`;
     if(lever) lever.textContent=totalSets?'Según lo registrado, priorizá técnica antes que carga y registrá la siguiente serie.':'Palanca física de hoy: registrar pesos para medir progreso.';
   }
-  function statCard([k,v]){ return `<div class="quickStat"><span>${escapeHtml(k)}</span><strong>${escapeHtml(String(v))}</strong></div>`; }
+  function statCard([k,v]){
+    return window.WORKOUT_UI?.statCard?.(k,String(v))??`<div class="quickStat"><span>${escapeHtml(k)}</span><strong>${escapeHtml(String(v))}</strong></div>`;
+  }
   function quickDraftKey(exerciseId=currentQuickExerciseId,date=todayStr()){ return `${date}:${exerciseId||''}`; }
   function quickInputValue(id){ const element=document.getElementById(id); return element?.type==='checkbox'?!!element.checked:(element?.value??''); }
   function captureQuickDraft(){
@@ -689,11 +699,12 @@
     const source=session?.exercises?.length?session.exercises:plan.exercises;
     const query=document.getElementById('quickExerciseSearch')?.value||'';
     const ranking=rankExercisesForContext({date,currentPlan:plan,query});
-    select.innerHTML=ranking.groups.map(group=>`<optgroup label="${escapeHtml(group.label)}">${group.items.map(exercise=>{
+    const renderExerciseOption=(exercise,escapeValue=escapeHtml)=>{
       const active=(source||[]).find(item=>item.exerciseId===exercise.exerciseId);
       const value=active?(active.id||active.exerciseId):`library:${exercise.exerciseId}`;
-      return `<option value="${escapeHtml(value)}">${escapeHtml(exercise.name)}</option>`;
-    }).join('')}</optgroup>`).join('');
+      return `<option value="${escapeValue(value)}">${escapeValue(exercise.name)}</option>`;
+    };
+    select.innerHTML=window.WORKOUT_UI?.groupedOptions?.(ranking.groups,renderExerciseOption)??ranking.groups.map(group=>`<optgroup label="${escapeHtml(group.label)}">${group.items.map(exercise=>renderExerciseOption(exercise)).join('')}</optgroup>`).join('');
     if(!currentQuickExerciseId && source?.[0]) currentQuickExerciseId=source[0].id||source[0].exerciseId;
     if(currentQuickExerciseId) select.value=currentQuickExerciseId;
     const exercise=(source||[]).find(x=>(x.id||x.exerciseId)===select.value) || source?.[0];
@@ -867,10 +878,17 @@
     };
     session.exercises=session.exercises||[];
     const afterId=String(payload.insertAfterExerciseId||'');
-    const afterIndex=afterId?session.exercises.findIndex(item=>item.id===afterId||item.exerciseId===afterId):-1;
-    const insertIndex=afterIndex>=0?afterIndex+1:session.exercises.length;
-    session.exercises.splice(insertIndex,0,exercise);
-    session.exercises.forEach((item,index)=>{item.order=index+1;});
+    const inserted=window.WORKOUT_PLAN?.insert?.(session.exercises,exercise,afterId);
+    let insertIndex;
+    if(inserted){
+      session.exercises=inserted.items;
+      insertIndex=session.exercises.findIndex(item=>item.id===exercise.id||item.exerciseId===exercise.exerciseId);
+    }else{
+      const afterIndex=afterId?session.exercises.findIndex(item=>item.id===afterId||item.exerciseId===afterId):-1;
+      insertIndex=afterIndex>=0?afterIndex+1:session.exercises.length;
+      session.exercises.splice(insertIndex,0,exercise);
+      session.exercises.forEach((item,index)=>{item.order=index+1;});
+    }
     session.currentExerciseIndex=insertIndex;
     currentQuickExerciseId=exercise.id;
     session.routine=session.routine||{name:plan.name,muscles:[],exercises:[]};
@@ -899,9 +917,13 @@
       delete planExercise.sets;
       delete planExercise.completed;
       if(!dayPlan.exercises.some(item=>sameExercise(item,planExercise))){
-        const planAfterIndex=afterId?dayPlan.exercises.findIndex(item=>item.id===afterId||item.exerciseId===afterId):-1;
-        dayPlan.exercises.splice(planAfterIndex>=0?planAfterIndex+1:dayPlan.exercises.length,0,planExercise);
-        dayPlan.exercises.forEach((item,index)=>{item.order=index+1;});
+        const insertedPlan=window.WORKOUT_PLAN?.insert?.(dayPlan.exercises,planExercise,afterId);
+        if(insertedPlan) dayPlan.exercises=insertedPlan.items;
+        else{
+          const planAfterIndex=afterId?dayPlan.exercises.findIndex(item=>item.id===afterId||item.exerciseId===afterId):-1;
+          dayPlan.exercises.splice(planAfterIndex>=0?planAfterIndex+1:dayPlan.exercises.length,0,planExercise);
+          dayPlan.exercises.forEach((item,index)=>{item.order=index+1;});
+        }
         dayPlan.muscles=[...new Set([...(dayPlan.muscles||[]),planExercise.muscle].filter(Boolean))];
         planValue[targetDayKey]=dayPlan;
         saveWeeklyPlan(planValue);

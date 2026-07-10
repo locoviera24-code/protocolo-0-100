@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "test:rules": "npx --yes firebase-tools@15.23.0 emulators:exec --project demo-protocolo-0100 --only firestore \"node firebase/rules.test.mjs\"",
+    "test:modules": "node scripts/test-module-boundaries.mjs",
     "test:e2e": "playwright test"
   },
   "devDependencies": {

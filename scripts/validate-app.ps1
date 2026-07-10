@@ -18,11 +18,17 @@ function Assert-True([bool]$condition, [string]$message) {
 $html = Read-Utf8 'index.html'
 $nutrition = Read-Utf8 'nutrition-data.js'
 $fdc = Read-Utf8 'fdc-client.js'
+$workoutStore = Read-Utf8 'workout-store.js'
+$workoutPlan = Read-Utf8 'workout-plan.js'
 $workoutMetrics = Read-Utf8 'workout-metrics.js'
 $workoutRanking = Read-Utf8 'workout-ranking.js'
+$workoutUi = Read-Utf8 'workout-ui.js'
 $workout = Read-Utf8 'workout-features.js'
 $firebaseConfig = Read-Utf8 'firebase-config.js'
+$firebaseService = Read-Utf8 'firebase-service.js'
 $gymPartySync = Read-Utf8 'gym-party-sync.js'
+$gymPartyMetrics = Read-Utf8 'gym-party-metrics.js'
+$gymPartyUi = Read-Utf8 'gym-party-ui.js'
 $gymParty = Read-Utf8 'gym-party.js'
 $advanced = Read-Utf8 'advanced-features.js'
 $serviceWorker = Read-Utf8 'sw.js'
@@ -46,6 +52,7 @@ $gymPartySyncTest = Read-Utf8 'scripts/test-gym-party-sync.mjs'
 $androidSecurityTest = Read-Utf8 'scripts/test-android-webview-security.mjs'
 $androidReleaseTest = Read-Utf8 'scripts/test-android-release.mjs'
 $accessibilityTest = Read-Utf8 'scripts/test-accessibility.mjs'
+$moduleBoundaryTest = Read-Utf8 'scripts/test-module-boundaries.mjs'
 $playwrightConfig = Read-Utf8 'playwright.config.mjs'
 $playwrightGymTest = Read-Utf8 'tests/e2e/gym-flow.spec.mjs'
 $readme = Read-Utf8 'README.md'
@@ -62,11 +69,12 @@ $duplicates = $staticIds | Group-Object | Where-Object Count -gt 1 | Select-Obje
 Assert-True ($duplicates.Count -eq 0) "Hay IDs HTML duplicados: $($duplicates -join ', ')"
 
 $requiredFiles = @(
-    'nutrition-data.js', 'fdc-client.js', 'workout-metrics.js', 'workout-ranking.js', 'workout-features.js', 'advanced-features.js',
-    'firebase-config.js', 'gym-party-sync.js', 'gym-party.js',
+    'nutrition-data.js', 'fdc-client.js', 'workout-store.js', 'workout-plan.js', 'workout-metrics.js', 'workout-ranking.js', 'workout-ui.js', 'workout-features.js', 'advanced-features.js',
+    'firebase-config.js', 'firebase-service.js', 'gym-party-sync.js', 'gym-party-metrics.js', 'gym-party-ui.js', 'gym-party.js',
     'scripts/test-android-webview-security.mjs',
     'scripts/test-android-release.mjs',
     'scripts/test-accessibility.mjs',
+    'scripts/test-module-boundaries.mjs',
     'scripts/serve-static.mjs', 'playwright.config.mjs', 'tests/e2e/gym-flow.spec.mjs',
     'manifest.webmanifest', 'sw.js',
     'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetProvider.java',
@@ -82,10 +90,32 @@ foreach ($file in $requiredFiles) {
     Assert-True (Test-Path -LiteralPath (Join-Path $repoRoot $file) -PathType Leaf) "Falta $file"
 }
 
-foreach ($script in @('nutrition-data.js', 'fdc-client.js', 'workout-metrics.js', 'workout-ranking.js', 'workout-features.js', 'gym-party-sync.js', 'gym-party.js', 'advanced-features.js')) {
+foreach ($script in @('nutrition-data.js', 'fdc-client.js', 'workout-store.js', 'workout-plan.js', 'workout-metrics.js', 'workout-ranking.js', 'workout-ui.js', 'workout-features.js', 'firebase-service.js', 'gym-party-sync.js', 'gym-party-metrics.js', 'gym-party-ui.js', 'gym-party.js', 'advanced-features.js')) {
     Assert-True ($html.Contains("<script src=`"$script`"></script>")) "index.html no carga $script"
     Assert-True ($serviceWorker.Contains("'./$script'")) "sw.js no cachea $script"
 }
+foreach ($order in @(
+    @('workout-store.js','workout-features.js'),
+    @('workout-plan.js','workout-features.js'),
+    @('workout-ui.js','workout-features.js'),
+    @('firebase-service.js','gym-party.js'),
+    @('gym-party-metrics.js','gym-party.js'),
+    @('gym-party-ui.js','gym-party.js')
+)) {
+    Assert-True ($html.IndexOf("<script src=`"$($order[0])`"></script>") -lt $html.IndexOf("<script src=`"$($order[1])`"></script>")) "$($order[0]) debe cargarse antes de $($order[1])"
+}
+foreach ($contract in @('WORKOUT_STORE','WORKOUT_PLAN','WORKOUT_UI')) {
+    Assert-True ($workout.Contains($contract)) "workout-features.js no integra $contract"
+}
+foreach ($contract in @('FIREBASE_SERVICE','GYM_PARTY_METRICS','GYM_PARTY_UI')) {
+    Assert-True ($gymParty.Contains($contract)) "gym-party.js no integra $contract"
+}
+foreach ($contract in @('read','write','update','ensure','migrate')) { Assert-True ($workoutStore.Contains($contract)) "Falta API de almacenamiento modular: $contract" }
+foreach ($contract in @('sameExercise','dedupe','insert','dayKeyForDate','copyDay')) { Assert-True ($workoutPlan.Contains($contract)) "Falta API de plan modular: $contract" }
+foreach ($contract in @('groupedOptions','statCard','announce')) { Assert-True ($workoutUi.Contains($contract)) "Falta API UI de Gym: $contract" }
+foreach ($contract in @('hasConfig','configSource','moduleUrls','load')) { Assert-True ($firebaseService.Contains($contract)) "Falta API modular Firebase: $contract" }
+foreach ($contract in @('percentChange','aggregateSets','changes')) { Assert-True ($gymPartyMetrics.Contains($contract)) "Falta API de metricas Gym Party: $contract" }
+foreach ($contract in @('helpButton','statCard','renderRoot','syncLabel')) { Assert-True ($gymPartyUi.Contains($contract)) "Falta API UI de Gym Party: $contract" }
 
 foreach ($contract in @('calculateSetMetrics','calculateSetsMetrics','bodyweightReps','addedLoadVolume','estimatedOneRepMax','Sin series registradas')) {
     Assert-True ($workoutMetrics.Contains($contract)) "Falta contrato de metricas de gym: $contract"
@@ -503,6 +533,9 @@ Assert-True ($deployWorkflow.Contains('gym-party.js')) 'El despliegue Pages debe
 Assert-True ($deployWorkflow.Contains('firebase-config.js')) 'El despliegue Pages debe publicar firebase-config.js'
 Assert-True ($deployWorkflow.Contains('write-firebase-config.ps1')) 'El despliegue Pages debe generar firebase-config.js desde secrets si existen'
 Assert-True ($deployWorkflow.Contains('workout-features.js')) 'El despliegue Pages debe publicar workout-features.js'
+foreach ($module in @('workout-store.js','workout-plan.js','workout-ui.js','firebase-service.js','gym-party-metrics.js','gym-party-ui.js')) {
+    Assert-True ($deployWorkflow.Contains($module)) "El despliegue Pages debe publicar $module"
+}
 Assert-True ($apkWorkflow.Contains('write-firebase-config.ps1')) 'El build APK debe generar firebase-config.js desde secrets si existen'
 Assert-True ($apkWorkflow.Contains('./scripts/validate-app.ps1 -CheckAndroidAssets')) 'El build APK debe validar los assets sincronizados'
 Assert-True ($validationWorkflow.Contains('./scripts/validate-app.ps1 -CheckAndroidAssets')) 'Falta validacion automatica de web y Android'
@@ -524,6 +557,11 @@ foreach ($workflow in @($deployWorkflow, $apkWorkflow, $validationWorkflow)) {
     Assert-True ($workflow.Contains('node ./scripts/test-android-webview-security.mjs')) 'Cada workflow debe probar seguridad WebView Android'
     Assert-True ($workflow.Contains('node ./scripts/test-android-release.mjs')) 'Cada workflow debe probar contratos de release Android'
     Assert-True ($workflow.Contains('node ./scripts/test-accessibility.mjs')) 'Cada workflow debe probar accesibilidad web y movil'
+    Assert-True ($workflow.Contains('npm run test:modules')) 'Cada workflow debe probar limites modulares'
+}
+Assert-True ($releaseWorkflow.Contains('npm run test:modules')) 'El release Android debe probar limites modulares'
+foreach ($contract in @('WORKOUT_STORE','WORKOUT_PLAN','WORKOUT_UI','FIREBASE_SERVICE','GYM_PARTY_METRICS','GYM_PARTY_UI','aggregate.bodyweightReps','aggregate.addedLoadVolume')) {
+    Assert-True ($moduleBoundaryTest.Contains($contract)) "Falta cobertura modular: $contract"
 }
 foreach ($contract in @('Torso A', 'Pierna A', 'Torso B', 'Pierna B', 'Torso C', 'Rutina propia', 'buildWorkoutWidgetState', 'updateQuickSetPayload', 'deleteQuickSetPayload')) {
     Assert-True ($workoutTest.Contains($contract)) "Falta prueba workout: $contract"
