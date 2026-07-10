@@ -66,6 +66,11 @@ Documento: `workout_sessions_shared/{partyId}_{userId}_{localSessionId}`
 - `totalVolume`
 - `createdAt`
 - `updatedAt`
+- `revision`
+- `localDate`
+- `timeZone`
+- `utcOffset`
+- `deletedReason`: opcional al retirar datos compartidos
 
 ## workout_sets_shared
 
@@ -92,6 +97,12 @@ Documento: `workout_sets_shared/{partyId}_{userId}_{localSessionId}_{exerciseId}
 - `deleted`: boolean opcional. Cuando una serie se elimina en la app, se marca
   como `true` para ocultarla de graficas/metrica y sincronizar el cambio sin
   requerir `delete` fisico en Firestore.
+- `deletedAt`: fecha del tombstone
+- `deletedReason`: opcional, por ejemplo `privacy-removal`
+- `revision`
+- `localDate`
+- `timeZone`
+- `utcOffset`
 
 ## gym_party_invites
 
@@ -124,3 +135,17 @@ Documento sugerido: `weekly_member_stats/{partyId}_{userId}_{weekStart}`
 
 En el MVP web actual las estadisticas se calculan en cliente y pueden cachearse
 a futuro para reducir lecturas.
+
+## Identidad e invariantes
+
+- Los IDs de membresia siguen `{partyId}_{userId}`.
+- Sesiones y sets compartidos conservan `partyId`, `userId` y su ID local; las
+  reglas impiden cambiarlos despues de crear el documento.
+- `members[]` no se guarda dentro de `gym_parties`; los miembros viven en
+  `gym_party_members` para evitar duplicacion y escrituras conflictivas.
+- El limite recomendado/validado es 10 miembros.
+- La fecha de calendario (`date`/`localDate`) se conserva separada del timestamp
+  UTC para que las semanas no cambien por zona horaria.
+- `dirty`, `syncState`, `attempts`, `lastError` y el backoff viven solo en
+  `localStorage`/`syncQueue`; se eliminan al sanitizar la escritura remota y no
+  forman parte del documento Firestore permitido por Rules.

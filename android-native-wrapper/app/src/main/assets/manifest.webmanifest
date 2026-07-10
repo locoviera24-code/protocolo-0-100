@@ -1,10 +1,15 @@
 {
   "name": "Protocolo 0→100: Hábitos, gym y nutrición",
   "short_name": "Protocolo 0→100",
-  "description": "Tracker integral para atención, rutinas de gimnasio, nutrición, sueño y hábitos.",
+  "description": "Registrá entrenamientos, series, hábitos y nutrición; seguí tu progreso y compartí Gym Party de forma privada.",
+  "id": "./",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
   "background_color": "#0b1220",
   "theme_color": "#0b1220",
   "orientation": "portrait-primary",
@@ -20,6 +25,29 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Entrenamiento de hoy",
+      "short_name": "Gym",
+      "description": "Abrir la rutina y el progreso de hoy",
+      "url": "./index.html?module=gym",
+      "icons": [{"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png"}]
+    },
+    {
+      "name": "Gym Party",
+      "short_name": "Gym Party",
+      "description": "Abrir la sala privada compartida",
+      "url": "./index.html?module=gym-party",
+      "icons": [{"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png"}]
+    },
+    {
+      "name": "Registrar serie",
+      "short_name": "Serie rápida",
+      "description": "Abrir directamente el registro rápido",
+      "url": "./index.html?module=gym&quickLog=1",
+      "icons": [{"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png"}]
     }
   ],
   "categories": [

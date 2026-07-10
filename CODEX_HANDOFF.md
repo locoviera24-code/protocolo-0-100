@@ -2,9 +2,9 @@
 
 Ultima actualizacion: 2026-06-30
 Rama esperada: `main`
-Version actual: `2.5.8`
-Android: `versionCode 30`, `versionName "2.5.8"`
-Service worker cache: `protocolo-0-100-pwa-v34`
+Version actual: `2.6.0`
+Android: `versionCode 31`, `versionName "2.6.0"`
+Service worker cache: `protocolo-0-100-pwa-v35`
 Backup consolidado: `schemaVersion: 3`
 
 Leer primero este archivo y luego `README.md`, `index.html`,
@@ -24,7 +24,7 @@ Estado actual:
 - Gym Party implementado como modulo web/PWA opcional.
 - Nutricion local/FDC opcional.
 - Backups JSON `schemaVersion: 3`.
-- PWA offline con cache v34 y actualizacion consentida desde el aviso visible.
+- PWA offline con cache v35 y actualizacion consentida desde el aviso visible.
 - APK con widget Android y permiso `INTERNET` para Firebase/Gym Party.
 
 ## 2. Funcionalidades ya existen
@@ -75,9 +75,18 @@ Web:
   acceso rapido.
 - `firebase-config.js`: stub seguro para config publica Firebase; Actions puede
   reemplazarlo desde secrets.
+- `workout-store.js`, `workout-plan.js`, `workout-ui.js`: limites modulares de
+  almacenamiento, planificacion y UI; `workout-features.js` conserva la API
+  publica y fallbacks.
+- `firebase-service.js`, `gym-party-metrics.js`, `gym-party-ui.js`: carga
+  diferida Firebase, agregados de series y componentes UI; `gym-party.js`
+  conserva la orquestacion y API publica.
+- `gym-party-sync.js`: sincronizacion incremental con dirty/revision, LWW,
+  tombstones, backoff y contexto horario.
 - `gym-party.js`: modulo Gym Party, registro rapido, graficas y edicion/eliminacion de series.
-- `advanced-features.js`: version `2.5.8`, backup/importacion Gym Party.
-- `sw.js`: cache v34, incluye Gym Party y evita persistir una configuracion Firebase obsoleta.
+- `advanced-features.js`: version `2.6.0`, backup/importacion Gym Party.
+- `sw.js`: cache v35, actualizacion consentida, incluye modulos nuevos y evita
+  persistir una configuracion Firebase obsoleta.
 - `README.md`: documenta Gym Party, demo, Firebase, privacidad y pruebas.
 - `CODEX_HANDOFF.md`: este handoff.
 
@@ -93,24 +102,28 @@ Android:
 - `android-native-wrapper/app/src/main/AndroidManifest.xml`: agrega
   `android.permission.INTERNET`.
 - `android-native-wrapper/app/src/main/java/com/protocolo/cien/MainActivity.java`:
-  permite acceso universal desde archivos locales para que WebView pueda usar
-  Firebase/FDC desde assets locales.
-- `android-native-wrapper/app/build.gradle`: `versionCode 30`,
-  `versionName 2.5.8`.
+  usa `WebViewAssetLoader` sobre HTTPS interno, bloquea file/content/universal
+  access y mixed content, activa Safe Browsing y limita origenes remotos.
+- `android-native-wrapper/app/build.gradle`: `versionCode 31`,
+  `versionName 2.6.0`, firma release solo desde variables seguras.
 - `android-native-wrapper/app/src/main/assets/*`: sincronizado desde raiz.
 
 Scripts/workflows:
 
-- `scripts/sync-web-assets.ps1`: copia `firebase-config.js` y `gym-party.js`.
+- `scripts/sync-web-assets.ps1`: copia todos los modulos web, config y Gym Party.
 - `scripts/write-firebase-config.ps1`: genera `firebase-config.js` desde
   variables `FIREBASE_*` si existen.
 - `scripts/validate-app.ps1`: valida contratos Gym Party y config Firebase.
 - `scripts/test-gym-party.mjs`: prueba demo, multi-miembro, estadisticas y
   backup/importacion.
-- `.github/workflows/*.yml`: corren `test-gym-party.mjs`.
+- `.github/workflows/*.yml`: ejecutan pruebas de Gym, Gym Party, modulos,
+  accesibilidad, seguridad y release segun el flujo.
 - `.github/workflows/deploy-pages.yml`: publica `workout-features.js`,
   `firebase-config.js` y `gym-party.js`.
-- `.github/workflows/build-debug-apk.yml`: release objetivo `v2.5.8`.
+- `.github/workflows/build-debug-apk.yml`: artifact debug temporal, sin Release.
+- `.github/workflows/build-release-apk.yml`: APK firmado versionado y SHA-256.
+- `.github/workflows/validate-app.yml`: Playwright Android/iPhone, Emulator y
+  build release con firma efimera.
 
 ## 5. Estructura datos/localStorage/Firebase
 
@@ -438,12 +451,14 @@ arrastrar la configuracion Firebase en JSON compartidos.
   reales.
 - Modo local/mock no sincroniza entre telefonos; para iPhone + Android usar
   Firebase.
-- APK usa WebView local y permiso Internet; probar Firebase en dispositivo real.
+- APK usa HTTPS interno con `WebViewAssetLoader` y permiso Internet; probar
+  Firebase y widget en dispositivo real.
 - No hay Google login. Desde `2.5.8` hay email/password opcional para vincular
   la sesion anonima y restaurar la misma Gym Party en otro dispositivo.
-- No hay Cloud Functions ni contador transaccional fuerte para `membersCount`;
-  para uso serio con muchas altas simultaneas, agregar transacciones.
-- `index.html` sigue monolitico.
+- No hay Cloud Functions. El flujo de alta protege invariantes con reglas y
+  transacciones/actualizaciones acotadas, pero sigue optimizado para hasta 10.
+- `index.html`, `workout-features.js` y `gym-party.js` siguen siendo grandes;
+  la fase 15 inicio extraccion incremental sin reescribirlos.
 - No hay IndexedDB; localStorage puede quedarse corto con historiales enormes.
 
 ## 12. Decisiones tecnicas importantes
@@ -476,11 +491,11 @@ No borrar ni renombrar datos sin migracion.
 
 ## 14. Que queda pendiente
 
-- Probar Firebase real con dos cuentas anonimas.
+- Probar Firebase real de produccion con dos cuentas/dispositivos despues de
+  desplegar las reglas e indices actuales.
 - Probar iPhone/Safari/PWA con codigo de invitacion.
 - Probar APK con Firebase desde WebView.
-- Validar `firebase/firestore.rules` en emulator.
-- Agregar Auth email/password opcional.
+- Verificar el widget en launchers Android reales; RemoteViews varia por fabricante.
 - Cachear `weekly_member_stats`.
 - Paginacion historica si hay muchas sesiones.
 - Mejorar comparador seleccionando miembros especificos para salas >5.
@@ -497,8 +512,8 @@ No borrar ni renombrar datos sin migracion.
 8. Sincronizar.
 9. Revisar dashboard Gym Party.
 10. Exportar backup JSON y CSV comparativo.
-11. Si se publica APK, esperar workflow `Construir APK Android` y release
-    `v2.5.8`.
+11. Para APK final ejecutar `Publicar APK Android release` con Secrets de firma
+    y conservar la misma clave para futuras actualizaciones `v2.6.0`.
 
 ## 16. Como probar la app
 
@@ -511,6 +526,13 @@ powershell -ExecutionPolicy Bypass -File .\scripts\validate-app.ps1 -CheckAndroi
 node .\scripts\test-service-worker.mjs
 node .\scripts\test-workout-features.mjs
 node .\scripts\test-gym-party.mjs
+node .\scripts\test-gym-party-sync.mjs
+node .\scripts\test-module-boundaries.mjs
+node .\scripts\test-android-webview-security.mjs
+node .\scripts\test-android-release.mjs
+node .\scripts\test-accessibility.mjs
+npm run test:rules
+npm run test:e2e
 git diff --check
 ```
 
@@ -558,7 +580,9 @@ Salida:
 android-native-wrapper/app/build/outputs/apk/debug/app-debug.apk
 ```
 
-GitHub Actions publica release `v2.5.8` si se empuja a `main`.
+GitHub Actions publica artifacts debug en `main`; el APK final `v2.6.0` se
+publica con el workflow `Publicar APK Android release` por tag `v*` o ejecucion
+manual, usando los Secrets de firma.
 
 ## 18. Como configurar Firebase
 
@@ -722,3 +746,108 @@ la membresia, sala, sesiones compartidas e historial sincronizado. Si nunca se
 guardo acceso y se perdio el dispositivo viejo, Firebase Anonymous no permite
 recuperar el UID anterior; solo queda unirse nuevamente con codigo o importar
 un backup manual.
+
+## 24. Release 2.6.0 - endurecimiento y modularizacion incremental
+
+Trabajo realizado en la rama `codex/gym-platform-hardening`, en commits
+separados por fase:
+
+1. Ejercicios extra persistentes por sesion/dia/biblioteca sin duplicados.
+2. Ranking contextual por rutina, dia, frecuencia, favoritos y busqueda.
+3. Editor visual de rutina con series objetivo, reps, descanso, copiar y deshacer.
+4. Biblioteca versionada/migrable con alias y ejercicios personalizados.
+5. Metricas corregidas para peso corporal, lastre, mejor serie y 1RM estimado.
+6. Firestore Rules estrictas y pruebas negativas en Emulator.
+7. Invitaciones revocables, regeneracion y salida/eliminacion privada segura.
+8. Sync incremental con revision/dirty, LWW, tombstones, backoff y zonas horarias.
+9. WebView Android endurecido con `WebViewAssetLoader` y allowlist de red.
+10. APK debug separado de release firmado; release incluye checksum SHA-256.
+11. PWA con actualizacion consentida, shortcuts y config Firebase `no-store`.
+12. Registro rapido simplificado, barra de guardado, drafts, deshacer y descanso.
+13. Accesibilidad movil: labels, foco, teclado, live region, safe-area y motion.
+14. Playwright Android Chromium/iPhone WebKit y build release real en CI.
+15. Modulos internos extraidos sin romper APIs: `workout-store.js`,
+    `workout-plan.js`, `workout-ui.js`, `firebase-service.js`,
+    `gym-party-metrics.js`, `gym-party-ui.js`.
+
+Persistencia y compatibilidad:
+
+- No se renombro ni elimino ninguna clave `protocolo_0_100_*` existente.
+- `weeklyWorkoutPlan`, `workoutSessions`, `exerciseHistory`, biblioteca,
+  preferencias, Gym Party y widget conservan migracion/fallback.
+- Firebase config, email portable y codigo pendiente no salen en backups.
+- Las series eliminadas conservan tombstone remoto pero no cuentan en resumen,
+  mapa muscular, graficas ni historial visible.
+- La app sigue funcionando sin Firebase en local/demo y sin AndroidBridge en web/iOS.
+
+Firebase produccion:
+
+- Habilitar Anonymous y, para cambio de dispositivo, Email/Password.
+- Desplegar `firebase/firestore.rules` y `firebase/firestore.indexes.json`.
+- La config publica llega por Secrets `FIREBASE_*`; no agregar service accounts.
+- Cada miembro vincula su propio email/clave si necesita recuperar el mismo UID
+  en otro dispositivo. El owner no guarda credenciales del amigo.
+
+APK release:
+
+- Version: `versionCode 31`, `versionName 2.6.0`.
+- Cache web: `protocolo-0-100-pwa-v35`.
+- Debug: `.github/workflows/build-debug-apk.yml`.
+- Release firmado: `.github/workflows/build-release-apk.yml` con Secrets
+  `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`,
+  `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`.
+- No cambiar la clave de firma entre releases instalados.
+
+Pruebas nuevas/relevantes:
+
+- `scripts/test-module-boundaries.mjs`
+- `scripts/test-gym-party-sync.mjs`
+- `scripts/test-android-webview-security.mjs`
+- `scripts/test-android-release.mjs`
+- `scripts/test-accessibility.mjs`
+- `firebase/rules.test.mjs`
+- `tests/e2e/gym-flow.spec.mjs`
+
+Verificacion integral ejecutada el 2026-07-10:
+
+- `scripts/validate-app.ps1 -CheckAndroidAssets`: OK, version `2.6.0`, cache
+  `v35`, 71 alimentos, 28 nutrientes, 253 IDs y assets Android sincronizados.
+- Pruebas Node de service worker, Workout, metricas, Gym Party, sync,
+  modularizacion, WebView, release y accesibilidad: todas OK.
+- Playwright con `workers:1`: 5 pruebas OK en Android Chromium/iPhone WebKit y
+  1 omitida intencionalmente (Service Worker solo Chromium).
+- Firebase Emulator: owner/union validos y seis negativas criticas denegadas.
+- `npm audit --audit-level=moderate`: 0 vulnerabilidades.
+- Escaneo de secretos: sin Firebase API key real, service account, keystore ni
+  private key rastreados; las coincidencias de texto son controles/documentacion.
+- Gradle 8.10.2 + JDK 17 + Android SDK 35: `assembleDebug` OK, APK 1.434.302 bytes.
+- `assembleRelease` con keystore efimero: OK, APK 1.134.336 bytes, firma v1/v2
+  verificada por `apksigner`, SHA-256
+  `37ADCC5889660651DAC5E33777D266965581A408686F0E513AA82BDCD6B5DCD4`.
+- El build real detecto y se corrigio `android.useAndroidX=true`; el contrato
+  queda cubierto por `test-android-release.mjs` y `validate-app.ps1`.
+- El APK release local usa certificado efimero de prueba y no debe distribuirse
+  como actualizacion. El artifact final debe compilarse en GitHub Actions con el
+  keystore de produccion guardado en Secrets.
+
+Limitaciones conocidas despues de este release:
+
+- La validacion automatica no sustituye probar el widget en al menos un launcher
+  Android real y Gym Party en dos dispositivos reales con el proyecto Firebase.
+- El acceso portable requiere vincular email/clave antes de perder la sesion
+  anonima original.
+- No hay listeners realtime permanentes ni Cloud Functions; es intencional para
+  reducir lecturas/costos en Spark.
+- `weekly_member_stats` sigue calculado en cliente y es candidato a cache futuro.
+- Los orquestadores grandes deben seguir reduciendose por extraccion incremental;
+  no reescribir `index.html`, `workout-features.js` ni `gym-party.js` de golpe.
+
+Antes de continuar en otro chat leer, en este orden:
+
+1. `CODEX_HANDOFF.md` completo, especialmente esta seccion.
+2. `README.md`.
+3. `workout-store.js`, `workout-plan.js`, `workout-features.js`.
+4. `firebase-service.js`, `gym-party-sync.js`, `gym-party-metrics.js`,
+   `gym-party-ui.js`, `gym-party.js`.
+5. `firebase/firestore.rules`, `firebase/firestore.indexes.json` y pruebas.
+6. `android-native-wrapper/README_ANDROID.md`, `MainActivity.java` y widget.

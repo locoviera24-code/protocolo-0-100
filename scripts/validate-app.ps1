@@ -34,6 +34,7 @@ $advanced = Read-Utf8 'advanced-features.js'
 $serviceWorker = Read-Utf8 'sw.js'
 $manifestText = Read-Utf8 'manifest.webmanifest'
 $androidBuild = Read-Utf8 'android-native-wrapper/app/build.gradle'
+$androidProperties = Read-Utf8 'android-native-wrapper/gradle.properties'
 $androidManifest = Read-Utf8 'android-native-wrapper/app/src/main/AndroidManifest.xml'
 $mainActivity = Read-Utf8 'android-native-wrapper/app/src/main/java/com/protocolo/cien/MainActivity.java'
 $widgetProvider = Read-Utf8 'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetProvider.java'
@@ -369,6 +370,7 @@ foreach ($contract in @('WebViewAssetLoader','appassets.androidplatform.net','se
 }
 Assert-True (-not $mainActivity.Contains('loadUrl("file:')) 'MainActivity no debe cargar la app mediante file://'
 Assert-True ($androidBuild.Contains("androidx.webkit:webkit:1.15.0")) 'Falta dependencia AndroidX WebKit compatible con minSdk 23'
+Assert-True ($androidProperties.Contains('android.useAndroidX=true')) 'AndroidX WebKit requiere android.useAndroidX=true'
 Assert-True ($androidManifest.Contains('android.webkit.WebView.EnableSafeBrowsing')) 'Falta Safe Browsing en AndroidManifest'
 foreach ($contract in @('assembleRelease','ANDROID_KEYSTORE_BASE64','ANDROID_KEYSTORE_PASSWORD','ANDROID_KEY_ALIAS','ANDROID_KEY_PASSWORD','sha256sum','gh release create','workflow_dispatch')) {
     Assert-True ($releaseWorkflow.Contains($contract)) "Falta contrato de APK release: $contract"

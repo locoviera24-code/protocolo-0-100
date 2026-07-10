@@ -19,9 +19,16 @@ La raiz del repositorio es la fuente de la PWA y tambien se sincroniza dentro de
 
 ```text
 index.html                  Interfaz, protocolo, gym y nutricion
-workout-features.js         Rutina semanal, registro rapido, historial gym y estado del widget Android
+workout-store.js            Acceso conservador y versionado a localStorage Gym
+workout-plan.js             Normalizacion, deduplicacion e insercion en rutinas
+workout-ui.js               Renderizadores pequenos y anuncios accesibles de Gym
+workout-features.js         Orquestador de rutina, registro, historial y widget Android
 firebase-config.js          Stub seguro; GitHub Actions puede generar config Firebase publica
-gym-party.js                Sala Gym Party, demo local, privacidad, Firebase opcional y comparativas
+firebase-service.js         Deteccion de config y carga diferida del SDK Firebase
+gym-party-sync.js           Reconciliacion incremental, LWW, tombstones y backoff
+gym-party-metrics.js        Agregados semanales compartidos y fuerza/peso corporal
+gym-party-ui.js             Componentes pequenos y estado de sincronizacion
+gym-party.js                Orquestador de sala, demo, privacidad y comparativas
 nutrition-data.js           Base local estructurada de alimentos y nutrientes
 fdc-client.js               Cliente opcional USDA FDC, normalizacion y cache
 advanced-features.js        Cobertura, diagnostico, tendencias, backup y gamificacion
@@ -31,6 +38,7 @@ scripts/validate-app.ps1    Validaciones estructurales
 scripts/test-service-worker.mjs Prueba de cache/offline/FDC
 scripts/test-workout-features.mjs Prueba de rutina, widget e importacion directa
 scripts/test-gym-party.mjs  Prueba de demo, multi-miembro, estadisticas y backup Gym Party
+scripts/test-module-boundaries.mjs Prueba de contratos entre modulos extraidos
 scripts/sync-web-assets.ps1 Sincronizacion web -> Android
 scripts/write-firebase-config.ps1 Genera firebase-config.js desde secrets FIREBASE_*
 android-native-wrapper/     Proyecto Android con WebView y widget nativo
@@ -85,9 +93,11 @@ privacidad quedan en secciones plegadas. Cada serie guardada aparece como una
 tarjeta compacta con **Editar** y **Eliminar**, para corregir
 reps/kilos/RIR/RPE/nota sin rehacer el entrenamiento.
 
-El registro rapido de Gym Party muestra arriba los botones **Atras**,
-**Siguiente** y **Completar** para no tener que buscarlos dentro del formulario.
-Tambien permite **Agregar ejercicio extra** cuando se hace un movimiento fuera
+El registro rapido pone primero ejercicio, repeticiones, kilos y el boton
+**Guardar serie** en una barra estable para reducir desplazamiento. Las series
+ya registradas aparecen despues en tarjetas compactas con editar, eliminar y
+deshacer. No muestra navegacion anterior/siguiente innecesaria en web: se elige
+directamente fecha y ejercicio. Tambien permite **Agregar ejercicio extra** cuando se hace un movimiento fuera
 de la rutina habitual; ese ejercicio queda dentro de la misma `workoutSession`,
 entra al historial, al volumen, al backup y a la sincronizacion de la sala.
 El selector **Dia de entrenamiento** permite elegir ayer u otra fecha para
@@ -200,6 +210,12 @@ serie propia, Gym Party reconstruye los datos compartidos desde el registro
 local para que graficas, mapa muscular y lista semanal no muestren copias
 antiguas.
 
+La sincronizacion Firebase es incremental. Cada fila conserva revision, estado
+dirty, fecha local/zona horaria y `updatedAt`; los conflictos se resuelven por
+ultima escritura conocida (LWW). Las eliminaciones viajan como tombstones para
+que una serie borrada no reaparezca al descargar datos remotos. Ante error se
+aplica backoff y los datos locales siguen disponibles.
+
 Gym Party permite exportar CSV comparativo de la sala y JSON con mis datos
 compartidos. El CSV no incluye datos privados de nutricion, sueno, ansiedad,
 pantalla ni notas personales.
@@ -242,7 +258,15 @@ Validar estructura:
 powershell -ExecutionPolicy Bypass -File ./scripts/validate-app.ps1
 node ./scripts/test-service-worker.mjs
 node ./scripts/test-workout-features.mjs
+node ./scripts/test-workout-metrics.mjs
 node ./scripts/test-gym-party.mjs
+node ./scripts/test-gym-party-sync.mjs
+node ./scripts/test-module-boundaries.mjs
+node ./scripts/test-android-webview-security.mjs
+node ./scripts/test-android-release.mjs
+node ./scripts/test-accessibility.mjs
+npm run test:rules
+npm run test:e2e
 ```
 
 Sincronizar la version web dentro del APK y comprobarla:
@@ -259,17 +283,30 @@ cd android-native-wrapper
 gradle :app:assembleDebug --stacktrace
 ```
 
-El APK resultante queda en `android-native-wrapper/app/build/outputs/apk/debug/app-debug.apk`. Tambien se publica por GitHub Actions como asset del release.
+El APK debug queda en `android-native-wrapper/app/build/outputs/apk/debug/app-debug.apk`.
+El release firmado requiere `ANDROID_KEYSTORE_PATH`,
+`ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` y `ANDROID_KEY_PASSWORD`, y
+se compila con `gradle :app:assembleRelease --stacktrace`. GitHub Actions usa el
+keystore codificado en `ANDROID_KEYSTORE_BASE64` y nunca lo guarda en el repo.
 
 ## Publicacion
 
 - **PWA:** el workflow `Publicar PWA en GitHub Pages` publica los archivos raiz.
-- **APK:** el workflow `Construir APK Android` compila el wrapper y publica la descarga directa de la version `v2.5.8`.
+- **APK debug:** el workflow `Construir APK Android` publica un artifact temporal para pruebas.
+- **APK release:** el workflow `Publicar APK Android release` compila `v2.6.0` con firma privada desde GitHub Secrets, publica el APK versionado y adjunta su checksum SHA-256.
 
-El APK generado es `debug`, apropiado para uso personal. Publicar en Play Store requiere una compilacion `release` firmada con una clave privada.
+La PWA no activa una nueva version a mitad de un registro: muestra aviso y solo
+envia `SKIP_WAITING` cuando el usuario toca **Actualizar ahora**. El APK release
+es distinto del debug y debe conservar siempre la misma clave de firma para
+permitir actualizaciones sobre una instalacion previa.
 
 ## Seguridad
 
 La app usa lenguaje orientativo y no diagnostica deficiencias ni sustituye a entrenadores, nutricionistas, medicos u otros profesionales de salud. Ajusta cargas segun tecnica, dolor, fatiga y seguridad.
+
+Android carga los assets internos mediante `WebViewAssetLoader` sobre
+`https://appassets.androidplatform.net`; bloquea acceso a archivos/contenido,
+mixed content y navegacion remota no permitida. Firebase, FDC y enlaces externos
+se restringen por origen y los enlaces normales se abren fuera del WebView.
 
 Focus Coins es solo gamificacion: no es dinero, inversion ni criptomoneda; no es transferible ni intercambiable por dinero. Referidos, conversiones, comisiones y rankings son simulaciones locales hasta conectar un backend real.

@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const APP_VERSION='2.5.8';
+  const APP_VERSION='2.6.0';
   const APP_STATE_KEY='protocolo_0_100_state_v2';
   const SAVED_MEALS_KEY='protocolo_0_100_saved_meals_v1';
   const NUTRITION_PROFILE_KEY='protocolo_0_100_nutrition_profile_v1';
@@ -11,7 +11,7 @@
   const RANKING_SETTINGS_KEY='protocolo_0_100_ranking_settings_v1';
   const MONTHLY_RANKINGS_KEY='protocolo_0_100_monthly_rankings_v1';
   const REWARDS_KEY='protocolo_0_100_rewards_v1';
-  const GYM_PARTY_BACKUP_FIELDS=['gymPartySettings','gymPartyMembership','sharedWorkoutSessions','sharedWorkoutSets','syncQueue','lastGymPartySyncAt','gymPartyDemoData'];
+  const GYM_PARTY_BACKUP_FIELDS=['gymPartySettings','gymPartyMembership','sharedWorkoutSessions','sharedWorkoutSets','syncQueue','lastGymPartySyncAt','lastGymPartyRemoteSyncAt','gymPartyDemoData'];
   const FDC=window.FDC_CLIENT||null;
   const DEFINITIONS=window.NUTRIENT_DEFINITIONS||{};
   const PRIMARY_COVERAGE=['calories','protein','carbs','fat','fiber','water','sodium','potassium','calcium','iron','magnesium','zinc','vitaminA','vitaminC','vitaminD','vitaminE','vitaminK','b12','folate'];
@@ -547,7 +547,7 @@
     const state=getLocalData(APP_STATE_KEY,{});
     const workoutKeys=window.WORKOUT_FEATURES?.keys||{};
     const gymPartyState=window.GYM_PARTY_FEATURES?.exportState?.()||{};
-    return {...state,...gymPartyState,startDate:localStorage.getItem(START_KEY)||todayStr(),entries:getEntries(),gymSessions:getLocalData(GYM_SESSIONS_KEY,[]),weeklyWorkoutPlan:getLocalData(workoutKeys.weeklyWorkoutPlan||'protocolo_0_100_weekly_workout_plan_v1',null),workoutSessions:getLocalData(workoutKeys.workoutSessions||'protocolo_0_100_workout_sessions_v1',[]),exerciseHistory:getLocalData(workoutKeys.exerciseHistory||'protocolo_0_100_exercise_history_v1',{}),exerciseLibrary:getLocalData(workoutKeys.exerciseLibrary||'protocolo_0_100_exercise_library_v1',[]),gymSettings:getLocalData(workoutKeys.gymSettings||'protocolo_0_100_gym_settings_v1',{}),workoutWidgetState:getLocalData(workoutKeys.workoutWidgetState||'protocolo_0_100_workout_widget_state_v1',null),nutritionEntries:getLocalData(NUTRITION_ENTRIES_KEY,[]),nutritionTargets:advancedTargets(),bodyMetrics:getLocalData(BODY_METRICS_KEY,{}),customFoods:getLocalData(CUSTOM_FOODS_KEY,[]),cachedFdcFoods:FDC?.cachedFoods?.()||[],nutritionAliases:getLocalData(NUTRITION_ALIASES_KEY,{}),exportedAt:new Date().toISOString()};
+    return {...state,...gymPartyState,startDate:localStorage.getItem(START_KEY)||todayStr(),entries:getEntries(),gymSessions:getLocalData(GYM_SESSIONS_KEY,[]),weeklyWorkoutPlan:getLocalData(workoutKeys.weeklyWorkoutPlan||'protocolo_0_100_weekly_workout_plan_v1',null),workoutSessions:getLocalData(workoutKeys.workoutSessions||'protocolo_0_100_workout_sessions_v1',[]),exerciseHistory:getLocalData(workoutKeys.exerciseHistory||'protocolo_0_100_exercise_history_v1',{}),exerciseLibrary:getLocalData(workoutKeys.exerciseLibrary||'protocolo_0_100_exercise_library_v1',[]),exerciseLibraryMeta:getLocalData(workoutKeys.exerciseLibraryMeta||'protocolo_0_100_exercise_library_meta_v1',null),exercisePreferences:getLocalData(workoutKeys.exercisePreferences||'protocolo_0_100_exercise_preferences_v1',{schemaVersion:1,exercises:{}}),gymSettings:getLocalData(workoutKeys.gymSettings||'protocolo_0_100_gym_settings_v1',{}),workoutWidgetState:getLocalData(workoutKeys.workoutWidgetState||'protocolo_0_100_workout_widget_state_v1',null),nutritionEntries:getLocalData(NUTRITION_ENTRIES_KEY,[]),nutritionTargets:advancedTargets(),bodyMetrics:getLocalData(BODY_METRICS_KEY,{}),customFoods:getLocalData(CUSTOM_FOODS_KEY,[]),cachedFdcFoods:FDC?.cachedFoods?.()||[],nutritionAliases:getLocalData(NUTRITION_ALIASES_KEY,{}),exportedAt:new Date().toISOString()};
   }
   window.buildCompleteBackup=buildCompleteBackup;
   function importCompleteBackupData(data){
@@ -561,6 +561,8 @@
       if(Array.isArray(state.workoutSessions))setLocalData(workoutKeys.workoutSessions||'protocolo_0_100_workout_sessions_v1',state.workoutSessions);
       if(state.exerciseHistory)setLocalData(workoutKeys.exerciseHistory||'protocolo_0_100_exercise_history_v1',state.exerciseHistory);
       if(Array.isArray(state.exerciseLibrary))setLocalData(workoutKeys.exerciseLibrary||'protocolo_0_100_exercise_library_v1',state.exerciseLibrary);
+      if(state.exerciseLibraryMeta)setLocalData(workoutKeys.exerciseLibraryMeta||'protocolo_0_100_exercise_library_meta_v1',state.exerciseLibraryMeta);
+      if(state.exercisePreferences)setLocalData(workoutKeys.exercisePreferences||'protocolo_0_100_exercise_preferences_v1',state.exercisePreferences);
       if(state.gymSettings)setLocalData(workoutKeys.gymSettings||'protocolo_0_100_gym_settings_v1',state.gymSettings);
       if(state.workoutWidgetState)setLocalData(workoutKeys.workoutWidgetState||'protocolo_0_100_workout_widget_state_v1',state.workoutWidgetState);
       if(Array.isArray(state.customFoods))setLocalData(CUSTOM_FOODS_KEY,state.customFoods);
@@ -594,6 +596,8 @@
       workoutSessions:getLocalData(workoutKeys.workoutSessions||'protocolo_0_100_workout_sessions_v1',[]),
       exerciseHistory:getLocalData(workoutKeys.exerciseHistory||'protocolo_0_100_exercise_history_v1',{}),
       exerciseLibrary:getLocalData(workoutKeys.exerciseLibrary||'protocolo_0_100_exercise_library_v1',[]),
+      exerciseLibraryMeta:getLocalData(workoutKeys.exerciseLibraryMeta||'protocolo_0_100_exercise_library_meta_v1',null),
+      exercisePreferences:getLocalData(workoutKeys.exercisePreferences||'protocolo_0_100_exercise_preferences_v1',{schemaVersion:1,exercises:{}}),
       gymSettings:getLocalData(workoutKeys.gymSettings||'protocolo_0_100_gym_settings_v1',{}),
       workoutWidgetState:getLocalData(workoutKeys.workoutWidgetState||'protocolo_0_100_workout_widget_state_v1',null),
       customFoods:getLocalData(CUSTOM_FOODS_KEY,[]),cachedFdcFoods:FDC?.cachedFoods?.()||[],nutritionTargets:advancedTargets(),bodyMetrics:getLocalData(BODY_METRICS_KEY,{}),
@@ -624,17 +628,26 @@
   window.advancedNutritionTotals=nutrientTotalsForDate;
 
   function setupUpdateNotice(){
-    if(!('serviceWorker'in navigator))return;
+    if(!('serviceWorker'in navigator)||location.hostname==='appassets.androidplatform.net')return;
+    const showUpdate=(registration,worker)=>{
+      if(!worker||document.getElementById('updateBanner'))return;
+      const banner=document.createElement('div');banner.id='updateBanner';banner.className='updateBanner';banner.setAttribute('role','status');banner.setAttribute('aria-live','polite');
+      banner.innerHTML='<div><strong>Nueva versión disponible</strong><div class="muted small">Actualizá sin perder tus datos locales.</div></div><button type="button" class="good">Actualizar ahora</button>';
+      banner.querySelector('button').addEventListener('click',event=>{
+        event.currentTarget.disabled=true;
+        window.__pwaUpdateAccepted=true;
+        sessionStorage.setItem('protocolo_pwa_update_accepted','1');
+        (registration.waiting||worker).postMessage({type:'SKIP_WAITING'});
+      });
+      document.body.appendChild(banner);
+    };
     navigator.serviceWorker.ready.then(registration=>{
       registration.update().catch(()=>{});
+      if(registration.waiting)showUpdate(registration,registration.waiting);
       registration.addEventListener('updatefound',()=>{
         const worker=registration.installing;if(!worker)return;
         worker.addEventListener('statechange',()=>{
-          if(worker.state==='installed'&&navigator.serviceWorker.controller&&!document.getElementById('updateBanner')){
-            const banner=document.createElement('div');banner.id='updateBanner';banner.className='updateBanner';
-            banner.innerHTML='<div><strong>Nueva versión disponible</strong><div class="muted small">Actualizá para usar las mejoras sin perder tus datos locales.</div></div><button type="button" class="good">Actualizar</button>';
-            banner.querySelector('button').addEventListener('click',()=>location.reload());document.body.appendChild(banner);
-          }
+          if(worker.state==='installed'&&navigator.serviceWorker.controller)showUpdate(registration,worker);
         });
       });
     }).catch(()=>{});

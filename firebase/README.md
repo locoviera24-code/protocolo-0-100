@@ -36,7 +36,8 @@ videos.
 }
 ```
 
-8. Publicar reglas desde `firebase/firestore.rules`.
+8. Publicar reglas e indices desde `firebase/firestore.rules` y
+   `firebase/firestore.indexes.json`.
 9. Probar login anonimo desde la app.
 10. Crear sala Firebase.
 11. Para migrar entre dispositivos, abrir **Invitar amigo y administrar sala >
@@ -47,6 +48,29 @@ videos.
 
 `firebase-config.js` del repo es un stub seguro. Si faltan secrets, los
 workflows conservan ese stub y la app sigue funcionando en modo demo/local.
+
+Con Firebase CLI autenticado, desplegar desde la raiz:
+
+```powershell
+npx firebase-tools deploy --only firestore:rules,firestore:indexes --project TU_PROJECT_ID
+```
+
+En Firebase Console tambien se puede pegar `firebase/firestore.rules`; los
+indices compuestos de `firebase/firestore.indexes.json` deben crearse por CLI o
+siguiendo el enlace que devuelve Firestore al detectar un indice faltante.
+
+## Verificacion local con Emulator
+
+Requiere Java 21 y dependencias instaladas:
+
+```powershell
+npm ci
+npm run test:rules
+```
+
+`firebase/rules.test.mjs` cubre accesos validos y negativos: lectura fuera de
+sala, escalado de rol, IDs incorrectos, escritura por otro usuario, limites de
+miembros y valores invalidos de series/peso.
 
 ## Seguridad
 
@@ -62,8 +86,26 @@ Las reglas incluidas buscan que:
 - no se lean datos de salas ajenas;
 - no se modifiquen perfiles de otros usuarios;
 - las invitaciones apunten a una sala activa.
+- los updates usen solo campos permitidos y no cambien `partyId`, `userId`, rol
+  o IDs inmutables;
+- reps, peso, fechas, revisiones y tombstones tengan tipos/rangos validos.
 
-Probar reglas en Firebase Emulator antes de usar datos reales.
+Probar reglas en Firebase Emulator antes de usar datos reales. Las reglas no
+deben reemplazarse por `allow read, write: if true` durante pruebas publicadas.
+
+## Sincronizacion y recuperacion
+
+- La app descarga cambios nuevos antes de subir su cola local.
+- `revision`, `updatedAt`, `localDate`, `timeZone` y `utcOffset` permiten
+  reconciliar ediciones entre dispositivos. `dirty`, `syncState`, intentos y
+  errores son estado local de cola y no se suben a Firestore.
+- Las eliminaciones son tombstones (`deleted`, `deletedAt`) y evitan que una
+  serie borrada reaparezca.
+- Los fallos conservan la cola y aplican backoff; no bloquean el entrenamiento.
+- La sesion anonima persiste en el mismo navegador/PWA.
+- Para cambiar de dispositivo conservando el mismo UID, cada usuario debe
+  vincular su propio acceso email/clave antes de perder el dispositivo. El
+  owner de la sala no guarda ni conoce la clave de otro miembro.
 
 ## Datos compartidos por defecto
 

@@ -4,6 +4,7 @@ import {readFile} from 'node:fs/promises';
 const debug=await readFile(new URL('../.github/workflows/build-debug-apk.yml',import.meta.url),'utf8');
 const release=await readFile(new URL('../.github/workflows/build-release-apk.yml',import.meta.url),'utf8');
 const gradle=await readFile(new URL('../android-native-wrapper/app/build.gradle',import.meta.url),'utf8');
+const properties=await readFile(new URL('../android-native-wrapper/gradle.properties',import.meta.url),'utf8');
 const ignore=await readFile(new URL('../.gitignore',import.meta.url),'utf8');
 
 assert.match(debug,/assembleDebug/);
@@ -21,6 +22,7 @@ assert.match(release,/workflow_dispatch:/);
 assert.match(release,/gh release create/);
 assert.match(gradle,/signingConfigs/);
 assert.match(gradle,/releaseSigningConfigured/);
+assert.match(properties,/android\.useAndroidX=true/);
 assert.match(ignore,/\*\.jks/);
 assert.match(ignore,/\*\.keystore/);
 
