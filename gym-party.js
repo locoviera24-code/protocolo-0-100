@@ -10,6 +10,7 @@
     sharedWorkoutSets: 'protocolo_0_100_shared_workout_sets_v1',
     syncQueue: 'protocolo_0_100_gym_party_sync_queue_v1',
     lastSyncAt: 'protocolo_0_100_last_gym_party_sync_at_v1',
+    lastRemoteSyncAt:'protocolo_0_100_gym_party_last_remote_sync_at_v1',
     demoData: 'protocolo_0_100_gym_party_demo_data_v1'
   };
   const workoutKeys = {
@@ -138,6 +139,7 @@
   function cleanAlias(value){ return String(value || '').trim().replace(/\s+/g,' ').slice(0,32) || 'Atleta'; }
   function cleanEmail(value){ return String(value || '').trim().toLowerCase().slice(0,120); }
   function nowIso(){ return new Date().toISOString(); }
+  function syncEngine(){ return window.GYM_PARTY_SYNC||null; }
   function number(value){ return Number.isFinite(Number(value)) ? Number(value) : 0; }
   function round(value, digits = 1){
     const p = 10 ** digits;
@@ -200,6 +202,8 @@
   function saveSyncQueue(value){ return write(keys.syncQueue, value); }
   function setLastSync(value = nowIso()){ write(keys.lastSyncAt, value); return value; }
   function lastSyncAt(){ return read(keys.lastSyncAt, ''); }
+  function lastRemoteSyncAt(){ return read(keys.lastRemoteSyncAt,''); }
+  function setLastRemoteSyncAt(value){ if(value) write(keys.lastRemoteSyncAt,value); return value; }
 
   function privacyFromForm(prefix){
     return {
@@ -222,6 +226,11 @@
     delete clean.syncState;
     delete clean.lastError;
     delete clean.attempts;
+    delete clean.nextAttemptAt;
+    delete clean.dirty;
+    delete clean._syncFingerprint;
+    delete clean.conflict;
+    delete clean.lastSyncedAt;
     return clean;
   }
   function privacyFromMember(member = {}){
@@ -537,12 +546,14 @@
     const hide = !!privacy.hideAbsoluteWeights;
     const startedAt = session.startedAt || session.savedAt || `${session.date || todayStr()}T00:00:00.000Z`;
     const finishedAt = session.finishedAt || null;
+    const time=syncEngine()?.timeContext?.(session.date||todayStr())||{localDate:session.date||todayStr(),timeZone:'UTC',utcOffset:0};
     return {
       id: `${member.partyId}_${member.userId}_${session.id}`,
       partyId: member.partyId,
       userId: member.userId,
       localSessionId: session.id,
       date: session.date || todayStr(),
+      ...time,
       weekday: session.weekday || weekdayLabel(session.date || todayStr()),
       routineName: session.routine?.name || session.routine || session.routineName || 'Entrenamiento',
       startedAt,
@@ -567,6 +578,7 @@
   function sanitizeWorkoutSets(session, member, privacy){
     if(privacy.shareAggregateOnly || !privacy.shareSetDetails) return [];
     const hide = !!privacy.hideAbsoluteWeights;
+    const time=syncEngine()?.timeContext?.(session.date||todayStr())||{localDate:session.date||todayStr(),timeZone:'UTC',utcOffset:0};
     return safeArray(session.exercises).flatMap(exercise => safeArray(exercise.sets).map((set, index) => ({
       id: `${member.partyId}_${member.userId}_${session.id}_${exercise.id || exercise.exerciseId}_${set.id || index + 1}`,
       partyId: member.partyId,
@@ -584,6 +596,7 @@
       rpe: set.rpe ?? null,
       isBodyweight: !!(set.bodyweight || exercise.bodyweight),
       date: session.date || todayStr(),
+      ...time,
       createdAt: set.savedAt || session.startedAt || nowIso(),
       deleted: false,
       source: 'local',
@@ -682,7 +695,12 @@
       .map(row => ({
         ...row,
         deleted: true,
+        deletedAt:nowIso(),
+        deletedReason:'set-deleted',
+        revision:Math.max(1,number(row.revision)+1),
         pendingSync: true,
+        dirty:true,
+        syncState:'pending',
         source: 'local',
         updatedAt: nowIso()
       }));
@@ -690,9 +708,10 @@
   function queueUpserts(type, rows){
     const queue = syncQueue();
     const map = new Map(queue.map(op => [op.id, op]));
-    rows.forEach(row => {
+    rows.filter(row=>row.dirty||row.pendingSync).forEach(row => {
       const id = `${type}:${row.id}`;
-      map.set(id, {id, type, collection: type === 'session' ? collections.sessions : collections.sets, payload: row, queuedAt: nowIso(), attempts: 0});
+      const previous=map.get(id),sameRevision=number(previous?.payload?.revision)===number(row.revision);
+      map.set(id,{id,type,collection:type==='session'?collections.sessions:collections.sets,payload:row,queuedAt:previous?.queuedAt||nowIso(),attempts:sameRevision?number(previous?.attempts):0,lastError:sameRevision?previous?.lastError||null:null,nextAttemptAt:sameRevision?previous?.nextAttemptAt||null:null});
     });
     saveSyncQueue([...map.values()]);
   }
@@ -703,16 +722,21 @@
     if(!privacy.shareGymData) return {sessions: [], sets: []};
     const member = {partyId: m.partyId, userId: m.userId, backendMode: m.backendMode};
     const local = localWorkoutSessions();
-    const sessions = local.map(session => sanitizeWorkoutSession(session, member, privacy));
-    const sets = local.flatMap(session => sanitizeWorkoutSets(session, member, privacy));
-    const deletedSets = localSetTombstones(sharedSets(), sessions, sets, member);
+    const sessionBase=local.map(session=>sanitizeWorkoutSession(session,member,privacy));
+    const setBase=local.flatMap(session=>sanitizeWorkoutSets(session,member,privacy));
+    const ownExistingSessions=sharedSessions().filter(row=>row.partyId===m.partyId&&row.userId===m.userId);
+    const ownExistingSets=sharedSets().filter(row=>row.partyId===m.partyId&&row.userId===m.userId);
+    const sessions=m.backendMode==='firebase'?(syncEngine()?.prepareLocalRows?.(sessionBase,ownExistingSessions)||sessionBase):sessionBase.map(row=>({...row,pendingSync:false,dirty:false,syncState:'local'}));
+    const sets=m.backendMode==='firebase'?(syncEngine()?.prepareLocalRows?.(setBase,ownExistingSets)||setBase):setBase.map(row=>({...row,pendingSync:false,dirty:false,syncState:'local'}));
+    const deletedSets=localSetTombstones(ownExistingSets,sessions,sets,member);
+    const existingTombstones=ownExistingSets.filter(row=>row.deleted||row.deletedAt);
     const withoutOwnSessions = sharedSessions().filter(row => !(row.partyId === m.partyId && row.userId === m.userId));
     const withoutOwnSets = sharedSets().filter(row => !(row.partyId === m.partyId && row.userId === m.userId));
     saveSharedSessions(upsertById(withoutOwnSessions, sessions));
-    saveSharedSets(upsertById(withoutOwnSets, [...sets, ...deletedSets]));
+    saveSharedSets(upsertById(withoutOwnSets,[...sets,...existingTombstones,...deletedSets]));
     if(queue && m.backendMode === 'firebase'){
-      queueUpserts('session', sessions);
-      queueUpserts('set', [...sets, ...deletedSets]);
+      queueUpserts('session',sessions);
+      queueUpserts('set',[...sets,...existingTombstones,...deletedSets]);
     }
     if(!silent && sessions.length) flashMessage('Entrenamientos de gym preparados para compartir.');
     return {sessions, sets};
@@ -1659,9 +1683,11 @@
     const stats = calculatePartyStats(data, referenceDate);
     const self = stats.find(row => row.member.userId === m?.userId) || stats[0] || {current: {}};
     const dateLabel = referenceDate === todayStr() ? 'Hoy' : referenceDate;
+    const syncCounts=syncEngine()?.stateCounts?.([...safeArray(data.sessions),...safeArray(data.sets)])||{};
+    const syncError=settings().syncLastError||'';
     const syncText = m.backendMode === 'demo'
       ? 'Demo'
-      : `${m.backendMode === 'firebase' ? 'Online' : 'Local'} - ${syncQueue().length} pendiente(s)`;
+      : `${m.backendMode === 'firebase' ? 'Online' : 'Local'} - ${syncQueue().length} pendiente(s)${syncCounts.conflict?` - ${syncCounts.conflict} conflicto(s) resuelto(s)`:''}`;
     const inviteHint = members.length === 1
       ? `<div class="partyTip">Cuando quieras sumar a tu amigo, desplega este apartado y envia el codigo.</div>`
       : '';
@@ -1679,6 +1705,7 @@
           <span class="statusChip good">${escape(dateLabel)}</span>
         </div>
         ${m.backendMode === 'demo' ? '<div class="partyTip">Demo: datos ficticios.</div>' : ''}
+        ${syncError?`<div class="auditItem warn">Ultimo error de sincronizacion: ${escape(syncError)}. Tus datos siguen guardados localmente.</div>`:''}
         ${maxWarning}
         <div class="partyFocusHint">Foco: guarda la serie actual. Lo social y las graficas quedan abajo, plegados.</div>
       </div>
@@ -1722,6 +1749,7 @@
           <button type="button" class="good" data-gym-party-action="share-code">Enviar codigo</button>
           <button type="button" class="secondary" data-gym-party-action="copy-code">Copiar codigo</button>
           <button type="button" class="secondary" data-gym-party-action="sync">Sincronizar</button>
+          <button type="button" class="secondary" data-gym-party-action="sync-full">Sincronizacion completa</button>
           <button type="button" class="secondary" data-gym-party-action="new-room">Crear sala nueva</button>
           <button type="button" class="secondary" data-gym-party-action="export-csv">Exportar CSV</button>
           <button type="button" class="secondary" data-gym-party-action="export-json">Exportar JSON</button>
@@ -1905,6 +1933,7 @@
     else if(action === 'copy-code') copyInviteCode();
     else if(action === 'share-code') shareInviteCode();
     else if(action === 'sync') syncNow().catch(error => flashMessage(firebaseError(error)));
+    else if(action === 'sync-full') syncNow({full:true}).catch(error=>flashMessage(firebaseError(error)));
     else if(action === 'export-csv') exportCsv();
     else if(action === 'export-json') exportJson();
     else if(action === 'save-privacy') savePrivacy();
@@ -2123,7 +2152,7 @@
     renderGymParty();
     flashMessage('Entrenamiento finalizado.');
   }
-  async function syncNow(){
+  async function syncNow({full=false,force=true}={}){
     const m = activeMembership();
     if(!m){ flashMessage('Primero crea o unite a una Gym Party.'); return; }
     syncFromLocalWorkouts({silent: true});
@@ -2133,7 +2162,7 @@
         renderGymParty();
         return;
       }
-      await syncFirebaseNow();
+      await syncFirebaseNow({full,force});
     }else{
       setLastSync();
       flashMessage(m.backendMode === 'demo' ? 'Demo refrescado.' : 'Sala local/mock actualizada.');
@@ -2270,8 +2299,8 @@
     const m=activeMembership(); if(!m||m.backendMode!=='firebase') throw new Error('No hay membresia Firebase activa.');
     if(window.confirm&&!window.confirm('Se ocultaran y marcaran como eliminadas tus sesiones y series compartidas. Tus entrenamientos locales NO se borran. ¿Continuar?')) return;
     const runtime=await loadFirebaseRuntime();
-    await tombstoneOwnSharedCollection(runtime,collections.sets,{deleted:true});
-    await tombstoneOwnSharedCollection(runtime,collections.sessions,{});
+    await tombstoneOwnSharedCollection(runtime,collections.sets,{deleted:true,deletedReason:'privacy-removal'});
+    await tombstoneOwnSharedCollection(runtime,collections.sessions,{deletedReason:'privacy-removal'});
     await deactivateFirebaseMembership({skipConfirm:true});
   }
   function newRoomFlow(){
@@ -2535,30 +2564,98 @@
     renderGymParty();
     flashMessage('Te uniste a la Gym Party Firebase.');
   }
-  async function syncFirebaseNow({silent = false} = {}){
-    const m = activeMembership();
-    if(!m || m.backendMode !== 'firebase') return;
-    const runtime = await loadFirebaseRuntime();
-    const {db, auth, firestoreMod} = runtime;
-    assertFirebaseSessionMatchesMembership(auth, m);
-    const queue = syncQueue();
-    for(const op of queue){
-      await firestoreMod.setDoc(firestoreMod.doc(db, op.collection, op.payload.id), {...firestorePayload(op.payload),updatedAt:firestoreMod.serverTimestamp()}, {merge: true});
+  function markUploadedRows(collectionName,ids,error=null,attempts=0){
+    const isSession=collectionName===collections.sessions,current=isSession?sharedSessions():sharedSets();
+    const next=error?(syncEngine()?.markRowsError?.(current,ids,error,attempts)||current):(syncEngine()?.markRowsSynced?.(current,ids)||current);
+    if(isSession) saveSharedSessions(next); else saveSharedSets(next);
+  }
+  async function uploadSyncQueue(runtime,{force=false}={}){
+    const {db,firestoreMod}=runtime; let queue=syncQueue(); const now=Date.now();
+    const due=queue.filter(op=>force||!op.nextAttemptAt||new Date(op.nextAttemptAt).getTime()<=now);
+    for(let index=0;index<due.length;index+=400){
+      const chunk=due.slice(index,index+400),batch=firestoreMod.writeBatch(db),timestamp=firestoreMod.serverTimestamp();
+      chunk.forEach(op=>batch.set(firestoreMod.doc(db,op.collection,op.payload.id),{...firestorePayload(op.payload),updatedAt:timestamp},{merge:true}));
+      try{
+        await batch.commit();
+        const completed=new Set(chunk.map(op=>op.id)); queue=queue.filter(op=>!completed.has(op.id)); saveSyncQueue(queue);
+        for(const collectionName of [collections.sessions,collections.sets]) markUploadedRows(collectionName,chunk.filter(op=>op.collection===collectionName).map(op=>op.payload.id));
+      }catch(error){
+        const failed=new Set(chunk.map(op=>op.id));
+        queue=queue.map(op=>{
+          if(!failed.has(op.id)) return op;
+          const attempts=number(op.attempts)+1,delay=syncEngine()?.backoffDelay?.(attempts)||Math.min(300000,1000*(2**attempts));
+          return {...op,attempts,lastError:String(error?.message||error).slice(0,300),nextAttemptAt:new Date(Date.now()+delay).toISOString()};
+        });
+        saveSyncQueue(queue);
+        for(const collectionName of [collections.sessions,collections.sets]){
+          const rows=chunk.filter(op=>op.collection===collectionName); if(rows.length) markUploadedRows(collectionName,rows.map(op=>op.payload.id),error,Math.max(...rows.map(op=>number(op.attempts)+1)));
+        }
+        throw error;
+      }
     }
-    saveSyncQueue([]);
-    const membersQuery = firestoreMod.query(firestoreMod.collection(db, collections.members), firestoreMod.where('partyId','==', m.partyId), firestoreMod.where('active','==', true), firestoreMod.limit(MAX_GYM_PARTY_MEMBERS + 1));
-    const sessionsQuery = firestoreMod.query(firestoreMod.collection(db, collections.sessions), firestoreMod.where('partyId','==', m.partyId), firestoreMod.limit(240));
-    const setsQuery = firestoreMod.query(firestoreMod.collection(db, collections.sets), firestoreMod.where('partyId','==', m.partyId), firestoreMod.limit(2000));
-    const [partySnap,membersSnap,sessionsSnap,setsSnap]=await Promise.all([firestoreMod.getDoc(firestoreMod.doc(db,collections.parties,m.partyId)),firestoreMod.getDocs(membersQuery),firestoreMod.getDocs(sessionsQuery),firestoreMod.getDocs(setsQuery)]);
-    const members = membersSnap.docs.map(docSnap => docSnap.data());
-    const remoteSessions = sessionsSnap.docs.map(docSnap => ({...docSnap.data(), source: 'firebase', pendingSync: false}));
-    const remoteSets = setsSnap.docs.map(docSnap => ({...docSnap.data(), source: 'firebase', pendingSync: false}));
-    saveSharedSessions(upsertById(sharedSessions().filter(row => row.partyId !== m.partyId), remoteSessions));
-    saveSharedSets(upsertById(sharedSets().filter(row => row.partyId !== m.partyId), remoteSets));
-    const party = {...(m.party||currentParty()||{}),...(partySnap.exists()?partySnap.data():{}),members,membersCount:members.length,maxMembers:partySnap.data()?.maxMembers||MAX_GYM_PARTY_MEMBERS};
-    saveMembership({...m, party, updatedAt: nowIso()});
-    setLastSync();
-    if(!silent) flashMessage('Gym Party sincronizada.');
+    return {uploaded:due.length,remaining:syncQueue().length};
+  }
+  async function fetchRemoteCollection(runtime,collectionName,{full=false,pageSize=250}={}){
+    const m=activeMembership(),{db,firestoreMod}=runtime,watermark=lastRemoteSyncAt(); let cursor=null,pages=0; const rows=[];
+    do{
+      const constraints=[firestoreMod.where('partyId','==',m.partyId)];
+      if(!full&&watermark) constraints.push(firestoreMod.where('updatedAt','>',firestoreMod.Timestamp.fromDate(new Date(watermark))));
+      constraints.push(firestoreMod.orderBy('updatedAt','asc'),firestoreMod.orderBy(firestoreMod.documentId(),'asc'));
+      if(cursor) constraints.push(firestoreMod.startAfter(cursor));
+      constraints.push(firestoreMod.limit(pageSize));
+      const snap=await firestoreMod.getDocs(firestoreMod.query(firestoreMod.collection(db,collectionName),...constraints));
+      rows.push(...snap.docs.map(docSnap=>docSnap.data())); pages+=1;
+      cursor=snap.docs.length===pageSize?snap.docs[snap.docs.length-1]:null;
+    }while(cursor&&pages<50);
+    return rows;
+  }
+  function discardResolvedQueueRows(rows){
+    const resolved=new Set(safeArray(rows).filter(row=>!row.dirty&&!row.pendingSync).map(row=>row.id));
+    if(!resolved.size) return;
+    saveSyncQueue(syncQueue().filter(op=>!resolved.has(op.payload?.id)));
+  }
+  function reconcileOwnRemoteWorkouts(member,mergedSessions,mergedSets){
+    const engine=syncEngine(),api=workoutApi();
+    if(!engine?.reconcileWorkoutSessions||!api?.replaceSessionPayload) return;
+    const ownSessions=mergedSessions.filter(row=>row.userId===member.userId);
+    const ownSets=mergedSets.filter(row=>row.userId===member.userId);
+    const result=engine.reconcileWorkoutSessions(localWorkoutSessions(),ownSessions,ownSets);
+    result.changedIds.forEach(id=>{
+      const session=result.sessions.find(row=>row.id===id);
+      if(session) api.replaceSessionPayload(session);
+    });
+  }
+  async function syncFirebaseNow({silent=false,full=false,force=false}={}){
+    const m=activeMembership(); if(!m||m.backendMode!=='firebase') return;
+    const runtime=await loadFirebaseRuntime(),{db,auth,firestoreMod}=runtime; assertFirebaseSessionMatchesMembership(auth,m);
+    try{
+      const membersQuery=firestoreMod.query(firestoreMod.collection(db,collections.members),firestoreMod.where('partyId','==',m.partyId),firestoreMod.where('active','==',true),firestoreMod.limit(MAX_GYM_PARTY_MEMBERS+1));
+      const shouldFull=full||!lastRemoteSyncAt();
+      const [partySnap,membersSnap,remoteSessions,remoteSets]=await Promise.all([
+        firestoreMod.getDoc(firestoreMod.doc(db,collections.parties,m.partyId)),
+        firestoreMod.getDocs(membersQuery),
+        fetchRemoteCollection(runtime,collections.sessions,{full:shouldFull,pageSize:120}),
+        fetchRemoteCollection(runtime,collections.sets,{full:shouldFull,pageSize:300})
+      ]);
+      const localSessions=sharedSessions(),localSets=sharedSets();
+      const partySessions=localSessions.filter(row=>row.partyId===m.partyId),partySets=localSets.filter(row=>row.partyId===m.partyId);
+      const mergedSessions=syncEngine()?.mergeRemoteRows?.(partySessions,remoteSessions)||upsertById(partySessions,remoteSessions);
+      const mergedSets=syncEngine()?.mergeRemoteRows?.(partySets,remoteSets)||upsertById(partySets,remoteSets);
+      saveSharedSessions([...localSessions.filter(row=>row.partyId!==m.partyId),...mergedSessions]);
+      saveSharedSets([...localSets.filter(row=>row.partyId!==m.partyId),...mergedSets]);
+      discardResolvedQueueRows([...mergedSessions,...mergedSets]);
+      reconcileOwnRemoteWorkouts(m,mergedSessions,mergedSets);
+      const upload=await uploadSyncQueue(runtime,{force});
+      const members=membersSnap.docs.map(docSnap=>docSnap.data()),party={...(m.party||currentParty()||{}),...(partySnap.exists()?partySnap.data():{}),members,membersCount:members.length,maxMembers:partySnap.data()?.maxMembers||MAX_GYM_PARTY_MEMBERS};
+      saveMembership({...m,party,inviteCode:party.inviteCode||m.inviteCode,updatedAt:nowIso()});
+      const latest=syncEngine()?.latestRemoteTimestamp?.([...remoteSessions,...remoteSets])||''; if(latest) setLastRemoteSyncAt(latest);
+      setLastSync(); saveSettings({syncLastError:'',syncLastMode:shouldFull?'full':'incremental',syncLastDownloaded:remoteSessions.length+remoteSets.length});
+      if(!silent) flashMessage(`Gym Party sincronizada: ${upload.uploaded} subida(s), ${remoteSessions.length+remoteSets.length} cambio(s) remoto(s).`);
+      return {uploaded:upload.uploaded,downloaded:remoteSessions.length+remoteSets.length,full:shouldFull};
+    }catch(error){
+      saveSettings({syncLastError:String(error?.message||error).slice(0,300),syncLastFailedAt:nowIso()});
+      throw error;
+    }
   }
 
   function exportableSettings(){
@@ -2583,6 +2680,7 @@
       sharedWorkoutSets: sharedSets(),
       syncQueue: syncQueue(),
       lastGymPartySyncAt: lastSyncAt(),
+      lastGymPartyRemoteSyncAt:lastRemoteSyncAt(),
       gymPartyDemoData: read(keys.demoData, null)
     };
   }
@@ -2594,6 +2692,7 @@
     if(Array.isArray(state.sharedWorkoutSets)) write(keys.sharedWorkoutSets, state.sharedWorkoutSets);
     if(Array.isArray(state.syncQueue)) write(keys.syncQueue, state.syncQueue);
     if(state.lastGymPartySyncAt) write(keys.lastSyncAt, state.lastGymPartySyncAt);
+    if(state.lastGymPartyRemoteSyncAt) write(keys.lastRemoteSyncAt,state.lastGymPartyRemoteSyncAt);
     if(state.gymPartyDemoData) write(keys.demoData, state.gymPartyDemoData);
   }
 
@@ -2635,7 +2734,7 @@
       window.addEventListener('online', () => {
         const m = activeMembership();
         if(m?.backendMode === 'firebase' && syncQueue().length){
-          syncNow().catch(() => flashMessage('Hay datos pendientes; probá sincronizar manualmente.'));
+          syncNow({force:false}).catch(() => flashMessage('Hay datos pendientes; probá sincronizar manualmente.'));
         }
       });
     }

@@ -1,0 +1,57 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "workout_sessions_shared",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "partyId", "order": "ASCENDING"},
+        {"fieldPath": "updatedAt", "order": "ASCENDING"},
+        {"fieldPath": "__name__", "order": "ASCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "workout_sessions_shared",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "partyId", "order": "ASCENDING"},
+        {"fieldPath": "userId", "order": "ASCENDING"},
+        {"fieldPath": "__name__", "order": "ASCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "workout_sets_shared",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "partyId", "order": "ASCENDING"},
+        {"fieldPath": "updatedAt", "order": "ASCENDING"},
+        {"fieldPath": "__name__", "order": "ASCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "workout_sets_shared",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "partyId", "order": "ASCENDING"},
+        {"fieldPath": "userId", "order": "ASCENDING"},
+        {"fieldPath": "__name__", "order": "ASCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "gym_party_members",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "partyId", "order": "ASCENDING"},
+        {"fieldPath": "active", "order": "ASCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "gym_party_members",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "userId", "order": "ASCENDING"},
+        {"fieldPath": "active", "order": "ASCENDING"}
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

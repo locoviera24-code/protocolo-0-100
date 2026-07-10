@@ -11,7 +11,7 @@
   const RANKING_SETTINGS_KEY='protocolo_0_100_ranking_settings_v1';
   const MONTHLY_RANKINGS_KEY='protocolo_0_100_monthly_rankings_v1';
   const REWARDS_KEY='protocolo_0_100_rewards_v1';
-  const GYM_PARTY_BACKUP_FIELDS=['gymPartySettings','gymPartyMembership','sharedWorkoutSessions','sharedWorkoutSets','syncQueue','lastGymPartySyncAt','gymPartyDemoData'];
+  const GYM_PARTY_BACKUP_FIELDS=['gymPartySettings','gymPartyMembership','sharedWorkoutSessions','sharedWorkoutSets','syncQueue','lastGymPartySyncAt','lastGymPartyRemoteSyncAt','gymPartyDemoData'];
   const FDC=window.FDC_CLIENT||null;
   const DEFINITIONS=window.NUTRIENT_DEFINITIONS||{};
   const PRIMARY_COVERAGE=['calories','protein','carbs','fat','fiber','water','sodium','potassium','calcium','iron','magnesium','zinc','vitaminA','vitaminC','vitaminD','vitaminE','vitaminK','b12','folate'];

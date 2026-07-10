@@ -51,5 +51,8 @@ jobs:
       - name: Probar Gym Party
         run: node ./scripts/test-gym-party.mjs
 
+      - name: Probar sincronizacion incremental
+        run: node ./scripts/test-gym-party-sync.mjs
+
       - name: Probar reglas Firestore en Emulator
         run: npm run test:rules

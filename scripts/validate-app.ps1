@@ -22,6 +22,7 @@ $workoutMetrics = Read-Utf8 'workout-metrics.js'
 $workoutRanking = Read-Utf8 'workout-ranking.js'
 $workout = Read-Utf8 'workout-features.js'
 $firebaseConfig = Read-Utf8 'firebase-config.js'
+$gymPartySync = Read-Utf8 'gym-party-sync.js'
 $gymParty = Read-Utf8 'gym-party.js'
 $advanced = Read-Utf8 'advanced-features.js'
 $serviceWorker = Read-Utf8 'sw.js'
@@ -40,6 +41,7 @@ $gymPartyTest = Read-Utf8 'scripts/test-gym-party.mjs'
 $workoutMetricsTest = Read-Utf8 'scripts/test-workout-metrics.mjs'
 $firestoreRules = Read-Utf8 'firebase/firestore.rules'
 $firestoreRulesTest = Read-Utf8 'firebase/rules.test.mjs'
+$gymPartySyncTest = Read-Utf8 'scripts/test-gym-party-sync.mjs'
 $readme = Read-Utf8 'README.md'
 $handoff = Read-Utf8 'CODEX_HANDOFF.md'
 
@@ -55,7 +57,7 @@ Assert-True ($duplicates.Count -eq 0) "Hay IDs HTML duplicados: $($duplicates -j
 
 $requiredFiles = @(
     'nutrition-data.js', 'fdc-client.js', 'workout-metrics.js', 'workout-ranking.js', 'workout-features.js', 'advanced-features.js',
-    'firebase-config.js', 'gym-party.js',
+    'firebase-config.js', 'gym-party-sync.js', 'gym-party.js',
     'manifest.webmanifest', 'sw.js',
     'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetProvider.java',
     'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetUpdateService.java',
@@ -70,7 +72,7 @@ foreach ($file in $requiredFiles) {
     Assert-True (Test-Path -LiteralPath (Join-Path $repoRoot $file) -PathType Leaf) "Falta $file"
 }
 
-foreach ($script in @('nutrition-data.js', 'fdc-client.js', 'workout-metrics.js', 'workout-ranking.js', 'workout-features.js', 'gym-party.js', 'advanced-features.js')) {
+foreach ($script in @('nutrition-data.js', 'fdc-client.js', 'workout-metrics.js', 'workout-ranking.js', 'workout-features.js', 'gym-party-sync.js', 'gym-party.js', 'advanced-features.js')) {
     Assert-True ($html.Contains("<script src=`"$script`"></script>")) "index.html no carga $script"
     Assert-True ($serviceWorker.Contains("'./$script'")) "sw.js no cachea $script"
 }
@@ -80,6 +82,7 @@ foreach ($contract in @('calculateSetMetrics','calculateSetsMetrics','bodyweight
 }
 Assert-True ($html.Contains('<script src="firebase-config.js"></script>')) 'index.html no carga firebase-config.js'
 Assert-True ($html.IndexOf('<script src="firebase-config.js"></script>') -lt $html.IndexOf('<script src="gym-party.js"></script>')) 'firebase-config.js debe cargarse antes de gym-party.js'
+Assert-True ($html.IndexOf('<script src="gym-party-sync.js"></script>') -lt $html.IndexOf('<script src="gym-party.js"></script>')) 'gym-party-sync.js debe cargarse antes de gym-party.js'
 Assert-True ($firebaseConfig.Contains('window.GYM_PARTY_FIREBASE_CONFIG')) 'firebase-config.js debe definir window.GYM_PARTY_FIREBASE_CONFIG'
 foreach ($forbidden in @('service_account', 'private_key', '-----BEGIN PRIVATE KEY-----')) {
     Assert-True (-not $firebaseConfig.Contains($forbidden)) "firebase-config.js no debe contener $forbidden"
@@ -196,6 +199,7 @@ foreach ($contract in @(
     'sharedWorkoutSets',
     'syncQueue',
     'lastGymPartySyncAt',
+    'lastGymPartyRemoteSyncAt',
     'gymPartyDemoData'
 )) {
     Assert-True ($advanced.Contains($contract)) "Falta contrato de backup Gym Party: $contract"
@@ -288,6 +292,16 @@ foreach ($contract in @(
 )) {
     Assert-True ($gymParty.Contains($contract)) "Falta contrato Gym Party: $contract"
 }
+foreach ($contract in @('prepareLocalRows','mergeRemoteRows','markRowsSynced','markRowsError','backoffDelay','latestRemoteTimestamp','timeContext','syncState','remote-newer')) {
+    Assert-True ($gymPartySync.Contains($contract)) "Falta contrato de sync incremental: $contract"
+}
+foreach ($contract in @('uploadSyncQueue','fetchRemoteCollection','lastRemoteSyncAt','serverTimestamp','writeBatch','startAfter','sync-full','revision','localDate','timeZone','utcOffset','deletedAt')) {
+    Assert-True ($gymParty.Contains($contract)) "Falta integracion de sync incremental: $contract"
+}
+foreach ($contract in @('dirty flags','conflicto LWW','tombstones','backoff','timeContext')) {
+    Assert-True ($gymPartySyncTest.Contains($contract)) "Falta prueba de sync incremental: $contract"
+}
+Assert-True (Test-Path -LiteralPath (Join-Path $repoRoot 'firebase/firestore.indexes.json') -PathType Leaf) 'Faltan indices Firestore para sync incremental'
 Assert-True (-not $gymParty.Contains('members: undefined')) 'Gym Party no debe enviar members: undefined a Firestore'
 Assert-True ($gymParty.Contains('delete partyDoc.members')) 'Gym Party debe eliminar members antes de crear gym_parties en Firestore'
 foreach ($removedAction in @(
@@ -447,6 +461,7 @@ foreach ($workflow in @($deployWorkflow, $apkWorkflow, $validationWorkflow)) {
     Assert-True ($workflow.Contains('node ./scripts/test-workout-features.mjs')) 'Cada workflow debe probar rutina semanal y estado widget'
     Assert-True ($workflow.Contains('node ./scripts/test-workout-metrics.mjs')) 'Cada workflow debe probar metricas de gimnasio'
     Assert-True ($workflow.Contains('node ./scripts/test-gym-party.mjs')) 'Cada workflow debe probar Gym Party'
+    Assert-True ($workflow.Contains('node ./scripts/test-gym-party-sync.mjs')) 'Cada workflow debe probar sync incremental'
 }
 foreach ($contract in @('Torso A', 'Pierna A', 'Torso B', 'Pierna B', 'Torso C', 'Rutina propia', 'buildWorkoutWidgetState', 'updateQuickSetPayload', 'deleteQuickSetPayload')) {
     Assert-True ($workoutTest.Contains($contract)) "Falta prueba workout: $contract"

@@ -167,7 +167,7 @@ service cloud.firestore {
           "routineName", "startedAt", "finishedAt", "durationMinutes", "exercisesCompleted",
           "totalSets", "totalReps", "totalVolume", "externalLoadVolume", "bodyweightReps",
           "addedLoadVolume", "bestWeight", "bestSetVolume", "maxReps", "timeZone", "utcOffset",
-          "revision", "deletedAt", "createdAt", "updatedAt"
+          "revision", "deletedAt", "deletedReason", "createdAt", "updatedAt"
         ])
         && data.id == sessionId
         && validString(data.partyId, 1, 128)
@@ -183,6 +183,7 @@ service cloud.firestore {
         && optionalDate(data, "startedAt")
         && optionalDate(data, "finishedAt")
         && optionalDate(data, "deletedAt")
+        && optionalString(data, "deletedReason", 40)
         && optionalDate(data, "createdAt")
         && optionalDate(data, "updatedAt")
         && optionalNumber(data, "durationMinutes", 0, 2880)
@@ -203,7 +204,7 @@ service cloud.firestore {
           "id", "partyId", "sessionId", "userId", "localExerciseId", "localSetId",
           "exerciseId", "exerciseName", "muscleGroup", "setNumber", "reps", "weightKg",
           "rir", "rpe", "isBodyweight", "date", "localDate", "timeZone", "utcOffset",
-          "revision", "deleted", "deletedAt", "createdAt", "updatedAt"
+          "revision", "deleted", "deletedAt", "deletedReason", "createdAt", "updatedAt"
         ])
         && data.id == setId
         && validString(data.partyId, 1, 128)
@@ -231,6 +232,7 @@ service cloud.firestore {
         && optionalNumber(data, "revision", 1, 1000000)
         && optionalBool(data, "deleted")
         && optionalDate(data, "deletedAt")
+        && optionalString(data, "deletedReason", 40)
         && optionalDate(data, "createdAt")
         && optionalDate(data, "updatedAt");
     }

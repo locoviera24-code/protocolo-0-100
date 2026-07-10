@@ -3,6 +3,7 @@ import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
 
 const source = await readFile(new URL('../gym-party.js', import.meta.url), 'utf8');
+const syncSource=await readFile(new URL('../gym-party-sync.js',import.meta.url),'utf8');
 assert.match(source, /browserLocalPersistence/);
 assert.match(source, /setPersistence/);
 assert.match(source, /onAuthStateChanged/);
@@ -47,7 +48,9 @@ function createContext() {
     addEventListener() {}
   };
   context.window = context;
-  vm.runInContext(source, vm.createContext(context), {filename: 'gym-party.js'});
+  const vmContext=vm.createContext(context);
+  vm.runInContext(syncSource,vmContext,{filename:'gym-party-sync.js'});
+  vm.runInContext(source,vmContext,{filename:'gym-party.js'});
   return {context, store};
 }
 
@@ -126,6 +129,7 @@ party.importState({
   sharedWorkoutSets: [{id: 'set_test', partyId: 'party_test', sessionId: 'session_test', userId: 'user_test', reps: 8, weightKg: 20}],
   syncQueue: [{id: 'session:session_test'}],
   lastGymPartySyncAt: '2026-06-24T12:00:00.000Z',
+  lastGymPartyRemoteSyncAt:'2026-06-24T11:59:00.000Z',
   gymPartyDemoData: demo2
 });
 const exported = party.exportState();
@@ -137,6 +141,7 @@ assert.equal(exported.gymPartyMembership.partyId, 'party_test');
 assert.equal(exported.sharedWorkoutSessions[0].id, 'session_test');
 assert.equal(exported.sharedWorkoutSets[0].id, 'set_test');
 assert.equal(exported.syncQueue[0].id, 'session:session_test');
+assert.equal(exported.lastGymPartyRemoteSyncAt,'2026-06-24T11:59:00.000Z');
 assert.equal(exported.gymPartyDemoData.party.id, 'demo_party');
 
 const {context: syncContext, store: syncStore} = createContext();

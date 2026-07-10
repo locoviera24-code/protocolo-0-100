@@ -14,6 +14,7 @@ on:
       - workout-ranking.js
       - workout-metrics.js
       - gym-party.js
+      - gym-party-sync.js
       - firebase-config.js
       - advanced-features.js
       - manifest.webmanifest
@@ -60,10 +61,13 @@ jobs:
       - name: Probar Gym Party
         run: node ./scripts/test-gym-party.mjs
 
+      - name: Probar sincronizacion incremental
+        run: node ./scripts/test-gym-party-sync.mjs
+
       - name: Preparar archivos publicos
         run: |
           mkdir -p dist-pages/icons
-          cp index.html nutrition-data.js fdc-client.js workout-metrics.js workout-ranking.js workout-features.js firebase-config.js gym-party.js advanced-features.js manifest.webmanifest sw.js dist-pages/
+          cp index.html nutrition-data.js fdc-client.js workout-metrics.js workout-ranking.js workout-features.js firebase-config.js gym-party-sync.js gym-party.js advanced-features.js manifest.webmanifest sw.js dist-pages/
           cp icons/icon-192.png icons/icon-512.png dist-pages/icons/
 
       - name: Generar configuracion Firebase opcional

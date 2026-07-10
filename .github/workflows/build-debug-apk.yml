@@ -62,6 +62,9 @@ jobs:
       - name: Probar Gym Party
         run: node ./scripts/test-gym-party.mjs
 
+      - name: Probar sincronizacion incremental
+        run: node ./scripts/test-gym-party-sync.mjs
+
       - name: Configurar Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
