@@ -96,6 +96,11 @@ foreach ($forbidden in @('service_account', 'private_key', '-----BEGIN PRIVATE K
 Assert-True ($manifest.start_url -eq './index.html') 'El manifest debe conservar start_url relativo para GitHub Pages'
 Assert-True ($manifest.scope -eq './') 'El manifest debe conservar scope relativo para GitHub Pages'
 Assert-True ($manifest.display -eq 'standalone') 'El manifest debe mantener display standalone'
+Assert-True ($manifest.id -eq './') 'El manifest debe declarar un id estable y relativo'
+Assert-True (($manifest.display_override -contains 'standalone')) 'El manifest debe declarar display_override'
+Assert-True (($manifest.shortcuts.url -contains './index.html?module=gym')) 'Falta shortcut PWA a Gym'
+Assert-True (($manifest.shortcuts.url -contains './index.html?module=gym-party')) 'Falta shortcut PWA a Gym Party'
+Assert-True (($manifest.shortcuts.url -contains './index.html?module=gym&quickLog=1')) 'Falta shortcut PWA a registro rapido'
 foreach ($icon in @('icons/icon-192.png', 'icons/icon-512.png')) {
     Assert-True (($manifest.icons.src -contains $icon)) "El manifest no declara $icon"
     Assert-True ($serviceWorker.Contains("'./$icon'")) "sw.js no cachea $icon"
@@ -126,6 +131,16 @@ $pwaSafetyContracts = @(
 )
 foreach ($contract in $pwaSafetyContracts) {
     Assert-True ($serviceWorker.Contains($contract)) "Falta contrato seguro del service worker: $contract"
+}
+foreach ($contract in @("event.data?.type === 'SKIP_WAITING'",'firebaseConfigResponse',"cache: 'no-store'",'GYM_PARTY_FIREBASE_CONFIG=window.GYM_PARTY_FIREBASE_CONFIG||{}')) {
+    Assert-True ($serviceWorker.Contains($contract)) "Falta contrato de actualizacion/config PWA: $contract"
+}
+Assert-True (-not $serviceWorker.Contains('then(() => self.skipWaiting())')) 'El service worker no debe activarse antes de que el usuario acepte'
+foreach ($contract in @('Nueva versi','Actualizar ahora','protocolo_pwa_update_accepted',"postMessage({type:'SKIP_WAITING'})")) {
+    Assert-True (($advanced + $html).Contains($contract)) "Falta UX de actualizacion PWA: $contract"
+}
+foreach ($contract in @("launchParams.get('module')","launchParams.get('quickLog')","window.openQuickSetLogger?.()")) {
+    Assert-True ($html.Contains($contract)) "Falta manejo de shortcuts PWA: $contract"
 }
 Assert-True (-not $serviceWorker.Contains('keys.filter(k => k !== CACHE_NAME)')) 'sw.js no debe borrar caches ajenos a la app'
 Assert-True (-not $serviceWorker.Contains('cache.put(event.request')) 'sw.js no debe cachear cualquier GET sin limite'
@@ -471,6 +486,8 @@ foreach ($workflow in @($deployWorkflow, $apkWorkflow, $validationWorkflow)) {
 }
 Assert-True ($serviceWorkerTest.Contains('api.nal.usda.gov')) 'La prueba del service worker debe cubrir llamadas FDC'
 Assert-True ($serviceWorkerTest.Contains('otra-app-cache')) 'La prueba del service worker debe proteger caches ajenos'
+Assert-True ($serviceWorkerTest.Contains('SKIP_WAITING')) 'La prueba del service worker debe cubrir activacion consentida'
+Assert-True ($serviceWorkerTest.Contains('firebase-config.js')) 'La prueba del service worker debe cubrir configuracion Firebase online/offline'
 foreach ($contract in @('32 reps de peso corporal','addedLoadVolume','percentChange(100,0),null','estimatedOneRepMax')) {
     Assert-True ($workoutMetricsTest.Contains($contract)) "Falta prueba de metricas de gym: $contract"
 }

@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'protocolo-0-100-pwa-';
-const CACHE_NAME = `${CACHE_PREFIX}v33`;
+const CACHE_NAME = `${CACHE_PREFIX}v34`;
 const CORE_ASSETS = ['./', './index.html', './nutrition-data.js', './fdc-client.js', './workout-metrics.js', './workout-ranking.js', './workout-features.js', './gym-party-sync.js', './gym-party.js', './advanced-features.js', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
 const CORE_URLS = new Set(CORE_ASSETS.map(asset => new URL(asset, self.location.href).href));
 
@@ -48,8 +48,25 @@ async function coreAssetResponse(request, event) {
   });
 }
 
+async function firebaseConfigResponse(request) {
+  try {
+    return await fetch(request, {cache: 'no-store'});
+  } catch (error) {
+    return new Response('window.GYM_PARTY_FIREBASE_CONFIG=window.GYM_PARTY_FIREBASE_CONFIG||{};', {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/javascript; charset=utf-8',
+        'Cache-Control': 'no-store'
+      }
+    });
+  }
+}
+
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(CORE_ASSETS)).then(() => self.skipWaiting()));
+  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(CORE_ASSETS)));
+});
+self.addEventListener('message', event => {
+  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
 self.addEventListener('activate', event => {
   event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME).map(key => caches.delete(key)))).then(() => self.clients.claim()));
@@ -58,6 +75,11 @@ self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
+
+  if (url.pathname.endsWith('/firebase-config.js')) {
+    event.respondWith(firebaseConfigResponse(event.request));
+    return;
+  }
 
   if (event.request.mode === 'navigate') {
     event.respondWith(networkFirstNavigation(event.request));

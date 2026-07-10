@@ -2256,11 +2256,13 @@ function copyPhoneMetricsToForm(){
   updateUI();
   phoneMessage('ok','Métricas copiadas al formulario del día. Ahora guardá el registro.');
 }
-if('serviceWorker' in navigator && location.protocol !== 'file:'){
+if('serviceWorker' in navigator && location.protocol !== 'file:' && location.hostname !== 'appassets.androidplatform.net'){
   let serviceWorkerRefreshing=false;
   navigator.serviceWorker.addEventListener('controllerchange', ()=>{
-    if(serviceWorkerRefreshing) return;
+    const accepted=window.__pwaUpdateAccepted||sessionStorage.getItem('protocolo_pwa_update_accepted')==='1';
+    if(serviceWorkerRefreshing||!accepted) return;
     serviceWorkerRefreshing=true;
+    sessionStorage.removeItem('protocolo_pwa_update_accepted');
     window.location.reload();
   });
   window.addEventListener('load', ()=>{
@@ -2377,7 +2379,16 @@ renderHelpGuide();
 setupHelpButtons();
 loadEntryForDate();
 renderAll();
-setModule(localStorage.getItem(ACTIVE_MODULE_KEY)||'protocolo');
+const launchParams=new URLSearchParams(location.search);
+const launchModule=launchParams.get('module');
+const launchQuickLog=launchParams.get('quickLog')==='1';
+setModule(launchModule||localStorage.getItem(ACTIVE_MODULE_KEY)||'protocolo');
+if(launchModule||launchQuickLog){
+  launchParams.delete('module'); launchParams.delete('quickLog');
+  const cleanQuery=launchParams.toString();
+  history.replaceState(null,'',location.pathname+(cleanQuery?'?'+cleanQuery:'')+location.hash);
+}
+if(launchQuickLog) setTimeout(()=>window.openQuickSetLogger?.(),0);
 maybeAutoShowActionModal();
 </script>
 <script src="workout-metrics.js"></script>

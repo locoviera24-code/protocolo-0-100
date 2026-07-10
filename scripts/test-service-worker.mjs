@@ -10,6 +10,7 @@ const previousCacheName = `protocolo-0-100-pwa-v${Number(cacheVersion) - 1}`;
 const handlers = {};
 const deletedCaches = [];
 const cacheStores = new Map();
+let skipWaitingCalls = 0;
 let fetchImpl = async () => {
   throw new Error('offline');
 };
@@ -71,7 +72,7 @@ const caches = {
 const self = {
   location: {href: 'https://app.test/protocolo/sw.js', origin: 'https://app.test'},
   clients: {claim: async () => undefined},
-  skipWaiting: async () => undefined,
+  skipWaiting: async () => { skipWaitingCalls += 1; },
   addEventListener(type, handler) {
     handlers[type] = handler;
   }
@@ -86,6 +87,13 @@ vm.runInContext(source, vm.createContext({
   Response,
   console
 }), {filename: 'sw.js'});
+
+let installation;
+handlers.install({waitUntil(value) { installation = Promise.resolve(value); }});
+await installation;
+assert.equal(skipWaitingCalls, 0, 'La instalacion no debe activar una actualizacion sin permiso');
+handlers.message({data: {type: 'SKIP_WAITING'}});
+assert.equal(skipWaitingCalls, 1, 'El boton de actualizar debe poder activar el worker en espera');
 
 function dispatchFetch(request) {
   let responsePromise;
@@ -118,6 +126,15 @@ assert.equal(fdc.responsePromise, undefined);
 const unknown = dispatchFetch({method: 'GET', mode: 'cors', url: 'https://app.test/protocolo/otro.json'});
 assert.equal(unknown.responsePromise, undefined);
 
+fetchImpl = async () => new Response('window.GYM_PARTY_FIREBASE_CONFIG={projectId:"real"};');
+const firebaseOnline = dispatchFetch({method: 'GET', mode: 'cors', url: 'https://app.test/protocolo/firebase-config.js?v=34'});
+assert.match(await (await firebaseOnline.responsePromise).text(), /projectId:"real"/);
+fetchImpl = async () => { throw new Error('offline'); };
+const firebaseOffline = dispatchFetch({method: 'GET', mode: 'cors', url: 'https://app.test/protocolo/firebase-config.js'});
+const firebaseFallback = await firebaseOffline.responsePromise;
+assert.equal(firebaseFallback.status, 200);
+assert.match(await firebaseFallback.text(), /GYM_PARTY_FIREBASE_CONFIG/);
+
 const currentCache = await caches.open(currentCacheName);
 currentCache.entries.set('https://app.test/protocolo/index.html', new Response('offline-index'));
 const navigation = dispatchFetch({method: 'GET', mode: 'navigate', url: 'https://app.test/protocolo/?v=211'});
@@ -128,4 +145,4 @@ const core = dispatchFetch({method: 'GET', mode: 'cors', url: 'https://app.test/
 assert.equal(await (await core.responsePromise).text(), 'cached-core');
 await Promise.all(core.waits);
 
-console.log('Service worker correcto: cache acotada, FDC libre y navegacion offline disponible.');
+console.log('Service worker correcto: actualizacion consentida, Firebase no cacheado, cache acotada y navegacion offline.');

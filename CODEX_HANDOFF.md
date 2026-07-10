@@ -4,7 +4,7 @@ Ultima actualizacion: 2026-06-30
 Rama esperada: `main`
 Version actual: `2.5.8`
 Android: `versionCode 30`, `versionName "2.5.8"`
-Service worker cache: `protocolo-0-100-pwa-v33`
+Service worker cache: `protocolo-0-100-pwa-v34`
 Backup consolidado: `schemaVersion: 3`
 
 Leer primero este archivo y luego `README.md`, `index.html`,
@@ -24,7 +24,7 @@ Estado actual:
 - Gym Party implementado como modulo web/PWA opcional.
 - Nutricion local/FDC opcional.
 - Backups JSON `schemaVersion: 3`.
-- PWA offline con cache v33.
+- PWA offline con cache v34 y actualizacion consentida desde el aviso visible.
 - APK con widget Android y permiso `INTERNET` para Firebase/Gym Party.
 
 ## 2. Funcionalidades ya existen
@@ -77,7 +77,7 @@ Web:
   reemplazarlo desde secrets.
 - `gym-party.js`: modulo Gym Party, registro rapido, graficas y edicion/eliminacion de series.
 - `advanced-features.js`: version `2.5.8`, backup/importacion Gym Party.
-- `sw.js`: cache v33 e incluye `gym-party.js`.
+- `sw.js`: cache v34, incluye Gym Party y evita persistir una configuracion Firebase obsoleta.
 - `README.md`: documenta Gym Party, demo, Firebase, privacidad y pruebas.
 - `CODEX_HANDOFF.md`: este handoff.
 
