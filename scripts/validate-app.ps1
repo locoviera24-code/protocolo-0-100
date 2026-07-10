@@ -38,6 +38,8 @@ $serviceWorkerTest = Read-Utf8 'scripts/test-service-worker.mjs'
 $workoutTest = Read-Utf8 'scripts/test-workout-features.mjs'
 $gymPartyTest = Read-Utf8 'scripts/test-gym-party.mjs'
 $workoutMetricsTest = Read-Utf8 'scripts/test-workout-metrics.mjs'
+$firestoreRules = Read-Utf8 'firebase/firestore.rules'
+$firestoreRulesTest = Read-Utf8 'firebase/rules.test.mjs'
 $readme = Read-Utf8 'README.md'
 $handoff = Read-Utf8 'CODEX_HANDOFF.md'
 
@@ -150,6 +152,26 @@ foreach ($contract in @(
 )) {
     Assert-True ($advanced.Contains($contract)) "Falta contrato de backup gym/widget: $contract"
 }
+
+foreach ($contract in @(
+    'affectedKeys().hasOnly',
+    'isOwnerAfter',
+    'joiningSelf',
+    'docId == memberId(data.partyId, data.userId)',
+    'request.resource.data.role == resource.data.role',
+    'request.resource.data.userId == resource.data.userId',
+    'request.resource.data.partyId == resource.data.partyId',
+    'data.maxMembers <= 10',
+    'data.reps <= 10000',
+    '"weightKg"',
+    'validWeeklyStat'
+)) {
+    Assert-True ($firestoreRules.Contains($contract)) "Falta contrato critico de Firestore Rules: $contract"
+}
+foreach ($contract in @('assertFails','role:''owner''','EVIL10','wrong_document_id','negative_set','getDoc(doc(outsiderDb')) {
+    Assert-True ($firestoreRulesTest.Contains($contract)) "Falta prueba negativa de Firestore Rules: $contract"
+}
+Assert-True ($validationWorkflow.Contains('npm run test:rules')) 'El workflow de validacion debe ejecutar Firebase Emulator'
 
 foreach ($contract in @(
     'protocolo_0_100_exercise_preferences_v1',

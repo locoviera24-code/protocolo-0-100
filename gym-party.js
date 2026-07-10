@@ -215,6 +215,15 @@
     const m = activeMembership();
     return {...defaultPrivacy, ...(m?.privacy || {})};
   }
+  function firestorePayload(value){
+    const clean={...value};
+    delete clean.source;
+    delete clean.pendingSync;
+    delete clean.syncState;
+    delete clean.lastError;
+    delete clean.attempts;
+    return clean;
+  }
   function privacyFromMember(member = {}){
     return {
       shareGymData: member.shareGymData !== false,
@@ -2353,10 +2362,13 @@
     };
     const partyDoc = {...party};
     delete partyDoc.members;
-    await firestoreMod.setDoc(firestoreMod.doc(db, collections.publicProfiles, uidValue), {uid: uidValue, alias, avatar: '', createdAt: nowIso(), updatedAt: nowIso()}, {merge: true});
-    await firestoreMod.setDoc(firestoreMod.doc(db, collections.parties, partyId), partyDoc);
-    await firestoreMod.setDoc(firestoreMod.doc(db, collections.invites, inviteCode), {inviteCode, partyId, partyName: name, createdBy: uidValue, createdAt: nowIso(), active: true, membersCount: 1, maxMembers: MAX_GYM_PARTY_MEMBERS});
-    await firestoreMod.setDoc(firestoreMod.doc(db, collections.members, member.id), member);
+    const batch=firestoreMod.writeBatch(db);
+    const timestamp=firestoreMod.serverTimestamp();
+    batch.set(firestoreMod.doc(db, collections.publicProfiles, uidValue), {uid: uidValue, alias, avatar: '', createdAt: timestamp, updatedAt: timestamp}, {merge: true});
+    batch.set(firestoreMod.doc(db, collections.parties, partyId), {...partyDoc,createdAt:timestamp,updatedAt:timestamp});
+    batch.set(firestoreMod.doc(db, collections.members, member.id), {...member,joinedAt:timestamp,updatedAt:timestamp});
+    batch.set(firestoreMod.doc(db, collections.invites, inviteCode), {inviteCode,partyId,partyName:name,createdBy:uidValue,createdAt:timestamp,updatedAt:timestamp,active:true,membersCount:1,maxMembers:MAX_GYM_PARTY_MEMBERS,uses:0});
+    await batch.commit();
     saveMembership({partyId, inviteCode, userId: uidValue, alias, role: 'owner', backendMode: 'firebase', active: true, privacy, joinedAt: nowIso(), party});
     saveSettings({backendMode: 'firebase'});
     syncFromLocalWorkouts({silent: true});
@@ -2368,30 +2380,32 @@
     const runtime = await loadFirebaseRuntime();
     const {db, auth, firestoreMod} = runtime;
     const inviteRef = firestoreMod.doc(db, collections.invites, code);
-    const inviteSnap = await firestoreMod.getDoc(inviteRef);
-    if(!inviteSnap.exists() || inviteSnap.data().active === false) throw new Error('PARTY_NOT_FOUND');
-    const invite = inviteSnap.data();
-    if(Number(invite.membersCount || 0) >= Number(invite.maxMembers || MAX_GYM_PARTY_MEMBERS)) throw new Error('PARTY_FULL');
+    let invite=null;
+    let member=null;
+    await firestoreMod.runTransaction(db,async transaction=>{
+      const inviteSnap=await transaction.get(inviteRef);
+      if(!inviteSnap.exists()||inviteSnap.data().active===false) throw new Error('PARTY_NOT_FOUND');
+      invite=inviteSnap.data();
+      const partyRef=firestoreMod.doc(db,collections.parties,invite.partyId);
+      const memberRef=firestoreMod.doc(db,collections.members,memberIdForLocalParty(invite.partyId,auth.currentUser.uid));
+      const memberSnap=await transaction.get(memberRef);
+      if(memberSnap.exists()&&memberSnap.data().active){member=memberSnap.data();return;}
+      const membersCount=Number(invite.membersCount||0);
+      const uses=Number(invite.uses||0);
+      if(membersCount>=Number(invite.maxMembers||MAX_GYM_PARTY_MEMBERS)) throw new Error('PARTY_FULL');
+      if(invite.maxUses!==null&&invite.maxUses!==undefined&&uses>=Number(invite.maxUses)) throw new Error('PARTY_NOT_FOUND');
+      member={id:memberIdForLocalParty(invite.partyId,auth.currentUser.uid),partyId:invite.partyId,inviteCode:code,userId:auth.currentUser.uid,aliasInParty:alias,role:'member',joinedAt:nowIso(),active:true,...privacy};
+      const timestamp=firestoreMod.serverTimestamp();
+      transaction.set(memberRef,{...member,joinedAt:timestamp,updatedAt:timestamp});
+      transaction.update(partyRef,{membersCount:membersCount+1,updatedAt:timestamp});
+      transaction.update(inviteRef,{membersCount:membersCount+1,uses:uses+1,updatedAt:timestamp});
+      transaction.set(firestoreMod.doc(db,collections.publicProfiles,auth.currentUser.uid),{uid:auth.currentUser.uid,alias,avatar:'',createdAt:timestamp,updatedAt:timestamp},{merge:true});
+    });
+    if(!invite||!member) throw new Error('PARTY_NOT_FOUND');
     const partyRef = firestoreMod.doc(db, collections.parties, invite.partyId);
-    const member = {
-      id: memberIdForLocalParty(invite.partyId, auth.currentUser.uid),
-      partyId: invite.partyId,
-      inviteCode: code,
-      userId: auth.currentUser.uid,
-      aliasInParty: alias,
-      role: 'member',
-      joinedAt: nowIso(),
-      active: true,
-      ...privacy
-    };
-    await firestoreMod.setDoc(firestoreMod.doc(db, collections.publicProfiles, auth.currentUser.uid), {uid: auth.currentUser.uid, alias, avatar: '', createdAt: nowIso(), updatedAt: nowIso()}, {merge: true});
-    await firestoreMod.setDoc(firestoreMod.doc(db, collections.members, member.id), member);
     const membersQuery = firestoreMod.query(firestoreMod.collection(db, collections.members), firestoreMod.where('partyId','==', invite.partyId), firestoreMod.where('active','==', true), firestoreMod.limit(MAX_GYM_PARTY_MEMBERS + 1));
     const membersSnap = await firestoreMod.getDocs(membersQuery);
     const members = membersSnap.docs.map(docSnap => docSnap.data());
-    const nextCount = Math.min(MAX_GYM_PARTY_MEMBERS, members.length);
-    await firestoreMod.setDoc(partyRef, {membersCount: nextCount, updatedAt: nowIso()}, {merge: true});
-    await firestoreMod.setDoc(inviteRef, {membersCount: nextCount, updatedAt: nowIso()}, {merge: true});
     const partySnap = await firestoreMod.getDoc(partyRef);
     if(!partySnap.exists() || partySnap.data().active === false) throw new Error('PARTY_NOT_FOUND');
     const party = {id: invite.partyId, ...partySnap.data(), inviteCode: code};
@@ -2411,7 +2425,7 @@
     assertFirebaseSessionMatchesMembership(auth, m);
     const queue = syncQueue();
     for(const op of queue){
-      await firestoreMod.setDoc(firestoreMod.doc(db, op.collection, op.payload.id), {...op.payload, pendingSync: false, updatedAt: nowIso()}, {merge: true});
+      await firestoreMod.setDoc(firestoreMod.doc(db, op.collection, op.payload.id), {...firestorePayload(op.payload),updatedAt:firestoreMod.serverTimestamp()}, {merge: true});
     }
     saveSyncQueue([]);
     const membersQuery = firestoreMod.query(firestoreMod.collection(db, collections.members), firestoreMod.where('partyId','==', m.partyId), firestoreMod.where('active','==', true), firestoreMod.limit(MAX_GYM_PARTY_MEMBERS + 1));

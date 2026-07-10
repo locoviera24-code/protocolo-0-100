@@ -20,6 +20,21 @@ jobs:
       - name: Descargar repositorio
         uses: actions/checkout@v4
 
+      - name: Configurar Java para Firebase Emulator
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Configurar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Instalar pruebas Firebase
+        run: npm ci
+
       - name: Comprobar estructura, datos, PWA y assets Android
         shell: pwsh
         run: ./scripts/validate-app.ps1 -CheckAndroidAssets
@@ -35,3 +50,6 @@ jobs:
 
       - name: Probar Gym Party
         run: node ./scripts/test-gym-party.mjs
+
+      - name: Probar reglas Firestore en Emulator
+        run: npm run test:rules

@@ -6,31 +6,242 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function memberDocId(partyId) {
-      return partyId + "_" + request.auth.uid;
+    function validString(value, minSize, maxSize) {
+      return value is string && value.size() >= minSize && value.size() <= maxSize;
     }
 
-    function memberPath(partyId) {
-      return /databases/$(database)/documents/gym_party_members/$(memberDocId(partyId));
+    function optionalString(data, field, maxSize) {
+      return !data.keys().hasAny([field]) || data[field] == null || (data[field] is string && data[field].size() <= maxSize);
+    }
+
+    function optionalNumber(data, field, minValue, maxValue) {
+      return !data.keys().hasAny([field]) || data[field] == null || (data[field] is number && data[field] >= minValue && data[field] <= maxValue);
+    }
+
+    function optionalBool(data, field) {
+      return !data.keys().hasAny([field]) || data[field] is bool;
+    }
+
+    function optionalDate(data, field) {
+      return !data.keys().hasAny([field]) || data[field] == null || data[field] is timestamp || (data[field] is string && data[field].size() <= 40);
+    }
+
+    function partyPath(partyId) {
+      return /databases/$(database)/documents/gym_parties/$(partyId);
+    }
+
+    function memberId(partyId, uid) {
+      return partyId + "_" + uid;
+    }
+
+    function memberPathFor(partyId, uid) {
+      return /databases/$(database)/documents/gym_party_members/$(memberId(partyId, uid));
+    }
+
+    function ownMemberPath(partyId) {
+      return memberPathFor(partyId, request.auth.uid);
+    }
+
+    function invitePath(inviteCode) {
+      return /databases/$(database)/documents/gym_party_invites/$(inviteCode);
     }
 
     function isMember(partyId) {
       return signedIn()
-        && exists(memberPath(partyId))
-        && get(memberPath(partyId)).data.active == true;
+        && exists(ownMemberPath(partyId))
+        && get(ownMemberPath(partyId)).data.active == true;
     }
 
     function isOwner(partyId) {
       return isMember(partyId)
-        && get(memberPath(partyId)).data.role == "owner";
+        && get(ownMemberPath(partyId)).data.role == "owner";
     }
 
-    function inviteIsValid() {
+    function isOwnerAfter(partyId) {
       return signedIn()
-        && request.resource.data.inviteCode is string
-        && exists(/databases/$(database)/documents/gym_party_invites/$(request.resource.data.inviteCode))
-        && get(/databases/$(database)/documents/gym_party_invites/$(request.resource.data.inviteCode)).data.active == true
-        && get(/databases/$(database)/documents/gym_party_invites/$(request.resource.data.inviteCode)).data.partyId == request.resource.data.partyId;
+        && existsAfter(ownMemberPath(partyId))
+        && getAfter(ownMemberPath(partyId)).data.active == true
+        && getAfter(ownMemberPath(partyId)).data.role == "owner";
+    }
+
+    function joiningSelf(partyId) {
+      return signedIn()
+        && !exists(ownMemberPath(partyId))
+        && existsAfter(ownMemberPath(partyId))
+        && getAfter(ownMemberPath(partyId)).data.active == true
+        && getAfter(ownMemberPath(partyId)).data.role == "member";
+    }
+
+    function validParty(data, partyId) {
+      return data.keys().hasOnly([
+          "id", "name", "inviteCode", "createdBy", "createdAt", "updatedAt",
+          "active", "privacyMode", "membersCount", "maxMembers"
+        ])
+        && data.id == partyId
+        && validString(data.name, 1, 80)
+        && validString(data.inviteCode, 4, 10)
+        && validString(data.createdBy, 1, 128)
+        && data.active is bool
+        && data.privacyMode == "gym-only"
+        && data.membersCount is int
+        && data.membersCount >= 0
+        && data.membersCount <= data.maxMembers
+        && data.maxMembers is int
+        && data.maxMembers >= 1
+        && data.maxMembers <= 10
+        && optionalDate(data, "createdAt")
+        && optionalDate(data, "updatedAt");
+    }
+
+    function validMember(data, docId) {
+      return data.keys().hasOnly([
+          "id", "partyId", "inviteCode", "userId", "aliasInParty", "role",
+          "joinedAt", "updatedAt", "active", "shareGymData", "shareAggregateOnly",
+          "shareSetDetails", "hideAbsoluteWeights", "anonymousAlias", "shareGeneralScore"
+        ])
+        && data.id == docId
+        && docId == memberId(data.partyId, data.userId)
+        && validString(data.partyId, 1, 128)
+        && validString(data.userId, 1, 128)
+        && validString(data.aliasInParty, 1, 32)
+        && validString(data.inviteCode, 4, 10)
+        && (data.role == "owner" || data.role == "member")
+        && data.active is bool
+        && data.shareGymData is bool
+        && data.shareAggregateOnly is bool
+        && data.shareSetDetails is bool
+        && data.hideAbsoluteWeights is bool
+        && data.anonymousAlias is bool
+        && data.shareGeneralScore is bool
+        && optionalDate(data, "joinedAt")
+        && optionalDate(data, "updatedAt");
+    }
+
+    function inviteCanBeUsed(data) {
+      return data.active == true
+        && exists(partyPath(data.partyId))
+        && get(partyPath(data.partyId)).data.active == true
+        && (!data.keys().hasAny(["expiresAt"]) || data.expiresAt == null || (data.expiresAt is timestamp && data.expiresAt > request.time))
+        && (!data.keys().hasAny(["maxUses"]) || data.maxUses == null || data.uses < data.maxUses)
+        && data.membersCount < data.maxMembers;
+    }
+
+    function validInvite(data, code) {
+      return data.keys().hasOnly([
+          "inviteCode", "partyId", "partyName", "createdBy", "createdAt", "updatedAt",
+          "active", "membersCount", "maxMembers", "uses", "maxUses", "expiresAt"
+        ])
+        && data.inviteCode == code
+        && validString(data.inviteCode, 4, 10)
+        && validString(data.partyId, 1, 128)
+        && validString(data.partyName, 1, 80)
+        && validString(data.createdBy, 1, 128)
+        && data.active is bool
+        && data.membersCount is int
+        && data.membersCount >= 0
+        && data.membersCount <= data.maxMembers
+        && data.maxMembers is int
+        && data.maxMembers >= 1
+        && data.maxMembers <= 10
+        && data.uses is int
+        && data.uses >= 0
+        && optionalNumber(data, "maxUses", 1, 100)
+        && optionalDate(data, "expiresAt")
+        && optionalDate(data, "createdAt")
+        && optionalDate(data, "updatedAt");
+    }
+
+    function validSession(data, sessionId) {
+      return data.keys().hasOnly([
+          "id", "partyId", "userId", "localSessionId", "date", "localDate", "weekday",
+          "routineName", "startedAt", "finishedAt", "durationMinutes", "exercisesCompleted",
+          "totalSets", "totalReps", "totalVolume", "externalLoadVolume", "bodyweightReps",
+          "addedLoadVolume", "bestWeight", "bestSetVolume", "maxReps", "timeZone", "utcOffset",
+          "revision", "deletedAt", "createdAt", "updatedAt"
+        ])
+        && data.id == sessionId
+        && validString(data.partyId, 1, 128)
+        && validString(data.userId, 1, 128)
+        && validString(data.localSessionId, 1, 160)
+        && validString(data.date, 10, 10)
+        && optionalString(data, "localDate", 10)
+        && validString(data.weekday, 1, 20)
+        && validString(data.routineName, 1, 100)
+        && optionalString(data, "timeZone", 80)
+        && optionalNumber(data, "utcOffset", -840, 840)
+        && optionalNumber(data, "revision", 1, 1000000)
+        && optionalDate(data, "startedAt")
+        && optionalDate(data, "finishedAt")
+        && optionalDate(data, "deletedAt")
+        && optionalDate(data, "createdAt")
+        && optionalDate(data, "updatedAt")
+        && optionalNumber(data, "durationMinutes", 0, 2880)
+        && optionalNumber(data, "exercisesCompleted", 0, 100)
+        && optionalNumber(data, "totalSets", 0, 1000)
+        && optionalNumber(data, "totalReps", 0, 100000)
+        && optionalNumber(data, "totalVolume", 0, 100000000)
+        && optionalNumber(data, "externalLoadVolume", 0, 100000000)
+        && optionalNumber(data, "bodyweightReps", 0, 100000)
+        && optionalNumber(data, "addedLoadVolume", 0, 100000000)
+        && optionalNumber(data, "bestWeight", 0, 5000)
+        && optionalNumber(data, "bestSetVolume", 0, 10000000)
+        && optionalNumber(data, "maxReps", 0, 10000);
+    }
+
+    function validSet(data, setId) {
+      return data.keys().hasOnly([
+          "id", "partyId", "sessionId", "userId", "localExerciseId", "localSetId",
+          "exerciseId", "exerciseName", "muscleGroup", "setNumber", "reps", "weightKg",
+          "rir", "rpe", "isBodyweight", "date", "localDate", "timeZone", "utcOffset",
+          "revision", "deleted", "deletedAt", "createdAt", "updatedAt"
+        ])
+        && data.id == setId
+        && validString(data.partyId, 1, 128)
+        && validString(data.sessionId, 1, 320)
+        && validString(data.userId, 1, 128)
+        && optionalString(data, "localExerciseId", 180)
+        && optionalString(data, "localSetId", 180)
+        && validString(data.exerciseId, 1, 180)
+        && validString(data.exerciseName, 1, 120)
+        && validString(data.muscleGroup, 1, 80)
+        && data.setNumber is int
+        && data.setNumber >= 1
+        && data.setNumber <= 1000
+        && data.reps is number
+        && data.reps >= 0
+        && data.reps <= 10000
+        && optionalNumber(data, "weightKg", 0, 5000)
+        && optionalNumber(data, "rir", 0, 10)
+        && optionalNumber(data, "rpe", 0, 10)
+        && data.isBodyweight is bool
+        && validString(data.date, 10, 10)
+        && optionalString(data, "localDate", 10)
+        && optionalString(data, "timeZone", 80)
+        && optionalNumber(data, "utcOffset", -840, 840)
+        && optionalNumber(data, "revision", 1, 1000000)
+        && optionalBool(data, "deleted")
+        && optionalDate(data, "deletedAt")
+        && optionalDate(data, "createdAt")
+        && optionalDate(data, "updatedAt");
+    }
+
+    function validWeeklyStat(data) {
+      return data.keys().hasOnly([
+          "partyId", "userId", "weekStart", "sessionsCount", "totalSets", "totalReps",
+          "totalVolume", "bodyweightReps", "exercisesCount", "consistencyScore", "changeVsPreviousWeek", "updatedAt"
+        ])
+        && validString(data.partyId, 1, 128)
+        && validString(data.userId, 1, 128)
+        && validString(data.weekStart, 10, 10)
+        && optionalNumber(data, "sessionsCount", 0, 100)
+        && optionalNumber(data, "totalSets", 0, 10000)
+        && optionalNumber(data, "totalReps", 0, 1000000)
+        && optionalNumber(data, "totalVolume", 0, 1000000000)
+        && optionalNumber(data, "bodyweightReps", 0, 1000000)
+        && optionalNumber(data, "exercisesCount", 0, 10000)
+        && optionalNumber(data, "consistencyScore", 0, 100)
+        && optionalNumber(data, "changeVsPreviousWeek", -10000, 10000)
+        && optionalDate(data, "updatedAt");
     }
 
     match /users_public_profile/{uid} {
@@ -38,24 +249,36 @@ service cloud.firestore {
       allow list: if false;
       allow create, update: if signedIn()
         && request.auth.uid == uid
-        && request.resource.data.uid == uid;
+        && request.resource.data.keys().hasOnly(["uid", "alias", "avatar", "createdAt", "updatedAt"])
+        && request.resource.data.uid == uid
+        && validString(request.resource.data.alias, 1, 32)
+        && optionalString(request.resource.data, "avatar", 512)
+        && optionalDate(request.resource.data, "createdAt")
+        && optionalDate(request.resource.data, "updatedAt");
       allow delete: if false;
     }
 
     match /gym_parties/{partyId} {
-      allow get: if signedIn() && isMember(partyId);
+      allow get: if isMember(partyId);
       allow list: if false;
       allow create: if signedIn()
+        && validParty(request.resource.data, partyId)
         && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.membersCount == 1
         && request.resource.data.active == true
-        && request.resource.data.maxMembers <= 10;
-      allow update: if (
-          isOwner(partyId)
-          && request.resource.data.maxMembers <= 10
-        ) || (
-          isMember(partyId)
-          && request.resource.data.diff(resource.data).changedKeys().hasOnly(["membersCount", "updatedAt"])
-          && request.resource.data.membersCount <= resource.data.maxMembers
+        && isOwnerAfter(partyId);
+      allow update: if validParty(request.resource.data, partyId)
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.createdBy == resource.data.createdBy
+        && (
+          (isOwner(partyId)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              "name", "inviteCode", "active", "privacyMode", "membersCount", "maxMembers", "updatedAt"
+            ]))
+          ||
+          (joiningSelf(partyId)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["membersCount", "updatedAt"])
+            && request.resource.data.membersCount == resource.data.membersCount + 1)
         );
       allow delete: if false;
     }
@@ -64,60 +287,118 @@ service cloud.firestore {
       allow get: if signedIn();
       allow list: if false;
       allow create: if signedIn()
-        && request.resource.data.inviteCode == inviteCode
+        && validInvite(request.resource.data, inviteCode)
         && request.resource.data.createdBy == request.auth.uid
-        && request.resource.data.active == true;
-      allow update: if signedIn()
+        && request.resource.data.active == true
+        && request.resource.data.uses == 0
+        && isOwnerAfter(request.resource.data.partyId)
+        && getAfter(partyPath(request.resource.data.partyId)).data.createdBy == request.auth.uid;
+      allow update: if validInvite(request.resource.data, inviteCode)
+        && request.resource.data.inviteCode == resource.data.inviteCode
+        && request.resource.data.partyId == resource.data.partyId
+        && request.resource.data.createdBy == resource.data.createdBy
         && (
-          isOwner(resource.data.partyId)
-          || (
-            isMember(resource.data.partyId)
-            && request.resource.data.diff(resource.data).changedKeys().hasOnly(["membersCount", "updatedAt"])
-            && request.resource.data.membersCount <= resource.data.maxMembers
-          )
+          (isOwner(resource.data.partyId)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              "partyName", "active", "membersCount", "maxMembers", "uses", "maxUses", "expiresAt", "updatedAt"
+            ]))
+          ||
+          (joiningSelf(resource.data.partyId)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["membersCount", "uses", "updatedAt"])
+            && request.resource.data.membersCount == resource.data.membersCount + 1
+            && request.resource.data.uses == resource.data.uses + 1)
         );
       allow delete: if false;
     }
 
-    match /gym_party_members/{memberId} {
+    match /gym_party_members/{docId} {
       allow get, list: if signedIn()
         && (resource.data.userId == request.auth.uid || isMember(resource.data.partyId));
       allow create: if signedIn()
+        && validMember(request.resource.data, docId)
         && request.resource.data.userId == request.auth.uid
-        && request.resource.data.id == memberId
         && request.resource.data.active == true
         && request.resource.data.shareGymData == true
-        && inviteIsValid();
+        && (
+          (request.resource.data.role == "owner"
+            && existsAfter(partyPath(request.resource.data.partyId))
+            && getAfter(partyPath(request.resource.data.partyId)).data.createdBy == request.auth.uid
+            && getAfter(partyPath(request.resource.data.partyId)).data.membersCount == 1)
+          ||
+          (request.resource.data.role == "member"
+            && exists(invitePath(request.resource.data.inviteCode))
+            && inviteCanBeUsed(get(invitePath(request.resource.data.inviteCode)).data)
+            && get(invitePath(request.resource.data.inviteCode)).data.partyId == request.resource.data.partyId
+            && getAfter(partyPath(request.resource.data.partyId)).data.membersCount == get(partyPath(request.resource.data.partyId)).data.membersCount + 1
+            && getAfter(invitePath(request.resource.data.inviteCode)).data.uses == get(invitePath(request.resource.data.inviteCode)).data.uses + 1)
+        );
       allow update: if signedIn()
-        && (resource.data.userId == request.auth.uid || isOwner(resource.data.partyId))
+        && validMember(request.resource.data, docId)
+        && request.resource.data.id == resource.data.id
         && request.resource.data.partyId == resource.data.partyId
-        && request.resource.data.userId == resource.data.userId;
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.inviteCode == resource.data.inviteCode
+        && (
+          (resource.data.userId == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              "aliasInParty", "active", "shareGymData", "shareAggregateOnly", "shareSetDetails",
+              "hideAbsoluteWeights", "anonymousAlias", "shareGeneralScore", "updatedAt"
+            ]))
+          ||
+          (isOwner(resource.data.partyId)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["active", "updatedAt"]))
+        );
       allow delete: if false;
     }
 
     match /workout_sessions_shared/{sessionId} {
       allow get, list: if signedIn() && isMember(resource.data.partyId);
-      allow create, update: if signedIn()
-        && request.resource.data.id == sessionId
+      allow create: if signedIn()
+        && validSession(request.resource.data, sessionId)
         && request.resource.data.userId == request.auth.uid
         && isMember(request.resource.data.partyId);
+      allow update: if signedIn()
+        && validSession(request.resource.data, sessionId)
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.partyId == resource.data.partyId
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.localSessionId == resource.data.localSessionId
+        && isMember(resource.data.partyId);
       allow delete: if false;
     }
 
     match /workout_sets_shared/{setId} {
       allow get, list: if signedIn() && isMember(resource.data.partyId);
-      allow create, update: if signedIn()
-        && request.resource.data.id == setId
+      allow create: if signedIn()
+        && validSet(request.resource.data, setId)
         && request.resource.data.userId == request.auth.uid
         && isMember(request.resource.data.partyId);
+      allow update: if signedIn()
+        && validSet(request.resource.data, setId)
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.partyId == resource.data.partyId
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.sessionId == resource.data.sessionId
+        && isMember(resource.data.partyId);
       allow delete: if false;
     }
 
     match /weekly_member_stats/{statId} {
       allow get, list: if signedIn() && isMember(resource.data.partyId);
-      allow create, update: if signedIn()
+      allow create: if signedIn()
+        && validWeeklyStat(request.resource.data)
         && request.resource.data.userId == request.auth.uid
         && isMember(request.resource.data.partyId);
+      allow update: if signedIn()
+        && validWeeklyStat(request.resource.data)
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.partyId == resource.data.partyId
+        && request.resource.data.weekStart == resource.data.weekStart
+        && isMember(resource.data.partyId);
       allow delete: if false;
     }
   }

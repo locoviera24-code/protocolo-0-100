@@ -4,6 +4,7 @@
 android-native-wrapper/local.properties
 
 # Generated artifacts
+node_modules/
 dist/
 dist-pages/
 *.apk
@@ -11,6 +12,9 @@ dist-pages/
 firebase-config.local.js
 firebase/.env
 firebase/.env.*
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
 
 # Editor / OS
 .idea/
