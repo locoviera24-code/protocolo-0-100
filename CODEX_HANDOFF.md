@@ -866,6 +866,9 @@ Correccion:
   de `workout_sessions_shared` y `workout_sets_shared`.
 - El reemplazo conserva todos los campos funcionales y elimina solo campos
   legacy/no permitidos; no borra sesiones ni series.
+- Una sesion antigua sin `finishedAt` ya no acumula semanas de duracion: se
+  comparte como 0/en curso. Duraciones importadas se limitan a 2.880 minutos,
+  el maximo aceptado por Rules.
 - `firebase/rules.test.mjs` crea un documento legacy con `source` y
   `pendingSync`, confirma que el reemplazo sanitizado esta permitido y prueba
   tambien las consultas reales de miembros/sesiones/sets.

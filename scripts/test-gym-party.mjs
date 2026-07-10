@@ -207,6 +207,7 @@ syncParty.importState({
 });
 syncParty.syncFromLocalWorkouts({silent: true});
 const synced = syncParty.exportState();
+assert.equal(synced.sharedWorkoutSessions[0].durationMinutes,0);
 const deletedSet = synced.sharedWorkoutSets.find(row => row.id.endsWith('set_deleted'));
 assert.equal(deletedSet.deleted, true);
 assert.equal(deletedSet.pendingSync, true);

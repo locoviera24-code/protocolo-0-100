@@ -360,6 +360,7 @@ foreach ($contract in @('prepareLocalRows','mergeRemoteRows','markRowsSynced','m
 }
 Assert-True ($gymParty.Contains('batch.set(firestoreMod.doc(db,op.collection,op.payload.id),{...firestorePayload(op.payload),updatedAt:timestamp})')) 'El sync debe reemplazar documentos propios para limpiar campos legacy'
 Assert-True (-not $gymParty.Contains('firestorePayload(op.payload),updatedAt:timestamp},{merge:true}')) 'El sync no debe conservar campos legacy con merge:true'
+Assert-True ($gymParty.Contains('Math.min(2880, Math.max(0, measuredDuration))')) 'La duracion compartida debe respetar el rango permitido por Rules'
 foreach ($contract in @('uploadSyncQueue','fetchRemoteCollection','lastRemoteSyncAt','serverTimestamp','writeBatch','startAfter','sync-full','revision','localDate','timeZone','utcOffset','deletedAt')) {
     Assert-True ($gymParty.Contains($contract)) "Falta integracion de sync incremental: $contract"
 }

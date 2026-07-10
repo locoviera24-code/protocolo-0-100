@@ -551,6 +551,7 @@
     const hide = !!privacy.hideAbsoluteWeights;
     const startedAt = session.startedAt || session.savedAt || `${session.date || todayStr()}T00:00:00.000Z`;
     const finishedAt = session.finishedAt || null;
+    const measuredDuration = number(summary.durationMinutes) || (finishedAt ? durationMinutes(startedAt, finishedAt) : 0);
     const time=syncEngine()?.timeContext?.(session.date||todayStr())||{localDate:session.date||todayStr(),timeZone:'UTC',utcOffset:0};
     return {
       id: `${member.partyId}_${member.userId}_${session.id}`,
@@ -563,7 +564,7 @@
       routineName: session.routine?.name || session.routine || session.routineName || 'Entrenamiento',
       startedAt,
       finishedAt,
-      durationMinutes: number(summary.durationMinutes) || durationMinutes(startedAt, finishedAt),
+      durationMinutes: Math.min(2880, Math.max(0, measuredDuration)),
       exercisesCompleted: number(summary.completedExercises ?? summary.exercisesCompleted),
       totalSets: number(summary.totalSets),
       totalReps: number(summary.totalReps) || totalRepsForSession(session),
