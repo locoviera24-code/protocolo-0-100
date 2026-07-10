@@ -7,11 +7,13 @@
     exerciseHistory:'protocolo_0_100_exercise_history_v1',
     exerciseLibrary:'protocolo_0_100_exercise_library_v1',
     exercisePreferences:'protocolo_0_100_exercise_preferences_v1',
+    exerciseLibraryMeta:'protocolo_0_100_exercise_library_meta_v1',
     gymSettings:'protocolo_0_100_gym_settings_v1',
     workoutWidgetState:'protocolo_0_100_workout_widget_state_v1'
   };
   const dayOrder=['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
   const dayLabels={monday:'Lunes',tuesday:'Martes',wednesday:'Miércoles',thursday:'Jueves',friday:'Viernes',saturday:'Sábado',sunday:'Domingo'};
+  const EXERCISE_LIBRARY_VERSION=2;
   const actionOpenToday='com.protocolo.cien.ACTION_OPEN_TODAY_WORKOUT';
   const actionQuickLog='com.protocolo.cien.ACTION_QUICK_LOG_SET';
   const actionCompleteExercise='com.protocolo.cien.ACTION_COMPLETE_CURRENT_EXERCISE';
@@ -126,11 +128,64 @@
     if(!localStorage.getItem(keys.workoutSessions)) setLocalData(keys.workoutSessions,[]);
     if(!localStorage.getItem(keys.gymSettings)) setLocalData(keys.gymSettings,settings());
     if(!localStorage.getItem(keys.exercisePreferences)) setLocalData(keys.exercisePreferences,{schemaVersion:1,exercises:{},updatedAt:null});
+    migrateExerciseLibrary();
   }
   function weeklyPlan(){ return getLocalData(keys.weeklyWorkoutPlan,clone(defaultWeeklyPlan)); }
   function saveWeeklyPlan(plan){ setLocalData(keys.weeklyWorkoutPlan,plan); syncWorkoutWidget(); }
   function libraryData(){ return getLocalData(keys.exerciseLibrary,clone(exerciseLibrary)); }
   function saveLibraryData(value){ setLocalData(keys.exerciseLibrary,value); }
+  function migrateExerciseLibrary(){
+    const existing=getLocalData(keys.exerciseLibrary,[]);
+    const meta=getLocalData(keys.exerciseLibraryMeta,null);
+    if(meta?.libraryVersion>=EXERCISE_LIBRARY_VERSION&&existing.length) return existing;
+    const byId=new Map();
+    existing.forEach((exercise,index)=>{
+      if(!exercise?.id) return;
+      const previous=byId.get(exercise.id);
+      byId.set(exercise.id,previous?mergeLibraryRecords(previous,exercise):{...exercise,aliases:[...new Set([exercise.name,...(exercise.aliases||[])].filter(Boolean))],createdAt:exercise.createdAt||null});
+    });
+    exerciseLibrary.forEach(official=>{
+      const current=byId.get(official.id);
+      if(current){
+        byId.set(official.id,{
+          ...official,
+          ...current,
+          id:official.id,
+          aliases:[...new Set([...(official.aliases||[]),...(current.aliases||[]),official.name,current.name].filter(Boolean))],
+          primaryMuscles:[...new Set([...(official.primaryMuscles||[]),...(current.primaryMuscles||[])])],
+          secondaryMuscles:[...new Set([...(official.secondaryMuscles||[]),...(current.secondaryMuscles||[])])],
+          official:true,
+          custom:false,
+          origin:'official',
+          libraryVersion:EXERCISE_LIBRARY_VERSION
+        });
+        return;
+      }
+      const equivalent=[...byId.values()].find(item=>exerciseAliases(item).some(name=>exerciseAliases(official).includes(name)));
+      if(equivalent){
+        equivalent.aliases=[...new Set([...(equivalent.aliases||[]),official.name,...(official.aliases||[])].filter(Boolean))];
+        equivalent.officialSourceId=official.id;
+        equivalent.libraryVersion=EXERCISE_LIBRARY_VERSION;
+        return;
+      }
+      byId.set(official.id,{...clone(official),official:true,custom:false,origin:'official',libraryVersion:EXERCISE_LIBRARY_VERSION});
+    });
+    const merged=[];
+    [...byId.values()].forEach(record=>{
+      const duplicate=merged.find(item=>item.id!==record.id&&exerciseAliases(item).some(name=>exerciseAliases(record).includes(name)));
+      if(!duplicate){merged.push(record);return;}
+      const preferred=duplicate.official&&!record.official?duplicate:record.official&&!duplicate.official?record:duplicate;
+      const secondary=preferred===duplicate?record:duplicate;
+      Object.assign(preferred,mergeLibraryRecords(preferred,secondary));
+      if(preferred!==duplicate){const index=merged.indexOf(duplicate);merged[index]=preferred;}
+    });
+    saveLibraryData(merged);
+    setLocalData(keys.exerciseLibraryMeta,{schemaVersion:1,libraryVersion:EXERCISE_LIBRARY_VERSION,migratedAt:new Date().toISOString(),officialCount:exerciseLibrary.length,customCount:merged.filter(item=>item.custom||item.origin==='custom').length});
+    return merged;
+  }
+  function mergeLibraryRecords(primary,secondary){
+    return {...primary,aliases:[...new Set([primary.name,secondary.name,...(primary.aliases||[]),...(secondary.aliases||[])].filter(Boolean))],primaryMuscles:[...new Set([...(primary.primaryMuscles||[]),...(secondary.primaryMuscles||[])])],secondaryMuscles:[...new Set([...(primary.secondaryMuscles||[]),...(secondary.secondaryMuscles||[])])],legacyIds:[...new Set([...(primary.legacyIds||[]),...(secondary.legacyIds||[]),secondary.id].filter(id=>id&&id!==primary.id))]};
+  }
   function libraryMatchFor(value,library=libraryData()){
     const probe=typeof value==='string'?{name:value}:value;
     return library.find(exercise=>sameExercise(exercise,probe))||null;
@@ -366,6 +421,10 @@
       .planEditorStatus{margin-top:10px;color:var(--muted);font-size:12px;min-height:18px}
       .planAdvancedEditor{border:1px solid var(--line);border-radius:14px;padding:11px 13px;margin-top:12px;background:rgba(255,255,255,.025)}
       .planAdvancedEditor summary{cursor:pointer;font-weight:800}
+      .exerciseLibraryList{display:grid;gap:8px;margin-top:10px;max-height:520px;overflow:auto}
+      .exerciseLibraryRow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:14px;padding:10px;background:rgba(255,255,255,.03)}
+      .exerciseLibraryRow strong,.exerciseLibraryRow span{display:block}.exerciseLibraryRow span{color:var(--muted);font-size:12px;margin-top:3px}
+      .exerciseLibraryActions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.exerciseLibraryActions button{min-height:34px;padding:7px 9px;font-size:12px}
       .workoutSafety{border:1px solid rgba(255,211,110,.30);border-radius:14px;padding:12px;background:rgba(255,211,110,.08);color:#ffe8ad;margin-top:12px}
       .widgetStatus{border:1px dashed rgba(114,214,255,.35);border-radius:14px;padding:10px;background:rgba(114,214,255,.06);color:#dff6ff;margin-top:10px}
       @media(max-width:850px){.workoutTodayGrid{grid-template-columns:1fr}.quickLogger input,.quickLogger select{font-size:16px}.planExerciseFields{grid-template-columns:1fr 1fr}.planExerciseFields .wide{grid-column:span 2}.planExerciseEditorHead{display:block}.planExerciseActions{justify-content:flex-start;margin-top:8px}}
@@ -453,6 +512,11 @@
           <div class="field" style="margin-top:10px"><label>Formato: músculo | ejercicio | peso corporal opcional | notas</label><textarea id="planEditorExercises" class="planEditorTextarea"></textarea></div>
           <button type="button" class="secondary" id="applyPlanTextBtn">Aplicar texto al día</button>
         </details>
+        <details class="planAdvancedEditor" id="exerciseLibraryEditor">
+          <summary>Biblioteca de ejercicios</summary>
+          <div class="field" style="margin-top:10px"><label>Buscar por nombre, alias o músculo</label><input type="search" id="exerciseLibrarySearch" autocomplete="off" placeholder="Ej. espalda"></div>
+          <div id="exerciseLibraryList" class="exerciseLibraryList"></div>
+        </details>
         <div class="formGrid" style="margin-top:10px">
           <div class="field"><label>Copiar desde</label><select id="copyPlanFrom"></select></div>
           <div class="field"><label>Copiar hacia</label><select id="copyPlanTo"></select></div>
@@ -493,6 +557,8 @@
     document.getElementById('createPlanCustomExerciseBtn')?.addEventListener('click',createPlanCustomExercise);
     document.getElementById('undoPlanExerciseDeleteBtn')?.addEventListener('click',undoPlanExerciseDelete);
     document.getElementById('applyPlanTextBtn')?.addEventListener('click',applyAdvancedPlanText);
+    document.getElementById('exerciseLibrarySearch')?.addEventListener('input',renderExerciseLibraryEditor);
+    document.getElementById('exerciseLibraryList')?.addEventListener('click',handleExerciseLibraryAction);
     document.getElementById('planEditorCards')?.addEventListener('change',updatePlanExerciseFromCard);
     document.getElementById('planEditorCards')?.addEventListener('click',handlePlanExerciseAction);
     document.getElementById('resetDefaultPlanBtn')?.addEventListener('click',resetDefaultPlan);
@@ -946,6 +1012,7 @@
       : (dayPlan.exercises||[]).map(exercise=>`${exercise.muscle} | ${exercise.name}${exercise.bodyweight?' | peso corporal':''}${exercise.notes?' | '+exercise.notes:''}`).join('\n');
     renderVisualPlanCards(dayPlan);
     renderPlanLibrarySelect();
+    renderExerciseLibraryEditor();
     const undo=document.getElementById('undoPlanExerciseDeleteBtn');
     if(undo) undo.disabled=!lastDeletedPlanExercise||lastDeletedPlanExercise.dayKey!==currentPlanEditorDay;
   }
@@ -985,7 +1052,46 @@
   }
   function renderPlanLibrarySelect(){
     const select=document.getElementById('planLibrarySelect'); if(!select) return;
-    select.innerHTML='<option value="">Elegir ejercicio…</option>'+libraryData().filter(exercise=>!exercise.hidden).map(exercise=>`<option value="${escapeHtml(exercise.id)}">${escapeHtml(exercise.name)} · ${escapeHtml(exercise.group||'General')}</option>`).join('');
+    const preferences=window.WORKOUT_RANKING?.read?.().exercises||{};
+    select.innerHTML='<option value="">Elegir ejercicio…</option>'+libraryData().filter(exercise=>!preferences[exercise.id]?.hidden).map(exercise=>`<option value="${escapeHtml(exercise.id)}">${escapeHtml(exercise.name)} · ${escapeHtml(exercise.group||'General')}</option>`).join('');
+  }
+  function exerciseUsageDays(exercise){
+    const plan=weeklyPlan();
+    return dayOrder.filter(dayKey=>(plan[dayKey]?.exercises||[]).some(item=>sameExercise(item,{id:exercise.id,exerciseId:exercise.id,name:exercise.name,aliases:exercise.aliases}))).map(dayKey=>dayLabels[dayKey]);
+  }
+  function renderExerciseLibraryEditor(){
+    const root=document.getElementById('exerciseLibraryList'); if(!root) return;
+    const query=normalizeExerciseName(document.getElementById('exerciseLibrarySearch')?.value||'');
+    const preferences=window.WORKOUT_RANKING?.read?.().exercises||{};
+    const rows=libraryData().filter(exercise=>!query||normalizeExerciseName([exercise.name,...(exercise.aliases||[]),exercise.group].join(' ')).includes(query));
+    root.innerHTML=rows.length?rows.map(exercise=>{
+      const pref=preferences[exercise.id]||{};
+      const days=exerciseUsageDays(exercise);
+      const custom=!!(exercise.custom||exercise.origin==='custom')&&!exercise.official;
+      return `<div class="exerciseLibraryRow" data-library-exercise-id="${escapeHtml(exercise.id)}">
+        <div><strong>${escapeHtml(exercise.name)}</strong><span>${escapeHtml(exercise.group||'General')} · ${escapeHtml(exercise.type||'personalizado')} · ${escapeHtml(exercise.unit||'kg')}</span><span>${days.length?`Se usa: ${escapeHtml(days.join(', '))}`:'No está en la rutina semanal'} · ${pref.lastUsedDate?`último uso ${escapeHtml(pref.lastUsedDate)}`:'sin uso registrado'}</span></div>
+        <div class="exerciseLibraryActions">
+          <button type="button" class="secondary" data-library-action="favorite">${pref.favorite?'Quitar favorito':'Favorito'}</button>
+          <button type="button" class="secondary" data-library-action="hidden">${pref.hidden?'Restaurar':'Ocultar'}</button>
+          ${custom?'<button type="button" class="secondary" data-library-action="edit">Editar</button>':''}
+        </div>
+      </div>`;
+    }).join(''):'<div class="emptyState">No hay ejercicios que coincidan con la búsqueda.</div>';
+  }
+  function handleExerciseLibraryAction(event){
+    const button=event.target.closest('[data-library-action]'); if(!button) return;
+    const row=button.closest('[data-library-exercise-id]'); const id=row?.dataset?.libraryExerciseId; if(!id) return;
+    const action=button.dataset.libraryAction,library=libraryData(),exercise=library.find(item=>item.id===id); if(!exercise) return;
+    const pref=window.WORKOUT_RANKING?.read?.().exercises?.[id]||{};
+    if(action==='favorite') window.WORKOUT_RANKING?.setExercisePreference?.(id,{favorite:!pref.favorite});
+    else if(action==='hidden') window.WORKOUT_RANKING?.setExercisePreference?.(id,{hidden:!pref.hidden});
+    else if(action==='edit'){
+      if(exercise.official){flash('Los ejercicios oficiales no se sobrescriben. Podés ocultarlos o crear uno personalizado.');return;}
+      const name=(window.prompt('Nombre del ejercicio:',exercise.name)||'').trim(); if(!name) return;
+      const muscle=(window.prompt('Grupo muscular:',exercise.group||'General')||exercise.group||'General').trim();
+      exercise.name=name; exercise.group=muscle; exercise.primaryMuscles=[muscle]; exercise.aliases=[...new Set([...(exercise.aliases||[]),name])]; exercise.updatedAt=new Date().toISOString(); saveLibraryData(library);
+    }
+    renderPlanLibrarySelect(); renderExerciseLibraryEditor();
   }
   function savePlanHeader(){
     const plan=weeklyPlan(),dayPlan=plan[currentPlanEditorDay]||clone(defaultWeeklyPlan[currentPlanEditorDay]);
@@ -1069,7 +1175,7 @@
       const exercises=lines.map((line,index)=>{
         const [muscleRaw,nameRaw,flagRaw,notesRaw]=line.split('|').map(x=>x.trim());
         const nameValue=nameRaw||muscleRaw||`Ejercicio ${index+1}`;
-        const libraryMatch=exerciseLibrary.find(exercise=>normalizeText(exercise.name)===normalizeText(nameValue) || (exercise.aliases||[]).some(alias=>normalizeText(alias)===normalizeText(nameValue)));
+        const libraryMatch=libraryMatchFor(nameValue);
         return {id:`custom-${key}-${index+1}`,exerciseId:libraryMatch?.id||`custom-${normalizeText(nameValue).replace(/\s+/g,'-')}`,name:nameValue,muscle:nameRaw?muscleRaw:(libraryMatch?.group||'General'),type:libraryMatch?.type||'personalizado',unit:libraryMatch?.unit||settings().unit,bodyweight:/peso corporal|bodyweight/i.test(flagRaw||''),notes:notesRaw||flagRaw||''};
       });
       plan[key]={dayKey:key,weekday:dayLabels[key],name,type:'workout',muscles:muscles.length?muscles:[...new Set(exercises.map(x=>x.muscle))],exercises};
@@ -1199,7 +1305,7 @@
     else if(action===actionWidgetSaveSet){syncWorkoutWidget();openGymToday();}
   }
 
-  window.WORKOUT_FEATURES={keys,dayOrder,defaultWeeklyPlan:clone(defaultWeeklyPlan),exerciseLibrary:clone(exerciseLibrary),getExerciseLibrary:()=>clone(libraryData()),dayKeyForDate,planForDate,rankExercisesForContext,getQuickWorkoutState,addManualExercisePayload,saveQuickSetPayload,updateQuickSetPayload,deleteQuickSetPayload,completeQuickExercisePayload,finishWorkoutPayload,buildWorkoutWidgetState,syncWorkoutWidget,importWidgetStateFromAndroid};
+  window.WORKOUT_FEATURES={keys,dayOrder,defaultWeeklyPlan:clone(defaultWeeklyPlan),exerciseLibrary:clone(exerciseLibrary),EXERCISE_LIBRARY_VERSION,getExerciseLibrary:()=>clone(libraryData()),migrateExerciseLibrary,dayKeyForDate,planForDate,rankExercisesForContext,getQuickWorkoutState,addManualExercisePayload,saveQuickSetPayload,updateQuickSetPayload,deleteQuickSetPayload,completeQuickExercisePayload,finishWorkoutPayload,buildWorkoutWidgetState,syncWorkoutWidget,importWidgetStateFromAndroid};
   window.openGymToday=openGymToday;
   window.openQuickSetLogger=openQuickSetLogger;
   window.handleAndroidWidgetIntent=(action,payload)=>handleAndroidWidgetIntent(action,payload||{});

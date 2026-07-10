@@ -11,6 +11,9 @@ assert.match(source,/data-plan-field="repsMin"/);
 assert.match(source,/data-plan-field="restSeconds"/);
 assert.match(source,/undoPlanExerciseDelete/);
 assert.match(source,/addPlanLibraryExercise/);
+assert.match(source,/EXERCISE_LIBRARY_VERSION/);
+assert.match(source,/migrateExerciseLibrary/);
+assert.match(source,/exerciseLibraryEditor/);
 
 function createContext(preloaded = {}, today = '2026-06-22') {
   const store = new Map(Object.entries(preloaded));
@@ -198,6 +201,23 @@ const {context: customContext} = createContext({
   protocolo_0_100_weekly_workout_plan_v1: JSON.stringify(customPlan)
 });
 assert.equal(customContext.WORKOUT_FEATURES.planForDate('2026-06-22').name, 'Rutina propia');
+
+const legacyLibrary=[
+  {id:'press-banca',name:'Banca editada',aliases:['mi banca'],group:'Pectoral propio',type:'peso libre',unit:'kg',notes:'nota personal'},
+  {id:'custom-face-pull',name:'Face pull',aliases:['facepull'],group:'Hombro',type:'polea',unit:'kg',custom:true,origin:'custom'}
+];
+const historical=[{id:'old',date:'2025-01-01',exercises:[{exerciseId:'press-banca',name:'Nombre histórico',sets:[]}]}];
+const {context: migrationContext,store:migrationStore}=createContext({
+  protocolo_0_100_exercise_library_v1:JSON.stringify(legacyLibrary),
+  protocolo_0_100_workout_sessions_v1:JSON.stringify(historical)
+});
+const migratedLibrary=migrationContext.WORKOUT_FEATURES.getExerciseLibrary();
+assert.equal(migratedLibrary.find(exercise=>exercise.id==='press-banca').name,'Banca editada');
+assert.ok(migratedLibrary.find(exercise=>exercise.id==='press-banca').aliases.includes('press banca'));
+assert.equal(migratedLibrary.filter(exercise=>exercise.name==='Face pull').length,1);
+assert.equal(migratedLibrary.some(exercise=>exercise.id==='tibial-anterior'),true);
+assert.equal(JSON.parse(migrationStore.get('protocolo_0_100_workout_sessions_v1'))[0].exercises[0].name,'Nombre histórico');
+assert.equal(JSON.parse(migrationStore.get('protocolo_0_100_exercise_library_meta_v1')).libraryVersion,migrationContext.WORKOUT_FEATURES.EXERCISE_LIBRARY_VERSION);
 
 const {context: rankContext,store:rankStore}=createContext({},'2026-08-10');
 for(const date of ['2026-07-13','2026-07-20','2026-07-27','2026-08-03','2026-08-10']) rankContext.WORKOUT_RANKING.recordExerciseUse({exerciseId:'press-banca',date,dayKey:'monday',routineName:'Torso A'});

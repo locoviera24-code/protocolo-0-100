@@ -547,7 +547,7 @@
     const state=getLocalData(APP_STATE_KEY,{});
     const workoutKeys=window.WORKOUT_FEATURES?.keys||{};
     const gymPartyState=window.GYM_PARTY_FEATURES?.exportState?.()||{};
-    return {...state,...gymPartyState,startDate:localStorage.getItem(START_KEY)||todayStr(),entries:getEntries(),gymSessions:getLocalData(GYM_SESSIONS_KEY,[]),weeklyWorkoutPlan:getLocalData(workoutKeys.weeklyWorkoutPlan||'protocolo_0_100_weekly_workout_plan_v1',null),workoutSessions:getLocalData(workoutKeys.workoutSessions||'protocolo_0_100_workout_sessions_v1',[]),exerciseHistory:getLocalData(workoutKeys.exerciseHistory||'protocolo_0_100_exercise_history_v1',{}),exerciseLibrary:getLocalData(workoutKeys.exerciseLibrary||'protocolo_0_100_exercise_library_v1',[]),exercisePreferences:getLocalData(workoutKeys.exercisePreferences||'protocolo_0_100_exercise_preferences_v1',{schemaVersion:1,exercises:{}}),gymSettings:getLocalData(workoutKeys.gymSettings||'protocolo_0_100_gym_settings_v1',{}),workoutWidgetState:getLocalData(workoutKeys.workoutWidgetState||'protocolo_0_100_workout_widget_state_v1',null),nutritionEntries:getLocalData(NUTRITION_ENTRIES_KEY,[]),nutritionTargets:advancedTargets(),bodyMetrics:getLocalData(BODY_METRICS_KEY,{}),customFoods:getLocalData(CUSTOM_FOODS_KEY,[]),cachedFdcFoods:FDC?.cachedFoods?.()||[],nutritionAliases:getLocalData(NUTRITION_ALIASES_KEY,{}),exportedAt:new Date().toISOString()};
+    return {...state,...gymPartyState,startDate:localStorage.getItem(START_KEY)||todayStr(),entries:getEntries(),gymSessions:getLocalData(GYM_SESSIONS_KEY,[]),weeklyWorkoutPlan:getLocalData(workoutKeys.weeklyWorkoutPlan||'protocolo_0_100_weekly_workout_plan_v1',null),workoutSessions:getLocalData(workoutKeys.workoutSessions||'protocolo_0_100_workout_sessions_v1',[]),exerciseHistory:getLocalData(workoutKeys.exerciseHistory||'protocolo_0_100_exercise_history_v1',{}),exerciseLibrary:getLocalData(workoutKeys.exerciseLibrary||'protocolo_0_100_exercise_library_v1',[]),exerciseLibraryMeta:getLocalData(workoutKeys.exerciseLibraryMeta||'protocolo_0_100_exercise_library_meta_v1',null),exercisePreferences:getLocalData(workoutKeys.exercisePreferences||'protocolo_0_100_exercise_preferences_v1',{schemaVersion:1,exercises:{}}),gymSettings:getLocalData(workoutKeys.gymSettings||'protocolo_0_100_gym_settings_v1',{}),workoutWidgetState:getLocalData(workoutKeys.workoutWidgetState||'protocolo_0_100_workout_widget_state_v1',null),nutritionEntries:getLocalData(NUTRITION_ENTRIES_KEY,[]),nutritionTargets:advancedTargets(),bodyMetrics:getLocalData(BODY_METRICS_KEY,{}),customFoods:getLocalData(CUSTOM_FOODS_KEY,[]),cachedFdcFoods:FDC?.cachedFoods?.()||[],nutritionAliases:getLocalData(NUTRITION_ALIASES_KEY,{}),exportedAt:new Date().toISOString()};
   }
   window.buildCompleteBackup=buildCompleteBackup;
   function importCompleteBackupData(data){
@@ -561,6 +561,7 @@
       if(Array.isArray(state.workoutSessions))setLocalData(workoutKeys.workoutSessions||'protocolo_0_100_workout_sessions_v1',state.workoutSessions);
       if(state.exerciseHistory)setLocalData(workoutKeys.exerciseHistory||'protocolo_0_100_exercise_history_v1',state.exerciseHistory);
       if(Array.isArray(state.exerciseLibrary))setLocalData(workoutKeys.exerciseLibrary||'protocolo_0_100_exercise_library_v1',state.exerciseLibrary);
+      if(state.exerciseLibraryMeta)setLocalData(workoutKeys.exerciseLibraryMeta||'protocolo_0_100_exercise_library_meta_v1',state.exerciseLibraryMeta);
       if(state.exercisePreferences)setLocalData(workoutKeys.exercisePreferences||'protocolo_0_100_exercise_preferences_v1',state.exercisePreferences);
       if(state.gymSettings)setLocalData(workoutKeys.gymSettings||'protocolo_0_100_gym_settings_v1',state.gymSettings);
       if(state.workoutWidgetState)setLocalData(workoutKeys.workoutWidgetState||'protocolo_0_100_workout_widget_state_v1',state.workoutWidgetState);
@@ -595,6 +596,7 @@
       workoutSessions:getLocalData(workoutKeys.workoutSessions||'protocolo_0_100_workout_sessions_v1',[]),
       exerciseHistory:getLocalData(workoutKeys.exerciseHistory||'protocolo_0_100_exercise_history_v1',{}),
       exerciseLibrary:getLocalData(workoutKeys.exerciseLibrary||'protocolo_0_100_exercise_library_v1',[]),
+      exerciseLibraryMeta:getLocalData(workoutKeys.exerciseLibraryMeta||'protocolo_0_100_exercise_library_meta_v1',null),
       exercisePreferences:getLocalData(workoutKeys.exercisePreferences||'protocolo_0_100_exercise_preferences_v1',{schemaVersion:1,exercises:{}}),
       gymSettings:getLocalData(workoutKeys.gymSettings||'protocolo_0_100_gym_settings_v1',{}),
       workoutWidgetState:getLocalData(workoutKeys.workoutWidgetState||'protocolo_0_100_workout_widget_state_v1',null),

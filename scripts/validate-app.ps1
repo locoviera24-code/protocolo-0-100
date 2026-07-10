@@ -139,7 +139,8 @@ foreach ($contract in @(
     'exerciseLibrary:',
     'gymSettings:',
     'workoutWidgetState:',
-    'exercisePreferences:'
+    'exercisePreferences:',
+    'exerciseLibraryMeta:'
 )) {
     Assert-True ($advanced.Contains($contract)) "Falta contrato de backup gym/widget: $contract"
 }
@@ -319,6 +320,10 @@ foreach ($contract in @(
     'undoPlanExerciseDelete',
     'addPlanLibraryExercise',
     'createPlanCustomExercise',
+    'EXERCISE_LIBRARY_VERSION',
+    'migrateExerciseLibrary',
+    'exerciseLibraryEditor',
+    'handleExerciseLibraryAction',
     'Registro r'
 )) {
     Assert-True ($workout.Contains($contract)) "Falta contrato web gym/widget: $contract"
