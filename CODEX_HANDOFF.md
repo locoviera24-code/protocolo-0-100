@@ -2,9 +2,9 @@
 
 Ultima actualizacion: 2026-06-30
 Rama esperada: `main`
-Version actual: `2.6.0`
-Android: `versionCode 31`, `versionName "2.6.0"`
-Service worker cache: `protocolo-0-100-pwa-v35`
+Version actual: `2.6.1`
+Android: `versionCode 32`, `versionName "2.6.1"`
+Service worker cache: `protocolo-0-100-pwa-v36`
 Backup consolidado: `schemaVersion: 3`
 
 Leer primero este archivo y luego `README.md`, `index.html`,
@@ -24,7 +24,7 @@ Estado actual:
 - Gym Party implementado como modulo web/PWA opcional.
 - Nutricion local/FDC opcional.
 - Backups JSON `schemaVersion: 3`.
-- PWA offline con cache v35 y actualizacion consentida desde el aviso visible.
+- PWA offline con cache v36 y actualizacion consentida desde el aviso visible.
 - APK con widget Android y permiso `INTERNET` para Firebase/Gym Party.
 
 ## 2. Funcionalidades ya existen
@@ -84,8 +84,8 @@ Web:
 - `gym-party-sync.js`: sincronizacion incremental con dirty/revision, LWW,
   tombstones, backoff y contexto horario.
 - `gym-party.js`: modulo Gym Party, registro rapido, graficas y edicion/eliminacion de series.
-- `advanced-features.js`: version `2.6.0`, backup/importacion Gym Party.
-- `sw.js`: cache v35, actualizacion consentida, incluye modulos nuevos y evita
+- `advanced-features.js`: version `2.6.1`, backup/importacion Gym Party.
+- `sw.js`: cache v36, actualizacion consentida, incluye modulos nuevos y evita
   persistir una configuracion Firebase obsoleta.
 - `README.md`: documenta Gym Party, demo, Firebase, privacidad y pruebas.
 - `CODEX_HANDOFF.md`: este handoff.
@@ -104,8 +104,8 @@ Android:
 - `android-native-wrapper/app/src/main/java/com/protocolo/cien/MainActivity.java`:
   usa `WebViewAssetLoader` sobre HTTPS interno, bloquea file/content/universal
   access y mixed content, activa Safe Browsing y limita origenes remotos.
-- `android-native-wrapper/app/build.gradle`: `versionCode 31`,
-  `versionName 2.6.0`, firma release solo desde variables seguras.
+- `android-native-wrapper/app/build.gradle`: `versionCode 32`,
+  `versionName 2.6.1`, firma release solo desde variables seguras.
 - `android-native-wrapper/app/src/main/assets/*`: sincronizado desde raiz.
 
 Scripts/workflows:
@@ -851,3 +851,30 @@ Antes de continuar en otro chat leer, en este orden:
    `gym-party-ui.js`, `gym-party.js`.
 5. `firebase/firestore.rules`, `firebase/firestore.indexes.json` y pruebas.
 6. `android-native-wrapper/README_ANDROID.md`, `MainActivity.java` y widget.
+
+## 25. Hotfix 2.6.1 - migracion de documentos Firestore legacy
+
+Durante la verificacion real de `2.6.0` en GitHub Pages se detecto que salas
+creadas por versiones antiguas conservaban en Firestore campos tecnicos como
+`source` y `pendingSync`. Las Rules estrictas nuevas los rechazan. Como el
+uploader incremental usaba `{merge:true}`, esos campos sobrevivian aunque el
+payload actual ya los filtraba, dejando la cola en `permission-denied`.
+
+Correccion:
+
+- `uploadSyncQueue()` ahora usa `batch.set()` sin merge para documentos propios
+  de `workout_sessions_shared` y `workout_sets_shared`.
+- El reemplazo conserva todos los campos funcionales y elimina solo campos
+  legacy/no permitidos; no borra sesiones ni series.
+- `firebase/rules.test.mjs` crea un documento legacy con `source` y
+  `pendingSync`, confirma que el reemplazo sanitizado esta permitido y prueba
+  tambien las consultas reales de miembros/sesiones/sets.
+- Version objetivo: `2.6.1`, Android `versionCode 32`, cache PWA `v36`.
+- Las seis definiciones de `firebase/firestore.indexes.json` fueron creadas en
+  Firebase Console y quedaron `Habilitado` el 2026-07-10.
+- Las Rules endurecidas validadas en Emulator fueron publicadas en el proyecto
+  `a-100-9d80a` el 2026-07-10.
+- Verificacion del hotfix: Node Gym Party/sync/modulos/SW/release OK; Emulator
+  OK con consultas reales y limpieza de documento legacy; Playwright 5 OK y 1
+  omitida intencionalmente; `assembleRelease` firmado con la clave permanente
+  OK.

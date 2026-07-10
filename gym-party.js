@@ -2641,7 +2641,7 @@
     const due=queue.filter(op=>force||!op.nextAttemptAt||new Date(op.nextAttemptAt).getTime()<=now);
     for(let index=0;index<due.length;index+=400){
       const chunk=due.slice(index,index+400),batch=firestoreMod.writeBatch(db),timestamp=firestoreMod.serverTimestamp();
-      chunk.forEach(op=>batch.set(firestoreMod.doc(db,op.collection,op.payload.id),{...firestorePayload(op.payload),updatedAt:timestamp},{merge:true}));
+      chunk.forEach(op=>batch.set(firestoreMod.doc(db,op.collection,op.payload.id),{...firestorePayload(op.payload),updatedAt:timestamp}));
       try{
         await batch.commit();
         const completed=new Set(chunk.map(op=>op.id)); queue=queue.filter(op=>!completed.has(op.id)); saveSyncQueue(queue);

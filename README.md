@@ -215,6 +215,9 @@ dirty, fecha local/zona horaria y `updatedAt`; los conflictos se resuelven por
 ultima escritura conocida (LWW). Las eliminaciones viajan como tombstones para
 que una serie borrada no reaparezca al descargar datos remotos. Ante error se
 aplica backoff y los datos locales siguen disponibles.
+Al subir una fila propia se reemplaza el documento remoto con el payload
+sanitizado. Esto elimina campos tecnicos que versiones anteriores pudieron
+guardar por error (`source`, `pendingSync`) sin borrar la sesion ni la serie.
 
 Gym Party permite exportar CSV comparativo de la sala y JSON con mis datos
 compartidos. El CSV no incluye datos privados de nutricion, sueno, ansiedad,
@@ -293,7 +296,7 @@ keystore codificado en `ANDROID_KEYSTORE_BASE64` y nunca lo guarda en el repo.
 
 - **PWA:** el workflow `Publicar PWA en GitHub Pages` publica los archivos raiz.
 - **APK debug:** el workflow `Construir APK Android` publica un artifact temporal para pruebas.
-- **APK release:** el workflow `Publicar APK Android release` compila `v2.6.0` con firma privada desde GitHub Secrets, publica el APK versionado y adjunta su checksum SHA-256.
+- **APK release:** el workflow `Publicar APK Android release` compila `v2.6.1` con firma privada desde GitHub Secrets, publica el APK versionado y adjunta su checksum SHA-256.
 
 La PWA no activa una nueva version a mitad de un registro: muestra aviso y solo
 envia `SKIP_WAITING` cuando el usuario toca **Actualizar ahora**. El APK release

@@ -22,6 +22,8 @@ assert.match(source, /revokeInvite/);
 assert.match(source, /deactivateFirebaseMembership/);
 assert.match(source, /deleteSharedDataAndLeave/);
 assert.match(source, /tombstoneOwnSharedCollection/);
+assert.match(source,/batch\.set\(firestoreMod\.doc\(db,op\.collection,op\.payload\.id\),\{\.\.\.firestorePayload\(op\.payload\),updatedAt:timestamp\}\)/);
+assert.doesNotMatch(source,/firestorePayload\(op\.payload\),updatedAt:timestamp\},\{merge:true\}/);
 
 function createContext() {
   const store = new Map();

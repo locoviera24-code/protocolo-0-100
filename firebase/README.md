@@ -101,6 +101,9 @@ deben reemplazarse por `allow read, write: if true` durante pruebas publicadas.
   errores son estado local de cola y no se suben a Firestore.
 - Las eliminaciones son tombstones (`deleted`, `deletedAt`) y evitan que una
   serie borrada reaparezca.
+- Las escrituras de sesiones/series propias reemplazan el documento completo
+  sanitizado para retirar campos legacy no permitidos por Rules; no se usa
+  `merge:true` en esa migracion.
 - Los fallos conservan la cola y aplican backoff; no bloquean el entrenamiento.
 - La sesion anonima persiste en el mismo navegador/PWA.
 - Para cambiar de dispositivo conservando el mismo UID, cada usuario debe

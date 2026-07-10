@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {initializeTestEnvironment,assertFails,assertSucceeds} from '@firebase/rules-unit-testing';
-import {Timestamp,doc,getDoc,runTransaction,setDoc,updateDoc,writeBatch} from 'firebase/firestore';
+import {Timestamp,collection,doc,documentId,getDoc,getDocs,limit,orderBy,query,runTransaction,setDoc,updateDoc,where,writeBatch} from 'firebase/firestore';
 
 const projectId='demo-protocolo-0100';
 const rules=await readFile(new URL('./firestore.rules',import.meta.url),'utf8');
@@ -54,9 +54,20 @@ try{
   await assertFails(getDoc(doc(outsiderDb,'gym_parties','party_secure')));
 
   const ownerSet={id:'set_owner',partyId:'party_secure',sessionId:'session_owner',userId:'owner',localExerciseId:'press-row',localSetId:'set-local',exerciseId:'press-banca',exerciseName:'Press de banca',muscleGroup:'Pecho',setNumber:1,reps:8,weightKg:60,rir:2,rpe:8,isBodyweight:false,date:'2026-07-10',createdAt:now,updatedAt:now,deleted:false};
+  const ownerSession={id:'session_owner',partyId:'party_secure',userId:'owner',localSessionId:'local_session_owner',date:'2026-07-10',localDate:'2026-07-10',weekday:'Viernes',routineName:'Torso C',startedAt:now,finishedAt:now,durationMinutes:60,exercisesCompleted:1,totalSets:1,totalReps:8,totalVolume:480,externalLoadVolume:480,bodyweightReps:0,addedLoadVolume:0,bestWeight:60,bestSetVolume:480,maxReps:8,timeZone:'America/Asuncion',utcOffset:-240,revision:1,createdAt:now,updatedAt:now};
+  await assertSucceeds(setDoc(doc(ownerDb,'workout_sessions_shared','session_owner'),ownerSession));
   await assertSucceeds(setDoc(doc(ownerDb,'workout_sets_shared','set_owner'),ownerSet));
   await assertFails(updateDoc(doc(memberDb,'workout_sets_shared','set_owner'),{reps:99,updatedAt:now}));
   await assertSucceeds(updateDoc(doc(ownerDb,'workout_sets_shared','set_owner'),{reps:9,updatedAt:now}));
+
+  await env.withSecurityRulesDisabled(async context=>{
+    await setDoc(doc(context.firestore(),'workout_sets_shared','set_legacy'),{...ownerSet,id:'set_legacy',source:'local',pendingSync:false});
+  });
+  await assertSucceeds(setDoc(doc(ownerDb,'workout_sets_shared','set_legacy'),{...ownerSet,id:'set_legacy'}));
+
+  await assertSucceeds(getDocs(query(collection(ownerDb,'gym_party_members'),where('partyId','==','party_secure'),where('active','==',true),limit(11))));
+  await assertSucceeds(getDocs(query(collection(ownerDb,'workout_sessions_shared'),where('partyId','==','party_secure'),orderBy('updatedAt','asc'),orderBy(documentId(),'asc'),limit(120))));
+  await assertSucceeds(getDocs(query(collection(ownerDb,'workout_sets_shared'),where('partyId','==','party_secure'),orderBy('updatedAt','asc'),orderBy(documentId(),'asc'),limit(300))));
 
   const wrongIdBatch=writeBatch(outsiderDb);
   wrongIdBatch.set(doc(outsiderDb,'gym_party_members','wrong_document_id'),memberData('party_secure','outsider','SAFE10','member'));
@@ -86,7 +97,7 @@ try{
     transaction.update(inviteRef,{membersCount:inviteSnap.data().membersCount-1,updatedAt:now});
     assert.equal(memberSnap.data().active,true);
   }));
-  console.log('Firestore Rules correctas: owner atomico, union valida y seis negativas criticas denegadas.');
+  console.log('Firestore Rules correctas: owner atomico, consultas sync, limpieza legacy y seis negativas criticas denegadas.');
 }finally{
   await env.cleanup();
 }
