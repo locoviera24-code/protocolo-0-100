@@ -29,7 +29,9 @@
     }
     *{box-sizing:border-box}
     html,body{margin:0; min-height:100%; background:radial-gradient(circle at 20% 10%, #172b51 0, transparent 30%), radial-gradient(circle at 90% 0, #123934 0, transparent 28%), var(--bg); color:var(--text); font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;}
-    body{padding-bottom:48px;}
+    body{padding-bottom:calc(48px + env(safe-area-inset-bottom));}
+    .srOnly{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+    .skipLink{position:fixed;left:12px;top:8px;z-index:1000;transform:translateY(-160%);background:#fff;color:#07111f;padding:10px 14px;border-radius:10px;font-weight:850}.skipLink:focus{transform:translateY(0)}
     .app{max-width:1160px; margin:0 auto; padding:22px;}
     header{display:flex; align-items:center; justify-content:space-between; gap:16px; margin:10px 0 22px;}
     .brand{display:flex; flex-direction:column; gap:6px;}
@@ -70,6 +72,8 @@
     button{border:none; border-radius:12px; padding:11px 14px; font-weight:700; color:#06111f; background:var(--accent); cursor:pointer; transition:transform .08s ease, filter .2s ease;}
     button:hover{filter:brightness(1.08)}
     button:active{transform:translateY(1px)}
+    :where(button,input,select,textarea,summary,a,[tabindex]):focus-visible{outline:3px solid var(--warn)!important;outline-offset:3px!important;box-shadow:0 0 0 5px rgba(255,211,110,.16)!important}
+    button:disabled{cursor:not-allowed;opacity:.55;filter:saturate(.65)}
     button.secondary{background:#243653; color:var(--text); border:1px solid var(--line)}
     button.good{background:var(--accent2)}
     button.warn{background:var(--warn)}
@@ -276,17 +280,22 @@
     @media(max-width:600px){.assistantPreviewGrid,.assistantCustomGrid{grid-template-columns:1fr 1fr}.assistantCustomGrid input:first-child{grid-column:1/-1}}
     @media(max-width:480px){.quickStats{grid-template-columns:1fr}.macroRow{grid-template-columns:72px 1fr 76px}.entryRow{grid-template-columns:1fr}.entryRow button{justify-self:start}.assistantPreviewGrid{grid-template-columns:1fr}.moduleTopbar .topbarTitle span{display:none}.quickPartyBtn{font-size:12px;padding:8px 10px}}
 
+    @media(pointer:coarse){button,summary,input,select{min-height:44px}.helpBtn{width:44px;height:44px;min-width:44px}.barRow .helpBtn,.comparisonRow .helpBtn{width:36px;height:36px;min-width:36px}}
+    @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}.actionPulse{animation:none!important}}
+
     @media print{body{background:white;color:black}.panel,.stat,.phaseCard,.mini,.history{box-shadow:none;border-color:#ccc;background:white;color:black}.buttons,.tabs,#importFile{display:none!important}.app{max-width:100%;padding:0}.grid{display:block}.panel{page-break-inside:avoid;margin-bottom:14px}.muted,.small,label{color:#333}input,textarea,select{border-color:#aaa;color:black;background:white}}
   </style>
 </head>
 <body>
+  <a class="skipLink" href="#mainContent">Saltar al contenido principal</a>
+  <div class="srOnly" id="globalLiveRegion" role="status" aria-live="polite" aria-atomic="true"></div>
   <div class="moduleTopbar">
-    <button type="button" class="menuBtn" id="openDrawerBtn" aria-label="Abrir menú">☰</button>
+    <button type="button" class="menuBtn" id="openDrawerBtn" aria-label="Abrir menú" aria-controls="sideDrawer" aria-expanded="false">☰</button>
     <div class="topbarTitle"><strong id="currentModuleTitle">Protocolo 0→100</strong><span id="currentModuleSubtitle">Atención, pantalla y hábitos diarios</span></div>
     <button type="button" class="quickPartyBtn" id="openGymPartyTopBtn">Gym Party</button>
   </div>
   <div class="drawerBackdrop" id="drawerBackdrop"></div>
-  <aside class="sideDrawer" id="sideDrawer" aria-label="Módulos de la aplicación">
+  <aside class="sideDrawer" id="sideDrawer" aria-label="Módulos de la aplicación" aria-hidden="true">
     <div class="drawerHead"><div><h2>Protocolo 0→100</h2><div class="muted small">Elegí un espacio</div></div><button type="button" class="closeBtn" id="closeDrawerBtn" aria-label="Cerrar menú">×</button></div>
     <nav class="drawerNav">
       <button type="button" class="drawerItem active" data-module-target="protocolo"><span class="drawerIcon">📵</span><span><strong>Protocolo</strong><span>Pantalla, sueño, atención y hábitos.</span></span></button>
@@ -296,7 +305,7 @@
       <button type="button" class="drawerItem" data-module-target="progreso"><span class="drawerIcon">📈</span><span><strong>Progreso y recompensas</strong><span>Score integral, Focus Coins y rankings.</span></span></button>
     </nav>
   </aside>
-  <main class="app">
+  <main class="app" id="mainContent" tabindex="-1">
     <header class="protocolOnly">
       <div class="brand">
         <h1>Protocolo 0→100</h1>
@@ -777,7 +786,7 @@
     </section>
   </main>
 
-  <div class="modalBackdrop hidden" id="actionModalBackdrop" role="dialog" aria-modal="true" aria-labelledby="modalActionTitle">
+  <div class="modalBackdrop hidden" id="actionModalBackdrop" role="dialog" aria-modal="true" aria-labelledby="modalActionTitle" aria-hidden="true">
     <div class="actionModal">
       <div class="modalHd">
         <div>
@@ -951,7 +960,7 @@ function loadGymSession(id){
   document.getElementById('gymNotes').value=s.notes||'';
   gymDraft=(s.items||[]).map(i=>({...i}));
   renderGymDraft();
-  window.scrollTo({top:0,behavior:'smooth'});
+  window.scrollTo({top:0,behavior:preferredMotionBehavior()});
 }
 function deleteGymSession(id){
   setLocalData(GYM_SESSIONS_KEY,getLocalData(GYM_SESSIONS_KEY,[]).filter(s=>s.id!==id));
@@ -1409,11 +1418,14 @@ function showActionModal(force=true){
   if(!force && activeModule!=='protocolo') return;
   if(!force && checked('keyActionDone')) return;
   fillActionModal();
+  lastFocusedBeforeOverlay=document.activeElement;
   bd.classList.remove('hidden');
+  bd.setAttribute('aria-hidden','false');
+  document.getElementById('closeActionModalBtn')?.focus();
   const card=document.getElementById('actionFocusCard');
   if(card){ card.classList.add('actionPulse'); setTimeout(()=>card.classList.remove('actionPulse'),2300); }
 }
-function closeActionModal(){ const bd=document.getElementById('actionModalBackdrop'); if(bd) bd.classList.add('hidden'); }
+function closeActionModal(){ const bd=document.getElementById('actionModalBackdrop'); if(bd){const wasOpen=!bd.classList.contains('hidden');bd.classList.add('hidden');bd.setAttribute('aria-hidden','true');if(wasOpen&&lastFocusedBeforeOverlay?.focus)lastFocusedBeforeOverlay.focus();} }
 function dismissActionForSelectedDate(){
   const date = document.getElementById('entryDate').value || todayStr();
   setActionDismissed(date, true);
@@ -1535,9 +1547,11 @@ function deleteEntry(){
   let entries = getEntries().filter(e=>e.date!==date);
   setEntries(entries); fillForm(null); flash('Registro borrado.'); renderAll();
 }
+function preferredMotionBehavior(){return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth';}
 function flash(msg){
   const old = document.getElementById('toast'); if(old) old.remove();
-  const div=document.createElement('div'); div.id='toast'; div.textContent=msg; div.style.cssText='position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#e7fff3;color:#071a12;padding:12px 16px;border-radius:999px;font-weight:800;box-shadow:0 10px 30px rgba(0,0,0,.35);z-index:99';
+  const live=document.getElementById('globalLiveRegion');if(live){live.textContent='';requestAnimationFrame(()=>{live.textContent=String(msg||'');});}
+  const div=document.createElement('div'); div.id='toast'; div.textContent=msg;div.setAttribute('aria-hidden','true'); div.style.cssText='position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#e7fff3;color:#071a12;padding:12px 16px;border-radius:999px;font-weight:800;box-shadow:0 10px 30px rgba(0,0,0,.35);z-index:99';
   document.body.appendChild(div); setTimeout(()=>div.remove(),1800);
 }
 
@@ -1843,8 +1857,28 @@ function setupHelpButtons(){
     if(check) check.appendChild(btn); else { const field=target.closest('.field'); if(field) field.appendChild(btn); }
   });
 }
-function openDrawer(){ document.body.classList.add('drawerOpen'); }
-function closeDrawer(){ document.body.classList.remove('drawerOpen'); }
+let accessibilityId=0,lastFocusedBeforeOverlay=null,accessibilityFrame=0;
+function applyAccessibilityEnhancements(root=document){
+  const scope=root?.querySelectorAll?root:document;
+  scope.querySelectorAll('.field').forEach(field=>{
+    const label=Array.from(field.children).find(child=>child.tagName==='LABEL');
+    const control=Array.from(field.children).find(child=>['INPUT','SELECT','TEXTAREA'].includes(child.tagName));
+    if(!label||!control)return;if(!control.id)control.id=`a11y-field-${++accessibilityId}`;label.htmlFor=control.id;
+  });
+  scope.querySelectorAll('[data-quick-adjust],[data-party-adjust]').forEach(button=>{
+    const raw=button.dataset.quickAdjust||button.dataset.partyAdjust||'',parts=raw.split(':'),target=parts[0],delta=Number(parts[1]);
+    button.setAttribute('aria-label',`${delta<0?'Restar':'Sumar'} ${Math.abs(delta)} ${target==='reps'?'repeticiones':'kilos'}`);
+  });
+  scope.querySelectorAll('[data-gym-party-weight]').forEach(button=>button.setAttribute('aria-label',`Usar ${button.dataset.gymPartyWeight} kilos`));
+}
+function queueAccessibilityEnhancements(){if(accessibilityFrame)return;accessibilityFrame=requestAnimationFrame(()=>{accessibilityFrame=0;applyAccessibilityEnhancements(document);});}
+function focusableElements(container){return Array.from(container?.querySelectorAll?.('button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),summary,[tabindex]:not([tabindex="-1"])')||[]).filter(element=>!element.closest('.hidden')&&element.getAttribute('aria-hidden')!=='true');}
+function trapOverlayFocus(event,container){
+  if(event.key!=='Tab'||!container)return;const items=focusableElements(container);if(!items.length)return;const first=items[0],last=items[items.length-1];
+  if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
+}
+function openDrawer(){lastFocusedBeforeOverlay=document.activeElement;document.body.classList.add('drawerOpen');document.getElementById('openDrawerBtn')?.setAttribute('aria-expanded','true');document.getElementById('sideDrawer')?.setAttribute('aria-hidden','false');document.getElementById('closeDrawerBtn')?.focus();}
+function closeDrawer(){const wasOpen=document.body.classList.contains('drawerOpen');document.body.classList.remove('drawerOpen');document.getElementById('openDrawerBtn')?.setAttribute('aria-expanded','false');document.getElementById('sideDrawer')?.setAttribute('aria-hidden','true');if(wasOpen&&lastFocusedBeforeOverlay?.focus)lastFocusedBeforeOverlay.focus();}
 function setModule(module){
   const meta={
     protocolo:['Protocolo 0→100','Atención, pantalla y hábitos diarios'],
@@ -1858,15 +1892,15 @@ function setModule(module){
   localStorage.setItem(ACTIVE_MODULE_KEY,activeModule);
   document.getElementById('currentModuleTitle').textContent=meta[activeModule][0];
   document.getElementById('currentModuleSubtitle').textContent=meta[activeModule][1];
-  document.querySelectorAll('[data-module-target]').forEach(btn=>btn.classList.toggle('active',btn.dataset.moduleTarget===activeModule));
+  document.querySelectorAll('[data-module-target]').forEach(btn=>{const active=btn.dataset.moduleTarget===activeModule;btn.classList.toggle('active',active);btn.setAttribute('aria-current',active?'page':'false');});
   if(activeModule==='protocolo') activateTab(lastProtocolTab); else activateTab(activeModule);
   closeActionModal();
   closeDrawer();
-  window.scrollTo({top:0,behavior:'smooth'});
+  window.scrollTo({top:0,behavior:preferredMotionBehavior()});
 }
 function activateTab(tabName){
   if(['registro','dashboard','telefono','plan','guia'].includes(tabName)) lastProtocolTab=tabName;
-  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active', b.dataset.tab===tabName));
+  document.querySelectorAll('.tab').forEach(b=>{const active=b.dataset.tab===tabName;b.classList.toggle('active',active);b.setAttribute('aria-selected',String(active));});
   ['registro','dashboard','gym','gym-party','nutricion','progreso','telefono','plan','guia'].forEach(t=>{
     const el=document.getElementById('tab-'+t); if(el) el.classList.toggle('hidden', t!==tabName);
   });
@@ -1881,7 +1915,7 @@ function openGuide(id){
   activateTab('guia');
   const card=document.getElementById('help-'+id);
   if(card){
-    card.scrollIntoView({behavior:'smooth', block:'start'});
+    card.scrollIntoView({behavior:preferredMotionBehavior(), block:'start'});
     card.classList.add('highlight');
     setTimeout(()=>card.classList.remove('highlight'),2400);
   }
@@ -2342,7 +2376,11 @@ document.getElementById('importFile').addEventListener('change', e=>{ if(e.targe
 ['openActionGuideBtn','modalGuideBtn'].forEach(id=>{ const el=document.getElementById(id); if(el) el.addEventListener('click', ()=>{ closeActionModal(); openGuide('actionToday'); }); });
 const actionBackdrop=document.getElementById('actionModalBackdrop');
 if(actionBackdrop) actionBackdrop.addEventListener('click', e=>{ if(e.target===actionBackdrop) closeActionModal(); });
-document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeActionModal(); });
+document.addEventListener('keydown', e=>{
+  if(e.key==='Escape'){if(document.body.classList.contains('drawerOpen'))closeDrawer();else closeActionModal();return;}
+  if(document.body.classList.contains('drawerOpen'))trapOverlayFocus(e,document.getElementById('sideDrawer'));
+  else if(!document.getElementById('actionModalBackdrop')?.classList.contains('hidden'))trapOverlayFocus(e,document.getElementById('actionModalBackdrop'));
+});
 let swipeStartX=null,swipeStartY=null;
 document.addEventListener('touchstart',e=>{const t=e.touches[0];swipeStartX=t.clientX;swipeStartY=t.clientY;},{passive:true});
 document.addEventListener('touchend',e=>{if(swipeStartX===null)return;const t=e.changedTouches[0],dx=t.clientX-swipeStartX,dy=Math.abs(t.clientY-swipeStartY);if(dy<80&&swipeStartX<30&&dx>75)openDrawer();if(dy<80&&document.body.classList.contains('drawerOpen')&&dx<-75)closeDrawer();swipeStartX=null;swipeStartY=null;},{passive:true});
@@ -2377,6 +2415,8 @@ loadNutritionTargets();
 loadBodyMetricsForDate();
 renderHelpGuide();
 setupHelpButtons();
+applyAccessibilityEnhancements(document);
+if('MutationObserver'in window)new MutationObserver(queueAccessibilityEnhancements).observe(document.body,{childList:true,subtree:true});
 loadEntryForDate();
 renderAll();
 const launchParams=new URLSearchParams(location.search);

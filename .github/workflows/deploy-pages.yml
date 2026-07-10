@@ -70,6 +70,9 @@ jobs:
       - name: Probar contratos de release Android
         run: node ./scripts/test-android-release.mjs
 
+      - name: Probar accesibilidad web y movil
+        run: node ./scripts/test-accessibility.mjs
+
       - name: Preparar archivos publicos
         run: |
           mkdir -p dist-pages/icons

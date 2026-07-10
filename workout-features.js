@@ -435,7 +435,7 @@
       .quickLogger .buttons button{min-height:46px}
       .quickPrimaryInputs{display:grid;grid-template-columns:.7fr 1fr 1fr;gap:10px;margin-top:10px}
       .quickAdjustRow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:6px}.quickAdjustRow button{min-height:38px;padding:7px 5px;font-size:12px}
-      .quickStickyActions{position:sticky;bottom:8px;z-index:35;display:grid;grid-template-columns:minmax(0,1.5fr) repeat(2,minmax(0,1fr));gap:8px;margin:12px -4px 8px;padding:9px;border:1px solid rgba(114,214,255,.32);border-radius:15px;background:rgba(11,18,32,.96);box-shadow:0 12px 30px rgba(0,0,0,.3);backdrop-filter:blur(12px)}
+      .quickStickyActions{position:sticky;bottom:max(8px,env(safe-area-inset-bottom));z-index:35;display:grid;grid-template-columns:minmax(0,1.5fr) repeat(2,minmax(0,1fr));gap:8px;margin:12px -4px 8px;padding:9px;border:1px solid rgba(114,214,255,.32);border-radius:15px;background:rgba(11,18,32,.96);box-shadow:0 12px 30px rgba(0,0,0,.3);backdrop-filter:blur(12px)}
       .quickStickyActions button{min-height:50px}.quickRestTimer{display:flex;justify-content:space-between;gap:10px;align-items:center;margin:8px 0;padding:9px 11px;border-radius:12px;background:rgba(114,214,255,.08);color:#dff6ff}.quickRestTimer.hidden{display:none}
       .quickLoggedSets{display:grid;gap:6px;margin-top:8px}.quickLoggedSet{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:12px;background:rgba(0,0,0,.09)}.quickLoggedSet span{color:var(--muted);font-size:12px}.quickLoggedSet .buttons{margin:0}.quickLoggedSet button{min-height:32px!important;padding:6px 8px;font-size:11px}
       .quickSecondaryDetails{margin-top:8px;border-top:1px solid var(--line);padding-top:9px}.quickSecondaryDetails summary{cursor:pointer;font-weight:750;color:#dff6ff}
@@ -666,7 +666,7 @@
   function quickSetRowsHtml(exercise){
     const sets=exercise?.sets||[];
     if(!sets.length) return '<div class="muted small">Todavía no hay series en este ejercicio.</div>';
-    return sets.map(set=>`<div class="quickLoggedSet ${set.id===editingQuickSetId?'editing':''}"><div><strong>Serie ${set.setNumber}</strong><span>${set.reps} reps · ${set.weight?`${set.weight} ${settings().unit}`:'peso corporal'}${set.rir!==null&&set.rir!==undefined?` · RIR ${set.rir}`:''}</span></div><div class="buttons"><button type="button" class="secondary" data-quick-edit-set="${escapeHtml(set.id)}">Editar</button><button type="button" class="danger" data-quick-delete-set="${escapeHtml(set.id)}">Eliminar</button></div></div>`).join('');
+    return sets.map(set=>`<div class="quickLoggedSet ${set.id===editingQuickSetId?'editing':''}"><div><strong>Serie ${set.setNumber}</strong><span>${set.reps} reps · ${set.weight?`${set.weight} ${settings().unit}`:'peso corporal'}${set.rir!==null&&set.rir!==undefined?` · RIR ${set.rir}`:''}</span></div><div class="buttons"><button type="button" class="secondary" data-quick-edit-set="${escapeHtml(set.id)}" aria-label="Editar serie ${set.setNumber} de ${escapeHtml(exercise.name)}">Editar</button><button type="button" class="danger" data-quick-delete-set="${escapeHtml(set.id)}" aria-label="Eliminar serie ${set.setNumber} de ${escapeHtml(exercise.name)}">Eliminar</button></div></div>`).join('');
   }
   function updateRestTimerDisplay(){
     const box=document.getElementById('quickRestTimer'),value=document.getElementById('quickRestTimerValue'); if(!box||!value)return;
@@ -744,7 +744,7 @@
   function openGymToday(){
     setModule('gym');
     renderWorkoutDashboard();
-    document.getElementById('todayWorkoutPanel')?.scrollIntoView({behavior:'smooth',block:'start'});
+    document.getElementById('todayWorkoutPanel')?.scrollIntoView({behavior:window.preferredMotionBehavior?.()||'auto',block:'start'});
   }
   function openQuickSetLogger(exerciseId){
     const session=ensureSession(todayStr());
@@ -752,7 +752,7 @@
     else if(session) currentQuickExerciseId=currentExercise(session)?.id || currentExercise(session)?.exerciseId || null;
     openGymToday();
     renderQuickLogger();
-    document.getElementById('quickSetLoggerPanel')?.scrollIntoView({behavior:'smooth',block:'start'});
+    document.getElementById('quickSetLoggerPanel')?.scrollIntoView({behavior:window.preferredMotionBehavior?.()||'auto',block:'start'});
   }
   function selectedSessionForQuick(){
     return ensureSession(todayStr());
@@ -1154,8 +1154,8 @@
         <div class="planExerciseActions">
           <button type="button" class="secondary" data-plan-action="up" aria-label="Subir ${escapeHtml(exercise.name)}">Subir</button>
           <button type="button" class="secondary" data-plan-action="down" aria-label="Bajar ${escapeHtml(exercise.name)}">Bajar</button>
-          <button type="button" class="secondary" data-plan-action="duplicate">Duplicar</button>
-          <button type="button" class="danger" data-plan-action="delete">Eliminar</button>
+          <button type="button" class="secondary" data-plan-action="duplicate" aria-label="Duplicar ${escapeHtml(exercise.name)}">Duplicar</button>
+          <button type="button" class="danger" data-plan-action="delete" aria-label="Eliminar ${escapeHtml(exercise.name)}">Eliminar</button>
         </div>
       </div>
       <div class="planExerciseFields">

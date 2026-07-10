@@ -65,6 +65,9 @@ jobs:
       - name: Probar contratos de release Android
         run: node ./scripts/test-android-release.mjs
 
+      - name: Probar accesibilidad web y movil
+        run: node ./scripts/test-accessibility.mjs
+
       - name: Decodificar keystore privado
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}

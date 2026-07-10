@@ -45,6 +45,7 @@ $firestoreRulesTest = Read-Utf8 'firebase/rules.test.mjs'
 $gymPartySyncTest = Read-Utf8 'scripts/test-gym-party-sync.mjs'
 $androidSecurityTest = Read-Utf8 'scripts/test-android-webview-security.mjs'
 $androidReleaseTest = Read-Utf8 'scripts/test-android-release.mjs'
+$accessibilityTest = Read-Utf8 'scripts/test-accessibility.mjs'
 $readme = Read-Utf8 'README.md'
 $handoff = Read-Utf8 'CODEX_HANDOFF.md'
 
@@ -63,6 +64,7 @@ $requiredFiles = @(
     'firebase-config.js', 'gym-party-sync.js', 'gym-party.js',
     'scripts/test-android-webview-security.mjs',
     'scripts/test-android-release.mjs',
+    'scripts/test-accessibility.mjs',
     'manifest.webmanifest', 'sw.js',
     'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetProvider.java',
     'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetUpdateService.java',
@@ -340,6 +342,11 @@ foreach ($contract in @('assembleRelease','ANDROID_KEYSTORE_BASE64','ANDROID_KEY
 }
 Assert-True (-not $apkWorkflow.Contains('gh release')) 'El workflow debug no debe publicar GitHub Releases'
 Assert-True ($androidReleaseTest.Contains('Release Android separado')) 'Falta prueba de separacion debug/release'
+foreach ($contract in @('globalLiveRegion',':focus-visible','prefers-reduced-motion','safe-area-inset-bottom','applyAccessibilityEnhancements','label.htmlFor=control.id','trapOverlayFocus','preferredMotionBehavior')) {
+    Assert-True ($html.Contains($contract)) "Falta contrato de accesibilidad: $contract"
+}
+Assert-True ($accessibilityTest.Contains('Accesibilidad correcta')) 'Falta prueba automatica de accesibilidad'
+Assert-True ($releaseWorkflow.Contains('node ./scripts/test-accessibility.mjs')) 'El release Android debe probar accesibilidad web'
 Assert-True (-not $gymParty.Contains('members: undefined')) 'Gym Party no debe enviar members: undefined a Firestore'
 Assert-True ($gymParty.Contains('delete partyDoc.members')) 'Gym Party debe eliminar members antes de crear gym_parties en Firestore'
 foreach ($removedAction in @(
@@ -504,6 +511,7 @@ foreach ($workflow in @($deployWorkflow, $apkWorkflow, $validationWorkflow)) {
     Assert-True ($workflow.Contains('node ./scripts/test-gym-party-sync.mjs')) 'Cada workflow debe probar sync incremental'
     Assert-True ($workflow.Contains('node ./scripts/test-android-webview-security.mjs')) 'Cada workflow debe probar seguridad WebView Android'
     Assert-True ($workflow.Contains('node ./scripts/test-android-release.mjs')) 'Cada workflow debe probar contratos de release Android'
+    Assert-True ($workflow.Contains('node ./scripts/test-accessibility.mjs')) 'Cada workflow debe probar accesibilidad web y movil'
 }
 foreach ($contract in @('Torso A', 'Pierna A', 'Torso B', 'Pierna B', 'Torso C', 'Rutina propia', 'buildWorkoutWidgetState', 'updateQuickSetPayload', 'deleteQuickSetPayload')) {
     Assert-True ($workoutTest.Contains($contract)) "Falta prueba workout: $contract"

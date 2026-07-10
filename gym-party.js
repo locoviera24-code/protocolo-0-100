@@ -1443,8 +1443,8 @@
       return `<div class="partySetRow">
         <div><strong>${escape(set.exerciseName || set.exerciseId || 'Ejercicio')}</strong><span>${escape(set.date || '')} - Serie ${set.setNumber || ''} - ${number(set.reps)} reps - ${escape(weight)}</span></div>
         <div class="partySetRowActions">
-          <button type="button" class="secondary" data-gym-party-action="party-edit-set" data-party-date="${escape(set.date || reference)}" data-party-exercise-id="${escape(set.localExerciseId || set.exerciseId || '')}" data-party-set-id="${escape(set.localSetId || set.id)}">Editar</button>
-          <button type="button" class="danger" data-gym-party-action="party-delete-set" data-party-date="${escape(set.date || reference)}" data-party-exercise-id="${escape(set.localExerciseId || set.exerciseId || '')}" data-party-set-id="${escape(set.localSetId || set.id)}">Eliminar</button>
+          <button type="button" class="secondary" data-gym-party-action="party-edit-set" data-party-date="${escape(set.date || reference)}" data-party-exercise-id="${escape(set.localExerciseId || set.exerciseId || '')}" data-party-set-id="${escape(set.localSetId || set.id)}" aria-label="Editar serie ${set.setNumber||''} de ${escape(set.exerciseName||'ejercicio')}">Editar</button>
+          <button type="button" class="danger" data-gym-party-action="party-delete-set" data-party-date="${escape(set.date || reference)}" data-party-exercise-id="${escape(set.localExerciseId || set.exerciseId || '')}" data-party-set-id="${escape(set.localSetId || set.id)}" aria-label="Eliminar serie ${set.setNumber||''} de ${escape(set.exerciseName||'ejercicio')}">Eliminar</button>
         </div>
       </div>`;
     }).join('') : '<div class="emptyState">No hay series tuyas en la semana seleccionada.</div>';
@@ -1592,8 +1592,8 @@
       return `<div class="partySetRow ${active ? 'editing' : ''}">
         <div><strong>Serie ${set.setNumber || ''}</strong><span>${escape(meta)}</span></div>
         <div class="partySetRowActions">
-          <button type="button" class="secondary" data-gym-party-action="party-edit-set" data-party-set-id="${escape(set.id)}">Editar</button>
-          <button type="button" class="danger" data-gym-party-action="party-delete-set" data-party-set-id="${escape(set.id)}">Eliminar</button>
+          <button type="button" class="secondary" data-gym-party-action="party-edit-set" data-party-set-id="${escape(set.id)}" aria-label="Editar serie ${set.setNumber||''} de ${escape(state.currentExerciseName||'ejercicio')}">Editar</button>
+          <button type="button" class="danger" data-gym-party-action="party-delete-set" data-party-set-id="${escape(set.id)}" aria-label="Eliminar serie ${set.setNumber||''} de ${escape(state.currentExerciseName||'ejercicio')}">Eliminar</button>
         </div>
       </div>`;
     }).join('')}</div>
@@ -1877,7 +1877,7 @@
       .partyAccessGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
       .partyAccessGrid .field{margin:0}
       .partySaveRow{margin-top:12px}
-      .partyStickySave{position:sticky;bottom:8px;z-index:35;display:grid;grid-template-columns:1.4fr 1fr .85fr;gap:8px;padding:9px;border:1px solid rgba(114,214,255,.30);border-radius:15px;background:rgba(11,18,32,.96);box-shadow:0 12px 30px rgba(0,0,0,.3);backdrop-filter:blur(12px)}
+      .partyStickySave{position:sticky;bottom:max(8px,env(safe-area-inset-bottom));z-index:35;display:grid;grid-template-columns:1.4fr 1fr .85fr;gap:8px;padding:9px;border:1px solid rgba(114,214,255,.30);border-radius:15px;background:rgba(11,18,32,.96);box-shadow:0 12px 30px rgba(0,0,0,.3);backdrop-filter:blur(12px)}
       .partyStickySave button{min-height:50px}.partyQuickAdjust{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:6px}.partyQuickAdjust button{min-height:36px;padding:6px 4px;font-size:11px}
       .partyRestTimer{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:8px 0;padding:9px 11px;border-radius:12px;background:rgba(114,214,255,.08);color:#dff6ff}.partyRestTimer.hidden{display:none}
       .partyInlineAction{width:100%;min-height:46px;margin-top:8px}
