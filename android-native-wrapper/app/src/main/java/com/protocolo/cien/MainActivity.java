@@ -10,19 +10,26 @@ import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.speech.RecognizerIntent;
 import android.webkit.JavascriptInterface;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
-import android.webkit.WebViewClient;
+
+import androidx.webkit.WebViewAssetLoader;
+import androidx.webkit.WebViewClientCompat;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -45,6 +52,8 @@ public class MainActivity extends Activity {
     public static final String ACTION_WIDGET_PREVIOUS_EXERCISE = "com.protocolo.cien.ACTION_WIDGET_PREVIOUS_EXERCISE";
     public static final String ACTION_WIDGET_NEXT_EXERCISE = "com.protocolo.cien.ACTION_WIDGET_NEXT_EXERCISE";
     private static final int SPEECH_REQUEST_CODE = 4100;
+    private static final String APP_HOST = "appassets.androidplatform.net";
+    private static final String APP_URL = "https://" + APP_HOST + "/assets/index.html";
     private WebView webView;
     private Intent pendingWidgetIntent;
 
@@ -58,16 +67,45 @@ public class MainActivity extends Activity {
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
         settings.setDatabaseEnabled(true);
-        settings.setAllowFileAccess(true);
+        settings.setAllowFileAccess(false);
         settings.setAllowContentAccess(false);
         settings.setAllowFileAccessFromFileURLs(false);
-        settings.setAllowUniversalAccessFromFileURLs(true);
+        settings.setAllowUniversalAccessFromFileURLs(false);
+        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) settings.setSafeBrowsingEnabled(true);
+
+        WebViewAssetLoader assetLoader = new WebViewAssetLoader.Builder()
+                .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this))
+                .build();
 
         pendingWidgetIntent = getIntent();
-        webView.setWebViewClient(new WebViewClient() {
+        webView.setWebViewClient(new WebViewClientCompat() {
+            @Override
+            public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+                return resolveWebResource(assetLoader, request.getUrl());
+            }
+
+            @Override
+            @SuppressWarnings("deprecation")
+            public WebResourceResponse shouldInterceptRequest(WebView view, String url) {
+                return resolveWebResource(assetLoader, Uri.parse(url));
+            }
+
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                return handleNavigation(request.getUrl(), request.isForMainFrame());
+            }
+
+            @Override
+            @SuppressWarnings("deprecation")
+            public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                return handleNavigation(Uri.parse(url), true);
+            }
+
             @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
+                if (!isTrustedAppUrl(Uri.parse(url))) return;
                 dispatchWidgetIntentToWeb(pendingWidgetIntent);
                 pendingWidgetIntent = null;
             }
@@ -75,7 +113,53 @@ public class MainActivity extends Activity {
         webView.addJavascriptInterface(new AndroidBridge(this), "AndroidBridge");
         webView.addJavascriptInterface(new AndroidUsageBridge(this), "AndroidUsageBridge");
         webView.addJavascriptInterface(new AndroidSpeechBridge(), "AndroidSpeechBridge");
-        webView.loadUrl("file:///android_asset/index.html");
+        webView.loadUrl(APP_URL);
+    }
+
+    private boolean isTrustedAppUrl(Uri uri) {
+        return uri != null
+                && "https".equalsIgnoreCase(uri.getScheme())
+                && APP_HOST.equalsIgnoreCase(uri.getHost());
+    }
+
+    private boolean isAllowedRemoteResource(Uri uri) {
+        if (uri == null) return false;
+        String scheme = uri.getScheme() == null ? "" : uri.getScheme().toLowerCase(Locale.ROOT);
+        if ("blob".equals(scheme) || "data".equals(scheme) || "about".equals(scheme)) return true;
+        if (!"https".equals(scheme)) return false;
+        String host = uri.getHost() == null ? "" : uri.getHost().toLowerCase(Locale.ROOT);
+        return APP_HOST.equals(host)
+                || "www.gstatic.com".equals(host)
+                || "api.nal.usda.gov".equals(host)
+                || host.endsWith(".googleapis.com")
+                || host.endsWith(".firebaseapp.com");
+    }
+
+    private WebResourceResponse resolveWebResource(WebViewAssetLoader loader, Uri uri) {
+        WebResourceResponse local = loader.shouldInterceptRequest(uri);
+        if (local != null || isAllowedRemoteResource(uri)) return local;
+        return new WebResourceResponse(
+                "text/plain",
+                "UTF-8",
+                403,
+                "Blocked by app policy",
+                Collections.emptyMap(),
+                new ByteArrayInputStream(new byte[0])
+        );
+    }
+
+    private boolean handleNavigation(Uri uri, boolean mainFrame) {
+        if (!mainFrame || isTrustedAppUrl(uri)) return false;
+        if (uri == null) return true;
+        String scheme = uri.getScheme() == null ? "" : uri.getScheme().toLowerCase(Locale.ROOT);
+        if ("blob".equals(scheme) && uri.toString().startsWith("blob:https://" + APP_HOST + "/")) return false;
+        if ("https".equals(scheme) || "http".equals(scheme) || "mailto".equals(scheme) || "tel".equals(scheme)) {
+            try {
+                startActivity(new Intent(Intent.ACTION_VIEW, uri));
+            } catch (Exception ignored) {
+            }
+        }
+        return true;
     }
 
     @Override

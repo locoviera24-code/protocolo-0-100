@@ -54,5 +54,8 @@ jobs:
       - name: Probar sincronizacion incremental
         run: node ./scripts/test-gym-party-sync.mjs
 
+      - name: Probar seguridad del WebView Android
+        run: node ./scripts/test-android-webview-security.mjs
+
       - name: Probar reglas Firestore en Emulator
         run: npm run test:rules

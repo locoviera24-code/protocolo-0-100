@@ -65,6 +65,9 @@ jobs:
       - name: Probar sincronizacion incremental
         run: node ./scripts/test-gym-party-sync.mjs
 
+      - name: Probar seguridad del WebView Android
+        run: node ./scripts/test-android-webview-security.mjs
+
       - name: Configurar Gradle
         uses: gradle/actions/setup-gradle@v4
         with:

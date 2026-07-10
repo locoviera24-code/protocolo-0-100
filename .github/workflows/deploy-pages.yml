@@ -64,6 +64,9 @@ jobs:
       - name: Probar sincronizacion incremental
         run: node ./scripts/test-gym-party-sync.mjs
 
+      - name: Probar seguridad del WebView Android
+        run: node ./scripts/test-android-webview-security.mjs
+
       - name: Preparar archivos publicos
         run: |
           mkdir -p dist-pages/icons

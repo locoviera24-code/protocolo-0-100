@@ -42,6 +42,7 @@ $workoutMetricsTest = Read-Utf8 'scripts/test-workout-metrics.mjs'
 $firestoreRules = Read-Utf8 'firebase/firestore.rules'
 $firestoreRulesTest = Read-Utf8 'firebase/rules.test.mjs'
 $gymPartySyncTest = Read-Utf8 'scripts/test-gym-party-sync.mjs'
+$androidSecurityTest = Read-Utf8 'scripts/test-android-webview-security.mjs'
 $readme = Read-Utf8 'README.md'
 $handoff = Read-Utf8 'CODEX_HANDOFF.md'
 
@@ -58,6 +59,7 @@ Assert-True ($duplicates.Count -eq 0) "Hay IDs HTML duplicados: $($duplicates -j
 $requiredFiles = @(
     'nutrition-data.js', 'fdc-client.js', 'workout-metrics.js', 'workout-ranking.js', 'workout-features.js', 'advanced-features.js',
     'firebase-config.js', 'gym-party-sync.js', 'gym-party.js',
+    'scripts/test-android-webview-security.mjs',
     'manifest.webmanifest', 'sw.js',
     'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetProvider.java',
     'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetUpdateService.java',
@@ -302,6 +304,12 @@ foreach ($contract in @('dirty flags','conflicto LWW','tombstones','backoff','ti
     Assert-True ($gymPartySyncTest.Contains($contract)) "Falta prueba de sync incremental: $contract"
 }
 Assert-True (Test-Path -LiteralPath (Join-Path $repoRoot 'firebase/firestore.indexes.json') -PathType Leaf) 'Faltan indices Firestore para sync incremental'
+foreach ($contract in @('WebViewAssetLoader','appassets.androidplatform.net','setAllowFileAccess(false)','setAllowContentAccess(false)','setAllowUniversalAccessFromFileURLs(false)','MIXED_CONTENT_NEVER_ALLOW','handleNavigation','www.gstatic.com','.googleapis.com','.firebaseapp.com','api.nal.usda.gov','AndroidBridge','AndroidUsageBridge','AndroidSpeechBridge')) {
+    Assert-True ($mainActivity.Contains($contract)) "Falta endurecimiento Android WebView: $contract"
+}
+Assert-True (-not $mainActivity.Contains('loadUrl("file:')) 'MainActivity no debe cargar la app mediante file://'
+Assert-True ($androidBuild.Contains("androidx.webkit:webkit:1.15.0")) 'Falta dependencia AndroidX WebKit compatible con minSdk 23'
+Assert-True ($androidManifest.Contains('android.webkit.WebView.EnableSafeBrowsing')) 'Falta Safe Browsing en AndroidManifest'
 Assert-True (-not $gymParty.Contains('members: undefined')) 'Gym Party no debe enviar members: undefined a Firestore'
 Assert-True ($gymParty.Contains('delete partyDoc.members')) 'Gym Party debe eliminar members antes de crear gym_parties en Firestore'
 foreach ($removedAction in @(
@@ -462,6 +470,7 @@ foreach ($workflow in @($deployWorkflow, $apkWorkflow, $validationWorkflow)) {
     Assert-True ($workflow.Contains('node ./scripts/test-workout-metrics.mjs')) 'Cada workflow debe probar metricas de gimnasio'
     Assert-True ($workflow.Contains('node ./scripts/test-gym-party.mjs')) 'Cada workflow debe probar Gym Party'
     Assert-True ($workflow.Contains('node ./scripts/test-gym-party-sync.mjs')) 'Cada workflow debe probar sync incremental'
+    Assert-True ($workflow.Contains('node ./scripts/test-android-webview-security.mjs')) 'Cada workflow debe probar seguridad WebView Android'
 }
 foreach ($contract in @('Torso A', 'Pierna A', 'Torso B', 'Pierna B', 'Torso C', 'Rutina propia', 'buildWorkoutWidgetState', 'updateQuickSetPayload', 'deleteQuickSetPayload')) {
     Assert-True ($workoutTest.Contains($contract)) "Falta prueba workout: $contract"
