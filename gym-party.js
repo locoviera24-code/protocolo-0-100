@@ -2435,6 +2435,17 @@
       throw new Error('Este navegador perdio la sesion anonima original. Tus entrenamientos locales siguen guardados; para volver a sincronizar, unite otra vez con el codigo de la sala.');
     }
   }
+  async function firebaseStage(stage, operation){
+    try{
+      return await operation();
+    }catch(error){
+      const wrapped = new Error(`${stage}: ${error?.message || error}`);
+      wrapped.code = error?.code || '';
+      wrapped.gymPartyStage = stage;
+      wrapped.cause = error;
+      throw wrapped;
+    }
+  }
   function hasFirebaseConfig(config){
     if(window.FIREBASE_SERVICE?.hasConfig) return window.FIREBASE_SERVICE.hasConfig(config);
     return !!(config && config.apiKey && config.authDomain && config.projectId && config.appId);
@@ -2700,10 +2711,10 @@
       const membersQuery=firestoreMod.query(firestoreMod.collection(db,collections.members),firestoreMod.where('partyId','==',m.partyId),firestoreMod.where('active','==',true),firestoreMod.limit(MAX_GYM_PARTY_MEMBERS+1));
       const shouldFull=full||!lastRemoteSyncAt();
       const [partySnap,membersSnap,remoteSessions,remoteSets]=await Promise.all([
-        firestoreMod.getDoc(firestoreMod.doc(db,collections.parties,m.partyId)),
-        firestoreMod.getDocs(membersQuery),
-        fetchRemoteCollection(runtime,collections.sessions,{full:shouldFull,pageSize:120}),
-        fetchRemoteCollection(runtime,collections.sets,{full:shouldFull,pageSize:300})
+        firebaseStage('leer sala',()=>firestoreMod.getDoc(firestoreMod.doc(db,collections.parties,m.partyId))),
+        firebaseStage('leer miembros',()=>firestoreMod.getDocs(membersQuery)),
+        firebaseStage('leer sesiones',()=>fetchRemoteCollection(runtime,collections.sessions,{full:shouldFull,pageSize:120})),
+        firebaseStage('leer series',()=>fetchRemoteCollection(runtime,collections.sets,{full:shouldFull,pageSize:300}))
       ]);
       const localSessions=sharedSessions(),localSets=sharedSets();
       const partySessions=localSessions.filter(row=>row.partyId===m.partyId),partySets=localSets.filter(row=>row.partyId===m.partyId);
@@ -2713,7 +2724,7 @@
       saveSharedSets([...localSets.filter(row=>row.partyId!==m.partyId),...mergedSets]);
       discardResolvedQueueRows([...mergedSessions,...mergedSets]);
       reconcileOwnRemoteWorkouts(m,mergedSessions,mergedSets);
-      const upload=await uploadSyncQueue(runtime,{force});
+      const upload=await firebaseStage('subir cambios',()=>uploadSyncQueue(runtime,{force}));
       const members=membersSnap.docs.map(docSnap=>docSnap.data()),party={...(m.party||currentParty()||{}),...(partySnap.exists()?partySnap.data():{}),members,membersCount:members.length,maxMembers:partySnap.data()?.maxMembers||MAX_GYM_PARTY_MEMBERS};
       saveMembership({...m,party,inviteCode:party.inviteCode||m.inviteCode,updatedAt:nowIso()});
       const latest=syncEngine()?.latestRemoteTimestamp?.([...remoteSessions,...remoteSets])||''; if(latest) setLastRemoteSyncAt(latest);

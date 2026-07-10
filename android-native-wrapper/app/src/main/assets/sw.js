@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'protocolo-0-100-pwa-';
-const CACHE_NAME = `${CACHE_PREFIX}v37`;
+const CACHE_NAME = `${CACHE_PREFIX}v38`;
 const CORE_ASSETS = ['./', './index.html', './nutrition-data.js', './fdc-client.js', './workout-store.js', './workout-plan.js', './workout-metrics.js', './workout-ranking.js', './workout-ui.js', './workout-features.js', './firebase-service.js', './gym-party-sync.js', './gym-party-metrics.js', './gym-party-ui.js', './gym-party.js', './advanced-features.js', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
 const CORE_URLS = new Set(CORE_ASSETS.map(asset => new URL(asset, self.location.href).href));
 
