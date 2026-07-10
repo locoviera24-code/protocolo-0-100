@@ -112,12 +112,33 @@ const manualExercise = quickWorkout.addManualExercisePayload({
   date: '2026-06-22',
   name: 'Face pull',
   muscle: 'Hombro',
-  bodyweight: false
+  bodyweight: false,
+  persistScope: 'weekday',
+  rememberForWeekday: true,
+  saveToLibrary: true,
+  targetDayKey: 'monday'
 });
 assert.equal(manualExercise.ok, true);
 assert.equal(manualExercise.exercise.name, 'Face pull');
 assert.equal(manualExercise.state.currentExerciseName, 'Face pull');
 assert.equal(manualExercise.state.currentExerciseMuscle, 'Hombro');
+assert.equal(manualExercise.remembered, true);
+assert.equal(manualExercise.savedToLibrary, true);
+assert.match(manualExercise.message, /proximos lunes/);
+const rememberedMonday = quickWorkout.planForDate('2026-06-29').exercises.filter(exercise => exercise.exerciseId === manualExercise.exercise.exerciseId);
+assert.equal(rememberedMonday.length, 1);
+assert.equal(rememberedMonday[0].name, 'Face pull');
+assert.equal(JSON.parse(quickStore.get(quickWorkout.keys.exerciseLibrary)).some(exercise => exercise.id === manualExercise.exercise.exerciseId && exercise.origin === 'custom'), true);
+const duplicateManual = quickWorkout.addManualExercisePayload({
+  date: '2026-06-22',
+  name: 'face   pull',
+  muscle: 'Hombro',
+  persistScope: 'weekday',
+  rememberForWeekday: true,
+  targetDayKey: 'monday'
+});
+assert.equal(duplicateManual.reused, true);
+assert.equal(quickWorkout.planForDate('2026-06-29').exercises.filter(exercise => exercise.exerciseId === manualExercise.exercise.exerciseId).length, 1);
 const manualSaved = quickWorkout.saveQuickSetPayload({
   date: '2026-06-22',
   exerciseId: manualExercise.exercise.id,
@@ -167,4 +188,4 @@ const {context: customContext} = createContext({
 });
 assert.equal(customContext.WORKOUT_FEATURES.planForDate('2026-06-22').name, 'Rutina propia');
 
-console.log('Workout features correcto: plan semanal, descanso, widget state, editar/eliminar serie, ejercicio manual, importacion directa y no sobrescritura.');
+console.log('Workout features correcto: plan semanal, persistencia weekday/biblioteca, deduplicacion, widget state, editar/eliminar serie e importacion directa.');

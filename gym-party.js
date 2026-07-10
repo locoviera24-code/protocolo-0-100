@@ -1501,6 +1501,10 @@
       </div>`;
     }
     const options = (state.exercises||[]).map(exercise => `<option value="${escape(exercise.id||exercise.exerciseId)}" ${selectedId===(exercise.id||exercise.exerciseId)?'selected':''}>${escape(exercise.name)} · ${exercise.setsLogged||0} serie(s)</option>`).join('');
+    const library = safeArray(api.exerciseLibrary).concat(safeArray(api.getExerciseLibrary?.())).filter((exercise,index,rows)=>rows.findIndex(item=>item.id===exercise.id)===index);
+    const libraryOptions = library.map(exercise=>`<option value="${escape(exercise.name)}">${escape(exercise.group||'General')}</option>`).join('');
+    const positionOptions = [`<option value="">Al final</option>`,...(state.exercises||[]).map(exercise=>`<option value="${escape(exercise.id||exercise.exerciseId)}">Despues de ${escape(exercise.name)}</option>`)].join('');
+    const weekday = state.plan?.weekday || weekdayLabel(date);
     const h = state.history;
     const editingSetId = settings().partyEditingSetId || '';
     const editingSet = safeArray(state.currentSets).find(set => set.id === editingSetId) || null;
@@ -1556,12 +1560,16 @@
         ${partySetRowsHtml(state, editingSetId)}
         <details class="partyNestedFold partyAddExerciseFold">
           <summary>Agregar ejercicio extra</summary>
+          <div class="field"><label>Buscar o escribir ejercicio</label><input type="search" id="partyManualExerciseName" list="partyExerciseLibraryOptions" autocomplete="off" placeholder="Ej. Face pull"><datalist id="partyExerciseLibraryOptions">${libraryOptions}</datalist></div>
           <div class="partyQuickInputs">
-            <div class="field"><label>Nombre</label><input type="text" id="partyManualExerciseName" placeholder="Ej. Face pull"></div>
             <div class="field"><label>Musculo</label><input type="text" id="partyManualExerciseMuscle" placeholder="Ej. Hombro"></div>
+            <div class="field"><label>Unidad</label><select id="partyManualExerciseUnit"><option value="kg">kg</option><option value="peso corporal">Peso corporal</option><option value="tiempo">Tiempo</option></select></div>
+            <div class="field"><label>Posicion</label><select id="partyManualInsertAfter">${positionOptions}</select></div>
           </div>
           <label class="check"><input type="checkbox" id="partyManualBodyweight"><span>Es peso corporal o sin kilos fijos.</span></label>
-          <button type="button" class="secondary partyInlineAction" data-gym-party-action="party-add-exercise">Agregar a este entrenamiento</button>
+          <label class="check"><input type="checkbox" id="partyManualRememberWeekday" checked><span>Recordar para los proximos ${escape(weekday.toLowerCase())}.</span></label>
+          <label class="check"><input type="checkbox" id="partyManualSaveLibrary"><span>Guardar en mi biblioteca de ejercicios.</span></label>
+          <button type="button" class="secondary partyInlineAction" data-gym-party-action="party-add-exercise">Agregar ejercicio</button>
         </details>
       </div>
     </div>`;
@@ -1930,12 +1938,28 @@
     const name = document.getElementById('partyManualExerciseName')?.value.trim() || '';
     const muscle = document.getElementById('partyManualExerciseMuscle')?.value.trim() || 'General';
     const bodyweight = !!document.getElementById('partyManualBodyweight')?.checked;
-    const result = api.addManualExercisePayload({date: selectedWorkoutDate(), name, muscle, bodyweight});
+    const rememberForWeekday = !!document.getElementById('partyManualRememberWeekday')?.checked;
+    const saveToLibrary = !!document.getElementById('partyManualSaveLibrary')?.checked;
+    const unit = document.getElementById('partyManualExerciseUnit')?.value || 'kg';
+    const insertAfterExerciseId = document.getElementById('partyManualInsertAfter')?.value || '';
+    const date = selectedWorkoutDate();
+    const result = api.addManualExercisePayload({
+      date,
+      name,
+      muscle,
+      unit,
+      bodyweight,
+      persistScope: rememberForWeekday ? 'weekday' : (saveToLibrary ? 'library' : 'session'),
+      rememberForWeekday,
+      saveToLibrary,
+      insertAfterExerciseId,
+      targetDayKey: api.dayKeyForDate?.(date)
+    });
     if(!result.ok){ flashMessage(result.message || 'No se pudo agregar el ejercicio.'); return; }
     saveSettings({partyQuickExerciseId: result.exercise?.id || result.state?.currentExerciseId || ''});
     refreshPartyWorkoutShare();
     renderGymParty();
-    flashMessage('Ejercicio agregado. Ya podes registrar la serie.');
+    flashMessage(result.message || 'Ejercicio agregado. Ya podes registrar la serie.');
   }
   function savePartyWorkoutSet(){
     const api = workoutApi();
