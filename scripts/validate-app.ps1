@@ -85,6 +85,12 @@ foreach ($script in @('nutrition-data.js', 'fdc-client.js', 'workout-metrics.js'
 foreach ($contract in @('calculateSetMetrics','calculateSetsMetrics','bodyweightReps','addedLoadVolume','estimatedOneRepMax','Sin series registradas')) {
     Assert-True ($workoutMetrics.Contains($contract)) "Falta contrato de metricas de gym: $contract"
 }
+foreach ($contract in @('quickStickyActions','data-quick-adjust="reps:1"','data-quick-adjust="weight:0.5"','data-quick-adjust="weight:2.5"','data-quick-adjust="weight:5"','undoDeleteQuickSetPayload','restTimerEnabled','hapticEnabled','quickDrafts','Finalizar el entrenamiento de hoy?')) {
+    Assert-True ($workout.Contains($contract)) "Falta UX de registro rapido Gym: $contract"
+}
+foreach ($contract in @('partyStickySave','data-party-adjust="reps:1"','data-party-adjust="weight:0.5"','data-party-adjust="weight:2.5"','data-party-adjust="weight:5"','partyQuickDrafts','party-undo-delete-set','Finalizar este entrenamiento?')) {
+    Assert-True ($gymParty.Contains($contract)) "Falta UX de registro rapido Gym Party: $contract"
+}
 Assert-True ($html.Contains('<script src="firebase-config.js"></script>')) 'index.html no carga firebase-config.js'
 Assert-True ($html.IndexOf('<script src="firebase-config.js"></script>') -lt $html.IndexOf('<script src="gym-party.js"></script>')) 'firebase-config.js debe cargarse antes de gym-party.js'
 Assert-True ($html.IndexOf('<script src="gym-party-sync.js"></script>') -lt $html.IndexOf('<script src="gym-party.js"></script>')) 'gym-party-sync.js debe cargarse antes de gym-party.js'

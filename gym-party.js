@@ -79,6 +79,9 @@
 
   let firebaseRuntime = null;
   let firebaseInitPromise = null;
+  const partyQuickDrafts = new Map();
+  let partyRestTimerInterval = null;
+  let partyRestTimerEndsAt = 0;
 
   function read(key, fallback){
     try{
@@ -729,7 +732,8 @@
     const sessions=m.backendMode==='firebase'?(syncEngine()?.prepareLocalRows?.(sessionBase,ownExistingSessions)||sessionBase):sessionBase.map(row=>({...row,pendingSync:false,dirty:false,syncState:'local'}));
     const sets=m.backendMode==='firebase'?(syncEngine()?.prepareLocalRows?.(setBase,ownExistingSets)||setBase):setBase.map(row=>({...row,pendingSync:false,dirty:false,syncState:'local'}));
     const deletedSets=localSetTombstones(ownExistingSets,sessions,sets,member);
-    const existingTombstones=ownExistingSets.filter(row=>row.deleted||row.deletedAt);
+    const currentPreparedSetIds=new Set(sets.map(row=>row.id));
+    const existingTombstones=ownExistingSets.filter(row=>(row.deleted||row.deletedAt)&&!currentPreparedSetIds.has(row.id));
     const withoutOwnSessions = sharedSessions().filter(row => !(row.partyId === m.partyId && row.userId === m.userId));
     const withoutOwnSets = sharedSets().filter(row => !(row.partyId === m.partyId && row.userId === m.userId));
     saveSharedSessions(upsertById(withoutOwnSessions, sessions));
@@ -1557,6 +1561,25 @@
   function selectedPartyExerciseId(){
     return settings().partyQuickExerciseId || '';
   }
+  function partyDraftKey(date=selectedWorkoutDate(),exerciseId=partyWorkoutSelectedExerciseId(),editingSetId=settings().partyEditingSetId||''){
+    return `${date}:${exerciseId||''}:${editingSetId||'new'}`;
+  }
+  function capturePartyQuickDraft(){
+    const select=document.getElementById('partyQuickExerciseSelect');if(!select)return;
+    partyQuickDrafts.set(partyDraftKey(selectedWorkoutDate(),select.value,settings().partyEditingSetId||''),{
+      reps:document.getElementById('partyQuickReps')?.value??'',weight:document.getElementById('partyQuickWeight')?.value??'',bodyweight:!!document.getElementById('partyQuickBodyweight')?.checked,rir:document.getElementById('partyQuickRir')?.value??'',rpe:document.getElementById('partyQuickRpe')?.value??'',note:document.getElementById('partyQuickNote')?.value??''
+    });
+  }
+  function updatePartyRestTimer(){
+    const box=document.getElementById('partyRestTimer'),value=document.getElementById('partyRestTimerValue');if(!box||!value)return;
+    const remaining=Math.max(0,Math.ceil((partyRestTimerEndsAt-Date.now())/1000));box.classList.toggle('hidden',!partyRestTimerEndsAt||remaining<=0);value.textContent=`${Math.floor(remaining/60)}:${String(remaining%60).padStart(2,'0')}`;
+    if(partyRestTimerEndsAt&&remaining<=0){partyRestTimerEndsAt=0;if(partyRestTimerInterval){clearInterval(partyRestTimerInterval);partyRestTimerInterval=null;}const gym=workoutApi()?.getGymSettings?.()||{};if(gym.hapticEnabled&&navigator.vibrate)navigator.vibrate([40,40,40]);}
+  }
+  function startPartyRestTimer(){
+    const gym=workoutApi()?.getGymSettings?.()||{};if(!gym.restTimerEnabled)return;
+    partyRestTimerEndsAt=Date.now()+Math.max(15,number(gym.restSeconds)||90)*1000;if(partyRestTimerInterval)clearInterval(partyRestTimerInterval);partyRestTimerInterval=setInterval(updatePartyRestTimer,1000);setTimeout(updatePartyRestTimer,0);
+  }
+  function partyHaptic(){const gym=workoutApi()?.getGymSettings?.()||{};if(gym.hapticEnabled&&navigator.vibrate)navigator.vibrate(35);}
   function partySetRowsHtml(state, editingSetId = ''){
     const sets = safeArray(state.currentSets);
     if(!sets.length) return '<div class="partyLoggedSets"><div class="partyLoggedSetsHeader"><strong>Series guardadas</strong><span>Sin series en este ejercicio.</span></div></div>';
@@ -1608,13 +1631,15 @@
     const h = state.history;
     const editingSetId = settings().partyEditingSetId || '';
     const editingSet = safeArray(state.currentSets).find(set => set.id === editingSetId) || null;
-    const repsValue = editingSet ? editingSet.reps : state.suggestedReps;
-    const weightValue = editingSet ? editingSet.weight : state.suggestedWeight;
-    const bodyweightValue = editingSet ? !!editingSet.bodyweight : state.bodyweight;
-    const rirValue = editingSet?.rir ?? 2;
-    const rpeValue = editingSet?.rpe ?? '';
-    const noteValue = editingSet?.note || '';
+    const draft=partyQuickDrafts.get(partyDraftKey(date,selectedId,editingSetId));
+    const repsValue = editingSet ? editingSet.reps : (draft?.reps??state.suggestedReps);
+    const weightValue = editingSet ? editingSet.weight : (draft?.weight??state.suggestedWeight);
+    const bodyweightValue = editingSet ? !!editingSet.bodyweight : (draft?.bodyweight??state.bodyweight);
+    const rirValue = editingSet?.rir ?? draft?.rir ?? 2;
+    const rpeValue = editingSet?.rpe ?? draft?.rpe ?? '';
+    const noteValue = editingSet?.note ?? draft?.note ?? '';
     const saveText = editingSet ? 'Guardar cambios' : 'Guardar serie';
+    const gymSettings=api.getGymSettings?.()||{};
     const hint = h ? `Ultima vez: ${h.name} - ${h.lastWeight||0} ${state.unit} x ${h.lastReps||0} reps.` : 'Sin historial previo. Empeza conservador y prioriza tecnica.';
     return `<div class="moduleCard partyWorkoutLogger">
       <div class="actionFocusTop">
@@ -1630,12 +1655,12 @@
         <div class="field"><label>Buscar ejercicio</label><input type="search" id="partyExerciseSearch" value="${escape(exerciseSearch)}" autocomplete="off" placeholder="Nombre o alias"></div>
         <div class="field"><label>Ejercicio</label><select id="partyQuickExerciseSelect">${options}</select></div>
         <div class="partyQuickInputs">
-          <div class="field"><label>Reps</label><input type="number" id="partyQuickReps" min="0" max="200" value="${escape(repsValue)}"></div>
-          <div class="field"><label>Kilos</label><input type="number" id="partyQuickWeight" min="0" step="0.5" value="${escape(weightValue)}"></div>
+          <div class="field"><label>Reps</label><input type="number" id="partyQuickReps" min="0" max="200" inputmode="numeric" value="${escape(repsValue)}"><div class="partyQuickAdjust"><button type="button" class="secondary" data-party-adjust="reps:-1">-1</button><button type="button" class="secondary" data-party-adjust="reps:1">+1</button></div></div>
+          <div class="field"><label>Kilos</label><input type="number" id="partyQuickWeight" min="0" step="0.5" inputmode="decimal" value="${escape(weightValue)}"><div class="partyQuickAdjust"><button type="button" class="secondary" data-party-adjust="weight:-0.5">-0.5</button><button type="button" class="secondary" data-party-adjust="weight:0.5">+0.5</button><button type="button" class="secondary" data-party-adjust="weight:-2.5">-2.5</button><button type="button" class="secondary" data-party-adjust="weight:2.5">+2.5</button><button type="button" class="secondary" data-party-adjust="weight:-5">-5</button><button type="button" class="secondary" data-party-adjust="weight:5">+5</button></div></div>
         </div>
-        <div class="partyWeightChips">
+        <details class="partyNestedFold compact"><summary>Pesos frecuentes</summary><div class="partyWeightChips">
           ${[0,5,10,20,40,60,80].map(value => `<button type="button" class="secondary" data-gym-party-weight="${value}">${value} kg</button>`).join('')}
-        </div>
+        </div></details>
         <label class="check"><input type="checkbox" id="partyQuickBodyweight" ${bodyweightValue?'checked':''}><span>Peso corporal / lastre opcional.</span></label>
         ${editingSet ? '<div class="auditItem good">Editando una serie guardada. Guardar cambios no crea una serie nueva.</div>' : ''}
         <details class="partyNestedFold">
@@ -1645,11 +1670,17 @@
             <div class="field"><label>RPE</label><input type="number" id="partyQuickRpe" min="0" max="10" step="0.5" value="${escape(rpeValue)}"></div>
           </div>
           <div class="field"><label>Nota</label><textarea id="partyQuickNote" placeholder="Tecnica, energia, ajuste...">${escape(noteValue)}</textarea></div>
+          <label class="check"><input type="checkbox" id="partyRestTimerEnabled" ${gymSettings.restTimerEnabled?'checked':''}><span>Cronometro de descanso al guardar.</span></label>
+          <div class="field"><label>Descanso (segundos)</label><input type="number" id="partyRestSeconds" min="15" max="600" step="15" value="${Math.max(15,number(gymSettings.restSeconds)||90)}"></div>
+          <label class="check"><input type="checkbox" id="partyHapticEnabled" ${gymSettings.hapticEnabled!==false?'checked':''}><span>Vibracion breve si el dispositivo permite.</span></label>
         </details>
         <div class="auditItem">${escape(hint)}</div>
-        <div class="partySaveRow">
+        <div class="partySaveRow partyStickySave">
           <button type="button" class="good partyPrimaryAction" data-gym-party-action="party-save-set">${escape(saveText)}</button>
+          <button type="button" class="secondary" data-gym-party-action="party-repeat-last-set">Repetir ultima</button>
+          <button type="button" class="secondary" data-gym-party-action="party-undo-delete-set" ${api.canUndoQuickSetDelete?.()?'':'disabled'}>Deshacer</button>
         </div>
+        <div class="partyRestTimer ${partyRestTimerEndsAt>Date.now()?'':'hidden'}" id="partyRestTimer" role="timer" aria-live="polite"><span>Descanso</span><strong id="partyRestTimerValue">0:00</strong></div>
         <div class="buttons partySecondaryActions">
           ${editingSet ? '<button type="button" class="secondary" data-gym-party-action="party-cancel-edit-set">Cancelar edicion</button>' : ''}
           <button type="button" class="warn" data-gym-party-action="party-finish-workout">Finalizar entrenamiento</button>
@@ -1846,6 +1877,9 @@
       .partyAccessGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
       .partyAccessGrid .field{margin:0}
       .partySaveRow{margin-top:12px}
+      .partyStickySave{position:sticky;bottom:8px;z-index:35;display:grid;grid-template-columns:1.4fr 1fr .85fr;gap:8px;padding:9px;border:1px solid rgba(114,214,255,.30);border-radius:15px;background:rgba(11,18,32,.96);box-shadow:0 12px 30px rgba(0,0,0,.3);backdrop-filter:blur(12px)}
+      .partyStickySave button{min-height:50px}.partyQuickAdjust{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:6px}.partyQuickAdjust button{min-height:36px;padding:6px 4px;font-size:11px}
+      .partyRestTimer{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:8px 0;padding:9px 11px;border-radius:12px;background:rgba(114,214,255,.08);color:#dff6ff}.partyRestTimer.hidden{display:none}
       .partyInlineAction{width:100%;min-height:46px;margin-top:8px}
       .partyGameCard{border-color:rgba(146,255,194,.28)}
       .partyLevelBar{height:14px;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:rgba(255,255,255,.07);margin:12px 0}
@@ -1907,7 +1941,7 @@
       .partyQuickInputs input{font-size:22px;font-weight:850;text-align:center;min-height:54px}
       .partyWeightChips{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:10px 0}
       .partyWeightChips button{min-height:42px}
-      @media(max-width:850px){.partyGrid,.partyMembers,.partyChartGrid,.partyCompareGrid,.partyCompareGrid.compact,.partyMiniSteps,.partyMainActions,.partyDateControls,.partyAccessGrid,.partyQuickInputs,.partySetCounters,.partySetRow,.partyMuscleMapShell,.partyMuscleChartGrid,.partyExerciseMetricGrid{grid-template-columns:1fr}.partySetRowActions{justify-content:stretch}.partySetRowActions button{flex:1}.partyHumanPanel{min-height:390px}.partyHumanCanvas{min-height:368px}.partyMuscleButton{min-width:104px;font-size:12px}.partyWeightChips{grid-template-columns:repeat(2,minmax(0,1fr))}.partyBarRow{grid-template-columns:92px minmax(0,1fr) 72px}.partyCodeBox{align-items:flex-start;flex-direction:column}.partyCodeBox strong{font-size:24px}}
+      @media(max-width:850px){.partyGrid,.partyMembers,.partyChartGrid,.partyCompareGrid,.partyCompareGrid.compact,.partyMiniSteps,.partyMainActions,.partyDateControls,.partyAccessGrid,.partyQuickInputs,.partySetCounters,.partySetRow,.partyMuscleMapShell,.partyMuscleChartGrid,.partyExerciseMetricGrid{grid-template-columns:1fr}.partySetRowActions{justify-content:stretch}.partySetRowActions button{flex:1}.partyHumanPanel{min-height:390px}.partyHumanCanvas{min-height:368px}.partyMuscleButton{min-width:104px;font-size:12px}.partyWeightChips{grid-template-columns:repeat(2,minmax(0,1fr))}.partyBarRow{grid-template-columns:92px minmax(0,1fr) 72px}.partyCodeBox{align-items:flex-start;flex-direction:column}.partyCodeBox strong{font-size:24px}.partyStickySave{grid-template-columns:1.25fr .9fr .75fr}.partyStickySave button{padding:8px 6px;font-size:12px}}
     `;
     document.head.appendChild(style);
   }
@@ -1919,6 +1953,7 @@
     const data = partyData();
     root.innerHTML = data?.party ? dashboardHtmlSimple(data) : noRoomHtmlSimple();
     bindGymPartyActionButtons(root);
+    setTimeout(updatePartyRestTimer,0);
   }
 
   function runGymPartyAction(action, event){
@@ -1953,6 +1988,8 @@
     else if(action === 'party-edit-set') editPartyWorkoutSet(event);
     else if(action === 'party-delete-set') deletePartyWorkoutSet(event);
     else if(action === 'party-cancel-edit-set') cancelPartyWorkoutSetEdit();
+    else if(action === 'party-repeat-last-set') repeatPartyWorkoutSet();
+    else if(action === 'party-undo-delete-set') undoPartyWorkoutSetDelete();
     else if(action === 'party-add-exercise') addPartyManualExercise();
     else if(action === 'party-finish-workout') finishPartyWorkout();
     else if(action === 'party-select-muscle') selectPartyMuscle(event);
@@ -1981,7 +2018,13 @@
       button.addEventListener('click', event => {
         event.preventDefault();
         const input = document.getElementById('partyQuickWeight');
-        if(input) input.value = button.dataset.gymPartyWeight;
+        if(input){input.value = button.dataset.gymPartyWeight;capturePartyQuickDraft();}
+      });
+    });
+    root.querySelectorAll('[data-party-adjust]').forEach(button=>{
+      if(button.dataset.partyAdjustBound==='1')return;button.dataset.partyAdjustBound='1';button.addEventListener('click',event=>{
+        event.preventDefault();const [target,delta]=button.dataset.partyAdjust.split(':'),input=document.getElementById(target==='reps'?'partyQuickReps':'partyQuickWeight');if(!input)return;
+        const value=Math.max(0,(number(input.value)+number(delta)));input.value=target==='reps'?Math.round(value):Math.round(value*2)/2;capturePartyQuickDraft();input.focus();
       });
     });
   }
@@ -2107,10 +2150,20 @@
       ? api.updateQuickSetPayload({...payload, setId: editingSetId})
       : api.saveQuickSetPayload(payload);
     if(!result.ok){ flashMessage(result.message || 'No se pudo guardar la serie.'); return; }
-    saveSettings({partyQuickExerciseId: result.state?.currentExerciseId || result.exercise?.id || partyWorkoutSelectedExerciseId(), partyEditingSetId: ''});
+    const nextExerciseId=result.state?.currentExerciseId||result.exercise?.id||partyWorkoutSelectedExerciseId();
+    partyQuickDrafts.delete(partyDraftKey(selectedWorkoutDate(),partyWorkoutSelectedExerciseId(),editingSetId));
+    partyQuickDrafts.set(partyDraftKey(selectedWorkoutDate(),nextExerciseId,''),{reps:payload.reps,weight:payload.weight,bodyweight:!!payload.bodyweight,rir:payload.rir,rpe:payload.rpe,note:''});
+    saveSettings({partyQuickExerciseId: nextExerciseId, partyEditingSetId: ''});
     refreshPartyWorkoutShare();
     renderGymParty();
+    partyHaptic();startPartyRestTimer();
     flashMessage(editingSetId ? 'Serie actualizada.' : 'Serie guardada en Gym Party.');
+  }
+  function repeatPartyWorkoutSet(){
+    const state=workoutApi()?.getQuickWorkoutState?.({date:selectedWorkoutDate(),exerciseId:partyWorkoutSelectedExerciseId()});
+    const last=safeArray(state?.currentSets).slice(-1)[0]||state?.history;if(!last){flashMessage('Todavia no hay una serie anterior para repetir.');return;}
+    const reps=document.getElementById('partyQuickReps'),weight=document.getElementById('partyQuickWeight'),body=document.getElementById('partyQuickBodyweight'),rir=document.getElementById('partyQuickRir');
+    if(reps)reps.value=last.reps??last.lastReps??8;if(weight)weight.value=last.weight??last.lastWeight??0;if(body)body.checked=!!last.bodyweight;if(rir&&last.rir!==null&&last.rir!==undefined)rir.value=last.rir;capturePartyQuickDraft();
   }
   function editPartyWorkoutSet(event){
     const button = event?.target?.closest?.('[data-party-set-id]');
@@ -2137,7 +2190,11 @@
     saveSettings({partyWorkoutDate: date, partyQuickExerciseId: result.state?.currentExerciseId || exerciseId, partyEditingSetId: nextEditing});
     refreshPartyWorkoutShare();
     renderGymParty();
-    flashMessage('Serie eliminada.');
+    flashMessage('Serie eliminada. Podes deshacerla enseguida.');
+  }
+  function undoPartyWorkoutSetDelete(){
+    const api=workoutApi(),result=api?.undoDeleteQuickSetPayload?.();if(!result?.ok){flashMessage(result?.message||'No hay una serie para restaurar.');return;}
+    saveSettings({partyWorkoutDate:result.session?.date||selectedWorkoutDate(),partyQuickExerciseId:result.state?.currentExerciseId||result.exercise?.id||'',partyEditingSetId:''});refreshPartyWorkoutShare();renderGymParty();flashMessage('Serie restaurada.');
   }
   function cancelPartyWorkoutSetEdit(){
     saveSettings({partyEditingSetId: ''});
@@ -2146,6 +2203,7 @@
   function finishPartyWorkout(){
     const api = workoutApi();
     if(!api?.finishWorkoutPayload){ flashMessage('Registro de gym no disponible todavia.'); return; }
+    if(window.confirm&&!window.confirm('Finalizar este entrenamiento? Las series seguiran disponibles para consultar y editar.'))return;
     const result = api.finishWorkoutPayload({date: selectedWorkoutDate()});
     if(!result.ok){ flashMessage(result.message || 'No se pudo finalizar.'); return; }
     refreshPartyWorkoutShare();
@@ -2729,6 +2787,12 @@
       if(event.target && event.target.id === 'partyWorkoutDateInput'){
         setPartyWorkoutDate(event.target.value || todayStr());
       }
+      if(event.target && ['partyRestTimerEnabled','partyRestSeconds','partyHapticEnabled'].includes(event.target.id)){
+        workoutApi()?.updateGymSettings?.({restTimerEnabled:!!document.getElementById('partyRestTimerEnabled')?.checked,restSeconds:Math.max(15,number(document.getElementById('partyRestSeconds')?.value)||90),hapticEnabled:!!document.getElementById('partyHapticEnabled')?.checked});
+      }
+    });
+    document.addEventListener('input',event=>{
+      if(event.target&&['partyQuickReps','partyQuickWeight','partyQuickBodyweight','partyQuickRir','partyQuickRpe','partyQuickNote'].includes(event.target.id))capturePartyQuickDraft();
     });
     if(typeof window.addEventListener === 'function'){
       window.addEventListener('online', () => {

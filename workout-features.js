@@ -71,6 +71,11 @@
   let currentQuickExerciseId=null;
   let currentPlanEditorDay='monday';
   let lastDeletedPlanExercise=null;
+  let lastDeletedQuickSet=null;
+  let editingQuickSetId='';
+  const quickDrafts=new Map();
+  let restTimerInterval=null;
+  let restTimerEndsAt=0;
   let importingNativeWidgetState=false;
 
   function ex(id,name,aliases,muscle,type,unit,primary,secondary,notes){
@@ -115,7 +120,7 @@
     return ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][jsDay];
   }
   function settings(){
-    return {...{widgetEnabled:true,showRir:true,unit:'kg',mode:'simple',showRestDays:true},...getLocalData(keys.gymSettings,{})};
+    return {...{widgetEnabled:true,showRir:true,unit:'kg',mode:'simple',showRestDays:true,restTimerEnabled:false,restSeconds:90,hapticEnabled:true},...getLocalData(keys.gymSettings,{})};
   }
   function saveSettings(next){
     setLocalData(keys.gymSettings,{...settings(),...next});
@@ -428,6 +433,12 @@
       .quickLogger{border:1px solid rgba(114,214,255,.35);background:linear-gradient(180deg,rgba(114,214,255,.10),rgba(152,245,194,.055));border-radius:18px;padding:14px;margin-top:12px}
       .quickLogger input,.quickLogger select{font-size:18px;padding:13px 12px}
       .quickLogger .buttons button{min-height:46px}
+      .quickPrimaryInputs{display:grid;grid-template-columns:.7fr 1fr 1fr;gap:10px;margin-top:10px}
+      .quickAdjustRow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:6px}.quickAdjustRow button{min-height:38px;padding:7px 5px;font-size:12px}
+      .quickStickyActions{position:sticky;bottom:8px;z-index:35;display:grid;grid-template-columns:minmax(0,1.5fr) repeat(2,minmax(0,1fr));gap:8px;margin:12px -4px 8px;padding:9px;border:1px solid rgba(114,214,255,.32);border-radius:15px;background:rgba(11,18,32,.96);box-shadow:0 12px 30px rgba(0,0,0,.3);backdrop-filter:blur(12px)}
+      .quickStickyActions button{min-height:50px}.quickRestTimer{display:flex;justify-content:space-between;gap:10px;align-items:center;margin:8px 0;padding:9px 11px;border-radius:12px;background:rgba(114,214,255,.08);color:#dff6ff}.quickRestTimer.hidden{display:none}
+      .quickLoggedSets{display:grid;gap:6px;margin-top:8px}.quickLoggedSet{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:12px;background:rgba(0,0,0,.09)}.quickLoggedSet span{color:var(--muted);font-size:12px}.quickLoggedSet .buttons{margin:0}.quickLoggedSet button{min-height:32px!important;padding:6px 8px;font-size:11px}
+      .quickSecondaryDetails{margin-top:8px;border-top:1px solid var(--line);padding-top:9px}.quickSecondaryDetails summary{cursor:pointer;font-weight:750;color:#dff6ff}
       .planEditorTextarea{min-height:150px;font-family:ui-monospace,Consolas,monospace;font-size:12px}
       .planEditorCards{display:grid;gap:10px;margin-top:12px}
       .planExerciseEditorCard{border:1px solid var(--line);border-radius:16px;padding:12px;background:rgba(255,255,255,.035)}
@@ -448,7 +459,7 @@
       .workoutSafety{border:1px solid rgba(255,211,110,.30);border-radius:14px;padding:12px;background:rgba(255,211,110,.08);color:#ffe8ad;margin-top:12px}
       .widgetStatus{border:1px dashed rgba(114,214,255,.35);border-radius:14px;padding:10px;background:rgba(114,214,255,.06);color:#dff6ff;margin-top:10px}
       @media(max-width:850px){.workoutTodayGrid{grid-template-columns:1fr}.quickLogger input,.quickLogger select{font-size:16px}.planExerciseFields{grid-template-columns:1fr 1fr}.planExerciseFields .wide{grid-column:span 2}.planExerciseEditorHead{display:block}.planExerciseActions{justify-content:flex-start;margin-top:8px}}
-      @media(max-width:520px){.planExerciseFields{grid-template-columns:1fr}.planExerciseFields .wide{grid-column:span 1}}
+      @media(max-width:520px){.planExerciseFields{grid-template-columns:1fr}.planExerciseFields .wide{grid-column:span 1}.quickPrimaryInputs{grid-template-columns:1fr 1fr}.quickPrimaryInputs .quickSetNumberField{grid-column:span 2}.quickStickyActions{grid-template-columns:1.35fr .9fr .8fr}.quickStickyActions button{padding:9px 7px;font-size:12px}.quickAdjustRow{grid-template-columns:repeat(2,minmax(0,1fr))}}
     `;
     document.head.appendChild(style);
   }
@@ -483,34 +494,42 @@
           <div class="formGrid">
             <div class="field"><label>Buscar ejercicio</label><input type="search" id="quickExerciseSearch" autocomplete="off" placeholder="Nombre o alias"></div>
             <div class="field"><label>Ejercicio actual</label><select id="quickExerciseSelect"></select></div>
-            <div class="field"><label>Número de serie</label><input type="number" id="quickSetNumber" min="1" value="1"></div>
-            <div class="field"><label>Repeticiones</label><input type="number" id="quickReps" min="0" max="200" value="8"></div>
-            <div class="field"><label>Kilos / lastre</label><input type="number" id="quickWeight" min="0" step="0.5" value="0"></div>
-            <div class="field"><label>RIR opcional</label><input type="number" id="quickRir" min="0" max="10" value="2"></div>
-            <div class="field"><label>RPE opcional</label><input type="number" id="quickRpe" min="0" max="10" step="0.5" placeholder="Ej. 8"></div>
           </div>
-          <label class="check" style="margin-top:10px"><input type="checkbox" id="quickBodyweight"><span>Peso corporal: registrar reps sin kilos, o usar kilos como lastre si agregás carga.</span></label>
-          <div class="field" style="margin-top:10px"><label>Nota opcional</label><textarea id="quickNote" placeholder="Técnica, molestia, energía, ajuste para próxima serie…"></textarea></div>
+          <div class="quickPrimaryInputs">
+            <div class="field quickSetNumberField"><label>Serie</label><input type="number" id="quickSetNumber" min="1" value="1"></div>
+            <div class="field"><label>Repeticiones</label><input type="number" id="quickReps" min="0" max="200" inputmode="numeric" value="8"><div class="quickAdjustRow"><button type="button" class="secondary" data-quick-adjust="reps:-1">-1</button><button type="button" class="secondary" data-quick-adjust="reps:1">+1</button></div></div>
+            <div class="field"><label>Kilos / lastre</label><input type="number" id="quickWeight" min="0" step="0.5" inputmode="decimal" value="0"><div class="quickAdjustRow"><button type="button" class="secondary" data-quick-adjust="weight:-0.5">-0.5</button><button type="button" class="secondary" data-quick-adjust="weight:0.5">+0.5</button><button type="button" class="secondary" data-quick-adjust="weight:-2.5">-2.5</button><button type="button" class="secondary" data-quick-adjust="weight:2.5">+2.5</button><button type="button" class="secondary" data-quick-adjust="weight:-5">-5</button><button type="button" class="secondary" data-quick-adjust="weight:5">+5</button></div></div>
+          </div>
+          <div class="quickStickyActions">
+            <button type="button" class="good" id="saveQuickSetBtn">Guardar serie</button>
+            <button type="button" class="secondary" id="repeatLastSetBtn">Repetir última</button>
+            <button type="button" class="secondary" id="undoQuickSetDeleteBtn" disabled>Deshacer</button>
+          </div>
+          <div class="quickRestTimer hidden" id="quickRestTimer" role="timer" aria-live="polite"><span>Descanso</span><strong id="quickRestTimerValue">0:00</strong></div>
           <div class="auditItem" id="quickLastHint">Última vez: sin datos todavía.</div>
           <div class="auditItem" id="quickSetStats">Ejercicio: 0 series · músculo: 0 series.</div>
-          <div class="buttons">
-            <button type="button" class="good" id="saveQuickSetBtn">Guardar serie</button>
-            <button type="button" class="secondary" id="repeatLastSetBtn">Repetir última serie</button>
-            <button type="button" class="secondary" id="previousExerciseBtn">Ejercicio anterior</button>
-            <button type="button" class="secondary" id="nextExerciseBtn">Siguiente ejercicio</button>
-            <button type="button" class="secondary" id="completeExerciseBtn">Completar ejercicio</button>
-            <button type="button" class="warn" id="finishWorkoutBtn">Finalizar entrenamiento</button>
-          </div>
+          <div class="quickLoggedSets" id="quickLoggedSets"></div>
+          <details class="quickSecondaryDetails">
+            <summary>Opcional y finalizar</summary>
+            <label class="check" style="margin-top:10px"><input type="checkbox" id="quickBodyweight"><span>Peso corporal: reps sin kilos o kilos como lastre.</span></label>
+            <div class="formGrid" style="margin-top:10px"><div class="field"><label>RIR opcional</label><input type="number" id="quickRir" min="0" max="10" value="2"></div><div class="field"><label>RPE opcional</label><input type="number" id="quickRpe" min="0" max="10" step="0.5" placeholder="Ej. 8"></div></div>
+            <div class="field" style="margin-top:10px"><label>Nota opcional</label><textarea id="quickNote" placeholder="Técnica, molestia, energía, ajuste para próxima serie…"></textarea></div>
+            <div class="buttons"><button type="button" class="warn" id="finishWorkoutBtn">Finalizar entrenamiento</button></div>
+          </details>
         </div>
       </div>
       <div class="moduleCard" id="workoutConfigPanel">
-        <h3>Rutina semanal y widget Android</h3>
+        <details class="planAdvancedEditor">
+        <summary>Configurar rutina semanal y widget Android</summary>
         <div class="formGrid">
           <label class="check"><input type="checkbox" id="gymWidgetEnabled"><span>Activar resumen para widget interno/nativo.</span></label>
           <label class="check"><input type="checkbox" id="gymShowRir"><span>Mostrar RIR/RPE en registro rápido.</span></label>
           <div class="field"><label>Unidad</label><select id="gymUnit"><option value="kg">kg</option><option value="lb">lb</option></select></div>
           <div class="field"><label>Modo</label><select id="gymMode"><option value="simple">Simple</option><option value="advanced">Avanzado</option></select></div>
           <label class="check"><input type="checkbox" id="gymShowRestDays"><span>Mostrar descanso/actividad suave sábado y domingo.</span></label>
+          <label class="check"><input type="checkbox" id="gymRestTimerEnabled"><span>Iniciar cronómetro de descanso al guardar.</span></label>
+          <div class="field"><label>Descanso (segundos)</label><input type="number" id="gymRestSeconds" min="15" max="600" step="15" value="90"></div>
+          <label class="check"><input type="checkbox" id="gymHapticEnabled"><span>Vibración breve al guardar (si el dispositivo permite).</span></label>
           <div class="field"><label>Día a editar</label><select id="planEditorDay"></select></div>
           <div class="field"><label>Nombre de rutina</label><input type="text" id="planEditorName"></div>
           <div class="field"><label>Músculos principales</label><input type="text" id="planEditorMuscles" placeholder="Pecho · Espalda"></div>
@@ -547,6 +566,7 @@
           <button type="button" class="warn" id="resetDefaultPlanBtn">Restablecer rutina predeterminada</button>
           <button type="button" class="secondary" id="refreshWorkoutWidgetBtn">Actualizar widget manualmente</button>
         </div>
+        </details>
       </div>
     `);
     setupWorkoutEvents();
@@ -562,14 +582,17 @@
     document.getElementById('startTodayWorkoutBtn')?.addEventListener('click',()=>openQuickSetLogger());
     document.getElementById('openQuickLoggerBtn')?.addEventListener('click',()=>openQuickSetLogger());
     document.getElementById('manualWidgetUpdateBtn')?.addEventListener('click',()=>{syncWorkoutWidget();flash('Widget actualizado con los datos actuales.');});
-    document.getElementById('quickExerciseSelect')?.addEventListener('change',event=>selectQuickExerciseValue(event.target.value));
+    document.getElementById('quickExerciseSelect')?.addEventListener('change',event=>{editingQuickSetId='';selectQuickExerciseValue(event.target.value);});
     document.getElementById('quickExerciseSearch')?.addEventListener('input',renderQuickLogger);
     document.getElementById('saveQuickSetBtn')?.addEventListener('click',saveQuickSet);
     document.getElementById('repeatLastSetBtn')?.addEventListener('click',repeatLastSet);
-    document.getElementById('previousExerciseBtn')?.addEventListener('click',previousExercise);
-    document.getElementById('nextExerciseBtn')?.addEventListener('click',nextExercise);
-    document.getElementById('completeExerciseBtn')?.addEventListener('click',completeCurrentExercise);
+    document.getElementById('undoQuickSetDeleteBtn')?.addEventListener('click',undoDeletedQuickSet);
     document.getElementById('finishWorkoutBtn')?.addEventListener('click',finishWorkout);
+    document.getElementById('quickSetLoggerPanel')?.addEventListener('click',handleQuickLoggerAction);
+    ['quickSetNumber','quickReps','quickWeight','quickRir','quickRpe','quickNote','quickBodyweight'].forEach(id=>{
+      document.getElementById(id)?.addEventListener('input',captureQuickDraft);
+      document.getElementById(id)?.addEventListener('change',captureQuickDraft);
+    });
     document.getElementById('planEditorDay')?.addEventListener('change',event=>{currentPlanEditorDay=event.target.value;renderPlanEditor();});
     document.getElementById('savePlanDayBtn')?.addEventListener('click',savePlanEditorDay);
     document.getElementById('copyPlanDayBtn')?.addEventListener('click',copyPlanDay);
@@ -583,8 +606,8 @@
     document.getElementById('planEditorCards')?.addEventListener('click',handlePlanExerciseAction);
     document.getElementById('resetDefaultPlanBtn')?.addEventListener('click',resetDefaultPlan);
     document.getElementById('refreshWorkoutWidgetBtn')?.addEventListener('click',()=>{syncWorkoutWidget();flash('Widget actualizado manualmente.');});
-    ['gymWidgetEnabled','gymShowRir','gymShowRestDays'].forEach(id=>document.getElementById(id)?.addEventListener('change',saveSettingsFromUi));
-    ['gymUnit','gymMode'].forEach(id=>document.getElementById(id)?.addEventListener('change',saveSettingsFromUi));
+    ['gymWidgetEnabled','gymShowRir','gymShowRestDays','gymRestTimerEnabled','gymHapticEnabled'].forEach(id=>document.getElementById(id)?.addEventListener('change',saveSettingsFromUi));
+    ['gymUnit','gymMode','gymRestSeconds'].forEach(id=>document.getElementById(id)?.addEventListener('change',saveSettingsFromUi));
   }
   function renderWorkoutDashboard(){
     injectWorkoutUi();
@@ -624,6 +647,41 @@
     if(lever) lever.textContent=totalSets?'Según lo registrado, priorizá técnica antes que carga y registrá la siguiente serie.':'Palanca física de hoy: registrar pesos para medir progreso.';
   }
   function statCard([k,v]){ return `<div class="quickStat"><span>${escapeHtml(k)}</span><strong>${escapeHtml(String(v))}</strong></div>`; }
+  function quickDraftKey(exerciseId=currentQuickExerciseId,date=todayStr()){ return `${date}:${exerciseId||''}`; }
+  function quickInputValue(id){ const element=document.getElementById(id); return element?.type==='checkbox'?!!element.checked:(element?.value??''); }
+  function captureQuickDraft(){
+    const exerciseId=document.getElementById('quickExerciseSelect')?.value||currentQuickExerciseId;
+    if(!exerciseId||String(exerciseId).startsWith('library:')) return;
+    quickDrafts.set(quickDraftKey(exerciseId),{
+      setNumber:quickInputValue('quickSetNumber'),reps:quickInputValue('quickReps'),weight:quickInputValue('quickWeight'),rir:quickInputValue('quickRir'),rpe:quickInputValue('quickRpe'),note:quickInputValue('quickNote'),bodyweight:quickInputValue('quickBodyweight')
+    });
+  }
+  function applyQuickDraft(draft){
+    if(!draft) return;
+    for(const [id,key] of [['quickSetNumber','setNumber'],['quickReps','reps'],['quickWeight','weight'],['quickRir','rir'],['quickRpe','rpe'],['quickNote','note']]){
+      const element=document.getElementById(id); if(element&&draft[key]!==undefined) element.value=draft[key];
+    }
+    const bodyweight=document.getElementById('quickBodyweight'); if(bodyweight&&draft.bodyweight!==undefined) bodyweight.checked=!!draft.bodyweight;
+  }
+  function quickSetRowsHtml(exercise){
+    const sets=exercise?.sets||[];
+    if(!sets.length) return '<div class="muted small">Todavía no hay series en este ejercicio.</div>';
+    return sets.map(set=>`<div class="quickLoggedSet ${set.id===editingQuickSetId?'editing':''}"><div><strong>Serie ${set.setNumber}</strong><span>${set.reps} reps · ${set.weight?`${set.weight} ${settings().unit}`:'peso corporal'}${set.rir!==null&&set.rir!==undefined?` · RIR ${set.rir}`:''}</span></div><div class="buttons"><button type="button" class="secondary" data-quick-edit-set="${escapeHtml(set.id)}">Editar</button><button type="button" class="danger" data-quick-delete-set="${escapeHtml(set.id)}">Eliminar</button></div></div>`).join('');
+  }
+  function updateRestTimerDisplay(){
+    const box=document.getElementById('quickRestTimer'),value=document.getElementById('quickRestTimerValue'); if(!box||!value)return;
+    const remaining=Math.max(0,Math.ceil((restTimerEndsAt-Date.now())/1000));
+    box.classList.toggle('hidden',!restTimerEndsAt||remaining<=0);
+    value.textContent=`${Math.floor(remaining/60)}:${String(remaining%60).padStart(2,'0')}`;
+    if(restTimerEndsAt&&remaining<=0){restTimerEndsAt=0;if(restTimerInterval){clearInterval(restTimerInterval);restTimerInterval=null;}if(settings().hapticEnabled&&navigator.vibrate)navigator.vibrate([40,40,40]);}
+  }
+  function startRestTimer(){
+    const current=settings(); if(!current.restTimerEnabled)return;
+    restTimerEndsAt=Date.now()+Math.max(15,Number(current.restSeconds)||90)*1000;
+    if(restTimerInterval)clearInterval(restTimerInterval);
+    restTimerInterval=setInterval(updateRestTimerDisplay,1000);updateRestTimerDisplay();
+  }
+  function hapticFeedback(){ if(settings().hapticEnabled&&navigator.vibrate)navigator.vibrate(35); }
   function renderQuickLogger(){
     const date=todayStr(),plan=planForDate(date);
     const select=document.getElementById('quickExerciseSelect'); if(!select) return;
@@ -640,15 +698,22 @@
     if(currentQuickExerciseId) select.value=currentQuickExerciseId;
     const exercise=(source||[]).find(x=>(x.id||x.exerciseId)===select.value) || source?.[0];
     if(!exercise) return;
+    currentQuickExerciseId=exercise.id||exercise.exerciseId;
     const h=history()[exercise.exerciseId]||null;
     const sets=exercise.sets||[];
-    document.getElementById('quickSetNumber').value=(sets.length||0)+1;
+    const editingSet=sets.find(set=>set.id===editingQuickSetId)||null;
+    if(editingQuickSetId&&!editingSet)editingQuickSetId='';
+    const last=sets[sets.length-1]||null;
+    document.getElementById('quickSetNumber').value=editingSet?.setNumber||(sets.length||0)+1;
     const bodyweight=!!exercise.bodyweight || !!h?.bodyweight;
     document.getElementById('quickBodyweight').checked=bodyweight;
-    if(h && !sets.length){
-      document.getElementById('quickReps').value=h.lastReps||8;
-      document.getElementById('quickWeight').value=h.lastWeight||0;
-    }
+    document.getElementById('quickReps').value=editingSet?.reps??last?.reps??h?.lastReps??8;
+    document.getElementById('quickWeight').value=editingSet?.weight??last?.weight??h?.lastWeight??0;
+    document.getElementById('quickRir').value=editingSet?.rir??last?.rir??2;
+    document.getElementById('quickRpe').value=editingSet?.rpe??'';
+    document.getElementById('quickNote').value=editingSet?.note??'';
+    document.getElementById('quickBodyweight').checked=editingSet?!!editingSet.bodyweight:bodyweight;
+    if(!editingSet)applyQuickDraft(quickDrafts.get(quickDraftKey(currentQuickExerciseId)));
     const hint=document.getElementById('quickLastHint');
     if(h) hint.textContent=`Última vez: ${h.name} — ${h.lastWeight||0} ${settings().unit} x ${h.lastReps||0} reps. Podés repetir la carga anterior; si te sentís bien, intentá +1 rep.`;
     else hint.textContent='Última vez: sin datos todavía. Si estás fatigado, mantener carga también cuenta.';
@@ -658,6 +723,10 @@
       const muscleSets=muscleSetCount(source,exercise.muscle);
       stat.textContent=`Series de este ejercicio: ${exerciseSets}. Total de ${exercise.muscle}: ${muscleSets}.`;
     }
+    const logged=document.getElementById('quickLoggedSets'); if(logged)logged.innerHTML=quickSetRowsHtml(exercise);
+    const save=document.getElementById('saveQuickSetBtn'); if(save)save.textContent=editingSet?'Guardar cambios':'Guardar serie';
+    const undo=document.getElementById('undoQuickSetDeleteBtn'); if(undo)undo.disabled=!lastDeletedQuickSet;
+    updateRestTimerDisplay();
     const show=settings().showRir;
     ['quickRir','quickRpe'].forEach(id=>{const field=document.getElementById(id)?.closest('.field'); if(field) field.classList.toggle('hidden',!show);});
   }
@@ -909,14 +978,29 @@
     const before=exercise.sets||[];
     const setId=String(payload.setId||'');
     const setNumber=Number(payload.setNumber);
+    const deletedIndex=before.findIndex(item=>(setId&&String(item.id||'')===setId)||(Number.isFinite(setNumber)&&Number(item.setNumber)===setNumber));
+    const deletedSet=deletedIndex>=0?before[deletedIndex]:null;
     const next=before.filter(item=>!((setId && String(item.id||'')===setId) || (Number.isFinite(setNumber) && Number(item.setNumber)===setNumber)));
     if(next.length===before.length) return {ok:false,reason:'missing-set',message:'No encontre esa serie.'};
+    lastDeletedQuickSet={date,sessionId:session.id,exerciseId:exercise.id||exercise.exerciseId,set:clone(deletedSet),index:deletedIndex};
     exercise.sets=next.map((set,index)=>({...set,setNumber:index+1}));
     session.currentExerciseIndex=session.exercises.findIndex(x=>x.id===exercise.id);
     currentQuickExerciseId=exercise.id;
     session.summary=sessionSummary(session);
     replaceSession(session);
     return {ok:true,session:clone(session),exercise:clone(exercise),state:getQuickWorkoutState({date,exerciseId:exercise.id})};
+  }
+  function undoDeleteQuickSetPayload(){
+    const deleted=lastDeletedQuickSet;
+    if(!deleted) return {ok:false,reason:'nothing-to-undo',message:'No hay una eliminación reciente para deshacer.'};
+    const session=sessions().find(item=>item.id===deleted.sessionId)||(activeSession(deleted.date)||latestSessionForDate(deleted.date));
+    const exercise=session?.exercises?.find(item=>item.id===deleted.exerciseId||item.exerciseId===deleted.exerciseId);
+    if(!session||!exercise) return {ok:false,reason:'missing-session',message:'No se pudo restaurar esa serie.'};
+    exercise.sets=exercise.sets||[];
+    if(!exercise.sets.some(set=>set.id===deleted.set.id)) exercise.sets.splice(Math.max(0,Math.min(deleted.index,exercise.sets.length)),0,clone(deleted.set));
+    exercise.sets=exercise.sets.map((set,index)=>({...set,setNumber:index+1}));
+    session.summary=sessionSummary(session);currentQuickExerciseId=exercise.id;replaceSession(session);lastDeletedQuickSet=null;
+    return {ok:true,session:clone(session),exercise:clone(exercise),state:getQuickWorkoutState({date:session.date,exerciseId:exercise.id})};
   }
   function completeQuickExercisePayload(payload={}){
     const date=payload.date||todayStr();
@@ -947,20 +1031,14 @@
     if(!session){ flash('Hoy toca descanso. Podés registrar movilidad suave si querés.'); return; }
     const exercise=selectedQuickExercise(session);
     if(!exercise){ flash('Elegí un ejercicio para registrar.'); return; }
-    const setNumber=Math.max(1,Number(document.getElementById('quickSetNumber').value)||((exercise.sets||[]).length+1));
-    const reps=Math.max(0,Number(document.getElementById('quickReps').value)||0);
-    const weight=Math.round(Math.max(0,Number(document.getElementById('quickWeight').value)||0)*2)/2;
-    const bodyweight=document.getElementById('quickBodyweight').checked;
-    const set={id:uid('set'),setNumber,reps,weight,rir:document.getElementById('quickRir').value===''?null:Math.max(0,Number(document.getElementById('quickRir').value)||0),rpe:document.getElementById('quickRpe').value===''?null:Math.max(0,Number(document.getElementById('quickRpe').value)||0),bodyweight,note:document.getElementById('quickNote').value.trim(),savedAt:new Date().toISOString(),volume:Math.round(reps*weight)};
-    exercise.sets=exercise.sets||[];
-    exercise.sets.push(set);
-    recordExercisePreference(session,exercise);
-    session.currentExerciseIndex=session.exercises.findIndex(x=>x.id===exercise.id);
-    session.summary=sessionSummary(session);
-    replaceSession(session);
-    document.getElementById('quickNote').value='';
+    const payload={date:session.date,exerciseId:exercise.id,setNumber:document.getElementById('quickSetNumber').value,reps:document.getElementById('quickReps').value,weight:document.getElementById('quickWeight').value,bodyweight:document.getElementById('quickBodyweight').checked,rir:document.getElementById('quickRir').value,rpe:document.getElementById('quickRpe').value,note:document.getElementById('quickNote').value};
+    const result=editingQuickSetId?updateQuickSetPayload({...payload,setId:editingQuickSetId}):saveQuickSetPayload(payload);
+    if(!result.ok){flash(result.message||'No se pudo guardar la serie.');return;}
+    const wasEditing=!!editingQuickSetId;editingQuickSetId='';
+    quickDrafts.set(quickDraftKey(exercise.id),{setNumber:(result.exercise.sets?.length||0)+1,reps:payload.reps,weight:payload.weight,rir:payload.rir,rpe:payload.rpe,note:'',bodyweight:payload.bodyweight});
     renderGym();
-    flash('Serie guardada. Registrar ya es progreso.');
+    hapticFeedback();startRestTimer();
+    flash(wasEditing?'Serie actualizada.':'Serie guardada. Registrar ya es progreso.');
   }
   function repeatLastSet(){
     const session=selectedSessionForQuick(),exercise=selectedQuickExercise(session);
@@ -970,6 +1048,26 @@
     document.getElementById('quickWeight').value=last.weight||last.lastWeight||0;
     if(last.rir!==undefined && last.rir!==null) document.getElementById('quickRir').value=last.rir;
     document.getElementById('quickBodyweight').checked=!!last.bodyweight;
+    captureQuickDraft();
+  }
+  function adjustQuickInput(target,delta){
+    const id=target==='reps'?'quickReps':'quickWeight',input=document.getElementById(id);if(!input)return;
+    const value=Math.max(0,(Number(input.value)||0)+Number(delta||0));input.value=target==='reps'?Math.round(value):Math.round(value*2)/2;captureQuickDraft();input.focus();
+  }
+  function handleQuickLoggerAction(event){
+    const adjust=event.target.closest('[data-quick-adjust]');
+    if(adjust){const [target,delta]=adjust.dataset.quickAdjust.split(':');adjustQuickInput(target,delta);return;}
+    const edit=event.target.closest('[data-quick-edit-set]');
+    if(edit){editingQuickSetId=edit.dataset.quickEditSet;quickDrafts.delete(quickDraftKey());renderQuickLogger();document.getElementById('quickReps')?.focus();return;}
+    const remove=event.target.closest('[data-quick-delete-set]');
+    if(remove){
+      if(window.confirm&&!window.confirm('Eliminar esta serie? Podrás deshacerla enseguida.'))return;
+      const result=deleteQuickSetPayload({date:todayStr(),exerciseId:currentQuickExerciseId,setId:remove.dataset.quickDeleteSet});
+      if(result.ok){if(editingQuickSetId===remove.dataset.quickDeleteSet)editingQuickSetId='';renderGym();flash('Serie eliminada. Podés deshacerla.');}
+    }
+  }
+  function undoDeletedQuickSet(){
+    const result=undoDeleteQuickSetPayload();if(!result.ok){flash(result.message);return;}renderGym();flash('Serie restaurada.');
   }
   function nextExercise(){
     const session=selectedSessionForQuick(); if(!session) return;
@@ -1002,6 +1100,7 @@
   }
   function finishWorkout(){
     const session=selectedSessionForQuick(); if(!session) return;
+    if(window.confirm&&!window.confirm('Finalizar el entrenamiento de hoy? Podrás seguir consultándolo y editar sus series.'))return;
     session.status='finalizado';
     session.finishedAt=new Date().toISOString();
     session.summary=sessionSummary(session);
@@ -1017,9 +1116,11 @@
     if(unit) unit.value=s.unit;
     if(mode) mode.value=s.mode;
     if(rest) rest.checked=!!s.showRestDays;
+    const timer=document.getElementById('gymRestTimerEnabled'),seconds=document.getElementById('gymRestSeconds'),haptic=document.getElementById('gymHapticEnabled');
+    if(timer)timer.checked=!!s.restTimerEnabled;if(seconds)seconds.value=Math.max(15,Number(s.restSeconds)||90);if(haptic)haptic.checked=!!s.hapticEnabled;
   }
   function saveSettingsFromUi(){
-    saveSettings({widgetEnabled:document.getElementById('gymWidgetEnabled').checked,showRir:document.getElementById('gymShowRir').checked,unit:document.getElementById('gymUnit').value,mode:document.getElementById('gymMode').value,showRestDays:document.getElementById('gymShowRestDays').checked});
+    saveSettings({widgetEnabled:document.getElementById('gymWidgetEnabled').checked,showRir:document.getElementById('gymShowRir').checked,unit:document.getElementById('gymUnit').value,mode:document.getElementById('gymMode').value,showRestDays:document.getElementById('gymShowRestDays').checked,restTimerEnabled:document.getElementById('gymRestTimerEnabled').checked,restSeconds:Math.max(15,Number(document.getElementById('gymRestSeconds').value)||90),hapticEnabled:document.getElementById('gymHapticEnabled').checked});
     renderQuickLogger();
   }
   function renderPlanEditor(){
@@ -1326,7 +1427,7 @@
     else if(action===actionWidgetSaveSet){syncWorkoutWidget();openGymToday();}
   }
 
-  window.WORKOUT_FEATURES={keys,dayOrder,defaultWeeklyPlan:clone(defaultWeeklyPlan),exerciseLibrary:clone(exerciseLibrary),EXERCISE_LIBRARY_VERSION,getExerciseLibrary:()=>clone(libraryData()),migrateExerciseLibrary,dayKeyForDate,planForDate,rankExercisesForContext,getQuickWorkoutState,addManualExercisePayload,saveQuickSetPayload,updateQuickSetPayload,deleteQuickSetPayload,replaceSessionPayload,completeQuickExercisePayload,finishWorkoutPayload,buildWorkoutWidgetState,syncWorkoutWidget,importWidgetStateFromAndroid};
+  window.WORKOUT_FEATURES={keys,dayOrder,defaultWeeklyPlan:clone(defaultWeeklyPlan),exerciseLibrary:clone(exerciseLibrary),EXERCISE_LIBRARY_VERSION,getExerciseLibrary:()=>clone(libraryData()),getGymSettings:()=>clone(settings()),updateGymSettings:next=>{saveSettings(next||{});return clone(settings());},migrateExerciseLibrary,dayKeyForDate,planForDate,rankExercisesForContext,getQuickWorkoutState,addManualExercisePayload,saveQuickSetPayload,updateQuickSetPayload,deleteQuickSetPayload,undoDeleteQuickSetPayload,canUndoQuickSetDelete:()=>!!lastDeletedQuickSet,replaceSessionPayload,completeQuickExercisePayload,finishWorkoutPayload,buildWorkoutWidgetState,syncWorkoutWidget,importWidgetStateFromAndroid};
   window.openGymToday=openGymToday;
   window.openQuickSetLogger=openQuickSetLogger;
   window.handleAndroidWidgetIntent=(action,payload)=>handleAndroidWidgetIntent(action,payload||{});

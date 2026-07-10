@@ -14,6 +14,11 @@ assert.match(source,/addPlanLibraryExercise/);
 assert.match(source,/EXERCISE_LIBRARY_VERSION/);
 assert.match(source,/migrateExerciseLibrary/);
 assert.match(source,/exerciseLibraryEditor/);
+assert.match(source,/data-quick-adjust="weight:5"/);
+assert.match(source,/quickStickyActions/);
+assert.match(source,/restTimerEnabled/);
+assert.match(source,/hapticEnabled/);
+assert.match(source,/undoDeleteQuickSetPayload/);
 
 function createContext(preloaded = {}, today = '2026-06-22') {
   const store = new Map(Object.entries(preloaded));
@@ -121,6 +126,13 @@ const quickDeleted = quickWorkout.deleteQuickSetPayload({
 });
 assert.equal(quickDeleted.ok, true);
 assert.equal(quickDeleted.state.currentExerciseSets, 0);
+assert.equal(quickWorkout.canUndoQuickSetDelete(),true);
+const quickRestored=quickWorkout.undoDeleteQuickSetPayload();
+assert.equal(quickRestored.ok,true);
+assert.equal(quickRestored.state.currentExerciseSets,1);
+assert.equal(quickRestored.state.currentSets[0].weight,22.5);
+assert.equal(quickWorkout.canUndoQuickSetDelete(),false);
+assert.equal(quickWorkout.updateGymSettings({restTimerEnabled:true,restSeconds:75,hapticEnabled:false}).restSeconds,75);
 assert.equal(JSON.parse(quickStore.get(quickWorkout.keys.workoutSessions))[0].routine.name, 'Torso A');
 const manualExercise = quickWorkout.addManualExercisePayload({
   date: '2026-06-22',
@@ -230,4 +242,4 @@ assert.equal(rankedPlan.groups[0].label,'Rutina de hoy');
 assert.ok(rankedPlan.groups[0].items.some(item=>item.exerciseId==='peck-deck'));
 assert.ok(rankStore.get('protocolo_0_100_exercise_preferences_v1'));
 
-console.log('Workout features correcto: plan semanal, persistencia weekday/biblioteca, deduplicacion, widget state, editar/eliminar serie e importacion directa.');
+console.log('Workout features correcto: plan semanal, widget, editar/eliminar/deshacer serie, ajustes rapidos y preferencias UX.');

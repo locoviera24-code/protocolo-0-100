@@ -203,6 +203,14 @@ const deletedSet = synced.sharedWorkoutSets.find(row => row.id.endsWith('set_del
 assert.equal(deletedSet.deleted, true);
 assert.equal(deletedSet.pendingSync, true);
 assert.ok(synced.syncQueue.some(op => op.id === `set:${deletedSet.id}` && op.payload.deleted === true));
+localSession.exercises[0].sets.push({id:'set_deleted',setNumber:2,reps:10,weight:40,savedAt:'2026-06-24T10:08:00.000Z'});
+syncStore.set('protocolo_0_100_workout_sessions_v1',JSON.stringify([localSession]));
+syncParty.syncFromLocalWorkouts({silent:true});
+const restoredSync=syncParty.exportState();
+const restoredSet=restoredSync.sharedWorkoutSets.find(row=>row.id.endsWith('set_deleted'));
+assert.equal(restoredSet.deleted,false);
+assert.equal(restoredSet.reps,10);
+assert.ok(restoredSync.syncQueue.some(op=>op.id===`set:${restoredSet.id}`&&op.payload.deleted===false));
 const visibleStats = syncParty.calculatePartyStats({
   party: {id: 'party_test'},
   members: [{id: 'party_test_user_test', partyId: 'party_test', userId: 'user_test', aliasInParty: 'Yo'}],
@@ -212,4 +220,4 @@ const visibleStats = syncParty.calculatePartyStats({
 assert.equal(visibleStats[0].current.totalSets, 1);
 assert.equal(visibleStats[0].current.totalVolume, 160);
 
-console.log('Gym Party correcto: demo 2 miembros, demo multi-miembro, estadisticas, tombstones de series eliminadas y backup/importacion.');
+console.log('Gym Party correcto: demo, estadisticas, tombstones, restauracion sin resurreccion incorrecta y backup.');
