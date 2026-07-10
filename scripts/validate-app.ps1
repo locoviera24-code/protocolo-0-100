@@ -310,6 +310,15 @@ foreach ($contract in @(
     'protocolo_0_100_workout_sessions_v1',
     'protocolo_0_100_exercise_history_v1',
     'Restablecer rutina predeterminada',
+    'advancedPlanTextEditor',
+    'planExerciseEditorCard',
+    'data-plan-field="targetSets"',
+    'data-plan-field="repsMin"',
+    'data-plan-field="repsMax"',
+    'data-plan-field="restSeconds"',
+    'undoPlanExerciseDelete',
+    'addPlanLibraryExercise',
+    'createPlanCustomExercise',
     'Registro r'
 )) {
     Assert-True ($workout.Contains($contract)) "Falta contrato web gym/widget: $contract"

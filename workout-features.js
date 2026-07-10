@@ -68,6 +68,7 @@
   };
   let currentQuickExerciseId=null;
   let currentPlanEditorDay='monday';
+  let lastDeletedPlanExercise=null;
   let importingNativeWidgetState=false;
 
   function ex(id,name,aliases,muscle,type,unit,primary,secondary,notes){
@@ -353,9 +354,22 @@
       .quickLogger input,.quickLogger select{font-size:18px;padding:13px 12px}
       .quickLogger .buttons button{min-height:46px}
       .planEditorTextarea{min-height:150px;font-family:ui-monospace,Consolas,monospace;font-size:12px}
+      .planEditorCards{display:grid;gap:10px;margin-top:12px}
+      .planExerciseEditorCard{border:1px solid var(--line);border-radius:16px;padding:12px;background:rgba(255,255,255,.035)}
+      .planExerciseEditorHead{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
+      .planExerciseEditorHead strong{display:block;font-size:15px}.planExerciseEditorHead span{display:block;color:var(--muted);font-size:12px;margin-top:3px}
+      .planExerciseFields{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+      .planExerciseFields .wide{grid-column:span 2}
+      .planExerciseFields input,.planExerciseFields select{padding:9px 10px;font-size:13px}
+      .planExerciseActions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+      .planExerciseActions button{min-height:34px;padding:7px 9px;font-size:12px}
+      .planEditorStatus{margin-top:10px;color:var(--muted);font-size:12px;min-height:18px}
+      .planAdvancedEditor{border:1px solid var(--line);border-radius:14px;padding:11px 13px;margin-top:12px;background:rgba(255,255,255,.025)}
+      .planAdvancedEditor summary{cursor:pointer;font-weight:800}
       .workoutSafety{border:1px solid rgba(255,211,110,.30);border-radius:14px;padding:12px;background:rgba(255,211,110,.08);color:#ffe8ad;margin-top:12px}
       .widgetStatus{border:1px dashed rgba(114,214,255,.35);border-radius:14px;padding:10px;background:rgba(114,214,255,.06);color:#dff6ff;margin-top:10px}
-      @media(max-width:850px){.workoutTodayGrid{grid-template-columns:1fr}.quickLogger input,.quickLogger select{font-size:16px}}
+      @media(max-width:850px){.workoutTodayGrid{grid-template-columns:1fr}.quickLogger input,.quickLogger select{font-size:16px}.planExerciseFields{grid-template-columns:1fr 1fr}.planExerciseFields .wide{grid-column:span 2}.planExerciseEditorHead{display:block}.planExerciseActions{justify-content:flex-start;margin-top:8px}}
+      @media(max-width:520px){.planExerciseFields{grid-template-columns:1fr}.planExerciseFields .wide{grid-column:span 1}}
     `;
     document.head.appendChild(style);
   }
@@ -422,14 +436,30 @@
           <div class="field"><label>Nombre de rutina</label><input type="text" id="planEditorName"></div>
           <div class="field"><label>Músculos principales</label><input type="text" id="planEditorMuscles" placeholder="Pecho · Espalda"></div>
         </div>
-        <div class="field" style="margin-top:10px"><label>Ejercicios del día (formato: músculo | ejercicio | peso corporal opcional)</label><textarea id="planEditorExercises" class="planEditorTextarea"></textarea></div>
+        <div id="planEditorCards" class="planEditorCards"></div>
+        <div id="planEditorStatus" class="planEditorStatus" role="status" aria-live="polite">Los cambios visuales se guardan automáticamente.</div>
+        <div class="formGrid" style="margin-top:10px">
+          <div class="field"><label>Agregar desde biblioteca</label><select id="planLibrarySelect"></select></div>
+          <div class="field"><label>Nombre personalizado</label><input type="text" id="planCustomExerciseName" placeholder="Ej. Face pull"></div>
+          <div class="field"><label>Músculo personalizado</label><input type="text" id="planCustomExerciseMuscle" placeholder="Ej. Hombro"></div>
+        </div>
+        <div class="buttons">
+          <button type="button" class="secondary" id="addPlanLibraryExerciseBtn">Agregar desde biblioteca</button>
+          <button type="button" class="secondary" id="createPlanCustomExerciseBtn">Crear ejercicio personalizado</button>
+          <button type="button" class="secondary" id="undoPlanExerciseDeleteBtn" disabled>Deshacer eliminación</button>
+        </div>
+        <details class="planAdvancedEditor" id="advancedPlanTextEditor">
+          <summary>Edición avanzada en texto</summary>
+          <div class="field" style="margin-top:10px"><label>Formato: músculo | ejercicio | peso corporal opcional | notas</label><textarea id="planEditorExercises" class="planEditorTextarea"></textarea></div>
+          <button type="button" class="secondary" id="applyPlanTextBtn">Aplicar texto al día</button>
+        </details>
         <div class="formGrid" style="margin-top:10px">
           <div class="field"><label>Copiar desde</label><select id="copyPlanFrom"></select></div>
           <div class="field"><label>Copiar hacia</label><select id="copyPlanTo"></select></div>
         </div>
         <div class="buttons">
-          <button type="button" class="good" id="savePlanDayBtn">Guardar día</button>
-          <button type="button" class="secondary" id="copyPlanDayBtn">Copiar día</button>
+          <button type="button" class="good" id="savePlanDayBtn">Guardar nombre y músculos</button>
+          <button type="button" class="secondary" id="copyPlanDayBtn">Duplicar rutina en otro día</button>
           <button type="button" class="warn" id="resetDefaultPlanBtn">Restablecer rutina predeterminada</button>
           <button type="button" class="secondary" id="refreshWorkoutWidgetBtn">Actualizar widget manualmente</button>
         </div>
@@ -459,6 +489,12 @@
     document.getElementById('planEditorDay')?.addEventListener('change',event=>{currentPlanEditorDay=event.target.value;renderPlanEditor();});
     document.getElementById('savePlanDayBtn')?.addEventListener('click',savePlanEditorDay);
     document.getElementById('copyPlanDayBtn')?.addEventListener('click',copyPlanDay);
+    document.getElementById('addPlanLibraryExerciseBtn')?.addEventListener('click',addPlanLibraryExercise);
+    document.getElementById('createPlanCustomExerciseBtn')?.addEventListener('click',createPlanCustomExercise);
+    document.getElementById('undoPlanExerciseDeleteBtn')?.addEventListener('click',undoPlanExerciseDelete);
+    document.getElementById('applyPlanTextBtn')?.addEventListener('click',applyAdvancedPlanText);
+    document.getElementById('planEditorCards')?.addEventListener('change',updatePlanExerciseFromCard);
+    document.getElementById('planEditorCards')?.addEventListener('click',handlePlanExerciseAction);
     document.getElementById('resetDefaultPlanBtn')?.addEventListener('click',resetDefaultPlan);
     document.getElementById('refreshWorkoutWidgetBtn')?.addEventListener('click',()=>{syncWorkoutWidget();flash('Widget actualizado manualmente.');});
     ['gymWidgetEnabled','gymShowRir','gymShowRestDays'].forEach(id=>document.getElementById(id)?.addEventListener('change',saveSettingsFromUi));
@@ -908,8 +944,122 @@
     document.getElementById('planEditorExercises').value=dayPlan.type==='rest'
       ? [dayPlan.message,...(dayPlan.suggestions||[])].join('\n')
       : (dayPlan.exercises||[]).map(exercise=>`${exercise.muscle} | ${exercise.name}${exercise.bodyweight?' | peso corporal':''}${exercise.notes?' | '+exercise.notes:''}`).join('\n');
+    renderVisualPlanCards(dayPlan);
+    renderPlanLibrarySelect();
+    const undo=document.getElementById('undoPlanExerciseDeleteBtn');
+    if(undo) undo.disabled=!lastDeletedPlanExercise||lastDeletedPlanExercise.dayKey!==currentPlanEditorDay;
+  }
+  function planExerciseDefaults(exercise,index=0){
+    return {...exercise,order:index+1,targetSets:Math.max(1,Number(exercise.targetSets)||3),repsMin:Math.max(0,Number(exercise.repsMin)||8),repsMax:Math.max(0,Number(exercise.repsMax)||12),restSeconds:Math.max(0,Number(exercise.restSeconds)||90),notes:String(exercise.notes||'')};
+  }
+  function renderVisualPlanCards(dayPlan){
+    const root=document.getElementById('planEditorCards'); if(!root) return;
+    if(dayPlan.type==='rest'){
+      root.innerHTML=`<div class="emptyState">${escapeHtml(dayPlan.message||'Día de descanso.')}<br>${escapeHtml((dayPlan.suggestions||[]).join(' · '))}</div>`;
+      return;
+    }
+    const rows=(dayPlan.exercises||[]).map(planExerciseDefaults);
+    root.innerHTML=rows.length?rows.map((exercise,index)=>`<article class="planExerciseEditorCard" data-plan-exercise-id="${escapeHtml(exercise.id||exercise.exerciseId)}">
+      <div class="planExerciseEditorHead">
+        <div><strong>${index+1}. ${escapeHtml(exercise.name)}</strong><span>${escapeHtml(exercise.muscle||'General')} · ${escapeHtml(exercise.type||'personalizado')} · ${escapeHtml(exercise.unit||settings().unit)}</span></div>
+        <div class="planExerciseActions">
+          <button type="button" class="secondary" data-plan-action="up" aria-label="Subir ${escapeHtml(exercise.name)}">Subir</button>
+          <button type="button" class="secondary" data-plan-action="down" aria-label="Bajar ${escapeHtml(exercise.name)}">Bajar</button>
+          <button type="button" class="secondary" data-plan-action="duplicate">Duplicar</button>
+          <button type="button" class="danger" data-plan-action="delete">Eliminar</button>
+        </div>
+      </div>
+      <div class="planExerciseFields">
+        <div class="field wide"><label>Nombre</label><input data-plan-field="name" value="${escapeHtml(exercise.name)}"></div>
+        <div class="field"><label>Músculo</label><input data-plan-field="muscle" value="${escapeHtml(exercise.muscle||'General')}"></div>
+        <div class="field"><label>Tipo</label><select data-plan-field="type">${['máquina','peso libre','polea','peso corporal','movilidad','personalizado'].map(value=>`<option value="${value}" ${exercise.type===value?'selected':''}>${value}</option>`).join('')}</select></div>
+        <div class="field"><label>Unidad</label><select data-plan-field="unit"><option value="kg" ${exercise.unit==='kg'?'selected':''}>kg</option><option value="peso corporal" ${exercise.unit==='peso corporal'?'selected':''}>peso corporal</option><option value="tiempo" ${exercise.unit==='tiempo'?'selected':''}>tiempo</option></select></div>
+        <label class="check"><input type="checkbox" data-plan-field="bodyweight" ${exercise.bodyweight?'checked':''}><span>Peso corporal</span></label>
+        <div class="field"><label>Series objetivo</label><input type="number" min="1" max="20" data-plan-field="targetSets" value="${exercise.targetSets}"></div>
+        <div class="field"><label>Reps mín.</label><input type="number" min="0" max="200" data-plan-field="repsMin" value="${exercise.repsMin}"></div>
+        <div class="field"><label>Reps máx.</label><input type="number" min="0" max="200" data-plan-field="repsMax" value="${exercise.repsMax}"></div>
+        <div class="field"><label>Descanso (s)</label><input type="number" min="0" max="900" step="15" data-plan-field="restSeconds" value="${exercise.restSeconds}"></div>
+        <div class="field wide"><label>Notas</label><input data-plan-field="notes" value="${escapeHtml(exercise.notes)}" placeholder="Técnica o ajuste"></div>
+      </div>
+    </article>`).join(''):'<div class="emptyState">Este día no tiene ejercicios. Agregá uno desde la biblioteca o creá uno personalizado.</div>';
+  }
+  function renderPlanLibrarySelect(){
+    const select=document.getElementById('planLibrarySelect'); if(!select) return;
+    select.innerHTML='<option value="">Elegir ejercicio…</option>'+libraryData().filter(exercise=>!exercise.hidden).map(exercise=>`<option value="${escapeHtml(exercise.id)}">${escapeHtml(exercise.name)} · ${escapeHtml(exercise.group||'General')}</option>`).join('');
+  }
+  function savePlanHeader(){
+    const plan=weeklyPlan(),dayPlan=plan[currentPlanEditorDay]||clone(defaultWeeklyPlan[currentPlanEditorDay]);
+    dayPlan.name=document.getElementById('planEditorName')?.value.trim()||dayPlan.name;
+    const muscles=(document.getElementById('planEditorMuscles')?.value||'').split(/[·,]/).map(value=>value.trim()).filter(Boolean);
+    if(muscles.length) dayPlan.muscles=muscles;
+    plan[currentPlanEditorDay]=dayPlan;
+    saveWeeklyPlan(plan);
+    return dayPlan;
+  }
+  function updatePlanExerciseFromCard(event){
+    const card=event.target.closest('[data-plan-exercise-id]'); if(!card) return;
+    const plan=weeklyPlan(),dayPlan=plan[currentPlanEditorDay]; if(!dayPlan||dayPlan.type==='rest') return;
+    const exercise=dayPlan.exercises.find(item=>(item.id||item.exerciseId)===card.dataset.planExerciseId); if(!exercise) return;
+    card.querySelectorAll('[data-plan-field]').forEach(input=>{
+      const field=input.dataset.planField;
+      if(field==='bodyweight') exercise[field]=input.checked;
+      else if(['targetSets','repsMin','repsMax','restSeconds'].includes(field)) exercise[field]=Math.max(0,Number(input.value)||0);
+      else exercise[field]=String(input.value||'').trim();
+    });
+    if(exercise.bodyweight) exercise.unit='peso corporal';
+    dayPlan.muscles=[...new Set(dayPlan.exercises.map(item=>item.muscle).filter(Boolean))];
+    plan[currentPlanEditorDay]=dayPlan;
+    saveWeeklyPlan(plan);
+    const status=document.getElementById('planEditorStatus'); if(status) status.textContent=`Guardado automáticamente: ${exercise.name}.`;
+    renderPlanEditor();
+  }
+  function handlePlanExerciseAction(event){
+    const button=event.target.closest('[data-plan-action]'); if(!button) return;
+    const card=button.closest('[data-plan-exercise-id]'); if(!card) return;
+    const action=button.dataset.planAction,plan=weeklyPlan(),dayPlan=plan[currentPlanEditorDay];
+    const index=dayPlan?.exercises?.findIndex(item=>(item.id||item.exerciseId)===card.dataset.planExerciseId)??-1; if(index<0) return;
+    if(action==='up'&&index>0) [dayPlan.exercises[index-1],dayPlan.exercises[index]]=[dayPlan.exercises[index],dayPlan.exercises[index-1]];
+    else if(action==='down'&&index<dayPlan.exercises.length-1) [dayPlan.exercises[index+1],dayPlan.exercises[index]]=[dayPlan.exercises[index],dayPlan.exercises[index+1]];
+    else if(action==='duplicate'){
+      const copy=clone(dayPlan.exercises[index]);
+      copy.id=`${copy.exerciseId||copy.id}-${currentPlanEditorDay}-copy-${Date.now().toString(36)}`;
+      copy.name=`${copy.name} (copia)`;
+      dayPlan.exercises.splice(index+1,0,copy);
+    }else if(action==='delete'){
+      lastDeletedPlanExercise={dayKey:currentPlanEditorDay,index,exercise:clone(dayPlan.exercises[index])};
+      dayPlan.exercises.splice(index,1);
+    }else return;
+    dayPlan.exercises.forEach((item,rowIndex)=>{item.order=rowIndex+1;});
+    dayPlan.muscles=[...new Set(dayPlan.exercises.map(item=>item.muscle).filter(Boolean))];
+    plan[currentPlanEditorDay]=dayPlan; saveWeeklyPlan(plan); renderPlanEditor();
+  }
+  function addPlanLibraryExercise(){
+    const id=document.getElementById('planLibrarySelect')?.value; if(!id){flash('Elegí un ejercicio de la biblioteca.');return;}
+    const source=libraryData().find(exercise=>exercise.id===id); if(!source) return;
+    const plan=weeklyPlan(),dayPlan=plan[currentPlanEditorDay]; if(!dayPlan||dayPlan.type==='rest'){flash('Convertí primero el día de descanso desde la edición avanzada.');return;}
+    const candidate={id:`${source.id}-${currentPlanEditorDay}`,exerciseId:source.id,name:source.name,muscle:source.group||'General',type:source.type||'personalizado',unit:source.unit||settings().unit,bodyweight:source.bodyweight||source.unit==='peso corporal',notes:source.notes||'',targetSets:3,repsMin:8,repsMax:12,restSeconds:90};
+    if(dayPlan.exercises.some(exercise=>sameExercise(exercise,candidate))){flash('Ese ejercicio ya está en este día.');return;}
+    dayPlan.exercises.push(candidate); dayPlan.muscles=[...new Set([...(dayPlan.muscles||[]),candidate.muscle])]; plan[currentPlanEditorDay]=dayPlan; saveWeeklyPlan(plan); renderPlanEditor();
+  }
+  function createPlanCustomExercise(){
+    const name=document.getElementById('planCustomExerciseName')?.value.trim()||''; if(!name){flash('Escribí el nombre del ejercicio personalizado.');return;}
+    const muscle=document.getElementById('planCustomExerciseMuscle')?.value.trim()||'General';
+    const record=addOrReuseLibraryExercise({name,muscle,type:'personalizado',unit:settings().unit,bodyweight:false,notes:''}).exercise;
+    const select=document.getElementById('planLibrarySelect'); if(select) select.value=record.id;
+    addPlanLibraryExercise();
+  }
+  function undoPlanExerciseDelete(){
+    if(!lastDeletedPlanExercise||lastDeletedPlanExercise.dayKey!==currentPlanEditorDay) return;
+    const plan=weeklyPlan(),dayPlan=plan[currentPlanEditorDay];
+    dayPlan.exercises.splice(Math.min(lastDeletedPlanExercise.index,dayPlan.exercises.length),0,lastDeletedPlanExercise.exercise);
+    dayPlan.exercises.forEach((item,index)=>{item.order=index+1;}); plan[currentPlanEditorDay]=dayPlan; lastDeletedPlanExercise=null; saveWeeklyPlan(plan); renderPlanEditor(); flash('Eliminación deshecha.');
   }
   function savePlanEditorDay(){
+    savePlanHeader();
+    renderPlanEditor();
+    flash('Nombre y músculos guardados. Los ejercicios se guardan automáticamente.');
+  }
+  function applyAdvancedPlanText(){
     const plan=weeklyPlan(),key=currentPlanEditorDay,name=document.getElementById('planEditorName').value.trim()||defaultWeeklyPlan[key].name;
     const muscles=document.getElementById('planEditorMuscles').value.split(/[·,]/).map(x=>x.trim()).filter(Boolean);
     const lines=document.getElementById('planEditorExercises').value.split(/\n+/).map(x=>x.trim()).filter(Boolean);
@@ -926,7 +1076,7 @@
     }
     saveWeeklyPlan(plan);
     renderGym();
-    flash('Rutina semanal actualizada sin sobrescribir otros días.');
+    flash('Edición avanzada aplicada sin modificar sesiones históricas.');
   }
   function copyPlanDay(){
     const from=document.getElementById('copyPlanFrom').value,to=document.getElementById('copyPlanTo').value;

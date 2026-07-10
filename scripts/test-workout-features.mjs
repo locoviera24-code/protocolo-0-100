@@ -4,6 +4,13 @@ import vm from 'node:vm';
 
 const source = await readFile(new URL('../workout-features.js', import.meta.url), 'utf8');
 const rankingSource = await readFile(new URL('../workout-ranking.js', import.meta.url), 'utf8');
+assert.match(source,/planExerciseEditorCard/);
+assert.match(source,/Edición avanzada en texto/);
+assert.match(source,/data-plan-field="targetSets"/);
+assert.match(source,/data-plan-field="repsMin"/);
+assert.match(source,/data-plan-field="restSeconds"/);
+assert.match(source,/undoPlanExerciseDelete/);
+assert.match(source,/addPlanLibraryExercise/);
 
 function createContext(preloaded = {}, today = '2026-06-22') {
   const store = new Map(Object.entries(preloaded));
