@@ -1,0 +1,73 @@
+@media (max-width: 1023px) {
+  body { padding-bottom: calc(var(--nav-height) + var(--safe-bottom) + var(--space-4)); }
+  .bottomNav { display: grid; }
+  .menuBtn { display: none; }
+  .sideDrawer, .drawerBackdrop { display: none; }
+  .moduleTopbar { padding-inline: var(--space-4); }
+  .app { padding: var(--space-4); padding-bottom: calc(var(--nav-height) + var(--safe-bottom) + var(--space-5)); }
+  body .quickStickyActions, .dailySaveBar, .partyStickySave { bottom: calc(var(--nav-height) + var(--safe-bottom) + var(--space-2)) !important; }
+  body.keyboardOpen .bottomNav { display: none; }
+  body.keyboardOpen { padding-bottom: var(--space-4); }
+  body.keyboardOpen .quickStickyActions, body.keyboardOpen .dailySaveBar, body.keyboardOpen .partyStickySave { bottom: var(--space-2) !important; }
+}
+
+@media (min-width: 1024px) {
+  body { padding: 0 0 0 228px; }
+  .bottomNav { display: none; }
+  .menuBtn { display: none; }
+  .drawerBackdrop { display: none !important; }
+  .sideDrawer {
+    display: block;
+    width: 228px;
+    transform: none;
+    padding: var(--space-4) var(--space-3);
+    box-shadow: none;
+  }
+  .drawerHead { padding: var(--space-2) var(--space-2) var(--space-4); }
+  .drawerHead .closeBtn, .drawerHead .muted { display: none; }
+  .drawerHead h2 { font-size: var(--font-card); }
+  .drawerItem span span { display: none; }
+  .moduleTopbar { padding-inline: var(--space-5); }
+  .app { padding: var(--space-6) var(--space-5); }
+}
+
+@media (max-width: 900px) {
+  .grid, .scoreHero, .workoutTodayGrid { grid-template-columns: 1fr !important; }
+  .formGrid, .checks { grid-template-columns: 1fr 1fr; }
+  .actionDetails, .insightGrid, .guideGrid, .moduleGrid { grid-template-columns: 1fr; }
+  .ring { margin-inline: auto; }
+}
+
+@media (max-width: 600px) {
+  .moduleTopbar .topbarTitle span { display: none; }
+  .moduleHero > .muted { display: none; }
+  .panel .hd, .panel .bd, .moduleCard, .moduleHero { padding: var(--space-4); }
+  .formGrid, .checks, .moreGrid { grid-template-columns: 1fr; }
+  .homeShortcut { grid-template-columns: 1fr; }
+  .homeShortcut p { display: none; }
+  .homeShortcut .buttons, .homeShortcut .buttons button { width: 100%; }
+  .stats, .todaySummary, .metricGrid, .quickStats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stat:nth-child(2n), .mini:nth-child(2n), .metricCard:nth-child(2n), .quickStat:nth-child(2n) { border-right: 0; }
+  .stat:nth-child(n+3), .mini:nth-child(n+3), .metricCard:nth-child(n+3), .quickStat:nth-child(n+3) { border-top: 1px solid var(--color-border-soft); }
+  body .quickPrimaryInputs { grid-template-columns: 1fr 1fr; }
+  body .quickPrimaryInputs .quickSetNumberField { grid-column: 1 / -1; }
+  body .quickStickyActions { grid-template-columns: minmax(0, 1.4fr) repeat(2, minmax(0, .8fr)); padding: 7px; }
+  body .quickStickyActions button { padding-inline: 7px; font-size: var(--font-label); }
+  .nutritionNav { top: 60px; margin-inline: -4px; }
+}
+
+@media (max-width: 380px) {
+  .app { padding-inline: var(--space-3); }
+  .moduleTopbar { padding-inline: var(--space-3); }
+  .bottomNav button { font-size: 10px; }
+  .bottomNav button .icon { width: 20px; height: 20px; }
+  .stats, .todaySummary, .metricGrid, .quickStats { grid-template-columns: 1fr; }
+  .stat, .mini, .metricCard, .quickStat { border-right: 0; border-top: 1px solid var(--color-border-soft); }
+  .stat:first-child, .mini:first-child, .metricCard:first-child, .quickStat:first-child { border-top: 0; }
+  body .quickStickyActions { grid-template-columns: 1fr; position: static; }
+}
+
+@media print {
+  .moduleTopbar, .bottomNav, .sideDrawer { display: none !important; }
+  body { padding: 0; background: #fff; color: #000; }
+}

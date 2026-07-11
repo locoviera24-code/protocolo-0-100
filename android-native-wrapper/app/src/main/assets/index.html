@@ -288,26 +288,35 @@
   <link rel="stylesheet" href="styles/tokens.css" />
   <link rel="stylesheet" href="styles/base.css" />
   <link rel="stylesheet" href="styles/components.css" />
+  <link rel="stylesheet" href="styles/modules.css" />
+  <link rel="stylesheet" href="styles/responsive.css" />
 </head>
 <body>
   <a class="skipLink" href="#mainContent">Saltar al contenido principal</a>
   <div class="srOnly" id="globalLiveRegion" role="status" aria-live="polite" aria-atomic="true"></div>
   <div class="moduleTopbar">
-    <button type="button" class="menuBtn" id="openDrawerBtn" aria-label="Abrir menú" aria-controls="sideDrawer" aria-expanded="false">☰</button>
+    <button type="button" class="menuBtn" id="openDrawerBtn" aria-label="Abrir menú" aria-controls="sideDrawer" aria-expanded="false"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
     <div class="topbarTitle"><strong id="currentModuleTitle">Protocolo 0→100</strong><span id="currentModuleSubtitle">Atención, pantalla y hábitos diarios</span></div>
-    <button type="button" class="quickPartyBtn" id="openGymPartyTopBtn">Gym Party</button>
+    <button type="button" class="quickPartyBtn" id="openGymPartyTopBtn" hidden aria-hidden="true" tabindex="-1">Gym Party</button>
   </div>
   <div class="drawerBackdrop" id="drawerBackdrop"></div>
   <aside class="sideDrawer" id="sideDrawer" aria-label="Módulos de la aplicación" aria-hidden="true">
     <div class="drawerHead"><div><h2>Protocolo 0→100</h2><div class="muted small">Elegí un espacio</div></div><button type="button" class="closeBtn" id="closeDrawerBtn" aria-label="Cerrar menú">×</button></div>
     <nav class="drawerNav">
-      <button type="button" class="drawerItem active" data-module-target="protocolo"><span class="drawerIcon">📵</span><span><strong>Protocolo</strong><span>Pantalla, sueño, atención y hábitos.</span></span></button>
-      <button type="button" class="drawerItem" data-module-target="gym"><span class="drawerIcon">🏋️</span><span><strong>Gym</strong><span>Rutinas, ejercicios y progresión.</span></span></button>
-      <button type="button" class="drawerItem" data-module-target="gym-party"><span class="drawerIcon">🤝</span><span><strong>Gym Party</strong><span>Sala privada, comparativas y progreso compartido.</span></span></button>
-      <button type="button" class="drawerItem" data-module-target="nutricion"><span class="drawerIcon">🥗</span><span><strong>Nutrición</strong><span>Comidas, macros, agua y peso.</span></span></button>
-      <button type="button" class="drawerItem" data-module-target="progreso"><span class="drawerIcon">📈</span><span><strong>Progreso y recompensas</strong><span>Score integral, Focus Coins y rankings.</span></span></button>
+      <button type="button" class="drawerItem active" data-module-target="protocolo"><span class="drawerIcon"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v10h13V10M9 20v-6h6v6"/></svg></span><span><strong>Inicio</strong><span>Tu día y registro.</span></span></button>
+      <button type="button" class="drawerItem" data-module-target="gym"><span class="drawerIcon"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M6 9v6M3.5 10.5v3M18 9v6m2.5-4.5v3M6 12h12"/><path d="M8.5 7.5v9M15.5 7.5v9"/></svg></span><span><strong>Gym</strong><span>Entrenar y ver tu grupo.</span></span></button>
+      <button type="button" class="drawerItem" data-module-target="nutricion"><span class="drawerIcon"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h14l-1 16H6L5 4Z"/><path d="M8 8h8M9 12h6"/></svg></span><span><strong>Nutrición</strong><span>Comidas y cobertura.</span></span></button>
+      <button type="button" class="drawerItem" data-module-target="progreso"><span class="drawerIcon"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M4 19V9m6 10V5m6 14v-7m4 7H2"/></svg></span><span><strong>Progreso</strong><span>Tendencias y logros.</span></span></button>
+      <button type="button" class="drawerItem" data-module-target="mas"><span class="drawerIcon"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></span><span><strong>Más</strong><span>Ajustes y herramientas.</span></span></button>
     </nav>
   </aside>
+  <nav class="bottomNav" aria-label="Navegación principal">
+    <button type="button" class="active" data-module-target="protocolo"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v10h13V10M9 20v-6h6v6"/></svg><span>Inicio</span></button>
+    <button type="button" data-module-target="gym"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M6 9v6M3.5 10.5v3M18 9v6m2.5-4.5v3M6 12h12"/><path d="M8.5 7.5v9M15.5 7.5v9"/></svg><span>Gym</span></button>
+    <button type="button" data-module-target="nutricion"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h14l-1 16H6L5 4Z"/><path d="M8 8h8M9 12h6"/></svg><span>Nutrición</span></button>
+    <button type="button" data-module-target="progreso"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M4 19V9m6 10V5m6 14v-7m4 7H2"/></svg><span>Progreso</span></button>
+    <button type="button" data-module-target="mas"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg><span>Más</span></button>
+  </nav>
   <main class="app" id="mainContent" tabindex="-1">
     <header class="protocolOnly">
       <div class="brand">
@@ -712,6 +721,20 @@
               <div class="legalBox"><strong>Aviso de afiliados:</strong> si una persona recomienda la app mediante un código y recibe comisión, debe declararlo claramente. Las conversiones e ingresos mostrados aquí son simulaciones locales; pagos reales requieren backend, identidad y condiciones comerciales.</div>
             </div>
             <div class="legalBox"><strong>Términos básicos de Focus Coins:</strong> los puntos internos no son dinero, inversión ni criptomoneda; no se pueden retirar, transferir ni intercambiar por dinero, no tienen valor garantizado y sus reglas pueden cambiar. Las recompensas priorizan constancia y salud, nunca restricción extrema, sueño insuficiente u obsesión.</div>
+          </div>
+
+          <div id="tab-mas" class="hidden">
+            <div class="moduleHero">
+              <h3>Más herramientas</h3>
+              <div class="muted small">Configuración, privacidad y funciones de consulta.</div>
+            </div>
+            <div class="moreGrid">
+              <button type="button" class="moreLink" data-more-tab="telefono"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M10 5h4M11 18.5h2"/></svg><span><strong>Teléfono</strong><small>Uso e importación Android</small></span></button>
+              <button type="button" class="moreLink" data-more-tab="plan"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M6 3h12v18H6zM9 7h6M9 11h6M9 15h4"/></svg><span><strong>Plan 0→100</strong><small>Programa completo</small></span></button>
+              <button type="button" class="moreLink" data-more-tab="guia"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.8 9a2.4 2.4 0 1 1 3.6 2.1c-.9.5-1.4 1-1.4 2M12 17h.01"/></svg><span><strong>Guía</strong><small>Ayuda y criterios</small></span></button>
+              <button type="button" class="moreLink" data-more-tab="dashboard"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="11" cy="18" r="2"/></svg><span><strong>Ajustes y datos</strong><small>Backup, historial y exportación</small></span></button>
+            </div>
+            <div class="footerNote">Tus datos personales permanecen locales salvo lo que aceptes compartir en Gym Party.</div>
           </div>
 
 
@@ -1884,27 +1907,28 @@ function openDrawer(){lastFocusedBeforeOverlay=document.activeElement;document.b
 function closeDrawer(){const wasOpen=document.body.classList.contains('drawerOpen');document.body.classList.remove('drawerOpen');document.getElementById('openDrawerBtn')?.setAttribute('aria-expanded','false');document.getElementById('sideDrawer')?.setAttribute('aria-hidden','true');if(wasOpen&&lastFocusedBeforeOverlay?.focus)lastFocusedBeforeOverlay.focus();}
 function setModule(module){
   const meta={
-    protocolo:['Protocolo 0→100','Atención, pantalla y hábitos diarios'],
-    gym:['Gym','Rutinas, ejercicios y progresión'],
+    protocolo:['Inicio','Tu día, atención y hábitos'],
+    gym:['Gym','Entrenamiento, rutina y grupo'],
     'gym-party':['Gym Party','Sala privada y comparativas de entrenamiento'],
-    nutricion:['Nutrición','Comidas, cobertura y recomendaciones'],
-    progreso:['Progreso y recompensas','Score integral, Focus Coins y rankings']
+    nutricion:['Nutrición','Comidas y cobertura del día'],
+    progreso:['Progreso','Tendencias, historial y logros'],
+    mas:['Más','Ajustes, privacidad y herramientas']
   };
   activeModule=meta[module]?module:'protocolo';
   document.body.dataset.module=activeModule;
   localStorage.setItem(ACTIVE_MODULE_KEY,activeModule);
   document.getElementById('currentModuleTitle').textContent=meta[activeModule][0];
   document.getElementById('currentModuleSubtitle').textContent=meta[activeModule][1];
-  document.querySelectorAll('[data-module-target]').forEach(btn=>{const active=btn.dataset.moduleTarget===activeModule;btn.classList.toggle('active',active);btn.setAttribute('aria-current',active?'page':'false');});
+  document.querySelectorAll('[data-module-target]').forEach(btn=>{const target=btn.dataset.moduleTarget;const active=target===activeModule||(target==='gym'&&activeModule==='gym-party');btn.classList.toggle('active',active);btn.setAttribute('aria-current',active?'page':'false');});
   if(activeModule==='protocolo') activateTab(lastProtocolTab); else activateTab(activeModule);
   closeActionModal();
   closeDrawer();
   window.scrollTo({top:0,behavior:preferredMotionBehavior()});
 }
 function activateTab(tabName){
-  if(['registro','dashboard','telefono','plan','guia'].includes(tabName)) lastProtocolTab=tabName;
+  if(activeModule==='protocolo' && ['registro','dashboard'].includes(tabName)) lastProtocolTab=tabName;
   document.querySelectorAll('.tab').forEach(b=>{const active=b.dataset.tab===tabName;b.classList.toggle('active',active);b.setAttribute('aria-selected',String(active));});
-  ['registro','dashboard','gym','gym-party','nutricion','progreso','telefono','plan','guia'].forEach(t=>{
+  ['registro','dashboard','gym','gym-party','nutricion','progreso','mas','telefono','plan','guia'].forEach(t=>{
     const el=document.getElementById('tab-'+t); if(el) el.classList.toggle('hidden', t!==tabName);
   });
   if(tabName==='dashboard') drawChart();
@@ -2320,7 +2344,9 @@ document.getElementById('openGymPartyTopBtn').addEventListener('click', ()=>setM
 document.getElementById('closeDrawerBtn').addEventListener('click', closeDrawer);
 document.getElementById('drawerBackdrop').addEventListener('click', closeDrawer);
 document.querySelectorAll('[data-module-target]').forEach(btn=>btn.addEventListener('click',()=>setModule(btn.dataset.moduleTarget)));
+document.querySelectorAll('[data-more-tab]').forEach(btn=>btn.addEventListener('click',()=>{setModule('mas');activateTab(btn.dataset.moreTab);}));
 document.querySelectorAll('[data-open-gym-party]').forEach(btn=>btn.addEventListener('click',()=>setModule('gym-party')));
+if(window.visualViewport){const updateKeyboardState=()=>document.body.classList.toggle('keyboardOpen',window.innerHeight-window.visualViewport.height>160);window.visualViewport.addEventListener('resize',updateKeyboardState);window.visualViewport.addEventListener('scroll',updateKeyboardState);}
 document.getElementById('gymMuscle').addEventListener('change', populateGymExercises);
 document.getElementById('loadGymTemplateBtn').addEventListener('click', loadGymTemplate);
 document.getElementById('addGymExerciseBtn').addEventListener('click', addGymExercise);

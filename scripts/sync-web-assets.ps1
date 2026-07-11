@@ -28,6 +28,8 @@ $relativeFiles = @(
     'styles/tokens.css',
     'styles/base.css',
     'styles/components.css',
+    'styles/modules.css',
+    'styles/responsive.css',
     'icons/icon-192.png',
     'icons/icon-512.png'
 )

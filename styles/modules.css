@@ -1,0 +1,175 @@
+.moduleTopbar {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-nav);
+  height: 60px;
+  padding: 8px max(var(--space-4), calc((100vw - var(--content-width)) / 2 + var(--space-5)));
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  border-bottom: 1px solid var(--color-border-soft);
+  background: rgba(11, 18, 32, .94);
+  backdrop-filter: blur(14px);
+}
+.moduleTopbar strong { color: var(--color-text); font-size: var(--font-card); font-weight: 700; }
+.moduleTopbar span { display: block; color: var(--color-text-muted); font-size: var(--font-label); }
+.topbarTitle { min-width: 0; flex: 1; }
+.menuBtn { width: var(--touch-target); height: var(--touch-target); padding: 0; color: var(--color-text); background: transparent; border-color: var(--color-border-soft); }
+.quickPartyBtn { display: none !important; }
+
+.drawerBackdrop { z-index: calc(var(--z-drawer) - 1); background: rgba(2, 6, 12, .68); }
+.sideDrawer {
+  z-index: var(--z-drawer);
+  width: min(300px, 86vw);
+  padding: var(--space-4);
+  border-right: 1px solid var(--color-border-soft);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-overlay);
+}
+.drawerHead { border-color: var(--color-border-soft); }
+.drawerNav { gap: var(--space-1); }
+.drawerItem {
+  min-height: 52px;
+  grid-template-columns: 26px 1fr;
+  gap: var(--space-3);
+  border-color: transparent;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--color-text-secondary);
+}
+.drawerItem:hover { background: var(--color-surface-hover); color: var(--color-text); }
+.drawerItem.active { border-color: transparent; background: var(--color-primary-soft); color: var(--color-primary); }
+.drawerItem .drawerIcon { display: grid; place-items: center; color: inherit; }
+.drawerItem strong { color: inherit; font-size: var(--font-body); }
+.drawerItem span span { color: var(--color-text-muted); font-size: var(--font-label); font-weight: 400; }
+
+.bottomNav {
+  position: fixed;
+  z-index: var(--z-nav);
+  inset: auto 0 0;
+  height: calc(var(--nav-height) + var(--safe-bottom));
+  padding: 5px max(4px, env(safe-area-inset-right)) var(--safe-bottom) max(4px, env(safe-area-inset-left));
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  border-top: 1px solid var(--color-border);
+  background: rgba(13, 21, 36, .97);
+  box-shadow: 0 -8px 22px rgba(0, 0, 0, .2);
+  backdrop-filter: blur(16px);
+}
+.bottomNav button {
+  min-width: 0;
+  min-height: 56px;
+  padding: 5px 2px;
+  flex-direction: column;
+  gap: 2px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+.bottomNav button:hover { background: var(--color-surface-hover); color: var(--color-text-secondary); }
+.bottomNav button.active { background: var(--color-primary-soft); color: var(--color-primary); }
+.bottomNav button .icon { width: 21px; height: 21px; }
+
+body[data-module="gym"] .protocolOnly,
+body[data-module="gym-party"] .protocolOnly,
+body[data-module="nutricion"] .protocolOnly,
+body[data-module="progreso"] .protocolOnly,
+body[data-module="mas"] .protocolOnly { display: none !important; }
+body[data-module="gym"] .grid,
+body[data-module="gym-party"] .grid,
+body[data-module="nutricion"] .grid,
+body[data-module="progreso"] .grid,
+body[data-module="mas"] .grid { display: block; }
+
+.moduleHero { position: relative; overflow: hidden; }
+.moduleHero::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 3px; background: var(--color-primary); }
+.moduleHero h3 { margin-bottom: var(--space-1); font-size: var(--font-section); }
+.moduleHero > .muted { max-width: 68ch; }
+.homeShortcut {
+  margin-top: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-card);
+  background: var(--color-surface-soft);
+}
+.homeShortcut h3, .homeShortcut p { margin: 0; }
+.homeShortcut .buttons { margin: 0; }
+
+.tabs, .nutritionNav, .metricTabs {
+  gap: var(--space-1);
+  padding-bottom: var(--space-2);
+  overflow-x: auto;
+  flex-wrap: nowrap;
+  scrollbar-width: thin;
+}
+.tab, .nutritionNav button, .metricTab {
+  min-height: 40px;
+  padding: 8px 11px;
+  white-space: nowrap;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--font-small);
+}
+.tab.active, .nutritionNav button.active, .metricTab.active { background: var(--color-primary-soft); color: var(--color-primary); }
+
+.moreGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+.moreLink {
+  min-height: 82px;
+  justify-content: flex-start;
+  padding: var(--space-4);
+  border-color: var(--color-border-soft);
+  background: var(--color-surface-soft);
+  color: var(--color-text);
+  text-align: left;
+}
+.moreLink:hover { background: var(--color-surface-hover); }
+.moreLink .icon { color: var(--color-primary); }
+.moreLink span { display: grid; gap: 2px; }
+.moreLink small { color: var(--color-text-muted); font-weight: 400; }
+
+.actionFocus { padding: var(--space-4); background: var(--color-surface-raised); }
+.actionFocus::before { display: none; }
+.actionFocus h3 { font-size: var(--font-card); }
+.actionFocus .modalActionText { margin: var(--space-2) 0; font-size: var(--font-section); line-height: 1.35; }
+.actionDetails { gap: 0; }
+.actionDetail { padding: var(--space-3); border-top: 1px solid var(--color-border-soft); }
+
+.quickStats, .metricGrid, .stats, .todaySummary { border-block: 1px solid var(--color-border-soft); }
+.quickStat strong, .stat b { font-size: 1.25rem; font-weight: 750; }
+.metricCard .v { font-size: 1.65rem; font-weight: 750; }
+
+body .quickLogger { padding: var(--space-4); background: var(--color-surface-raised); }
+body .quickPrimaryInputs { gap: var(--space-3); }
+body .quickLogger input, body .quickLogger select { min-height: 52px; border-radius: var(--radius-control); font-size: 1.1rem; }
+body .quickStickyActions {
+  border-color: var(--color-border);
+  border-radius: var(--radius-card);
+  background: rgba(11, 18, 32, .97);
+  box-shadow: var(--shadow-subtle);
+}
+body .quickLoggedSet, .partySetRow, .entryRow, .workoutExerciseCard {
+  border-color: var(--color-border-soft);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-soft);
+}
+body .workoutExerciseCard.current { border-color: rgba(114, 214, 255, .42); background: var(--color-primary-soft); }
+body .workoutExerciseCard.done { border-color: rgba(120, 223, 168, .28); background: var(--color-success-soft); }
+
+.nutritionNav { position: sticky; top: 64px; z-index: 20; padding: 6px; border: 1px solid var(--color-border-soft); border-radius: var(--radius-card); background: rgba(17, 26, 43, .96); }
+.nutritionNav button { flex: 1 0 auto; }
+.coverageGrid, .recommendGrid { gap: var(--space-2); }
+.coverageRow, .recommendCard, .fdcResultCard { border-color: var(--color-border-soft); border-radius: var(--radius-control); background: var(--color-surface-soft); }
+
+body[data-module="progreso"] .moduleGrid { margin-top: var(--space-4); }
+body[data-module="progreso"] .moduleCard { box-shadow: none; }
+.coinBalance { color: var(--color-text); }
+.legalBox { border-color: var(--color-border-soft); background: var(--color-surface-soft); color: var(--color-text-secondary); }

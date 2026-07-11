@@ -35,6 +35,8 @@ $serviceWorker = Read-Utf8 'sw.js'
 $styleTokens = Read-Utf8 'styles/tokens.css'
 $styleBase = Read-Utf8 'styles/base.css'
 $styleComponents = Read-Utf8 'styles/components.css'
+$styleModules = Read-Utf8 'styles/modules.css'
+$styleResponsive = Read-Utf8 'styles/responsive.css'
 $manifestText = Read-Utf8 'manifest.webmanifest'
 $androidBuild = Read-Utf8 'android-native-wrapper/app/build.gradle'
 $androidProperties = Read-Utf8 'android-native-wrapper/gradle.properties'
@@ -81,7 +83,7 @@ $requiredFiles = @(
     'scripts/test-module-boundaries.mjs',
     'scripts/serve-static.mjs', 'playwright.config.mjs', 'tests/e2e/gym-flow.spec.mjs',
     'manifest.webmanifest', 'sw.js',
-    'styles/tokens.css', 'styles/base.css', 'styles/components.css',
+    'styles/tokens.css', 'styles/base.css', 'styles/components.css', 'styles/modules.css', 'styles/responsive.css',
     'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetProvider.java',
     'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetUpdateService.java',
     'android-native-wrapper/app/src/main/res/xml/workout_widget_info.xml',
@@ -99,10 +101,16 @@ foreach ($script in @('nutrition-data.js', 'fdc-client.js', 'workout-store.js', 
     Assert-True ($html.Contains("<script src=`"$script`"></script>")) "index.html no carga $script"
     Assert-True ($serviceWorker.Contains("'./$script'")) "sw.js no cachea $script"
 }
-foreach ($style in @('styles/tokens.css', 'styles/base.css', 'styles/components.css')) {
+foreach ($style in @('styles/tokens.css', 'styles/base.css', 'styles/components.css', 'styles/modules.css', 'styles/responsive.css')) {
     Assert-True ($html.Contains("<link rel=`"stylesheet`" href=`"$style`"")) "index.html no carga $style"
     Assert-True ($serviceWorker.Contains("'./$style'")) "sw.js no cachea $style"
     Assert-True ($deployWorkflow.Contains($style.Split('/')[0] + '/**')) "Pages no observa cambios de estilos"
+}
+foreach ($contract in @('.bottomNav', 'grid-template-columns: repeat(5', 'data-module')) {
+    Assert-True (($styleModules + $html).Contains($contract)) "Falta navegación principal: $contract"
+}
+foreach ($contract in @('safe-bottom', 'keyboardOpen', '@media (min-width: 1024px)', '@media (max-width: 380px)')) {
+    Assert-True ($styleResponsive.Contains($contract) -or $styleTokens.Contains($contract)) "Falta contrato responsive: $contract"
 }
 foreach ($contract in @('--color-bg', '--color-primary', '--space-4', '--radius-control', '--touch-target')) {
     Assert-True ($styleTokens.Contains($contract)) "Falta token visual: $contract"
@@ -425,10 +433,11 @@ foreach ($removedAction in @(
 )) {
     Assert-True (-not $gymParty.Contains($removedAction)) "Gym Party no debe mostrar control removido: $removedAction"
 }
-Assert-True ($html.Contains('data-module-target="gym-party"')) 'Falta entrada de navegacion Gym Party'
+Assert-True (-not $html.Contains('data-module-target="gym-party"')) 'Gym Party no debe duplicarse en la navegacion principal'
+Assert-True ($html.Contains("'gym-party':['Gym Party'")) 'setModule debe conservar compatibilidad con Gym Party'
 Assert-True ($html.Contains('id="tab-gym-party"')) 'Falta pestaña Gym Party'
 Assert-True ($html.Contains('<script src="gym-party.js"></script>')) 'index.html no carga gym-party.js'
-Assert-True ($html.Contains('id="openGymPartyTopBtn"')) 'Falta boton superior visible de Gym Party'
+Assert-True ($html.Contains('id="openGymPartyTopBtn" hidden')) 'El acceso superior legacy de Gym Party debe quedar oculto'
 Assert-True ($html.Contains('data-open-gym-party')) 'Faltan tarjetas/accesos rapidos a Gym Party'
 Assert-True ($html.Contains("if(!force && activeModule!=='protocolo') return;")) 'El modal automatico de accion diaria no debe bloquear Gym Party'
 
