@@ -1133,3 +1133,38 @@ accesibilidad visual.
 Pendiente: onboarding completo del modo guiado, Progreso consolidado, flujo de
 Nutricion por pasos, combobox Gym, mensajes/estados centrales e historiales
 responsive.
+
+## 31. Refactor UX/UI - bloque 5: Progreso consolidado
+
+- `progress/progress-view.js` convierte Progreso en el centro analitico para
+  Habitos, Gym y Nutricion sin crear claves nuevas ni duplicar datos.
+- Deep links internos: `progress/overview`, `progress/habits`, `progress/gym`,
+  `progress/nutrition`, `progress/history` y `progress/achievements`.
+- La portada muestra tendencia de 7 y 30 dias, consistencia, cambio contra el
+  periodo anterior, area mas fuerte, area a mejorar y una proxima accion.
+- Los filtros `#progressPeriod` y `#progressArea` permiten revisar 7, 30, 90
+  dias o todo el historial. Los graficos de barras usan `progress`, leyenda
+  textual y una escala comun; no dependen solo del color.
+- Gym reutiliza `workoutSessions` y `WORKOUT_METRICS`; Nutricion reutiliza
+  `protocolo_0_100_nutrition_entries_v1`; Habitos conserva los calculos del
+  tracker. No se modifica ni migra localStorage.
+- `home/overview` queda como ruta compatible que dirige al unico panel de
+  Progreso. Focus Coins, rankings, afiliados y recompensas quedan plegados en
+  Logros.
+- `progress/progress-view.js` se publica en Pages, se cachea offline y se
+  sincroniza dentro del APK. Cache actual: `protocolo-0-100-pwa-v51`.
+- Pruebas agregadas: `scripts/test-progress-view.mjs` y
+  `tests/e2e/progress.spec.mjs`.
+
+- Durante la matriz completa se detecto un fallo real en iPhone WebKit: al
+  cerrar el teclado, `bottomNav` podia reaparecer encima del boton Crear sala
+  antes de completar el toque. `ui/navigation.js` mantiene ahora una ventana
+  de estabilizacion de 450 ms y Gym Party delega acciones desde
+  `#gymPartyRoot`, resistente a sus rerenders.
+- Verificacion del bloque: validador web/PWA/Android OK con 315 IDs unicos;
+  contratos Progreso/design/router/layout/Gym Party OK; Playwright completo 43
+  OK y 14 omisiones intencionales; la regresion iPhone paso 5 repeticiones;
+  Firestore Emulator OK y `:app:assembleDebug` OK.
+
+Pendiente: historiales responsive reutilizables, flujo Nutricion por pasos,
+combobox Gym, mensajes/estados centrales, accesibilidad final y rendimiento.

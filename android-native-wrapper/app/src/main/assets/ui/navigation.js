@@ -1,13 +1,14 @@
 (function(){
   'use strict';
 
-  const CONTEXT_SELECTOR='.gymSectionNav,.partySectionNav,.nutritionNav';
+  const CONTEXT_SELECTOR='.gymSectionNav,.partySectionNav,.nutritionNav,.progressSectionNav';
   const ACTION_SELECTOR='.dailySaveBar,.quickStickyActions,.partyStickySave';
   const EDITABLE_SELECTOR='input,select,textarea,[contenteditable="true"]';
   let frame=0;
   let started=false;
   let resizeObserver=null;
   let lastScrollY=0;
+  let keyboardGraceUntil=0;
 
   function visible(element){
     if(!element||element.hidden||element.closest('.hidden'))return false;
@@ -26,7 +27,8 @@
   }
   function keyboardOpen(){
     const viewportReduced=keyboardInset()>80;
-    return editableFocused()&&(viewportReduced||matchMedia('(max-width: 1023px)').matches);
+    const mobile=matchMedia('(max-width: 1023px)').matches;
+    return (editableFocused()&&(viewportReduced||mobile))||(mobile&&Date.now()<keyboardGraceUntil);
   }
   function activateSingle(elements,className){
     const visibleElements=elements.filter(visible);
@@ -60,7 +62,7 @@
     setLength('--layout-action-height',height(action));
     setLength('--layout-banner-height',height(banner));
     setLength('--layout-keyboard-inset',inset);
-    document.body.dataset.layoutContext=context?.classList.contains('partySectionNav')?'party':context?.classList.contains('gymSectionNav')?'gym':context?.classList.contains('nutritionNav')?'nutrition':'none';
+    document.body.dataset.layoutContext=context?.classList.contains('partySectionNav')?'party':context?.classList.contains('gymSectionNav')?'gym':context?.classList.contains('nutritionNav')?'nutrition':context?.classList.contains('progressSectionNav')?'progress':'none';
     document.body.dataset.layoutAction=action?.classList.contains('partyStickySave')?'party':action?.classList.contains('quickStickyActions')?'gym':action?.classList.contains('dailySaveBar')?'daily':'none';
     const compact=mobile&&window.scrollY>56&&!isKeyboardOpen&&window.scrollY>=lastScrollY;
     document.body.classList.toggle('topbarCondensed',compact);
@@ -78,7 +80,11 @@
     ['resize','orientationchange','online','offline','app-route-change','layout-refresh'].forEach(type=>window.addEventListener(type,schedule,{passive:true}));
     window.addEventListener('scroll',schedule,{passive:true});
     document.addEventListener('focusin',schedule);
-    document.addEventListener('focusout',()=>setTimeout(schedule,80));
+    document.addEventListener('focusout',event=>{
+      if(event.target?.matches?.(EDITABLE_SELECTOR))keyboardGraceUntil=Date.now()+450;
+      setTimeout(schedule,80);
+      setTimeout(schedule,480);
+    });
     if(window.visualViewport){
       window.visualViewport.addEventListener('resize',schedule,{passive:true});
       window.visualViewport.addEventListener('scroll',schedule,{passive:true});
@@ -90,4 +96,3 @@
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});
   else start();
 })();
-

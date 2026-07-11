@@ -529,7 +529,7 @@
     const rows=[['codigo','influencer','usuarios_atribuidos','conversiones_simuladas','comision_pct','nota'],[code.code,code.name,code.mockUsers||0,code.mockConversions||0,code.commissionPct||10,'Simulación local; pagos reales requieren backend']];
     downloadBlob(rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n'),'panel_afiliado_simulado.csv','text/csv;charset=utf-8');
   }
-  function renderAdvancedProgress(){ renderIntegralScore();renderCoinsAndRewards();renderRankings();renderReferral();syncVersionedState(); }
+  function renderAdvancedProgress(){ renderIntegralScore();renderCoinsAndRewards();renderRankings();renderReferral();window.PROGRESS_VIEW?.render?.();syncVersionedState(); }
   window.renderAdvancedProgress=renderAdvancedProgress;
 
   function exportMealsCsv(){

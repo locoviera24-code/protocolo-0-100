@@ -10,6 +10,7 @@
     "test:router": "node scripts/test-router.mjs",
     "test:layout": "node scripts/test-layout-coordinator.mjs",
     "test:home-settings": "node scripts/test-home-settings.mjs",
+    "test:progress": "node scripts/test-progress-view.mjs",
     "test:e2e": "playwright test"
   },
   "devDependencies": {

@@ -315,6 +315,46 @@ body[data-module="progreso"] .moduleGrid { margin-top: var(--space-4); }
 body[data-module="progreso"] .moduleCard { box-shadow: none; }
 .progressRewardsDetails, .progressSecondaryDetails { padding: var(--space-3) var(--space-4); }
 .progressRewardsDetails > summary, .progressSecondaryDetails > summary { color: var(--color-text-secondary); }
+
+.progressSectionNav {
+  position: sticky;
+  top: var(--layout-topbar-height);
+  z-index: calc(var(--z-nav) - 1);
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  background: var(--color-bg);
+}
+.progressSectionNav::-webkit-scrollbar { display: none; }
+.progressSectionNav button {
+  flex: 0 0 auto;
+  min-height: var(--touch-target);
+  border-color: var(--color-border-soft);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+}
+.progressSectionNav button.active { border-color: var(--color-primary); background: var(--color-primary-soft); color: var(--color-primary); }
+.progressFilters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+.progressOverviewCard { margin-top: var(--space-3); }
+.progressOverviewCard .scoreTiles { margin-top: var(--space-3); }
+.progressKpiGrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: var(--space-4); border: 1px solid var(--color-border-soft); border-radius: var(--radius-card); overflow: hidden; }
+.progressKpi { display: grid; gap: var(--space-1); padding: var(--space-4); border-right: 1px solid var(--color-border-soft); background: var(--color-surface); }
+.progressKpi:last-child { border-right: 0; }
+.progressKpi span, .progressKpi small { color: var(--color-text-secondary); font-size: var(--font-small); }
+.progressKpi strong { font-size: var(--font-section); }
+.progressDecisionGrid .moduleCard { min-height: 150px; }
+.progressNextAction { border-color: var(--color-primary); }
+.analyticsBars { display: grid; gap: var(--space-3); margin-top: var(--space-4); }
+.analyticsBarRow { display: grid; grid-template-columns: minmax(130px, 1fr) minmax(120px, 2fr) minmax(70px, auto); align-items: center; gap: var(--space-3); }
+.analyticsBarRow > div { display: grid; gap: var(--space-1); }
+.analyticsBarRow span { color: var(--color-text-secondary); font-size: var(--font-small); }
+.analyticsBarRow b { text-align: right; font-size: var(--font-small); }
+.analyticsBarRow progress { width: 100%; height: var(--space-3); accent-color: var(--color-primary); }
+.sectionHeading { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); }
+.legacyProgressRedirect { max-width: 680px; margin-inline: auto; text-align: center; }
+.ledgerList { margin-top: var(--space-3); }
 .progressRewardsDetails .moduleCard { border: 0; padding: var(--space-3); background: var(--color-surface-soft); }
 .coinBalance { color: var(--color-text); }
 .legalBox { border-color: var(--color-border-soft); background: var(--color-surface-soft); color: var(--color-text-secondary); }

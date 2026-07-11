@@ -184,31 +184,11 @@
           </div>
 
           <div id="tab-dashboard" class="hidden">
-            <div class="periodNote"><strong>Tu tendencia:</strong> compará el día, la semana y el mes para decidir el próximo ajuste.</div>
-            <div class="metricGrid" id="periodMetrics"></div>
-            <h3>Comparación visual de puntajes</h3>
-            <div class="comparisonBars" id="comparisonBars"></div>
-            <div class="insightGrid" id="insightsPanel"></div>
-            <div class="backupNote"><strong>Curaduría de largo plazo:</strong> exportá JSON al menos una vez por semana o al cierre de cada mes. Así el sistema puede sostenerse indefinidamente sin perder historial.</div>
-            <div class="metricTabs" aria-label="Tipo de gráfico">
-              <button class="metricTab active" data-chart="daily" type="button">Días</button>
-              <button class="metricTab" data-chart="weekly" type="button">Semanas</button>
-              <button class="metricTab" data-chart="monthly" type="button">Meses</button>
-              <button class="metricTab" data-chart="areas" type="button">Áreas</button>
-            </div>
-            <div class="chartWrap big"><canvas id="scoreChart" width="900" height="320"></canvas></div>
-            <div class="chartCaption" id="chartCaption">Guardá registros para ver barras de evolución.</div>
-            <div class="buttons">
-              <button type="button" class="secondary" id="exportJsonBtn">Exportar JSON</button>
-              <button type="button" class="secondary" id="exportCsvBtn">Exportar CSV</button>
-              <button type="button" class="secondary" id="importBtn">Importar JSON</button>
-              <input type="file" id="importFile" accept="application/json" class="hidden">
-              <button type="button" class="secondary" onclick="window.print()">Imprimir resumen</button>
-            </div>
-            <h3 style="margin-top:16px">Insignias</h3>
-            <div class="badgeGrid" id="badges"></div>
-            <h3 style="margin-top:16px">Historial</h3>
-            <div class="history"><table id="historyTable"></table></div>
+            <section class="moduleCard legacyProgressRedirect" aria-labelledby="legacyProgressTitle">
+              <h2 id="legacyProgressTitle" tabindex="-1">Tus tendencias ahora están en Progreso</h2>
+              <p class="muted">El score, los períodos, Gym, Nutrición, historial y logros comparten una sola vista analítica.</p>
+              <button type="button" class="good" data-open-progress>Ver Progreso</button>
+            </section>
           </div>
 
           <div id="tab-gym" class="hidden">
@@ -450,33 +430,70 @@
           </div>
 
           <div id="tab-progreso" class="hidden">
-            <div class="moduleHero">
-              <h3>Progreso</h3>
-              <div class="muted small">Tu tendencia y la próxima mejora concreta.</div>
-              <div class="integralHero"><div class="ring" id="integralScoreRing" style="--p:0"><span><span id="integralScoreValue">0</span><small>integral</small></span></div><div><h2 id="integralScoreLabel">Sin datos suficientes</h2><div class="muted small" id="integralScoreAdvice"></div><div class="scoreTiles" id="integralScoreTiles" style="margin-top:10px"></div></div></div>
+            <h1 class="srOnly" id="progressViewHeading" tabindex="-1">Progreso</h1>
+            <nav class="progressSectionNav" role="tablist" aria-label="Secciones de Progreso">
+              <button type="button" role="tab" data-progress-view="overview">Vista general</button>
+              <button type="button" role="tab" data-progress-view="habits">Hábitos</button>
+              <button type="button" role="tab" data-progress-view="gym">Gym</button>
+              <button type="button" role="tab" data-progress-view="nutrition">Nutrición</button>
+              <button type="button" role="tab" data-progress-view="history">Historial</button>
+              <button type="button" role="tab" data-progress-view="achievements">Logros</button>
+            </nav>
+
+            <div class="progressFilters moduleCard" aria-label="Filtros de Progreso">
+              <div class="field"><label for="progressPeriod">Período</label><select id="progressPeriod"><option value="7">7 días</option><option value="30" selected>30 días</option><option value="90">90 días</option><option value="all">Todo</option></select></div>
+              <div class="field"><label for="progressArea">Área</label><select id="progressArea"><option value="all">Todas</option><option value="habits">Hábitos</option><option value="gym">Gym</option><option value="nutrition">Nutrición</option></select></div>
             </div>
-            <details class="moduleCard progressRewardsDetails">
-              <summary>Logros y recompensas</summary>
-            <div class="moduleGrid">
-              <div class="moduleCard"><h3>Focus Coins</h3><div class="coinBalance"><span id="coinBalance">0</span> <small style="font-size:14px">coins</small></div><div class="muted small">Gamificación interna, no financiera y no transferible.</div><div class="ledgerList" id="coinLedger" style="margin-top:10px"></div></div>
-              <div class="moduleCard"><h3>Recompensas e insignias</h3><div class="badgeGrid" id="rewardBadges"></div><div class="entryList" id="rewardsList"></div></div>
-            </div>
-            </details>
-            <details class="moduleCard progressSecondaryDetails">
-              <summary>Rankings mensuales</summary>
-              <div class="formGrid"><div class="field"><label>Alias público</label><input type="text" id="rankingAlias" placeholder="Ej. LectorConstante"></div><label class="check"><input type="checkbox" id="rankingOptIn"><span>Participar en rankings locales simulados.</span></label></div>
-              <div class="buttons"><button type="button" class="secondary" id="saveRankingSettingsBtn">Guardar preferencia</button></div>
-              <div class="rankingTable"><table id="monthlyRankingsTable"></table></div>
-              <div class="muted small">No existe un ranking único de perfección. Se comparan constancia, mejora, lectura, sueño, nutrición y reducción de pantalla por separado.</div>
-            </details>
-            <details class="moduleCard progressSecondaryDetails">
-              <summary>Referidos y afiliados</summary>
-              <div class="formGrid"><div class="field"><label>Código de referido</label><input type="text" id="referralCodeInput" placeholder="Ej. FOCUS10"></div><div class="field"><label>Estado</label><div class="auditItem" id="referralStatus">Sin código aplicado.</div></div></div>
-              <div class="buttons"><button type="button" class="good" id="applyReferralBtn">Aplicar código</button><button type="button" class="secondary" id="exportAffiliateCsvBtn">Descargar panel CSV</button></div>
-              <div class="quickStats" id="affiliateStats"></div>
-              <div class="legalBox"><strong>Aviso de afiliados:</strong> si una persona recomienda la app mediante un código y recibe comisión, debe declararlo claramente. Las conversiones e ingresos mostrados aquí son simulaciones locales; pagos reales requieren backend, identidad y condiciones comerciales.</div>
-            </details>
-            <details class="moduleCard progressSecondaryDetails"><summary>Términos de Focus Coins</summary><div class="legalBox">Los puntos internos no son dinero, inversión ni criptomoneda; no se pueden retirar, transferir ni intercambiar por dinero. Las recompensas priorizan constancia y salud.</div></details>
+
+            <section data-progress-panel="overview" role="tabpanel" aria-labelledby="progress-tab-overview">
+              <div class="moduleCard progressOverviewCard">
+                <div class="integralHero"><div class="ring" id="integralScoreRing" style="--p:0"><span><span id="integralScoreValue">0</span><small>integral</small></span></div><div><h2 id="integralScoreLabel">Sin datos suficientes</h2><div class="muted small" id="integralScoreAdvice"></div><div class="scoreTiles" id="integralScoreTiles"></div></div></div>
+              </div>
+              <div class="progressKpiGrid" id="progressSummaryMetrics"></div>
+              <div class="moduleGrid progressDecisionGrid">
+                <article class="moduleCard"><span class="muted small">Área más fuerte</span><h3 id="progressStrongestArea">Sin datos</h3><p id="progressStrongestDetail" class="muted small"></p></article>
+                <article class="moduleCard"><span class="muted small">Área a mejorar</span><h3 id="progressImproveArea">Sin datos</h3><p id="progressImproveDetail" class="muted small"></p></article>
+                <article class="moduleCard progressNextAction"><span class="muted small">Próxima acción</span><h3 id="progressNextAction">Registrá un dato comparable</h3><p class="muted small">Una acción concreta vale más que perseguir todas las métricas a la vez.</p></article>
+              </div>
+              <section class="moduleCard" aria-labelledby="progressTrendTitle"><h2 id="progressTrendTitle">Tendencia general</h2><div id="progressOverviewChart"></div><p class="chartCaption" id="progressOverviewSummary"></p></section>
+            </section>
+
+            <section class="hidden" data-progress-panel="habits" role="tabpanel" aria-labelledby="progress-tab-habits">
+              <div class="periodNote"><strong>Hábitos:</strong> compará períodos para decidir un solo ajuste concreto.</div>
+              <div class="metricGrid" id="periodMetrics"></div>
+              <div class="comparisonBars" id="comparisonBars"></div>
+              <div class="insightGrid" id="insightsPanel"></div>
+              <div class="metricTabs" role="tablist" aria-label="Tipo de gráfico de hábitos">
+                <button class="metricTab active" data-chart="daily" type="button" role="tab">Días</button>
+                <button class="metricTab" data-chart="weekly" type="button" role="tab">Semanas</button>
+                <button class="metricTab" data-chart="monthly" type="button" role="tab">Meses</button>
+                <button class="metricTab" data-chart="areas" type="button" role="tab">Áreas</button>
+              </div>
+              <div class="chartWrap big"><canvas id="scoreChart" width="900" height="320" role="img" aria-describedby="chartCaption"></canvas></div>
+              <div class="chartCaption" id="chartCaption">Guardá registros para ver barras de evolución.</div>
+            </section>
+
+            <section class="hidden" data-progress-panel="gym" role="tabpanel" aria-labelledby="progress-tab-gym">
+              <div class="progressKpiGrid" id="progressGymSummary"></div>
+              <section class="moduleCard" aria-labelledby="progressGymChartTitle"><h2 id="progressGymChartTitle">Entrenamiento por semana</h2><div id="progressGymChart"></div><p class="chartCaption" id="progressGymChartSummary"></p></section>
+            </section>
+
+            <section class="hidden" data-progress-panel="nutrition" role="tabpanel" aria-labelledby="progress-tab-nutrition">
+              <div class="progressKpiGrid" id="progressNutritionSummary"></div>
+              <section class="moduleCard" aria-labelledby="progressNutritionChartTitle"><h2 id="progressNutritionChartTitle">Registro nutricional</h2><div id="progressNutritionChart"></div><p class="chartCaption" id="progressNutritionChartSummary"></p></section>
+            </section>
+
+            <section class="hidden" data-progress-panel="history" role="tabpanel" aria-labelledby="progress-tab-history">
+              <div class="moduleCard"><div class="sectionHeading"><div><h2>Historial del protocolo</h2><p class="muted small">Los registros más recientes aparecen primero.</p></div><div class="buttons"><button type="button" class="secondary" id="exportJsonBtn">Exportar JSON</button><button type="button" class="secondary" id="exportCsvBtn">Exportar CSV</button><button type="button" class="secondary" id="importBtn">Importar JSON</button><input type="file" id="importFile" accept="application/json" class="hidden"></div></div><div class="history"><table id="historyTable"></table></div></div>
+            </section>
+
+            <section class="hidden" data-progress-panel="achievements" role="tabpanel" aria-labelledby="progress-tab-achievements">
+              <div class="moduleCard"><h2>Insignias de hábitos</h2><div class="badgeGrid" id="badges"></div></div>
+              <details class="moduleCard progressRewardsDetails"><summary>Focus Coins y recompensas</summary><div class="moduleGrid"><div class="moduleCard"><h3>Focus Coins</h3><div class="coinBalance"><span id="coinBalance">0</span> <small>coins</small></div><div class="muted small">Gamificación interna, no financiera y no transferible.</div><div class="ledgerList" id="coinLedger"></div></div><div class="moduleCard"><h3>Recompensas e insignias</h3><div class="badgeGrid" id="rewardBadges"></div><div class="entryList" id="rewardsList"></div></div></div></details>
+              <details class="moduleCard progressSecondaryDetails"><summary>Rankings mensuales</summary><div class="formGrid"><div class="field"><label for="rankingAlias">Alias público</label><input type="text" id="rankingAlias" placeholder="Ej. LectorConstante"></div><label class="check"><input type="checkbox" id="rankingOptIn"><span>Participar en rankings locales simulados.</span></label></div><div class="buttons"><button type="button" class="secondary" id="saveRankingSettingsBtn">Guardar preferencia</button></div><div class="rankingTable"><table id="monthlyRankingsTable"></table></div><div class="muted small">No existe un ranking único de perfección. La comparación útil es con tu período anterior.</div></details>
+              <details class="moduleCard progressSecondaryDetails"><summary>Referidos y afiliados</summary><div class="formGrid"><div class="field"><label for="referralCodeInput">Código de referido</label><input type="text" id="referralCodeInput" placeholder="Ej. FOCUS10"></div><div class="field"><label>Estado</label><div class="auditItem" id="referralStatus">Sin código aplicado.</div></div></div><div class="buttons"><button type="button" class="good" id="applyReferralBtn">Aplicar código</button><button type="button" class="secondary" id="exportAffiliateCsvBtn">Descargar panel CSV</button></div><div class="quickStats" id="affiliateStats"></div><div class="legalBox"><strong>Aviso de afiliados:</strong> las conversiones e ingresos mostrados aquí son simulaciones locales; pagos reales requieren backend, identidad y condiciones comerciales.</div></details>
+              <details class="moduleCard progressSecondaryDetails"><summary>Términos de Focus Coins</summary><div class="legalBox">Los puntos internos no son dinero, inversión ni criptomoneda; no se pueden retirar, transferir ni intercambiar por dinero.</div></details>
+            </section>
           </div>
 
           <div id="tab-mas" class="hidden">
@@ -662,7 +679,7 @@ const NUTRITION_ALIASES_KEY = 'protocolo_0_100_nutrition_aliases_v1';
 const UI_PREFERENCES_KEY = 'protocolo_0_100_ui_preferences_v1';
 const BACKUP_META_KEY = 'protocolo_0_100_backup_meta_v1';
 const APP_WEB_VERSION = '2.7.0';
-const APP_CACHE_VERSION = 'v50';
+const APP_CACHE_VERSION = 'v51';
 
 const EXERCISE_CATALOG = {
   'Pecho':['Press banca con barra','Press inclinado con mancuernas','Fondos','Aperturas en polea','Flexiones'],
@@ -1815,6 +1832,11 @@ const APP_VIEW_META={
   'nutrition/targets':['Objetivos nutricionales','Metas y configuración'],
   'nutrition/history':['Historial nutricional','Registros y tendencias'],
   'progress/overview':['Progreso','Tendencias, historial y logros'],
+  'progress/habits':['Hábitos','Score, constancia y áreas del protocolo'],
+  'progress/gym':['Progreso de Gym','Sesiones, series, repeticiones y volumen'],
+  'progress/nutrition':['Progreso nutricional','Registro y tendencia de comidas'],
+  'progress/history':['Historial','Registros consolidados del protocolo'],
+  'progress/achievements':['Logros','Insignias y recompensas secundarias'],
   'more/root':['Más','Ajustes, privacidad y herramientas'],
   'more/phone':['Teléfono','Uso e importación Android'],
   'more/plan':['Plan 0→100','Programa completo'],
@@ -1897,6 +1919,7 @@ function applyAppRoute(route,meta={}){
   });
   activateTab(tabForRoute(normalized),{internal:true});
   if(normalized.module==='gym'&&normalized.view!=='group')requestAnimationFrame(()=>applyGymRouteView(normalized.view,{focus:!!meta.focus}));
+  if(normalized.module==='progress')requestAnimationFrame(()=>window.PROGRESS_VIEW?.applyRoute?.(normalized.view));
   const root=(normalized.module==='home'&&normalized.view==='register')||(normalized.module==='gym'&&normalized.view==='train')||(normalized.module==='nutrition'&&normalized.view==='meals')||(normalized.module==='progress'&&normalized.view==='overview')||(normalized.module==='more'&&normalized.view==='root');
   document.getElementById('routeBackBtn')?.classList.toggle('hidden',root);
   closeActionModal();
@@ -2462,6 +2485,7 @@ maybeAutoShowActionModal();
 <script src="gym-party-metrics.js"></script>
 <script src="gym-party-ui.js"></script>
 <script src="gym-party.js"></script>
+<script src="progress/progress-view.js"></script>
 <script src="advanced-features.js"></script>
 </body>
 </html>

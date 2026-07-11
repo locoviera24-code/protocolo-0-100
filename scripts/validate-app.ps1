@@ -25,6 +25,7 @@ $workoutRanking = Read-Utf8 'workout-ranking.js'
 $workoutUi = Read-Utf8 'workout-ui.js'
 $appRouter = Read-Utf8 'ui/router.js'
 $appNavigation = Read-Utf8 'ui/navigation.js'
+$progressView = Read-Utf8 'progress/progress-view.js'
 $workout = Read-Utf8 'workout-features.js'
 $firebaseConfig = Read-Utf8 'firebase-config.js'
 $firebaseService = Read-Utf8 'firebase-service.js'
@@ -82,13 +83,13 @@ $duplicates = $staticIds | Group-Object | Where-Object Count -gt 1 | Select-Obje
 Assert-True ($duplicates.Count -eq 0) "Hay IDs HTML duplicados: $($duplicates -join ', ')"
 
 $requiredFiles = @(
-    'nutrition-data.js', 'fdc-client.js', 'workout-store.js', 'workout-plan.js', 'workout-metrics.js', 'workout-ranking.js', 'workout-ui.js', 'workout-features.js', 'advanced-features.js', 'ui/router.js', 'ui/navigation.js',
+    'nutrition-data.js', 'fdc-client.js', 'workout-store.js', 'workout-plan.js', 'workout-metrics.js', 'workout-ranking.js', 'workout-ui.js', 'workout-features.js', 'advanced-features.js', 'ui/router.js', 'ui/navigation.js', 'progress/progress-view.js',
     'firebase-config.js', 'firebase-service.js', 'gym-party-sync.js', 'gym-party-metrics.js', 'gym-party-ui.js', 'gym-party.js',
     'scripts/test-android-webview-security.mjs',
     'scripts/test-android-release.mjs',
     'scripts/test-accessibility.mjs',
-    'scripts/test-module-boundaries.mjs', 'scripts/test-design-system.mjs', 'scripts/design-token-allowlist.json', 'scripts/test-router.mjs', 'scripts/test-layout-coordinator.mjs', 'scripts/test-home-settings.mjs',
-    'scripts/serve-static.mjs', 'playwright.config.mjs', 'tests/e2e/gym-flow.spec.mjs', 'tests/e2e/visual-navigation.spec.mjs', 'tests/e2e/router.spec.mjs', 'tests/e2e/layout-sticky.spec.mjs', 'tests/e2e/home-settings.spec.mjs',
+    'scripts/test-module-boundaries.mjs', 'scripts/test-design-system.mjs', 'scripts/design-token-allowlist.json', 'scripts/test-router.mjs', 'scripts/test-layout-coordinator.mjs', 'scripts/test-home-settings.mjs', 'scripts/test-progress-view.mjs',
+    'scripts/serve-static.mjs', 'playwright.config.mjs', 'tests/e2e/gym-flow.spec.mjs', 'tests/e2e/visual-navigation.spec.mjs', 'tests/e2e/router.spec.mjs', 'tests/e2e/layout-sticky.spec.mjs', 'tests/e2e/home-settings.spec.mjs', 'tests/e2e/progress.spec.mjs',
     'manifest.webmanifest', 'sw.js',
     'styles/tokens.css', 'styles/base.css', 'styles/components.css', 'styles/features.css', 'styles/gym.css', 'styles/gym-party.css', 'styles/modules.css', 'styles/responsive.css',
     'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetProvider.java',
@@ -112,6 +113,11 @@ Assert-True ($html.Contains('<script src="ui/router.js"></script>')) 'index.html
 Assert-True ($serviceWorker.Contains("'./ui/router.js'")) 'sw.js no cachea ui/router.js'
 Assert-True ($html.Contains('<script src="ui/navigation.js"></script>')) 'index.html no carga ui/navigation.js'
 Assert-True ($serviceWorker.Contains("'./ui/navigation.js'")) 'sw.js no cachea ui/navigation.js'
+Assert-True ($html.Contains('<script src="progress/progress-view.js"></script>')) 'index.html no carga progress/progress-view.js'
+Assert-True ($serviceWorker.Contains("'./progress/progress-view.js'")) 'sw.js no cachea progress/progress-view.js'
+foreach ($contract in @('progressPeriod','progressArea','progressSummaryMetrics','progressGymSummary','progressNutritionSummary','data-progress-view','data-progress-panel')) {
+    Assert-True (($html + $progressView).Contains($contract)) "Falta contrato de Progreso: $contract"
+}
 foreach ($contract in @('pushState','replaceState','popstate','parentFor','moduleAliases','gym-party','current')) {
     Assert-True ($appRouter.Contains($contract)) "Falta contrato del router: $contract"
 }

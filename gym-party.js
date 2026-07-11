@@ -1911,6 +1911,14 @@
   }
 
   function bindGymPartyActionButtons(root){
+    if(root.dataset.gymPartyActionsDelegated !== '1'){
+      root.dataset.gymPartyActionsDelegated = '1';
+      root.addEventListener('click', event => {
+        const button = event.target.closest('[data-gym-party-action]');
+        if(!button || !root.contains(button)) return;
+        runGymPartyAction(button.dataset.gymPartyAction, event);
+      });
+    }
     root.querySelectorAll('[data-party-help]').forEach(button => {
       if(button.dataset.partyHelpBound === '1') return;
       button.dataset.partyHelpBound = '1';
@@ -1919,11 +1927,6 @@
         event.stopPropagation();
         showHelp(button.dataset.partyHelp);
       });
-    });
-    root.querySelectorAll('[data-gym-party-action]').forEach(button => {
-      if(button.dataset.gymPartyBound === '1') return;
-      button.dataset.gymPartyBound = '1';
-      button.addEventListener('click', event => runGymPartyAction(button.dataset.gymPartyAction, event));
     });
     root.querySelectorAll('[data-gym-party-weight]').forEach(button => {
       if(button.dataset.gymPartyWeightBound === '1') return;

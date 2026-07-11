@@ -284,6 +284,13 @@ Rutina predeterminada: lunes Torso A, martes Pierna A, miercoles Torso B, jueves
 
 ## Desarrollo y validacion
 
+### Progreso consolidado
+
+`Progreso` concentra la vista general, habitos, Gym, Nutricion, historial y
+logros. Sus deep links usan `?module=progress&view=overview|habits|gym|nutrition|history|achievements`.
+El selector de periodo permite comparar 7, 30, 90 dias o todo el historial;
+los graficos incluyen resumen textual y una escala comun accesible.
+
 Validar estructura:
 
 ```powershell

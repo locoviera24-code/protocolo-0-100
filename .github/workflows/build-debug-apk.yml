@@ -80,6 +80,9 @@ jobs:
       - name: Probar Inicio y Ajustes
         run: npm run test:home-settings
 
+      - name: Probar Progreso consolidado
+        run: npm run test:progress
+
       - name: Probar seguridad del WebView Android
         run: node ./scripts/test-android-webview-security.mjs
 

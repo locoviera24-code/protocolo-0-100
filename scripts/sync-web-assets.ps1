@@ -27,6 +27,7 @@ $relativeFiles = @(
     'sw.js',
     'ui/router.js',
     'ui/navigation.js',
+    'progress/progress-view.js',
     'styles/tokens.css',
     'styles/base.css',
     'styles/components.css',

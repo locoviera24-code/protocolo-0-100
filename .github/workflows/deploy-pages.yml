@@ -26,6 +26,7 @@ on:
       - manifest.webmanifest
       - sw.js
       - ui/**
+      - progress/**
       - styles/**
       - icons/**
       - firebase/**
@@ -87,6 +88,9 @@ jobs:
       - name: Probar Inicio y Ajustes
         run: npm run test:home-settings
 
+      - name: Probar Progreso consolidado
+        run: npm run test:progress
+
       - name: Probar seguridad del WebView Android
         run: node ./scripts/test-android-webview-security.mjs
 
@@ -98,11 +102,12 @@ jobs:
 
       - name: Preparar archivos publicos
         run: |
-          mkdir -p dist-pages/icons dist-pages/styles dist-pages/ui
+          mkdir -p dist-pages/icons dist-pages/styles dist-pages/ui dist-pages/progress
           cp index.html nutrition-data.js fdc-client.js workout-store.js workout-plan.js workout-metrics.js workout-ranking.js workout-ui.js workout-features.js firebase-config.js firebase-service.js gym-party-sync.js gym-party-metrics.js gym-party-ui.js gym-party.js advanced-features.js manifest.webmanifest sw.js dist-pages/
           cp icons/icon-192.png icons/icon-512.png dist-pages/icons/
           cp styles/*.css dist-pages/styles/
           cp ui/*.js dist-pages/ui/
+          cp progress/*.js dist-pages/progress/
 
       - name: Generar configuracion Firebase opcional
         shell: pwsh
