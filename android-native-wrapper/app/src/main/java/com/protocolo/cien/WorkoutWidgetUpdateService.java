@@ -204,7 +204,7 @@ public final class WorkoutWidgetUpdateService {
             return;
         }
         put(quick, "reps", Math.max(0, last.optInt("reps", last.optInt("lastReps", 8))));
-        put(quick, "weight", roundHalf(Math.max(0, last.optDouble("weight", last.optDouble("lastWeight", 0)))));
+        put(quick, "weight", displayWeight(state, last.optDouble("weight", last.optDouble("lastWeight", 0))));
         put(quick, "bodyweight", last.optBoolean("bodyweight", quick.optBoolean("bodyweight", false)));
         put(state, "quickLog", quick);
         put(state, "lastWidgetActionText", "Ultima serie cargada. Toca Guardar serie para repetirla.");
@@ -219,7 +219,8 @@ public final class WorkoutWidgetUpdateService {
         }
         JSONObject quick = ensureQuickLog(state, exercise);
         int reps = Math.max(0, quick.optInt("reps", 8));
-        double weight = roundHalf(Math.max(0, quick.optDouble("weight", 0)));
+        double displayWeight = roundHalf(Math.max(0, quick.optDouble("weight", 0)));
+        double weight = canonicalWeight(state, displayWeight);
         if (reps <= 0) {
             put(state, "lastWidgetActionText", "Subi las repeticiones antes de guardar.");
             return;
@@ -248,7 +249,7 @@ public final class WorkoutWidgetUpdateService {
         put(state, "workoutSession", session);
         updateHistory(state, session, exercise);
         refreshStateFromSession(state, session, exercise);
-        put(state, "lastWidgetActionText", "Serie guardada: " + shortName(exercise.optString("name", "Ejercicio")) + " · " + reps + " reps · " + formatWeight(weight) + " kg.");
+        put(state, "lastWidgetActionText", "Serie guardada: " + shortName(exercise.optString("name", "Ejercicio")) + " · " + reps + " reps · " + formatWeight(displayWeight) + " " + state.optString("unit", "kg") + ".");
     }
 
     private static void moveToNextExercise(JSONObject state) {
@@ -353,7 +354,7 @@ public final class WorkoutWidgetUpdateService {
             JSONObject last = lastSet(exercise);
             if (last == null) last = historyForExercise(state, exercise == null ? "" : exercise.optString("exerciseId", ""));
             put(quick, "reps", last == null ? 8 : Math.max(0, last.optInt("reps", last.optInt("lastReps", 8))));
-            put(quick, "weight", last == null ? 0 : roundHalf(Math.max(0, last.optDouble("weight", last.optDouble("lastWeight", 0)))));
+            put(quick, "weight", last == null ? 0 : displayWeight(state, last.optDouble("weight", last.optDouble("lastWeight", 0))));
             put(quick, "bodyweight", last == null ? (exercise != null && exercise.optBoolean("bodyweight", false)) : last.optBoolean("bodyweight", exercise != null && exercise.optBoolean("bodyweight", false)));
         }
         put(quick, "currentExerciseId", currentId);
@@ -386,7 +387,7 @@ public final class WorkoutWidgetUpdateService {
         putCurrentSetStats(state, state, selectedExercise);
         put(state, "progressText", summary.optInt("completedExercises", 0) + "/" + summary.optInt("totalExercises", 0)
                 + " ejercicios · " + summary.optInt("totalSets", 0) + " series · "
-                + Math.round(summary.optDouble("totalVolume", 0)) + " " + state.optString("unit", "kg"));
+                + Math.round(displayVolume(state, summary.optDouble("totalVolume", 0))) + " " + state.optString("unit", "kg"));
         ensureQuickLog(state, selectedExercise);
     }
 
@@ -782,6 +783,22 @@ public final class WorkoutWidgetUpdateService {
 
     private static double roundHalf(double value) {
         return Math.round(value * 2.0) / 2.0;
+    }
+
+    private static double displayWeight(JSONObject state, double weightKg) {
+        double value = Math.max(0, weightKg);
+        return roundHalf("lb".equalsIgnoreCase(state.optString("unit", "kg")) ? value * 2.2046226218 : value);
+    }
+
+    private static double canonicalWeight(JSONObject state, double displayedWeight) {
+        double value = Math.max(0, displayedWeight);
+        double kg = "lb".equalsIgnoreCase(state.optString("unit", "kg")) ? value / 2.2046226218 : value;
+        return Math.round(kg * 100.0) / 100.0;
+    }
+
+    private static double displayVolume(JSONObject state, double volumeKg) {
+        double value = Math.max(0, volumeKg);
+        return "lb".equalsIgnoreCase(state.optString("unit", "kg")) ? value * 2.2046226218 : value;
     }
 
     private static String formatWeight(double value) {

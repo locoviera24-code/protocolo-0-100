@@ -126,6 +126,18 @@
   function settings(){
     return {...{widgetEnabled:true,showRir:true,unit:'kg',mode:'simple',showRestDays:true,restTimerEnabled:false,restSeconds:90,hapticEnabled:true},...readStore(keys.gymSettings,{})};
   }
+  const LB_PER_KG=2.2046226218;
+  function displayWeight(weightKg,unit=settings().unit){
+    const value=Math.max(0,Number(weightKg)||0)*(unit==='lb'?LB_PER_KG:1);
+    return Math.round(value*2)/2;
+  }
+  function canonicalWeight(value,unit=settings().unit){
+    const kg=Math.max(0,Number(value)||0)/(unit==='lb'?LB_PER_KG:1);
+    return Math.round(kg*100)/100;
+  }
+  function displayVolume(volumeKg,unit=settings().unit){return Math.round(Math.max(0,Number(volumeKg)||0)*(unit==='lb'?LB_PER_KG:1));}
+  function displaySet(set){return {...clone(set),weight:displayWeight(set?.weight)};}
+  function displayHistory(row){return row?{...clone(row),lastWeight:displayWeight(row.lastWeight),bestWeight:displayWeight(row.bestWeight)}:null;}
   function saveSettings(next){
     writeStore(keys.gymSettings,{...settings(),...next});
     syncWorkoutWidget();
@@ -607,7 +619,8 @@
       return `<div class="workoutExerciseCard ${done?'done':''} ${cur?'current':''}"><strong>${escapeHtml(exercise.name)}</strong><div class="meta">${escapeHtml(exercise.muscle)} · ${sets} serie(s) registradas${exercise.bodyweight?' · peso corporal':''}</div></div>`;
     }).join('');
     const completed=summary?.completedExercises||0,total=exercises.length,totalSets=summary?.totalSets||0,volume=summary?.totalVolume||0,compliance=summary?.compliance||0;
-    const progressText=window.WORKOUT_METRICS?.formatProgress?.(summary||{},settingsValue.unit)||`${volume.toLocaleString()} ${settingsValue.unit}`;
+    const displaySummary=summary?{...summary,externalLoadVolume:displayVolume(summary.externalLoadVolume,settingsValue.unit),addedLoadVolume:displayVolume(summary.addedLoadVolume,settingsValue.unit)}:{};
+    const progressText=window.WORKOUT_METRICS?.formatProgress?.(displaySummary,settingsValue.unit)||`${displayVolume(volume,settingsValue.unit).toLocaleString()} ${settingsValue.unit}`;
     progress.innerHTML=[['Ejercicios',`${completed}/${total}`],['Series',totalSets],['Progreso',progressText],['Cumplimiento',`${compliance}%`]].map(statCard).join('');
     if(score) score.textContent=`Score gym ${Math.min(100,Math.round((completed/Math.max(1,total))*70 + Math.min(30,totalSets*2)))}/100`;
     if(lever) lever.textContent=totalSets?'Según lo registrado, priorizá técnica antes que carga y registrá la siguiente serie.':'Palanca física de hoy: registrar pesos para medir progreso.';
@@ -634,7 +647,7 @@
   function quickSetRowsHtml(exercise){
     const sets=exercise?.sets||[];
     if(!sets.length) return '<div class="muted small">Todavía no hay series en este ejercicio.</div>';
-    return sets.map(set=>`<div class="quickLoggedSet ${set.id===editingQuickSetId?'editing':''}"><div><strong>Serie ${set.setNumber}</strong><span>${set.reps} reps · ${set.weight?`${set.weight} ${settings().unit}`:'peso corporal'}${set.rir!==null&&set.rir!==undefined?` · RIR ${set.rir}`:''}</span></div><div class="buttons"><button type="button" class="secondary" data-quick-edit-set="${escapeHtml(set.id)}" aria-label="Editar serie ${set.setNumber} de ${escapeHtml(exercise.name)}">Editar</button><button type="button" class="danger" data-quick-delete-set="${escapeHtml(set.id)}" aria-label="Eliminar serie ${set.setNumber} de ${escapeHtml(exercise.name)}">Eliminar</button></div></div>`).join('');
+    return sets.map(set=>`<div class="quickLoggedSet ${set.id===editingQuickSetId?'editing':''}"><div><strong>Serie ${set.setNumber}</strong><span>${set.reps} reps · ${set.weight?`${displayWeight(set.weight)} ${settings().unit}`:'peso corporal'}${set.rir!==null&&set.rir!==undefined?` · RIR ${set.rir}`:''}</span></div><div class="buttons"><button type="button" class="secondary" data-quick-edit-set="${escapeHtml(set.id)}" aria-label="Editar serie ${set.setNumber} de ${escapeHtml(exercise.name)}">Editar</button><button type="button" class="danger" data-quick-delete-set="${escapeHtml(set.id)}" aria-label="Eliminar serie ${set.setNumber} de ${escapeHtml(exercise.name)}">Eliminar</button></div></div>`).join('');
   }
   function updateRestTimerDisplay(){
     const box=document.getElementById('quickRestTimer'),value=document.getElementById('quickRestTimerValue'); if(!box||!value)return;
@@ -677,14 +690,14 @@
     const bodyweight=!!exercise.bodyweight || !!h?.bodyweight;
     document.getElementById('quickBodyweight').checked=bodyweight;
     document.getElementById('quickReps').value=editingSet?.reps??last?.reps??h?.lastReps??8;
-    document.getElementById('quickWeight').value=editingSet?.weight??last?.weight??h?.lastWeight??0;
+    document.getElementById('quickWeight').value=displayWeight(editingSet?.weight??last?.weight??h?.lastWeight??0);
     document.getElementById('quickRir').value=editingSet?.rir??last?.rir??2;
     document.getElementById('quickRpe').value=editingSet?.rpe??'';
     document.getElementById('quickNote').value=editingSet?.note??'';
     document.getElementById('quickBodyweight').checked=editingSet?!!editingSet.bodyweight:bodyweight;
     if(!editingSet)applyQuickDraft(quickDrafts.get(quickDraftKey(currentQuickExerciseId)));
     const hint=document.getElementById('quickLastHint');
-    if(h) hint.textContent=`Última vez: ${h.name} — ${h.lastWeight||0} ${settings().unit} x ${h.lastReps||0} reps. Podés repetir la carga anterior; si te sentís bien, intentá +1 rep.`;
+    if(h) hint.textContent=`Última vez: ${h.name} — ${displayWeight(h.lastWeight)} ${settings().unit} x ${h.lastReps||0} reps. Podés repetir la carga anterior; si te sentís bien, intentá +1 rep.`;
     else hint.textContent='Última vez: sin datos todavía. Si estás fatigado, mantener carga también cuenta.';
     const stat=document.getElementById('quickSetStats');
     if(stat){
@@ -760,15 +773,15 @@
       currentExerciseId:exercise?.id||exercise?.exerciseId||'',
       currentExerciseName:exercise?.name||'',
       currentExerciseMuscle:exercise?.muscle||'',
-      currentSets:sets.map(set=>clone(set)),
+      currentSets:sets.map(displaySet),
       currentExerciseSets:exerciseSetCount(exercise),
       currentMuscleSets:muscleSetCount(source,exercise?.muscle),
       nextSetNumber:(sets.length||0)+1,
       suggestedReps:Number(last?.reps??h?.lastReps??8)||8,
-      suggestedWeight:Math.max(0,Math.round(Number(last?.weight??h?.lastWeight??0)*2)/2),
+      suggestedWeight:displayWeight(last?.weight??h?.lastWeight??0),
       bodyweight,
       unit:settings().unit,
-      history:h?clone(h):null,
+      history:displayHistory(h),
       summary:summary?clone(summary):null
     };
   }
@@ -907,7 +920,7 @@
     if(!exercise) return {ok:false,reason:'missing-exercise',message:'Elegí un ejercicio para registrar.'};
     const setNumber=Math.max(1,Number(payload.setNumber)||((exercise.sets||[]).length+1));
     const reps=Math.max(0,Number(payload.reps)||0);
-    const weight=Math.round(Math.max(0,Number(payload.weight)||0)*2)/2;
+    const weight=payload.weightCanonical?Math.max(0,Number(payload.weight)||0):canonicalWeight(payload.weight,payload.unit||settings().unit);
     const bodyweight=!!payload.bodyweight;
     const rir=payload.rir===''||payload.rir===undefined?null:Math.max(0,Number(payload.rir)||0);
     const rpe=payload.rpe===''||payload.rpe===undefined?null:Math.max(0,Number(payload.rpe)||0);
@@ -935,7 +948,7 @@
     const set=(setId?sets.find(item=>String(item.id||'')===setId):null) || (Number.isFinite(setNumber)?sets.find(item=>Number(item.setNumber)===setNumber):null);
     if(!set) return {ok:false,reason:'missing-set',message:'No encontre esa serie.'};
     set.reps=Math.max(0,Number(payload.reps)||0);
-    set.weight=Math.round(Math.max(0,Number(payload.weight)||0)*2)/2;
+    set.weight=payload.weightCanonical?Math.max(0,Number(payload.weight)||0):canonicalWeight(payload.weight,payload.unit||settings().unit);
     set.bodyweight=!!payload.bodyweight;
     set.rir=payload.rir===''||payload.rir===undefined?null:Math.max(0,Number(payload.rir)||0);
     set.rpe=payload.rpe===''||payload.rpe===undefined?null:Math.max(0,Number(payload.rpe)||0);
@@ -1025,7 +1038,7 @@
     const last=exercise?.sets?.slice(-1)[0] || history()[exercise?.exerciseId] || null;
     if(!last){ flash('Todavía no hay una serie anterior para repetir.'); return; }
     document.getElementById('quickReps').value=last.reps||last.lastReps||8;
-    document.getElementById('quickWeight').value=last.weight||last.lastWeight||0;
+    document.getElementById('quickWeight').value=displayWeight(last.weight??last.lastWeight??0);
     if(last.rir!==undefined && last.rir!==null) document.getElementById('quickRir').value=last.rir;
     document.getElementById('quickBodyweight').checked=!!last.bodyweight;
     captureQuickDraft();
@@ -1318,12 +1331,12 @@
     const currentId=current?.id||current?.exerciseId||'';
     const quickMatches=previousQuick.currentExerciseId && previousQuick.currentExerciseId===currentId;
     const quickReps=Number(quickMatches?previousQuick.reps:(lastSet?.reps??h?.lastReps??8))||8;
-    const quickWeight=Number(quickMatches?previousQuick.weight:(lastSet?.weight??h?.lastWeight??0))||0;
+    const quickWeight=Number(quickMatches?previousQuick.weight:displayWeight(lastSet?.weight??h?.lastWeight??0))||0;
     const quickBodyweight=!!(quickMatches?previousQuick.bodyweight:(current?.bodyweight||lastSet?.bodyweight||h?.bodyweight));
     const currentExerciseSets=exerciseSetCount(current);
     const currentMuscleSets=muscleSetCount(exercises,current?.muscle);
     const quickHint=h
-      ? `Ultima vez: ${h.name} — ${h.lastWeight||0} ${s.unit} x ${h.lastReps||0} reps.`
+      ? `Ultima vez: ${h.name} — ${displayWeight(h.lastWeight,s.unit)} ${s.unit} x ${h.lastReps||0} reps.`
       : 'Ajusta reps/kg y guarda desde el widget.';
     return {
       schemaVersion:2,
@@ -1347,7 +1360,7 @@
         unit:x.unit,
         completed:!!x.completed,
         setsLogged:x.sets?.length||0,
-        sets:clone(x.sets||[]),
+        sets:(x.sets||[]).map(displaySet),
         bodyweight:!!x.bodyweight
       })),
       currentExerciseId:currentId,
@@ -1372,7 +1385,7 @@
       },
       workoutSession:session?clone(session):null,
       exerciseHistory:history(),
-      progressText:plan.type==='rest'?restMessage:`${completed}/${total} ejercicios · ${totalSets} series · ${Math.round(totalVolume).toLocaleString()} ${s.unit}`,
+      progressText:plan.type==='rest'?restMessage:`${completed}/${total} ejercicios · ${totalSets} series · ${Math.round(s.unit==='lb'?totalVolume*LB_PER_KG:totalVolume).toLocaleString()} ${s.unit}`,
       completedExercises:completed,
       totalExercises:total,
       totalSets,
@@ -1407,7 +1420,7 @@
     else if(action===actionWidgetSaveSet){syncWorkoutWidget();openGymToday();}
   }
 
-  window.WORKOUT_FEATURES={keys,dayOrder,defaultWeeklyPlan:clone(defaultWeeklyPlan),exerciseLibrary:clone(exerciseLibrary),EXERCISE_LIBRARY_VERSION,getExerciseLibrary:()=>clone(libraryData()),getGymSettings:()=>clone(settings()),updateGymSettings:next=>{saveSettings(next||{});return clone(settings());},migrateExerciseLibrary,dayKeyForDate,planForDate,rankExercisesForContext,getQuickWorkoutState,addManualExercisePayload,saveQuickSetPayload,updateQuickSetPayload,deleteQuickSetPayload,undoDeleteQuickSetPayload,canUndoQuickSetDelete:()=>!!lastDeletedQuickSet,replaceSessionPayload,completeQuickExercisePayload,finishWorkoutPayload,buildWorkoutWidgetState,syncWorkoutWidget,importWidgetStateFromAndroid};
+  window.WORKOUT_FEATURES={keys,dayOrder,defaultWeeklyPlan:clone(defaultWeeklyPlan),exerciseLibrary:clone(exerciseLibrary),EXERCISE_LIBRARY_VERSION,getExerciseLibrary:()=>clone(libraryData()),getGymSettings:()=>clone(settings()),updateGymSettings:next=>{saveSettings(next||{});return clone(settings());},displayWeight,canonicalWeight,displayVolume,migrateExerciseLibrary,dayKeyForDate,planForDate,rankExercisesForContext,getQuickWorkoutState,addManualExercisePayload,saveQuickSetPayload,updateQuickSetPayload,deleteQuickSetPayload,undoDeleteQuickSetPayload,canUndoQuickSetDelete:()=>!!lastDeletedQuickSet,replaceSessionPayload,completeQuickExercisePayload,finishWorkoutPayload,buildWorkoutWidgetState,syncWorkoutWidget,importWidgetStateFromAndroid};
   window.openGymToday=openGymToday;
   window.openQuickSetLogger=openQuickSetLogger;
   window.handleAndroidWidgetIntent=(action,payload)=>handleAndroidWidgetIntent(action,payload||{});
@@ -1417,6 +1430,8 @@
   window.renderGym=renderGym;
 
   ensureWorkoutData();
+  const uiPreferences=readStore('protocolo_0_100_ui_preferences_v1',{});
+  if(['kg','lb'].includes(uiPreferences.unit))saveSettings({unit:uiPreferences.unit,showRir:uiPreferences.showRir!==false});
   injectWorkoutUi();
   renderWorkoutDashboard();
 })();

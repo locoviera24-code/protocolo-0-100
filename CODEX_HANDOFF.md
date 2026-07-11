@@ -4,7 +4,7 @@ Ultima actualizacion: 2026-06-30
 Rama esperada: `main`
 Version actual: `2.7.0` (fuente unica: `app-version.json`)
 Android: `versionCode 33`, `versionName "2.7.0"`
-Service worker cache: `protocolo-0-100-pwa-2.7.0-b51`
+Service worker cache: `protocolo-0-100-pwa-2.7.0-b52`
 Backup consolidado: `schemaVersion: 3`
 
 Leer primero este archivo y luego `README.md`, `index.html`,
@@ -1181,12 +1181,12 @@ combobox Gym, mensajes/estados centrales, accesibilidad final y rendimiento.
   heredados/dinamicos siguen inventariados y son deuda explicita, no se
   consideran migrados.
 - `app-version.json` es la fuente unica: version `2.7.0`, Android
-  `versionCode 33`, build web/cache `51` y fecha `2026-07-11`.
+  `versionCode 33`, build web/cache `52` y fecha `2026-07-11`.
 - `app-version.js` es el artefacto generado para web y service worker;
   `scripts/sync-app-version.mjs` lo regenera y alinea package/lockfile.
 - `index.html`, Acerca de, `advanced-features.js`, `sw.js`, Gradle y el workflow
   release consumen o validan esa fuente. Cache derivado:
-  `protocolo-0-100-pwa-2.7.0-b51`; APK:
+  `protocolo-0-100-pwa-2.7.0-b52`; APK:
   `protocolo-0-100-v2.7.0-release.apk`.
 - `scripts/test-version-alignment.mjs` y `npm run test:version` fallan ante
   divergencias. Pages y workflows Android ejecutan este contrato.
@@ -1218,7 +1218,12 @@ de historiales/Nutricion y crear el sistema central de mensajes/estados.
 - Pruebas: `scripts/test-settings-contract.mjs` y Playwright de Ajustes en los
   tres proyectos. Resultado: 16 OK, 2 omisiones moviles intencionales.
 
-Pendiente antes de declarar Ajustes completo: conversion canonica kg/lb en web,
-Gym Party y widget Android; onboarding reabrible del modo guiado; probar autosync
-con Firebase Emulator y aclarar/implementar recordatorios Android fuera del
-cronometro de descanso.
+- Pesos se guardan siempre en kg canonicos. Web, Progreso y Gym Party convierten
+  solo al mostrar/editar; cambiar a lb no reescribe sesiones historicas. El
+  widget muestra lb y convierte a kg antes de mutar `workoutSession`.
+- Verificacion kg/lb: prueba unitaria 132.5 lb -> 60.1 kg, Playwright 3/3 y
+  `:app:assembleDebug` OK.
+
+Pendiente antes de declarar Ajustes completo: onboarding reabrible del modo
+guiado; probar autosync con Firebase Emulator y aclarar/implementar recordatorios
+Android fuera del cronometro de descanso.

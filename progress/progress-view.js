@@ -101,11 +101,12 @@
     const days=selectedDays(),all=workoutSessions(),current=all.filter(session=>within(session.date,days)),previous=all.filter(session=>previousWindow(session.date,days));
     const aggregate=list=>list.reduce((total,session)=>{const metrics=sessionMetrics(session);total.sets+=number(metrics.totalSets);total.reps+=number(metrics.totalReps);total.volume+=number(metrics.externalLoadVolume);return total;},{sets:0,reps:0,volume:0});
     const totals=aggregate(current),previousTotals=aggregate(previous),summary=document.getElementById('progressGymSummary');
-    if(summary)summary.innerHTML=[kpi('Sesiones',current.length,deltaLabel(current.length,previous.length)),kpi('Series',totals.sets,deltaLabel(totals.sets,previousTotals.sets)),kpi('Repeticiones',totals.reps,'Peso corporal incluido'),kpi('Volumen externo',`${Math.round(totals.volume).toLocaleString()} kg`,deltaLabel(totals.volume,previousTotals.volume))].join('');
+    const unit=window.WORKOUT_FEATURES?.getGymSettings?.().unit||'kg',displayVolume=value=>window.WORKOUT_FEATURES?.displayVolume?.(value,unit)??Math.round(value);
+    if(summary)summary.innerHTML=[kpi('Sesiones',current.length,deltaLabel(current.length,previous.length)),kpi('Series',totals.sets,deltaLabel(totals.sets,previousTotals.sets)),kpi('Repeticiones',totals.reps,'Peso corporal incluido'),kpi('Volumen externo',`${displayVolume(totals.volume).toLocaleString()} ${unit}`,deltaLabel(totals.volume,previousTotals.volume))].join('');
     const weeks=groupByWeek(current,session=>session.date,session=>{const metrics=sessionMetrics(session);return {sessions:1,sets:metrics.totalSets,volume:metrics.externalLoadVolume};});
     const chart=document.getElementById('progressGymChart'),caption=document.getElementById('progressGymChartSummary');
-    if(chart)chart.innerHTML=barRows(weeks,{value:row=>row.sets,label:row=>row.label.slice(5),detail:row=>`${row.sessions} sesión(es) · ${Math.round(row.volume).toLocaleString()} kg`,display:row=>`${row.sets} series`,empty:'Registrá una sesión para ver la evolución semanal.'});
-    if(caption)caption.textContent=weeks.length?`Resumen textual: ${weeks.map(week=>`semana ${week.label}, ${week.sets} series y ${Math.round(week.volume)} kg`).join('; ')}. Más volumen no siempre significa mejor.`:'Resumen textual: no hay sesiones en el período.';
+    if(chart)chart.innerHTML=barRows(weeks,{value:row=>row.sets,label:row=>row.label.slice(5),detail:row=>`${row.sessions} sesión(es) · ${displayVolume(row.volume).toLocaleString()} ${unit}`,display:row=>`${row.sets} series`,empty:'Registrá una sesión para ver la evolución semanal.'});
+    if(caption)caption.textContent=weeks.length?`Resumen textual: ${weeks.map(week=>`semana ${week.label}, ${week.sets} series y ${displayVolume(week.volume)} ${unit}`).join('; ')}. Más volumen no siempre significa mejor.`:'Resumen textual: no hay sesiones en el período.';
   }
   function renderNutrition(){
     const days=selectedDays(),all=nutritionEntries(),current=all.filter(entry=>within(entry.date,days)),previous=all.filter(entry=>previousWindow(entry.date,days));

@@ -7,6 +7,7 @@ const gradle=await readFile(new URL('../android-native-wrapper/app/build.gradle'
 const properties=await readFile(new URL('../android-native-wrapper/gradle.properties',import.meta.url),'utf8');
 const ignore=await readFile(new URL('../.gitignore',import.meta.url),'utf8');
 const version=JSON.parse(await readFile(new URL('../app-version.json',import.meta.url),'utf8'));
+const widget=await readFile(new URL('../android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetUpdateService.java',import.meta.url),'utf8');
 
 assert.match(debug,/assembleDebug/);
 assert.match(debug,/actions\/upload-artifact@v4/);
@@ -29,6 +30,8 @@ assert.match(gradle,/versionName appVersion\.version/);
 assert.doesNotMatch(gradle,/versionName\s+['"]\d/);
 assert.match(release,/require\('\.\/app-version\.json'\)\.version/);
 assert.match(version.version,/^\d+\.\d+\.\d+$/);
+assert.match(widget,/canonicalWeight\(state, displayWeight\)/);
+assert.match(widget,/2\.2046226218/);
 assert.match(properties,/android\.useAndroidX=true/);
 assert.match(ignore,/\*\.jks/);
 assert.match(ignore,/\*\.keystore/);

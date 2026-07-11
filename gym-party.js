@@ -144,6 +144,10 @@
   function nowIso(){ return new Date().toISOString(); }
   function syncEngine(){ return window.GYM_PARTY_SYNC||null; }
   function number(value){ return Number.isFinite(Number(value)) ? Number(value) : 0; }
+  function displayUnit(){return workoutApi()?.getGymSettings?.().unit||'kg';}
+  function displayLoad(value){return workoutApi()?.displayWeight?.(value,displayUnit())??number(value);}
+  function displayLoadVolume(value){return workoutApi()?.displayVolume?.(value,displayUnit())??Math.round(number(value));}
+  function displayDelta(value){const numeric=number(value);return Math.sign(numeric)*displayLoad(Math.abs(numeric));}
   function round(value, digits = 1){
     const p = 10 ** digits;
     return Math.round(number(value) * p) / p;
@@ -1054,7 +1058,7 @@
           ${statCard('Reps', row.current.totalReps, 'reps')}
           ${statCard('Progreso', metricVolumeText(row.current), 'volume')}
         </div>
-        <div class="comparisonBars">${bar(row.current.totalVolume, maxVolume, 'Volumen', ' kg')}</div>
+        <div class="comparisonBars">${bar(displayLoadVolume(row.current.totalVolume), displayLoadVolume(maxVolume), 'Volumen', ` ${displayUnit()}`)}</div>
         <div class="muted small">Cambio vs semana pasada: volumen ${signed(row.changeVsPreviousWeek.volumePct, '%')} · series ${signed(row.changeVsPreviousWeek.setsPct, '%')}.</div>
       </div>`;
     }).join('')}</div>`;
@@ -1070,7 +1074,7 @@
       <div class="partyCompareGrid">
         <div class="partyCompareCard"><span>Yo</span><strong>${metricVolumeText(a.current)}</strong><small>${a.current.sessionsCount} sesiones · ${a.current.totalSets} series</small></div>
         <div class="partyCompareCard"><span>Amigo</span><strong>${metricVolumeText(b.current)}</strong><small>${b.current.sessionsCount} sesiones · ${b.current.totalSets} series</small></div>
-        <div class="partyCompareCard"><span>Diferencia visible</span><strong>${signed(diff)} kg</strong><small>Más volumen no siempre significa mejor.</small></div>
+        <div class="partyCompareCard"><span>Diferencia visible</span><strong>${signed(displayLoadVolume(Math.abs(diff))*Math.sign(diff))} ${displayUnit()}</strong><small>Más volumen no siempre significa mejor.</small></div>
         <div class="partyCompareCard"><span>Cambio propio</span><strong>${signed(a.changeVsPreviousWeek.volumePct, '%')}</strong><small>Tu referencia principal es tu semana pasada.</small></div>
       </div>
     </div>`;
@@ -1163,7 +1167,7 @@
   function strengthSetText(set){
     if(!set) return 'Sin dato';
     const weight = number(set.weightKg);
-    return weight ? `${round(weight,1)} kg x ${number(set.reps)} reps` : `${number(set.reps)} reps peso corporal`;
+    return weight ? `${displayLoad(weight)} ${displayUnit()} x ${number(set.reps)} reps` : `${number(set.reps)} reps peso corporal`;
   }
   function weekLabel(start, currentStart){
     if(start === currentStart) return 'Esta';
@@ -1362,8 +1366,8 @@
           <div class="partyExerciseMetricGrid">
             <div><span>Series</span><strong>${row.currentSets}</strong><small>${signed(row.setsDelta)}</small></div>
             <div><span>Reps</span><strong>${row.currentReps}</strong><small>${signed(row.repsDelta)}</small></div>
-            <div><span>Mejor peso</span><strong>${row.currentBestWeight ? `${formatNumber(row.currentBestWeight)} kg` : 'peso corporal'}</strong><small>${signed(row.bestWeightDelta, ' kg')}</small></div>
-            <div><span>Volumen</span><strong>${formatNumber(row.currentVolume)} kg</strong><small>${signed(row.volumeChangePct, '%')}</small></div>
+            <div><span>Mejor peso</span><strong>${row.currentBestWeight ? `${formatNumber(displayLoad(row.currentBestWeight))} ${displayUnit()}` : 'peso corporal'}</strong><small>${signed(displayDelta(row.bestWeightDelta), ` ${displayUnit()}`)}</small></div>
+            <div><span>Volumen</span><strong>${formatNumber(displayLoadVolume(row.currentVolume))} ${displayUnit()}</strong><small>${signed(row.volumeChangePct, '%')}</small></div>
           </div>
           <div class="muted small">Mejor serie: ${escape(strengthSetText(row.currentBestSet))}. Previa: ${escape(strengthSetText(row.previousBestSet))}.</div>
         </div>`).join('')
@@ -1385,12 +1389,12 @@
           </div>
           <div class="partyMuscleChartGrid">
             <div class="partyMiniChart"><h3>Series por semana</h3>${weekBarHtml(model.weeklyRows, 'sets')}</div>
-            <div class="partyMiniChart"><h3>Volumen por semana</h3>${weekBarHtml(model.weeklyRows, 'volume', ' kg')}</div>
-            <div class="partyMiniChart"><h3>Mejor peso registrado</h3>${weekBarHtml(model.weeklyRows, 'bestWeight', ' kg')}</div>
+            <div class="partyMiniChart"><h3>Volumen por semana</h3>${weekBarHtml(model.weeklyRows.map(row=>({...row,volume:displayLoadVolume(row.volume)})), 'volume', ` ${displayUnit()}`)}</div>
+            <div class="partyMiniChart"><h3>Mejor peso registrado</h3>${weekBarHtml(model.weeklyRows.map(row=>({...row,bestWeight:displayLoad(row.bestWeight)})), 'bestWeight', ` ${displayUnit()}`)}</div>
           </div>
           <div class="partyMuscleCompare">
             <h3>Comparacion por miembro</h3>
-            <div class="comparisonBars">${model.memberRows.map(row => bar(row.sets, maxMemberSets, `${row.label} - ${row.exercisesCount} ej. - ${formatNumber(row.bestWeight)} kg`, ' series')).join('') || '<div class="emptyState">Sin miembros para comparar.</div>'}</div>
+            <div class="comparisonBars">${model.memberRows.map(row => bar(row.sets, maxMemberSets, `${row.label} - ${row.exercisesCount} ej. - ${formatNumber(displayLoad(row.bestWeight))} ${displayUnit()}`, ' series')).join('') || '<div class="emptyState">Sin miembros para comparar.</div>'}</div>
           </div>
           <div class="partyMuscleExerciseList"><h3>Ejercicios del musculo</h3>${exerciseText}</div>
           <div class="muted small">Mas series o volumen no siempre significa mejor. Usalo para ver equilibrio y tendencia, no para forzar carga.</div>
@@ -1406,7 +1410,7 @@
     return `<div class="moduleCard">
       <h3>Gráficas comparativas</h3>
       <div class="partyChartGrid">
-        <div><h3>Volumen semanal ${helpButton('volume')}</h3><div class="comparisonBars">${stats.map(row => bar(row.current.totalVolume, maxVolume, memberDisplayName(row.member, data), ' kg')).join('')}</div></div>
+        <div><h3>Volumen semanal ${helpButton('volume')}</h3><div class="comparisonBars">${stats.map(row => bar(displayLoadVolume(row.current.totalVolume), displayLoadVolume(maxVolume), memberDisplayName(row.member, data), ` ${displayUnit()}`)).join('')}</div></div>
         <div><h3>Series semanales ${helpButton('sets')}</h3><div class="comparisonBars">${stats.map(row => bar(row.current.totalSets, maxSets, memberDisplayName(row.member, data))).join('')}</div></div>
         <div><h3>Sesiones por semana ${helpButton('consistency')}</h3><div class="comparisonBars">${stats.map(row => bar(row.current.sessionsCount, maxSessions, memberDisplayName(row.member, data))).join('')}</div></div>
         <div><h3>Reps de peso corporal ${helpButton('reps')}</h3><div class="comparisonBars">${stats.map(row => bar(row.current.bodyweightReps, maxBodyweightReps, memberDisplayName(row.member, data), ' reps')).join('')}</div></div>
@@ -1430,7 +1434,7 @@
     return `<div class="moduleCard">
       <h3>Progreso de ejercicio ${helpButton('best')}</h3>
       <div class="field"><label>Ejercicio</label><select id="gymPartyExerciseSelect">${options.map(([id,name]) => `<option value="${escape(id)}" ${id === selected ? 'selected' : ''}>${escape(name)}</option>`).join('')}</select></div>
-      <div class="entryList">${rows.map(row => `<div class="entryRow"><div><strong>${escape(memberDisplayName(row.member, data))}</strong><div class="meta">${row.best ? `${escape(row.best.exerciseName)} · ${row.best.reps} reps · ${row.best.weightKg === null ? 'peso oculto' : `${row.best.weightKg} kg`} · ${escape(row.best.date || '')}` : 'Sin series compartidas de este ejercicio.'}</div></div><span class="statusChip ${row.best ? 'good' : 'low'}">${row.best ? 'registrado' : 'sin dato'}</span></div>`).join('')}</div>
+      <div class="entryList">${rows.map(row => `<div class="entryRow"><div><strong>${escape(memberDisplayName(row.member, data))}</strong><div class="meta">${row.best ? `${escape(row.best.exerciseName)} · ${row.best.reps} reps · ${row.best.weightKg === null ? 'peso oculto' : `${displayLoad(row.best.weightKg)} ${displayUnit()}`} · ${escape(row.best.date || '')}` : 'Sin series compartidas de este ejercicio.'}</div></div><span class="statusChip ${row.best ? 'good' : 'low'}">${row.best ? 'registrado' : 'sin dato'}</span></div>`).join('')}</div>
     </div>`;
   }
   function muscleVolumeHtml(data, stats){
@@ -1443,7 +1447,7 @@
     const entries = Object.entries(totals).sort((a,b) => b[1] - a[1]).slice(0,8);
     if(!entries.length) return '';
     const max = Math.max(1, ...entries.map(([,value]) => value));
-    return `<div class="moduleCard"><h3>Volumen por músculo ${helpButton('muscle')}</h3><div class="comparisonBars">${entries.map(([muscle,value]) => bar(value, max, muscle, ' kg')).join('')}</div></div>`;
+    return `<div class="moduleCard"><h3>Volumen por músculo ${helpButton('muscle')}</h3><div class="comparisonBars">${entries.map(([muscle,value]) => bar(displayLoadVolume(value), displayLoadVolume(max), muscle, ` ${displayUnit()}`)).join('')}</div></div>`;
   }
   function weeklySetEditorHtml(data, reference = selectedWorkoutDate()){
     const m = activeMembership();
@@ -1452,7 +1456,7 @@
       .filter(set => set.userId === m?.userId && inWeek(set.date, start) && !set.deleted)
       .sort((a,b) => String(b.date || b.createdAt || '').localeCompare(String(a.date || a.createdAt || '')));
     const content = rows.length ? rows.map(set => {
-      const weight = set.weightKg === null || set.weightKg === undefined ? 'peso oculto' : `${formatNumber(set.weightKg)} kg`;
+      const weight = set.weightKg === null || set.weightKg === undefined ? 'peso oculto' : `${formatNumber(displayLoad(set.weightKg))} ${displayUnit()}`;
       return `<div class="partySetRow">
         <div><strong>${escape(set.exerciseName || set.exerciseId || 'Ejercicio')}</strong><span>${escape(set.date || '')} - Serie ${set.setNumber || ''} - ${number(set.reps)} reps - ${escape(weight)}</span></div>
         <div class="partySetRowActions">
@@ -1567,9 +1571,9 @@
   function metricVolumeText(metric){
     const volume=number(metric?.totalVolume??metric?.volume??metric?.externalLoadVolume);
     const bodyweight=number(metric?.bodyweightReps);
-    if(volume&&bodyweight) return `${formatNumber(volume)} kg · ${formatNumber(bodyweight)} reps PC`;
+    if(volume&&bodyweight) return `${formatNumber(displayLoadVolume(volume))} ${displayUnit()} · ${formatNumber(bodyweight)} reps PC`;
     if(bodyweight) return `${formatNumber(bodyweight)} reps peso corporal`;
-    return `${formatNumber(volume)} kg`;
+    return `${formatNumber(displayLoadVolume(volume))} ${displayUnit()}`;
   }
   function selectedPartyExerciseId(){
     return settings().partyQuickExerciseId || '';
@@ -1672,7 +1676,7 @@
           <div class="field"><label>Kilos</label><input type="number" id="partyQuickWeight" min="0" step="0.5" inputmode="decimal" value="${escape(weightValue)}"><div class="partyQuickAdjust"><button type="button" class="secondary" data-party-adjust="weight:-0.5">-0.5</button><button type="button" class="secondary" data-party-adjust="weight:0.5">+0.5</button><button type="button" class="secondary" data-party-adjust="weight:-2.5">-2.5</button><button type="button" class="secondary" data-party-adjust="weight:2.5">+2.5</button><button type="button" class="secondary" data-party-adjust="weight:-5">-5</button><button type="button" class="secondary" data-party-adjust="weight:5">+5</button></div></div>
         </div>
         <details class="partyNestedFold compact"><summary>Pesos frecuentes</summary><div class="partyWeightChips">
-          ${[0,5,10,20,40,60,80].map(value => `<button type="button" class="secondary" data-gym-party-weight="${value}">${value} kg</button>`).join('')}
+          ${[0,5,10,20,40,60,80].map(value => displayLoad(value)).map(value => `<button type="button" class="secondary" data-gym-party-weight="${value}">${value} ${displayUnit()}</button>`).join('')}
         </div></details>
         <label class="check"><input type="checkbox" id="partyQuickBodyweight" ${bodyweightValue?'checked':''}><span>Peso corporal / lastre opcional.</span></label>
         ${editingSet ? '<div class="auditItem good">Editando una serie guardada. Guardar cambios no crea una serie nueva.</div>' : ''}

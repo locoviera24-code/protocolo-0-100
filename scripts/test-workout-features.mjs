@@ -181,6 +181,19 @@ assert.equal(manualSaved.ok, true);
 assert.equal(manualSaved.set.weight, 12.5);
 assert.equal(JSON.parse(quickStore.get(quickWorkout.keys.workoutSessions))[0].exercises.some(exercise => exercise.manual && exercise.name === 'Face pull'), true);
 
+const {context: poundsContext,store:poundsStore}=createContext({
+  protocolo_0_100_gym_settings_v1:JSON.stringify({unit:'lb'})
+});
+const poundsWorkout=poundsContext.WORKOUT_FEATURES;
+const poundsExercise=poundsWorkout.planForDate('2026-06-22').exercises[1];
+const poundsSaved=poundsWorkout.saveQuickSetPayload({date:'2026-06-22',exerciseId:poundsExercise.id,reps:8,weight:132.5});
+assert.equal(poundsSaved.ok,true);
+assert.ok(Math.abs(poundsSaved.set.weight-60.1)<0.02,'Las libras deben persistirse como kg canónicos');
+assert.equal(poundsWorkout.getQuickWorkoutState({date:'2026-06-22',exerciseId:poundsExercise.id}).currentSets[0].weight,132.5);
+poundsWorkout.updateGymSettings({unit:'kg'});
+assert.equal(poundsWorkout.getQuickWorkoutState({date:'2026-06-22',exerciseId:poundsExercise.id}).currentSets[0].weight,60);
+assert.ok(Math.abs(JSON.parse(poundsStore.get(poundsWorkout.keys.workoutSessions))[0].exercises[1].sets[0].weight-60.1)<0.02);
+
 const nativeExercise = {...workout.planForDate('2026-06-22').exercises[1], sets: [{
   id: 'set_android_test',
   setNumber: 1,

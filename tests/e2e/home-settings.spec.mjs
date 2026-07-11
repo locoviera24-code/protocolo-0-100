@@ -70,6 +70,32 @@ test('Recordatorio habilitado funciona solo al abrir la app',async ({page})=>{
   await expect(page.locator('#toast')).toContainText('Recordatorio interno');
 });
 
+test('lb se muestra sin alterar el peso canónico guardado en kg',async ({page})=>{
+  await clean(page,'/index.html?module=more&view=settings');
+  await page.locator('#settingsUnit').selectOption('lb');
+  await page.locator('#saveUiSettingsBtn').click();
+  await page.goto('/index.html?module=gym&view=train');
+  await page.locator('#quickExerciseSelect').selectOption({label:'Press de banca'});
+  await page.locator('#quickReps').fill('8');
+  await page.locator('#quickWeight').fill('132.5');
+  await page.locator('#saveQuickSetBtn').click();
+  await expect(page.locator('#quickLoggedSets')).toContainText('132.5 lb');
+  const storedKg=await page.evaluate(()=>{
+    const sessions=JSON.parse(localStorage.getItem('protocolo_0_100_workout_sessions_v1'))||[];
+    return sessions[0].exercises.find(exercise=>exercise.name==='Press de banca').sets[0].weight;
+  });
+  expect(storedKg).toBeGreaterThan(60);
+  expect(storedKg).toBeLessThan(60.2);
+  await page.goto('/index.html?module=more&view=settings');
+  await page.locator('#settingsUnit').selectOption('kg');
+  await page.locator('#saveUiSettingsBtn').click();
+  await page.goto('/index.html?module=gym&view=train');
+  await page.locator('#quickExerciseSelect').selectOption({label:'Press de banca'});
+  await expect(page.locator('#quickLoggedSets')).toContainText('60 kg');
+  const storedAgain=await page.evaluate(()=>JSON.parse(localStorage.getItem('protocolo_0_100_workout_sessions_v1'))[0].exercises.find(exercise=>exercise.name==='Press de banca').sets[0].weight);
+  expect(storedAgain).toBe(storedKg);
+});
+
 test('Datos muestra almacenamiento y restablece solo un área',async ({page})=>{
   await clean(page,'/index.html?module=more&view=data');
   await page.evaluate(()=>{
@@ -89,7 +115,8 @@ test('Datos muestra almacenamiento y restablece solo un área',async ({page})=>{
 
 test('Acerca de expone versiones sin depender de Android',async ({page})=>{
   await clean(page,'/index.html?module=more&view=about');
-  await expect(page.locator('#aboutWebVersion')).toHaveText('2.7.0');
-  await expect(page.locator('#aboutCacheVersion')).toHaveText('2.7.0+51');
+  const version=await page.evaluate(()=>window.APP_VERSION_INFO);
+  await expect(page.locator('#aboutWebVersion')).toHaveText(version.version);
+  await expect(page.locator('#aboutCacheVersion')).toHaveText(version.cacheLabel);
   await expect(page.locator('#aboutAndroidVersion')).toHaveText('Web/PWA');
 });
