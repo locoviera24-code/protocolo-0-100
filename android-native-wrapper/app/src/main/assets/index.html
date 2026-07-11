@@ -318,123 +318,136 @@
     <button type="button" data-module-target="mas"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg><span>Más</span></button>
   </nav>
   <main class="app" id="mainContent" tabindex="-1">
-    <header class="protocolOnly">
+    <header class="protocolOnly homeHeader">
       <div class="brand">
+        <div class="homeEyebrow" id="homeGreeting">Tu día</div>
         <h1>Protocolo 0→100</h1>
-        <div class="subtitle">Sistema integral para atención, sueño, entrenamiento y nutrición. Incluye protocolo diario, rutinas de gym, seguimiento de macros y métricas comparables. Los datos se guardan localmente y funcionan offline.</div>
-        <div class="mantra">📏 Lo que no se mide no se mejora: día, semana, mes y mantenimiento indefinido.</div>
+        <div class="subtitle" id="homeDateLabel">Hoy</div>
+        <div class="mantra">Medí lo importante. Ajustá una cosa a la vez.</div>
       </div>
-      <div class="pill" id="levelPill">Nivel 1 · 0 XP</div>
+      <div class="pill hidden" id="levelPill" aria-hidden="true">Nivel 1 · 0 XP</div>
     </header>
 
     <section class="grid">
       <div class="panel">
         <div class="hd protocolOnly">
           <div>
-            <h2>Hoy</h2>
-            <div class="muted small">Configurá el inicio, registrá el día y dejá que la app calcule tu score.</div>
+            <h2>Registro del día</h2>
+            <div class="muted small">Completá lo esencial. Los detalles son opcionales.</div>
           </div>
-          <span class="pill" id="dayPill">Día 0</span>
         </div>
         <div class="bd">
-          <div class="formGrid protocolOnly">
-            <div class="field">
-              <label>Fecha de inicio del protocolo</label>
-              <input type="date" id="startDate">
-            </div>
+          <div class="formGrid protocolOnly homeDateControls">
             <div class="field">
               <label>Fecha del registro</label>
               <input type="date" id="entryDate">
             </div>
+            <details class="setupDetails">
+              <summary>Ajustar fecha de inicio</summary>
+              <div class="field"><label>Inicio del protocolo</label><input type="date" id="startDate"></div>
+            </details>
           </div>
 
-          <div class="phaseCard protocolOnly" style="margin-top:14px">
-            <h3 id="phaseTitle">Fase 0 · Preparación</h3>
-            <div class="taskList" id="taskList"></div>
-            <div class="todaySummary">
-              <div class="mini"><strong>Límite pantalla</strong><span id="limitText">Medir sin cambiar</span></div>
-              <div class="mini"><strong>Lectura meta</strong><span id="readingTargetText">Elegir libro/cuaderno</span></div>
-              <div class="mini"><strong>Corte nocturno</strong><span id="nightTargetText">Registrar sueño</span></div>
-            </div>
+          <div class="phaseCard protocolOnly homePlan" style="margin-top:14px">
+            <div class="homePlanHead"><div><span class="muted small">Plan actual</span><h3 id="phaseTitle">Fase 0 · Preparación</h3></div><span class="pill" id="dayPill">Día 0</span></div>
+            <details>
+              <summary>Ver objetivos de hoy</summary>
+              <div class="taskList" id="taskList"></div>
+              <div class="todaySummary">
+                <div class="mini"><strong>Pantalla</strong><span id="limitText">Medir sin cambiar</span></div>
+                <div class="mini"><strong>Lectura</strong><span id="readingTargetText">Elegir libro/cuaderno</span></div>
+                <div class="mini"><strong>Noche</strong><span id="nightTargetText">Registrar sueño</span></div>
+              </div>
+            </details>
           </div>
 
           <div class="homeShortcut protocolOnly">
-            <h3>🤝 Entrenar con un amigo</h3>
-            <p class="muted small">Creá una sala privada, copiá el código y mandáselo a tu amigo. Ambos registran entrenamientos y ven comparativas sanas.</p>
+            <div><h3>Entrenamiento compartido</h3><p class="muted small">Entrená y compará progreso con tu grupo.</p></div>
             <div class="buttons">
-              <button type="button" class="good" data-open-gym-party>Crear o unirme a Gym Party</button>
+              <button type="button" class="secondary" data-open-gym-party>Abrir Gym Party</button>
             </div>
           </div>
 
           <div class="actionFocus protocolOnly" id="actionFocusCard">
             <div class="actionFocusTop">
               <div>
-                <h3>⚡ Acción clave de hoy <button type="button" class="helpBtn" data-help-id="actionToday" title="Ver qué hacer, sentido y objetivo">?</button></h3>
-                <div class="muted small" id="actionTodayMeta">La app la actualiza según el día y la fase.</div>
+                <h3>Acción de hoy</h3>
+                <div class="muted small" id="actionTodayMeta">Según tu día y fase.</div>
               </div>
               <span class="actionStatus" id="actionStatus">Pendiente</span>
             </div>
             <div class="modalActionText" id="actionTodayText">Configura registro y revisa apps.</div>
-            <div class="actionDetails">
-              <div class="actionDetail"><strong>Qué hacer</strong><span id="actionHowText">Ejecutá la acción concreta del día.</span></div>
-              <div class="actionDetail"><strong>Sentido</strong><span id="actionMeaningText">Cada fase tiene una palanca central.</span></div>
-              <div class="actionDetail"><strong>Objetivo</strong><span id="actionObjectiveText">Que el día tenga un foco verificable.</span></div>
-            </div>
+            <details class="actionWhy">
+              <summary>¿Por qué esta acción?</summary>
+              <div class="actionDetails">
+                <div class="actionDetail"><strong>Qué hacer</strong><span id="actionHowText">Ejecutá la acción concreta del día.</span></div>
+                <div class="actionDetail"><strong>Sentido</strong><span id="actionMeaningText">Cada fase tiene una palanca central.</span></div>
+                <div class="actionDetail"><strong>Objetivo</strong><span id="actionObjectiveText">Que el día tenga un foco verificable.</span></div>
+              </div>
+            </details>
             <div class="buttons">
-              <button type="button" class="good" id="markActionBtn">Marcar acción como cumplida</button>
-              <button type="button" class="secondary" id="showActionModalBtn">Abrir aviso de acción</button>
-              <button type="button" class="secondary" id="openActionGuideBtn">Ver guía completa</button>
-              <button type="button" class="secondary" id="dismissActionBtn">Ocultar aviso por hoy</button>
+              <button type="button" class="good" id="markActionBtn">Marcar completada</button>
+              <button type="button" class="hidden" id="showActionModalBtn" aria-hidden="true" tabindex="-1">Abrir ayuda</button>
+              <button type="button" class="btn-text" id="openActionGuideBtn">Ver guía</button>
+              <button type="button" class="btn-text" id="dismissActionBtn">Ocultar hoy</button>
             </div>
           </div>
 
           <div class="tabs protocolOnly" style="margin-top:16px">
-            <button class="tab active" data-tab="registro" type="button">Registro diario</button>
-            <button class="tab" data-tab="dashboard" type="button">Dashboard</button>
-            <button class="tab" data-tab="telefono" type="button">Teléfono</button>
-            <button class="tab" data-tab="plan" type="button">Plan 0–100</button>
-            <button class="tab" data-tab="guia" type="button">Guía: qué hacer / sentido / objetivo</button>
+            <button class="tab active" data-tab="registro" type="button">Registro</button>
+            <button class="tab" data-tab="dashboard" type="button">Resumen</button>
           </div>
 
           <div id="tab-registro">
-            <div class="formGrid">
-              <div class="field"><label>Pantalla total del día (h)</label><input type="number" id="totalScreen" min="0" max="24" step="0.25" placeholder="Ej. 8.5"></div>
+            <h3 class="formSectionTitle">Esenciales</h3>
+            <div class="formGrid essentialFields">
               <div class="field"><label>Pantalla no esencial (h)</label><input type="number" id="nonEssential" min="0" max="24" step="0.25" placeholder="Ej. 6.25"></div>
               <div class="field"><label>Sueño real (h)</label><input type="number" id="sleepHours" min="0" max="14" step="0.25" placeholder="Ej. 7.5"></div>
-              <div class="field"><label>Minutos sin redes antes de dormir</label><input type="number" id="noSocialMins" min="0" max="240" step="5" placeholder="Ej. 60"></div>
               <div class="field"><label>Lectura/escritura (min)</label><input type="number" id="readingMins" min="0" max="240" step="5" placeholder="Ej. 25"></div>
               <div class="field"><label>Cuerpo/mundo offline (min)</label><input type="number" id="offlineMins" min="0" max="240" step="5" placeholder="Ej. 15"></div>
-              <div class="field"><label>Ansiedad/impulso de celular (1–10)</label><input type="number" id="anxiety" min="1" max="10" step="1" placeholder="Ej. 5"></div>
-              <div class="field"><label>Día manual del protocolo</label><input type="number" id="manualDay" min="0" max="99999" step="1" placeholder="Auto"></div>
             </div>
             <input type="hidden" id="phoneImported" value="">
             <input type="hidden" id="phoneImportedAt" value="">
             <input type="hidden" id="phoneDetectedTotal" value="">
             <input type="hidden" id="phoneDetectedNonEssential" value="">
             <input type="hidden" id="phoneMetricSource" value="">
-            <div class="checks">
-              <label class="check"><input type="checkbox" id="measuredScreen"><span>Medí el tiempo real de pantalla.</span></label>
+            <h3 class="formSectionTitle">Hábitos rápidos</h3>
+            <div class="checks quickHabits">
               <label class="check"><input type="checkbox" id="wakeNoSocial"><span>Sin redes al despertar / primeros 20–30 min.</span></label>
-              <label class="check"><input type="checkbox" id="stableSchedule"><span>Horario de sueño relativamente estable.</span></label>
               <label class="check"><input type="checkbox" id="phoneOutBed"><span>Celular fuera de la cama/cuarto.</span></label>
-              <label class="check"><input type="checkbox" id="noPhoneBed"><span>No usé teléfono en cama.</span></label>
-              <label class="check"><input type="checkbox" id="writingDone"><span>Hice nota, párrafo, esquema o miniensayo.</span></label>
               <label class="check"><input type="checkbox" id="readBeforeScroll"><span>Lectura/escritura antes que scroll.</span></label>
               <label class="check"><input type="checkbox" id="keyActionDone"><span>Cumplí la acción clave del día.</span></label>
             </div>
-            <div class="field" style="margin-top:12px"><label>Nota breve del día</label><textarea id="note" placeholder="Una frase: qué funcionó, qué ajustar, idea leída..."></textarea></div>
-            <div class="buttons">
-              <button type="button" class="good" id="saveBtn">Guardar registro</button>
-              <button type="button" class="secondary" id="clearBtn">Limpiar formulario</button>
-              <button type="button" class="danger" id="deleteBtn">Borrar este día</button>
+            <details class="dailyDetails">
+              <summary>Más detalles</summary>
+              <div class="formGrid">
+                <div class="field"><label>Pantalla total del día (h)</label><input type="number" id="totalScreen" min="0" max="24" step="0.25" placeholder="Ej. 8.5"></div>
+                <div class="field"><label>Minutos sin redes antes de dormir</label><input type="number" id="noSocialMins" min="0" max="240" step="5" placeholder="Ej. 60"></div>
+                <div class="field"><label>Ansiedad/impulso de celular (1–10)</label><input type="number" id="anxiety" min="1" max="10" step="1" placeholder="Ej. 5"></div>
+                <div class="field"><label>Día manual del protocolo</label><input type="number" id="manualDay" min="0" max="99999" step="1" placeholder="Auto"></div>
+              </div>
+              <div class="checks">
+                <label class="check"><input type="checkbox" id="measuredScreen"><span>Medí el tiempo real de pantalla.</span></label>
+                <label class="check"><input type="checkbox" id="stableSchedule"><span>Horario de sueño relativamente estable.</span></label>
+                <label class="check"><input type="checkbox" id="noPhoneBed"><span>No usé teléfono en cama.</span></label>
+                <label class="check"><input type="checkbox" id="writingDone"><span>Hice una nota, esquema o texto breve.</span></label>
+              </div>
+              <div class="field" style="margin-top:12px"><label>Nota breve del día</label><textarea id="note" placeholder="Qué funcionó o qué querés ajustar"></textarea></div>
+            </details>
+            <div class="dailySaveBar">
+              <button type="button" class="good" id="saveBtn"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M5 3h12l2 2v16H5zM8 3v6h8V3M8 17h8"/></svg>Guardar día</button>
             </div>
             <div class="scoreBreak" id="scoreBreak"></div>
             <div class="auditBox" id="auditBox"></div>
             <div class="rescue hidden" id="rescueBox"><strong>Día de rescate:</strong> registrá sin dramatizar, no compenses con castigo y mañana volvé al límite anterior.</div>
+            <details class="dailyDangerZone">
+              <summary>Opciones del registro</summary>
+              <div class="buttons"><button type="button" class="secondary" id="clearBtn">Limpiar formulario</button><button type="button" class="danger" id="deleteBtn">Borrar este día</button></div>
+            </details>
           </div>
 
           <div id="tab-dashboard" class="hidden">
-            <div class="periodNote"><strong>Eje rector:</strong> no se trata solo de “cumplir”, sino de convertir el hábito en datos comparables. La app mide el día, promedia la semana y el mes, y muestra si estás subiendo, bajando o estabilizándote.</div>
+            <div class="periodNote"><strong>Tu tendencia:</strong> compará el día, la semana y el mes para decidir el próximo ajuste.</div>
             <div class="metricGrid" id="periodMetrics"></div>
             <h3>Comparación visual de puntajes</h3>
             <div class="comparisonBars" id="comparisonBars"></div>
@@ -798,14 +811,16 @@
               </div>
             </div>
           </div>
-          <h3 style="margin-top:18px">Regla de juego</h3>
-          <div class="taskList">
-            <div class="task"><div class="icon">🛌</div><div><strong>Sueño y horario</strong><br><span class="muted small">Hasta 25 puntos.</span></div></div>
-            <div class="task"><div class="icon">🌙</div><div><strong>Protección nocturna</strong><br><span class="muted small">Hasta 20 puntos.</span></div></div>
-            <div class="task"><div class="icon">📵</div><div><strong>Presupuesto de pantalla</strong><br><span class="muted small">Hasta 20 puntos.</span></div></div>
-            <div class="task"><div class="icon">📚</div><div><strong>Lectura/escritura</strong><br><span class="muted small">Hasta 25 puntos.</span></div></div>
-            <div class="task"><div class="icon">🚶</div><div><strong>Cuerpo/mundo offline</strong><br><span class="muted small">Hasta 10 puntos.</span></div></div>
-          </div>
+          <details class="scoreRules">
+            <summary>Cómo se calcula</summary>
+            <div class="taskList">
+              <div class="task"><div><strong>Sueño y horario</strong><br><span class="muted small">Hasta 25 puntos.</span></div></div>
+              <div class="task"><div><strong>Protección nocturna</strong><br><span class="muted small">Hasta 20 puntos.</span></div></div>
+              <div class="task"><div><strong>Pantalla</strong><br><span class="muted small">Hasta 20 puntos.</span></div></div>
+              <div class="task"><div><strong>Lectura/escritura</strong><br><span class="muted small">Hasta 25 puntos.</span></div></div>
+              <div class="task"><div><strong>Cuerpo y mundo offline</strong><br><span class="muted small">Hasta 10 puntos.</span></div></div>
+            </div>
+          </details>
           <div class="footerNote">Esta herramienta es de autoorganización. Si la ansiedad es intensa, persistente o te impide dormir, estudiar/trabajar, comer, salir o relacionarte, buscá apoyo profesional o de un adulto de confianza.</div>
         </div>
       </aside>
@@ -880,6 +895,15 @@ let lastProtocolTab = 'registro';
 function pad(n){return String(n).padStart(2,'0')}
 function todayStr(){ const d=new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
 function parseDate(s){ const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d); }
+function updateHomeHeader(){
+  const selected=document.getElementById('entryDate')?.value||todayStr();
+  const hour=new Date().getHours();
+  const greeting=hour<12?'Buenos días':hour<19?'Buenas tardes':'Buenas noches';
+  const date=parseDate(selected);
+  const formatted=new Intl.DateTimeFormat('es-PY',{weekday:'long',day:'numeric',month:'long'}).format(date);
+  const greetingEl=document.getElementById('homeGreeting');if(greetingEl)greetingEl.textContent=greeting;
+  const dateEl=document.getElementById('homeDateLabel');if(dateEl)dateEl.textContent=formatted.charAt(0).toUpperCase()+formatted.slice(1);
+}
 function daysBetween(a,b){ return Math.round((parseDate(b)-parseDate(a))/(1000*60*60*24)); }
 function clamp(n,min,max){ return Math.max(min, Math.min(max, Number.isFinite(n)?n:0)); }
 function num(id){ const v=parseFloat(document.getElementById(id).value); return Number.isFinite(v)?v:0; }
@@ -1465,12 +1489,7 @@ function markActionDone(){
   updateUI();
   flash('Acción clave marcada como cumplida.');
 }
-function maybeAutoShowActionModal(){
-  if(activeModule!=='protocolo') return;
-  const date = document.getElementById('entryDate').value || todayStr();
-  if(checked('keyActionDone') || isActionDismissed(date)) return;
-  setTimeout(()=>showActionModal(false), 650);
-}
+function maybeAutoShowActionModal(){ renderActionCard(); }
 
 function scoreEntry(raw){
   const plan = planForDay(raw.day);
@@ -2165,7 +2184,7 @@ function drawChart(){
     drawBarChart(items, 'Puntaje diario de los últimos 30 registros. Ideal para detectar tendencia, rachas y recaídas sin dramatizar.');
   }
 }
-function updateUI(){ updatePlanUI(); updateScorePreview(); }
+function updateUI(){ updateHomeHeader(); updatePlanUI(); updateScorePreview(); }
 function renderAll(){ updateUI(); renderStats(); renderPeriodMetrics(); renderInsights(); renderBadges(); renderHistory(); renderPlanTable(); drawChart(); updatePhonePanel(); renderGym(); renderNutrition(); }
 
 function exportJson(){
