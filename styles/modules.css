@@ -135,6 +135,7 @@ body[data-module="mas"] .grid { display: block; }
 .moreLink .icon { color: var(--color-primary); }
 .moreLink span { display: grid; gap: 2px; }
 .moreLink small { color: var(--color-text-muted); font-weight: 400; }
+#tab-mas .moduleHero { display: none; }
 
 .actionFocus { padding: var(--space-4); background: var(--color-surface-raised); }
 .actionFocus::before { display: none; }

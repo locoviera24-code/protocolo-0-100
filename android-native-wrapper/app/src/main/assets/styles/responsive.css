@@ -29,6 +29,7 @@
   .drawerItem span span { display: none; }
   .moduleTopbar { padding-inline: var(--space-5); }
   .app { padding: var(--space-6) var(--space-5); }
+  body .quickStickyActions, body .partyStickySave, .dailySaveBar { position: static; }
 }
 
 @media (max-width: 900px) {

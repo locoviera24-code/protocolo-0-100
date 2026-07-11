@@ -61,6 +61,7 @@ $accessibilityTest = Read-Utf8 'scripts/test-accessibility.mjs'
 $moduleBoundaryTest = Read-Utf8 'scripts/test-module-boundaries.mjs'
 $playwrightConfig = Read-Utf8 'playwright.config.mjs'
 $playwrightGymTest = Read-Utf8 'tests/e2e/gym-flow.spec.mjs'
+$playwrightVisualTest = Read-Utf8 'tests/e2e/visual-navigation.spec.mjs'
 $readme = Read-Utf8 'README.md'
 $handoff = Read-Utf8 'CODEX_HANDOFF.md'
 
@@ -81,7 +82,7 @@ $requiredFiles = @(
     'scripts/test-android-release.mjs',
     'scripts/test-accessibility.mjs',
     'scripts/test-module-boundaries.mjs',
-    'scripts/serve-static.mjs', 'playwright.config.mjs', 'tests/e2e/gym-flow.spec.mjs',
+    'scripts/serve-static.mjs', 'playwright.config.mjs', 'tests/e2e/gym-flow.spec.mjs', 'tests/e2e/visual-navigation.spec.mjs',
     'manifest.webmanifest', 'sw.js',
     'styles/tokens.css', 'styles/base.css', 'styles/components.css', 'styles/modules.css', 'styles/responsive.css',
     'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetProvider.java',
@@ -387,8 +388,11 @@ foreach ($contract in @(
 foreach ($contract in @('prepareLocalRows','mergeRemoteRows','markRowsSynced','markRowsError','backoffDelay','latestRemoteTimestamp','timeContext','syncState','remote-newer')) {
     Assert-True ($gymPartySync.Contains($contract)) "Falta contrato de sync incremental: $contract"
 }
-Assert-True ($gymParty.Contains('batch.set(firestoreMod.doc(db,op.collection,op.payload.id),{...firestorePayload(op.payload),updatedAt:timestamp})')) 'El sync debe reemplazar documentos propios para limpiar campos legacy'
-Assert-True (-not $gymParty.Contains('firestorePayload(op.payload),updatedAt:timestamp},{merge:true}')) 'El sync no debe conservar campos legacy con merge:true'
+Assert-True ($gymParty.Contains('batch.set(firestoreMod.doc(db,op.collection,op.payload.id),{...firestorePayload(op.payload,op.collection),updatedAt:timestamp})')) 'El sync debe reemplazar documentos propios para limpiar campos legacy'
+Assert-True (-not $gymParty.Contains('firestorePayload(op.payload,op.collection),updatedAt:timestamp},{merge:true}')) 'El sync no debe conservar campos legacy con merge:true'
+foreach ($contract in @('firestoreFieldAllowlist','isolatedFailures','firestoreMod.setDoc','detailedError')) {
+    Assert-True ($gymParty.Contains($contract)) "Falta aislamiento de payloads Firestore legacy: $contract"
+}
 Assert-True ($gymParty.Contains('Math.min(2880, Math.max(0, measuredDuration))')) 'La duracion compartida debe respetar el rango permitido por Rules'
 foreach ($contract in @('uploadSyncQueue','fetchRemoteCollection','lastRemoteSyncAt','serverTimestamp','writeBatch','startAfter','sync-full','revision','localDate','timeZone','utcOffset','deletedAt')) {
     Assert-True ($gymParty.Contains($contract)) "Falta integracion de sync incremental: $contract"
@@ -416,6 +420,12 @@ Assert-True ($accessibilityTest.Contains('Accesibilidad correcta')) 'Falta prueb
 Assert-True ($releaseWorkflow.Contains('node ./scripts/test-accessibility.mjs')) 'El release Android debe probar accesibilidad web'
 foreach ($contract in @('android-chromium','iphone-webkit','Pixel 7','iPhone 13','browserName','serviceWorkers')) {
     Assert-True ($playwrightConfig.Contains($contract)) "Falta configuracion Playwright: $contract"
+}
+foreach ($contract in @('desktop-chromium','1440','900')) {
+    Assert-True ($playwrightConfig.Contains($contract)) "Falta configuracion Playwright escritorio: $contract"
+}
+foreach ($contract in @('320,360,390,412,430','bottomNav','expectNoHorizontalOverflow','reducedMotion','gymPartyCode','mobile-more.png','desktop-gym.png')) {
+    Assert-True ($playwrightVisualTest.Contains($contract)) "Falta cobertura visual E2E: $contract"
 }
 foreach ($contract in @('Face pull','partyManualRememberWeekday','2026-07-13','Editar serie 1 de Face pull','Eliminar serie 1 de Face pull','party-undo-delete-set','setOffline(true)','gymPartyCode','not.toHaveURL','memberCount','manifest.webmanifest')) {
     Assert-True ($playwrightGymTest.Contains($contract)) "Falta cobertura E2E: $contract"

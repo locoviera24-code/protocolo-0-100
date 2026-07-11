@@ -16,7 +16,8 @@ export default defineConfig({
   },
   projects:[
     {name:'android-chromium',use:{...devices['Pixel 7'],browserName:'chromium'}},
-    {name:'iphone-webkit',use:{...devices['iPhone 13'],browserName:'webkit'}}
+    {name:'iphone-webkit',use:{...devices['iPhone 13'],browserName:'webkit'}},
+    {name:'desktop-chromium',use:{...devices['Desktop Chrome'],browserName:'chromium',viewport:{width:1440,height:900}}}
   ],
   webServer:{
     command:'node scripts/serve-static.mjs 4173',

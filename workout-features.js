@@ -476,7 +476,8 @@
     if(!tab || document.getElementById('todayWorkoutPanel')) return;
     ensureWorkoutStyles();
     const hero=tab.querySelector('.moduleHero');
-    hero.insertAdjacentHTML('afterend',`
+    const insertionAnchor=tab.querySelector('.gymSectionNav')||hero;
+    insertionAnchor.insertAdjacentHTML('afterend',`
       <div class="moduleCard" id="todayWorkoutPanel">
         <div class="actionFocusTop"><div><h3 id="todayWorkoutTitle">Entrenamiento de hoy</h3><div class="muted small" id="todayWorkoutSummary"></div></div><span class="statusChip good" id="todayWorkoutScore">Gym</span></div>
         <div class="workoutTodayGrid">
