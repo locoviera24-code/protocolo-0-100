@@ -63,6 +63,6 @@ test('Datos muestra almacenamiento y restablece solo un área',async ({page})=>{
 test('Acerca de expone versiones sin depender de Android',async ({page})=>{
   await clean(page,'/index.html?module=more&view=about');
   await expect(page.locator('#aboutWebVersion')).toHaveText('2.7.0');
-  await expect(page.locator('#aboutCacheVersion')).toHaveText('v51');
+  await expect(page.locator('#aboutCacheVersion')).toHaveText('2.7.0+51');
   await expect(page.locator('#aboutAndroidVersion')).toHaveText('Web/PWA');
 });

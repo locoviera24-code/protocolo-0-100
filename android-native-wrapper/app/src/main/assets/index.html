@@ -597,7 +597,7 @@
 
           <section id="tab-about" class="hidden routeSubpage" aria-labelledby="aboutViewTitle">
             <div class="moduleHero"><h2 id="aboutViewTitle" tabindex="-1">Acerca de</h2><div class="muted small">Protocolo 0→100</div></div>
-            <div class="moduleCard"><div class="quickStats"><div class="quickStat"><span>Web</span><strong id="aboutWebVersion">2.7.0</strong></div><div class="quickStat"><span>Android</span><strong id="aboutAndroidVersion">Web/PWA</strong></div><div class="quickStat"><span>Caché</span><strong id="aboutCacheVersion">v50</strong></div><div class="quickStat"><span>Actualización</span><strong id="aboutUpdatedAt">2026-07-11</strong></div></div><p class="muted small">Datos local-first. Fuentes nutricionales documentadas en la biblioteca y USDA FDC opcional. Herramienta orientativa de autoorganización; no reemplaza asesoramiento profesional de salud o entrenamiento.</p><div class="buttons"><button type="button" class="secondary" data-more-view="privacy">Ver privacidad</button><a class="btn-secondary aboutRepoLink" href="https://github.com/locoviera24-code/protocolo-0-100" target="_blank" rel="noopener">Código y licencias</a></div></div>
+            <div class="moduleCard"><div class="quickStats"><div class="quickStat"><span>Web</span><strong id="aboutWebVersion">—</strong></div><div class="quickStat"><span>Android</span><strong id="aboutAndroidVersion">Web/PWA</strong></div><div class="quickStat"><span>Caché</span><strong id="aboutCacheVersion">—</strong></div><div class="quickStat"><span>Actualización</span><strong id="aboutUpdatedAt">—</strong></div></div><p class="muted small">Datos local-first. Fuentes nutricionales documentadas en la biblioteca y USDA FDC opcional. Herramienta orientativa de autoorganización; no reemplaza asesoramiento profesional de salud o entrenamiento.</p><div class="buttons"><button type="button" class="secondary" data-more-view="privacy">Ver privacidad</button><a class="btn-secondary aboutRepoLink" href="https://github.com/locoviera24-code/protocolo-0-100" target="_blank" rel="noopener noreferrer">Código y licencias</a></div></div>
           </section>
 
         </div>
@@ -661,6 +661,7 @@
     </div>
   </div>
 
+<script src="app-version.js"></script>
 <script src="nutrition-data.js"></script>
 <script src="fdc-client.js"></script>
 <script src="ui/router.js"></script>
@@ -678,8 +679,8 @@ const CUSTOM_FOODS_KEY = 'protocolo_0_100_custom_foods_v1';
 const NUTRITION_ALIASES_KEY = 'protocolo_0_100_nutrition_aliases_v1';
 const UI_PREFERENCES_KEY = 'protocolo_0_100_ui_preferences_v1';
 const BACKUP_META_KEY = 'protocolo_0_100_backup_meta_v1';
-const APP_WEB_VERSION = '2.7.0';
-const APP_CACHE_VERSION = 'v51';
+const APP_WEB_VERSION = window.APP_VERSION_INFO?.version || 'desconocida';
+const APP_CACHE_VERSION = window.APP_VERSION_INFO?.cacheLabel || 'desconocida';
 
 const EXERCISE_CATALOG = {
   'Pecho':['Press banca con barra','Press inclinado con mancuernas','Fondos','Aperturas en polea','Flexiones'],
@@ -827,6 +828,7 @@ function renderSettingsData(){
   const web=document.getElementById('aboutWebVersion');if(web)web.textContent=APP_WEB_VERSION;
   const android=document.getElementById('aboutAndroidVersion');if(android)android.textContent=androidVersionLabel();
   const cache=document.getElementById('aboutCacheVersion');if(cache)cache.textContent=APP_CACHE_VERSION;
+  const updated=document.getElementById('aboutUpdatedAt');if(updated)updated.textContent=window.APP_VERSION_INFO?.updatedAt||'desconocida';
 }
 function resetKeysForScope(scope){
   const keys=[];for(let index=0;index<localStorage.length;index++)keys.push(localStorage.key(index));

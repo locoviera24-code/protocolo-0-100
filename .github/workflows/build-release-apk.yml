@@ -71,6 +71,9 @@ jobs:
       - name: Probar presupuestos del sistema visual
         run: npm run test:design
 
+      - name: Verificar version unica
+        run: npm run test:version
+
       - name: Probar router y deep links
         run: npm run test:router
 
@@ -119,7 +122,7 @@ jobs:
         id: package
         shell: bash
         run: |
-          VERSION_NAME=$(sed -n "s/.*versionName '\([^']*\)'.*/\1/p" android-native-wrapper/app/build.gradle | head -n 1)
+          VERSION_NAME=$(node -p "require('./app-version.json').version")
           test -n "$VERSION_NAME"
           mkdir -p dist
           APK="dist/protocolo-0-100-v${VERSION_NAME}-release.apk"

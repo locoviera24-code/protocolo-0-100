@@ -1,36 +1,305 @@
-.workoutTodayGrid{display:grid;grid-template-columns:1.15fr .85fr;gap:12px;margin-top:12px}
-.workoutExerciseGrid{display:grid;gap:8px;margin-top:10px}
-.workoutExerciseCard{border:1px solid var(--line);border-radius:14px;padding:11px;background:rgba(255,255,255,.035);display:grid;gap:5px}
-.workoutExerciseCard.done{border-color:rgba(152,245,194,.35);background:rgba(152,245,194,.07)}
-.workoutExerciseCard.current{border-color:rgba(114,214,255,.45);background:rgba(114,214,255,.09)}
-.quickLogger{border:1px solid rgba(114,214,255,.35);background:linear-gradient(180deg,rgba(114,214,255,.10),rgba(152,245,194,.055));border-radius:18px;padding:14px;margin-top:12px}
-.quickLogger input,.quickLogger select{font-size:18px;padding:13px 12px}
-.quickLogger .buttons button{min-height:46px}
-.quickPrimaryInputs{display:grid;grid-template-columns:.7fr 1fr 1fr;gap:10px;margin-top:10px}
-.quickAdjustRow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:6px}.quickAdjustRow button{min-height:38px;padding:7px 5px;font-size:12px}
-.quickStickyActions{position:sticky;bottom:max(8px,env(safe-area-inset-bottom));z-index:35;display:grid;grid-template-columns:minmax(0,1.5fr) repeat(2,minmax(0,1fr));gap:8px;margin:12px -4px 8px;padding:9px;border:1px solid rgba(114,214,255,.32);border-radius:15px;background:rgba(11,18,32,.96);box-shadow:0 12px 30px rgba(0,0,0,.3);backdrop-filter:blur(12px)}
-.quickStickyActions button{min-height:50px}.quickRestTimer{display:flex;justify-content:space-between;gap:10px;align-items:center;margin:8px 0;padding:9px 11px;border-radius:12px;background:rgba(114,214,255,.08);color:#dff6ff}.quickRestTimer.hidden{display:none}
-.quickLoggedSets{display:grid;gap:6px;margin-top:8px}.quickLoggedSet{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:12px;background:rgba(0,0,0,.09)}.quickLoggedSet span{color:var(--muted);font-size:12px}.quickLoggedSet .buttons{margin:0}.quickLoggedSet button{min-height:32px!important;padding:6px 8px;font-size:11px}
-.quickSecondaryDetails{margin-top:8px;border-top:1px solid var(--line);padding-top:9px}.quickSecondaryDetails summary{cursor:pointer;font-weight:750;color:#dff6ff}
-.planEditorTextarea{min-height:150px;font-family:ui-monospace,Consolas,monospace;font-size:12px}
-.planEditorCards{display:grid;gap:10px;margin-top:12px}
-.planExerciseEditorCard{border:1px solid var(--line);border-radius:16px;padding:12px;background:rgba(255,255,255,.035)}
-.planExerciseEditorHead{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
-.planExerciseEditorHead strong{display:block;font-size:15px}.planExerciseEditorHead span{display:block;color:var(--muted);font-size:12px;margin-top:3px}
-.planExerciseFields{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
-.planExerciseFields .wide{grid-column:span 2}
-.planExerciseFields input,.planExerciseFields select{padding:9px 10px;font-size:13px}
-.planExerciseActions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
-.planExerciseActions button{min-height:34px;padding:7px 9px;font-size:12px}
-.planEditorStatus{margin-top:10px;color:var(--muted);font-size:12px;min-height:18px}
-.planAdvancedEditor{border:1px solid var(--line);border-radius:14px;padding:11px 13px;margin-top:12px;background:rgba(255,255,255,.025)}
-.planAdvancedEditor summary{cursor:pointer;font-weight:800}
-.exerciseLibraryList{display:grid;gap:8px;margin-top:10px;max-height:520px;overflow:auto}
-.exerciseLibraryRow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:14px;padding:10px;background:rgba(255,255,255,.03)}
-.exerciseLibraryRow strong,.exerciseLibraryRow span{display:block}.exerciseLibraryRow span{color:var(--muted);font-size:12px;margin-top:3px}
-.exerciseLibraryActions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.exerciseLibraryActions button{min-height:34px;padding:7px 9px;font-size:12px}
-.workoutSafety{border:1px solid rgba(255,211,110,.30);border-radius:14px;padding:12px;background:rgba(255,211,110,.08);color:#ffe8ad;margin-top:12px}
-.widgetStatus{border:1px dashed rgba(114,214,255,.35);border-radius:14px;padding:10px;background:rgba(114,214,255,.06);color:#dff6ff;margin-top:10px}
-@media(max-width:850px){.workoutTodayGrid{grid-template-columns:1fr}.quickLogger input,.quickLogger select{font-size:16px}.planExerciseFields{grid-template-columns:1fr 1fr}.planExerciseFields .wide{grid-column:span 2}.planExerciseEditorHead{display:block}.planExerciseActions{justify-content:flex-start;margin-top:8px}}
-@media(max-width:520px){.planExerciseFields{grid-template-columns:1fr}.planExerciseFields .wide{grid-column:span 1}.quickPrimaryInputs{grid-template-columns:1fr 1fr}.quickPrimaryInputs .quickSetNumberField{grid-column:span 2}.quickStickyActions{grid-template-columns:1.35fr .9fr .8fr}.quickStickyActions button{padding:9px 7px;font-size:12px}.quickAdjustRow{grid-template-columns:repeat(2,minmax(0,1fr))}}
-
+.workoutTodayGrid {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 12px;
+  margin-top: 12px;
+}
+.workoutExerciseGrid {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+.workoutExerciseCard {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  padding: 11px;
+  background: var(--surface-glass-soft);
+  display: grid;
+  gap: 5px;
+}
+.workoutExerciseCard.done {
+  border-color: var(--state-success-border);
+  background: var(--color-success-soft);
+}
+.workoutExerciseCard.current {
+  border-color: var(--state-info-border);
+  background: var(--state-info-soft);
+}
+.quickLogger {
+  border: 1px solid var(--state-info-border);
+  background: linear-gradient(
+    180deg,
+    var(--state-info-soft),
+    var(--color-success-soft)
+  );
+  border-radius: var(--radius-panel);
+  padding: 14px;
+  margin-top: 12px;
+}
+.quickLogger input,
+.quickLogger select {
+  font-size: var(--font-card);
+  padding: 13px 12px;
+}
+.quickLogger .buttons button {
+  min-height: 46px;
+}
+.quickPrimaryInputs {
+  display: grid;
+  grid-template-columns: 0.7fr 1fr 1fr;
+  gap: 10px;
+  margin-top: 10px;
+}
+.quickAdjustRow {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 6px;
+}
+.quickAdjustRow button {
+  min-height: 38px;
+  padding: 7px 5px;
+  font-size: var(--font-label);
+}
+.quickStickyActions {
+  position: sticky;
+  bottom: max(8px, env(safe-area-inset-bottom));
+  z-index: 35;
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 12px -4px 8px;
+  padding: 9px;
+  border: 1px solid var(--state-info-border);
+  border-radius: var(--radius-card);
+  background: var(--surface-navigation-strong);
+  box-shadow: var(--shadow-subtle);
+  backdrop-filter: blur(12px);
+}
+.quickStickyActions button {
+  min-height: 50px;
+}
+.quickRestTimer {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  margin: 8px 0;
+  padding: 9px 11px;
+  border-radius: var(--radius-card);
+  background: var(--state-info-soft);
+  color: var(--color-text);
+}
+.quickRestTimer.hidden {
+  display: none;
+}
+.quickLoggedSets {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+}
+.quickLoggedSet {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface-ink-soft);
+}
+.quickLoggedSet span {
+  color: var(--muted);
+  font-size: var(--font-label);
+}
+.quickLoggedSet .buttons {
+  margin: 0;
+}
+.quickLoggedSet button {
+  min-height: 32px !important;
+  padding: 6px 8px;
+  font-size: var(--font-label);
+}
+.quickSecondaryDetails {
+  margin-top: 8px;
+  border-top: 1px solid var(--line);
+  padding-top: 9px;
+}
+.quickSecondaryDetails summary {
+  cursor: pointer;
+  font-weight: 750;
+  color: var(--color-text);
+}
+.planEditorTextarea {
+  min-height: 150px;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: var(--font-label);
+}
+.planEditorCards {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+.planExerciseEditorCard {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  padding: 12px;
+  background: var(--surface-glass-soft);
+}
+.planExerciseEditorHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.planExerciseEditorHead strong {
+  display: block;
+  font-size: var(--font-body);
+}
+.planExerciseEditorHead span {
+  display: block;
+  color: var(--muted);
+  font-size: var(--font-label);
+  margin-top: 3px;
+}
+.planExerciseFields {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.planExerciseFields .wide {
+  grid-column: span 2;
+}
+.planExerciseFields input,
+.planExerciseFields select {
+  padding: 9px 10px;
+  font-size: var(--font-small);
+}
+.planExerciseActions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.planExerciseActions button {
+  min-height: 34px;
+  padding: 7px 9px;
+  font-size: var(--font-label);
+}
+.planEditorStatus {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: var(--font-label);
+  min-height: 18px;
+}
+.planAdvancedEditor {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  padding: 11px 13px;
+  margin-top: 12px;
+  background: var(--surface-glass-soft);
+}
+.planAdvancedEditor summary {
+  cursor: pointer;
+  font-weight: 800;
+}
+.exerciseLibraryList {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  max-height: 520px;
+  overflow: auto;
+}
+.exerciseLibraryRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  padding: 10px;
+  background: var(--surface-glass-soft);
+}
+.exerciseLibraryRow strong,
+.exerciseLibraryRow span {
+  display: block;
+}
+.exerciseLibraryRow span {
+  color: var(--muted);
+  font-size: var(--font-label);
+  margin-top: 3px;
+}
+.exerciseLibraryActions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.exerciseLibraryActions button {
+  min-height: 34px;
+  padding: 7px 9px;
+  font-size: var(--font-label);
+}
+.workoutSafety {
+  border: 1px solid var(--state-warning-border);
+  border-radius: var(--radius-card);
+  padding: 12px;
+  background: var(--color-warning-soft);
+  color: var(--state-warning-text);
+  margin-top: 12px;
+}
+.widgetStatus {
+  border: 1px dashed var(--state-info-border);
+  border-radius: var(--radius-card);
+  padding: 10px;
+  background: var(--state-info-soft);
+  color: var(--color-text);
+  margin-top: 10px;
+}
+@media (max-width: 850px) {
+  .workoutTodayGrid {
+    grid-template-columns: 1fr;
+  }
+  .quickLogger input,
+  .quickLogger select {
+    font-size: var(--font-body);
+  }
+  .planExerciseFields {
+    grid-template-columns: 1fr 1fr;
+  }
+  .planExerciseFields .wide {
+    grid-column: span 2;
+  }
+  .planExerciseEditorHead {
+    display: block;
+  }
+  .planExerciseActions {
+    justify-content: flex-start;
+    margin-top: 8px;
+  }
+}
+@media (max-width: 520px) {
+  .planExerciseFields {
+    grid-template-columns: 1fr;
+  }
+  .planExerciseFields .wide {
+    grid-column: span 1;
+  }
+  .quickPrimaryInputs {
+    grid-template-columns: 1fr 1fr;
+  }
+  .quickPrimaryInputs .quickSetNumberField {
+    grid-column: span 2;
+  }
+  .quickStickyActions {
+    grid-template-columns: 1.35fr 0.9fr 0.8fr;
+  }
+  .quickStickyActions button {
+    padding: 9px 7px;
+    font-size: var(--font-label);
+  }
+  .quickAdjustRow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

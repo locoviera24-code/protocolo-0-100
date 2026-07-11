@@ -71,6 +71,9 @@ jobs:
       - name: Probar presupuestos del sistema visual
         run: npm run test:design
 
+      - name: Verificar version unica
+        run: npm run test:version
+
       - name: Probar router y deep links
         run: npm run test:router
 

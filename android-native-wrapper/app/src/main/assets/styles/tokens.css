@@ -4,22 +4,53 @@
   --color-bg: #0b1220;
   --color-surface: #111a2b;
   --color-surface-raised: #172238;
-  --color-surface-soft: rgba(255, 255, 255, .035);
-  --color-surface-hover: rgba(255, 255, 255, .06);
+  --color-surface-soft: rgba(255, 255, 255, 0.035);
+  --color-surface-hover: rgba(255, 255, 255, 0.06);
   --color-border: #2a3a52;
-  --color-border-soft: rgba(255, 255, 255, .08);
+  --color-border-soft: rgba(255, 255, 255, 0.08);
   --color-text: #f4f7fb;
   --color-text-secondary: #afbdd0;
   --color-text-muted: #8796ab;
   --color-primary: #72d6ff;
   --color-primary-strong: #42bde9;
-  --color-primary-soft: rgba(114, 214, 255, .11);
+  --color-primary-soft: rgba(114, 214, 255, 0.11);
   --color-success: #78dfa8;
-  --color-success-soft: rgba(120, 223, 168, .1);
+  --color-success-soft: rgba(120, 223, 168, 0.1);
   --color-warning: #e9c46a;
-  --color-warning-soft: rgba(233, 196, 106, .1);
+  --color-warning-soft: rgba(233, 196, 106, 0.1);
   --color-danger: #ef8585;
-  --color-danger-soft: rgba(239, 133, 133, .1);
+  --color-danger-soft: rgba(239, 133, 133, 0.1);
+
+  --surface-input: #0d1626;
+  --surface-navigation: rgba(11, 18, 32, 0.96);
+  --surface-navigation-strong: rgba(11, 18, 32, 0.97);
+  --surface-overlay: rgba(3, 8, 15, 0.76);
+  --surface-scrim: rgba(2, 6, 12, 0.68);
+  --surface-glass: rgba(255, 255, 255, 0.04);
+  --surface-glass-soft: rgba(255, 255, 255, 0.025);
+  --surface-glass-strong: rgba(255, 255, 255, 0.08);
+  --surface-ink-soft: rgba(0, 0, 0, 0.12);
+  --surface-ink-strong: rgba(0, 0, 0, 0.3);
+
+  --state-info-border: rgba(114, 214, 255, 0.35);
+  --state-info-soft: rgba(114, 214, 255, 0.1);
+  --state-success-border: rgba(120, 223, 168, 0.35);
+  --state-warning-border: rgba(233, 196, 106, 0.35);
+  --state-danger-border: rgba(239, 133, 133, 0.35);
+  --state-warning-text: #f6dea3;
+  --state-danger-text: #ffd0d0;
+
+  --chart-primary: var(--color-primary);
+  --chart-secondary: var(--color-success);
+  --chart-warning: var(--color-warning);
+  --chart-danger: var(--color-danger);
+  --chart-grid: rgba(255, 255, 255, 0.08);
+  --muscle-active: var(--color-success);
+  --muscle-active-soft: rgba(120, 223, 168, 0.1);
+  --muscle-line: rgba(114, 214, 255, 0.35);
+
+  --elevation-focus: 0 0 0 3px var(--color-primary-soft);
+  --elevation-sticky: 0 -8px 22px rgba(0, 0, 0, 0.2);
 
   --space-1: 4px;
   --space-2: 8px;
@@ -29,19 +60,24 @@
   --space-6: 32px;
   --space-7: 48px;
 
-  --font-screen: clamp(1.5rem, 1.3rem + .8vw, 2rem);
+  --font-screen: clamp(1.5rem, 1.3rem + 0.8vw, 2rem);
   --font-section: 1.125rem;
   --font-card: 1rem;
-  --font-body: .9375rem;
-  --font-small: .8125rem;
-  --font-label: .75rem;
+  --font-body: 0.9375rem;
+  --font-small: 0.8125rem;
+  --font-label: 0.75rem;
+  --font-input: max(16px, 1em);
 
   --radius-control: 10px;
   --radius-card: 12px;
   --radius-panel: 16px;
   --radius-modal: 18px;
-  --shadow-subtle: 0 8px 24px rgba(0, 0, 0, .2);
-  --shadow-overlay: 0 20px 60px rgba(0, 0, 0, .42);
+  --radius-none: 0;
+  --radius-pill: 999px;
+  --radius-round: 50%;
+  --radius-sheet-top: var(--radius-card) var(--radius-card) 0 0;
+  --shadow-subtle: 0 8px 24px rgba(0, 0, 0, 0.2);
+  --shadow-overlay: 0 20px 60px rgba(0, 0, 0, 0.42);
   --control-height: 46px;
   --touch-target: 44px;
   --content-width: 1120px;
@@ -58,6 +94,7 @@
   --z-nav: 80;
   --z-drawer: 200;
   --z-modal: 300;
+  --print-text: #000;
 
   /* Compatibilidad con los estilos históricos. */
   --bg: var(--color-bg);

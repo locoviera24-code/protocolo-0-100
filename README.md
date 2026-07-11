@@ -15,7 +15,7 @@ PWA y APK Android para medir habitos, atencion, actividad fisica y nutricion con
 
 ## Navegacion y diseno
 
-La version `v2.7.0` usa una barra inferior movil con cinco destinos: **Inicio**,
+La version actual `v2.7.0` (build web `51`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
 **Gym**, **Nutricion**, **Progreso** y **Mas**. En escritorio usa una barra
 lateral compacta. Gym Party se abre desde **Gym > Grupo**, desde un acceso
 discreto en Inicio o mediante un enlace `gymPartyCode`; ya no ocupa un boton
@@ -40,6 +40,10 @@ guiado/compacto, unidad y preferencias de módulos. **Datos y copias** muestra
 uso local, schema, última exportación y restablecimientos selectivos.
 
 ## Arquitectura
+
+`app-version.json` es la fuente unica de version. `app-version.js` se genera
+con `node scripts/sync-app-version.mjs`; `npm run test:version` valida paquete,
+lockfile, web, cache PWA, Gradle, nombre del APK y documentacion.
 
 La raiz del repositorio es la fuente de la PWA y tambien se sincroniza dentro del APK:
 

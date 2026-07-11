@@ -16,6 +16,8 @@ function Assert-True([bool]$condition, [string]$message) {
 }
 
 $html = Read-Utf8 'index.html'
+$appVersionText = Read-Utf8 'app-version.json'
+$appVersionScript = Read-Utf8 'app-version.js'
 $nutrition = Read-Utf8 'nutrition-data.js'
 $fdc = Read-Utf8 'fdc-client.js'
 $workoutStore = Read-Utf8 'workout-store.js'
@@ -83,12 +85,12 @@ $duplicates = $staticIds | Group-Object | Where-Object Count -gt 1 | Select-Obje
 Assert-True ($duplicates.Count -eq 0) "Hay IDs HTML duplicados: $($duplicates -join ', ')"
 
 $requiredFiles = @(
-    'nutrition-data.js', 'fdc-client.js', 'workout-store.js', 'workout-plan.js', 'workout-metrics.js', 'workout-ranking.js', 'workout-ui.js', 'workout-features.js', 'advanced-features.js', 'ui/router.js', 'ui/navigation.js', 'progress/progress-view.js',
+    'app-version.json', 'app-version.js', 'nutrition-data.js', 'fdc-client.js', 'workout-store.js', 'workout-plan.js', 'workout-metrics.js', 'workout-ranking.js', 'workout-ui.js', 'workout-features.js', 'advanced-features.js', 'ui/router.js', 'ui/navigation.js', 'progress/progress-view.js',
     'firebase-config.js', 'firebase-service.js', 'gym-party-sync.js', 'gym-party-metrics.js', 'gym-party-ui.js', 'gym-party.js',
     'scripts/test-android-webview-security.mjs',
     'scripts/test-android-release.mjs',
     'scripts/test-accessibility.mjs',
-    'scripts/test-module-boundaries.mjs', 'scripts/test-design-system.mjs', 'scripts/design-token-allowlist.json', 'scripts/test-router.mjs', 'scripts/test-layout-coordinator.mjs', 'scripts/test-home-settings.mjs', 'scripts/test-progress-view.mjs',
+    'scripts/test-module-boundaries.mjs', 'scripts/test-design-system.mjs', 'scripts/design-token-allowlist.json', 'scripts/test-router.mjs', 'scripts/test-layout-coordinator.mjs', 'scripts/test-home-settings.mjs', 'scripts/test-progress-view.mjs', 'scripts/sync-app-version.mjs', 'scripts/test-version-alignment.mjs',
     'scripts/serve-static.mjs', 'playwright.config.mjs', 'tests/e2e/gym-flow.spec.mjs', 'tests/e2e/visual-navigation.spec.mjs', 'tests/e2e/router.spec.mjs', 'tests/e2e/layout-sticky.spec.mjs', 'tests/e2e/home-settings.spec.mjs', 'tests/e2e/progress.spec.mjs',
     'manifest.webmanifest', 'sw.js',
     'styles/tokens.css', 'styles/base.css', 'styles/components.css', 'styles/features.css', 'styles/gym.css', 'styles/gym-party.css', 'styles/modules.css', 'styles/responsive.css',
@@ -113,6 +115,8 @@ Assert-True ($html.Contains('<script src="ui/router.js"></script>')) 'index.html
 Assert-True ($serviceWorker.Contains("'./ui/router.js'")) 'sw.js no cachea ui/router.js'
 Assert-True ($html.Contains('<script src="ui/navigation.js"></script>')) 'index.html no carga ui/navigation.js'
 Assert-True ($serviceWorker.Contains("'./ui/navigation.js'")) 'sw.js no cachea ui/navigation.js'
+Assert-True ($html.Contains('<script src="app-version.js"></script>')) 'index.html no carga app-version.js'
+Assert-True ($serviceWorker.Contains("'./app-version.js'")) 'sw.js no cachea app-version.js'
 Assert-True ($html.Contains('<script src="progress/progress-view.js"></script>')) 'index.html no carga progress/progress-view.js'
 Assert-True ($serviceWorker.Contains("'./progress/progress-view.js'")) 'sw.js no cachea progress/progress-view.js'
 foreach ($contract in @('progressPeriod','progressArea','progressSummaryMetrics','progressGymSummary','progressNutritionSummary','data-progress-view','data-progress-panel')) {
@@ -211,21 +215,19 @@ foreach ($icon in @('icons/icon-192.png', 'icons/icon-512.png')) {
     Assert-True ($serviceWorker.Contains("'./$icon'")) "sw.js no cachea $icon"
 }
 
-$appVersionMatch = [regex]::Match($advanced, "const APP_VERSION='([^']+)';")
-$androidVersionMatch = [regex]::Match($androidBuild, "versionName\s+'([^']+)'")
-$cacheVersionMatch = [regex]::Match($serviceWorker, '\$\{CACHE_PREFIX\}v(\d+)')
-Assert-True $appVersionMatch.Success 'No se encontro APP_VERSION en advanced-features.js'
-Assert-True $androidVersionMatch.Success 'No se encontro versionName Android'
-Assert-True $cacheVersionMatch.Success 'No se encontro la version del cache PWA'
-$appVersion = $appVersionMatch.Groups[1].Value
-$androidVersion = $androidVersionMatch.Groups[1].Value
-$cacheVersion = $cacheVersionMatch.Groups[1].Value
-Assert-True ($appVersion -eq $androidVersion) "Version web $appVersion y Android $androidVersion no coinciden"
+try { $appVersionManifest = $appVersionText | ConvertFrom-Json } catch { throw 'app-version.json no contiene JSON valido' }
+$appVersion = [string]$appVersionManifest.version
+$cacheName = "protocolo-0-100-pwa-$appVersion-b$($appVersionManifest.build)"
+Assert-True ($appVersionScript.Contains("version:'$appVersion'")) 'app-version.js no coincide con app-version.json'
+Assert-True ($advanced.Contains('window.APP_VERSION_INFO')) 'advanced-features.js no consume la fuente unica de version'
+Assert-True ($androidBuild.Contains("new groovy.json.JsonSlurper().parse(rootProject.file('../app-version.json'))")) 'Gradle no consume app-version.json'
+Assert-True ($serviceWorker.Contains('CACHE_NAME = APP_VERSION_INFO.cacheName')) 'El cache PWA no deriva de app-version.json'
 Assert-True ($releaseWorkflow.Contains('VERSION_NAME')) 'El workflow release debe obtener versionName dinamicamente'
+Assert-True ($releaseWorkflow.Contains("require('./app-version.json').version")) 'El workflow release no consume app-version.json'
 Assert-True ($releaseWorkflow.Contains('protocolo-0-100-v${VERSION_NAME}-release.apk')) 'El APK release debe llevar la version en el nombre'
 Assert-True ($readme.Contains("v$appVersion")) "README.md no menciona v$appVersion"
 Assert-True ($handoff.Contains($appVersion)) "CODEX_HANDOFF.md no menciona la version $appVersion"
-Assert-True ($handoff.Contains("protocolo-0-100-pwa-v$cacheVersion")) "CODEX_HANDOFF.md no menciona el cache PWA v$cacheVersion"
+Assert-True ($handoff.Contains($cacheName)) "CODEX_HANDOFF.md no menciona el cache PWA $cacheName"
 
 $pwaSafetyContracts = @(
     'key.startsWith(CACHE_PREFIX)',
@@ -646,6 +648,7 @@ foreach ($workflow in @($deployWorkflow, $apkWorkflow, $validationWorkflow)) {
     Assert-True ($workflow.Contains('node ./scripts/test-android-release.mjs')) 'Cada workflow debe probar contratos de release Android'
     Assert-True ($workflow.Contains('node ./scripts/test-accessibility.mjs')) 'Cada workflow debe probar accesibilidad web y movil'
     Assert-True ($workflow.Contains('npm run test:modules')) 'Cada workflow debe probar limites modulares'
+    Assert-True ($workflow.Contains('npm run test:version')) 'Cada workflow debe verificar la fuente unica de version'
 }
 Assert-True ($releaseWorkflow.Contains('npm run test:modules')) 'El release Android debe probar limites modulares'
 foreach ($contract in @('WORKOUT_STORE','WORKOUT_PLAN','WORKOUT_UI','FIREBASE_SERVICE','GYM_PARTY_METRICS','GYM_PARTY_UI','aggregate.bodyweightReps','aggregate.addedLoadVolume')) {
@@ -662,4 +665,4 @@ if ($CheckAndroidAssets) {
     & (Join-Path $PSScriptRoot 'sync-web-assets.ps1') -Check
 }
 
-Write-Host "Validacion correcta: version $appVersion, cache PWA v$cacheVersion, $foodCount alimentos, $nutrientCount nutrientes y $($staticIds.Count) IDs estaticos unicos."
+Write-Host "Validacion correcta: version $appVersion, cache PWA $cacheName, $foodCount alimentos, $nutrientCount nutrientes y $($staticIds.Count) IDs estaticos unicos."

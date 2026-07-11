@@ -17,11 +17,12 @@ function assertAllowed(label,current,allowed){
   const unknown=[...new Set(current.filter(value=>!permitted.has(value)))];
   assert.deepEqual(unknown,[],`Nuevos ${label} hardcodeados fuera de la allowlist: ${unknown.join(', ')}`);
 }
+function directValues(current){return current.filter(value=>!value.startsWith('var(')&&value!=='none');}
 
 assertAllowed('colores',values(/#[0-9a-fA-F]{3,8}|rgba?\([^)]*\)/g,appStyles),allow.colors);
-assertAllowed('radios',values(/border-radius\s*:\s*([^;}{]+)/g,appStyles,1),allow.radii);
-assertAllowed('sombras',values(/(?:box-shadow|filter\s*:\s*drop-shadow)\s*:\s*([^;}{]+)/g,appStyles,1),allow.shadows);
-assertAllowed('tamaños tipográficos',values(/font-size\s*:\s*([^;}{]+)/g,appStyles,1),allow.fontSizes);
+assertAllowed('radios',directValues(values(/border-radius\s*:\s*([^;}{]+)/g,appStyles,1)),allow.radii);
+assertAllowed('sombras',directValues(values(/(?:box-shadow|filter\s*:\s*drop-shadow)\s*:\s*([^;}{]+)/g,appStyles,1)),allow.shadows);
+assertAllowed('tamaños tipográficos',directValues(values(/font-size\s*:\s*([^;}{]+)/g,appStyles,1)),allow.fontSizes);
 assertAllowed('estilos inline',values(/style="([^"]+)"/g,sourceText,1),allow.inlineStyles);
 
 const index=await readFile(new URL('../index.html',import.meta.url),'utf8');

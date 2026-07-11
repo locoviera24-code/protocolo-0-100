@@ -3,10 +3,10 @@ import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
 
 const source = await readFile(new URL('../sw.js', import.meta.url), 'utf8');
-const cacheVersion = source.match(/\$\{CACHE_PREFIX\}v(\d+)/)?.[1];
-assert.ok(cacheVersion, 'No se pudo detectar la version del cache');
-const currentCacheName = `protocolo-0-100-pwa-v${cacheVersion}`;
-const previousCacheName = `protocolo-0-100-pwa-v${Number(cacheVersion) - 1}`;
+const versionSource = await readFile(new URL('../app-version.js', import.meta.url), 'utf8');
+const versionManifest = JSON.parse(await readFile(new URL('../app-version.json', import.meta.url), 'utf8'));
+const currentCacheName = `protocolo-0-100-pwa-${versionManifest.version}-b${versionManifest.build}`;
+const previousCacheName = `protocolo-0-100-pwa-${versionManifest.version}-b${versionManifest.build-1}`;
 const handlers = {};
 const deletedCaches = [];
 const cacheStores = new Map();
@@ -78,7 +78,7 @@ const self = {
   }
 };
 
-vm.runInContext(source, vm.createContext({
+const context=vm.createContext({
   self,
   caches,
   fetch: request => fetchImpl(request),
@@ -86,7 +86,9 @@ vm.runInContext(source, vm.createContext({
   Set,
   Response,
   console
-}), {filename: 'sw.js'});
+});
+context.importScripts=()=>vm.runInContext(versionSource,context,{filename:'app-version.js'});
+vm.runInContext(source,context,{filename:'sw.js'});
 
 let installation;
 handlers.install({waitUntil(value) { installation = Promise.resolve(value); }});
@@ -110,14 +112,14 @@ function dispatchFetch(request) {
   return {responsePromise, waits};
 }
 
-cacheStores.set('protocolo-0-100-pwa-v9', new MockCache());
+cacheStores.set('protocolo-0-100-pwa-legacy', new MockCache());
 cacheStores.set(previousCacheName, new MockCache());
 cacheStores.set(currentCacheName, new MockCache());
 cacheStores.set('otra-app-cache', new MockCache());
 let activation;
 handlers.activate({waitUntil(value) { activation = Promise.resolve(value); }});
 await activation;
-assert.deepEqual(deletedCaches.sort(), ['protocolo-0-100-pwa-v9', previousCacheName].sort());
+assert.deepEqual(deletedCaches.sort(), ['protocolo-0-100-pwa-legacy', previousCacheName].sort());
 assert.equal(cacheStores.has('otra-app-cache'), true);
 
 const fdc = dispatchFetch({method: 'GET', mode: 'cors', url: 'https://api.nal.usda.gov/fdc/v1/foods/search'});

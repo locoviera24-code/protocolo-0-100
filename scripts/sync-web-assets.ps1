@@ -8,6 +8,7 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 $assetRoot = Join-Path $repoRoot 'android-native-wrapper/app/src/main/assets'
 $relativeFiles = @(
     'index.html',
+    'app-version.js',
     'nutrition-data.js',
     'fdc-client.js',
     'workout-store.js',

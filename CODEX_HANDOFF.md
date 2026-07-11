@@ -2,9 +2,9 @@
 
 Ultima actualizacion: 2026-06-30
 Rama esperada: `main`
-Version actual: `2.7.0`
+Version actual: `2.7.0` (fuente unica: `app-version.json`)
 Android: `versionCode 33`, `versionName "2.7.0"`
-Service worker cache: `protocolo-0-100-pwa-v45`
+Service worker cache: `protocolo-0-100-pwa-2.7.0-b51`
 Backup consolidado: `schemaVersion: 3`
 
 Leer primero este archivo y luego `README.md`, `index.html`,
@@ -1168,3 +1168,33 @@ responsive.
 
 Pendiente: historiales responsive reutilizables, flujo Nutricion por pasos,
 combobox Gym, mensajes/estados centrales, accesibilidad final y rendimiento.
+
+## 32. Refactor robusta - sistema visual y version unica
+
+- `styles/features.css` ya no contiene una segunda declaracion `:root` y fue
+  formateado junto con `styles/gym.css` y `styles/gym-party.css`.
+- Colores, superficies translucidas, overlays, estados, graficos, mapa
+  muscular, navegacion, radios, tipografia y elevacion usan tokens definidos
+  en `styles/tokens.css`.
+- `scripts/design-token-allowlist.json` conserva cero excepciones para colores,
+  radios, sombras y tamanos tipograficos directos. Los 19 estilos inline
+  heredados/dinamicos siguen inventariados y son deuda explicita, no se
+  consideran migrados.
+- `app-version.json` es la fuente unica: version `2.7.0`, Android
+  `versionCode 33`, build web/cache `51` y fecha `2026-07-11`.
+- `app-version.js` es el artefacto generado para web y service worker;
+  `scripts/sync-app-version.mjs` lo regenera y alinea package/lockfile.
+- `index.html`, Acerca de, `advanced-features.js`, `sw.js`, Gradle y el workflow
+  release consumen o validan esa fuente. Cache derivado:
+  `protocolo-0-100-pwa-2.7.0-b51`; APK:
+  `protocolo-0-100-v2.7.0-release.apk`.
+- `scripts/test-version-alignment.mjs` y `npm run test:version` fallan ante
+  divergencias. Pages y workflows Android ejecutan este contrato.
+
+- Verificacion del bloque: assets Android sincronizados; validador con 315 IDs
+  unicos; design/version/service-worker OK; Playwright visual, Inicio/Ajustes y
+  Progreso 23 OK con 7 omisiones intencionales; `:app:assembleDebug` OK leyendo
+  `app-version.json`.
+
+Pendiente real: migrar los 19 estilos inline permitidos, terminar responsive
+de historiales/Nutricion y crear el sistema central de mensajes/estados.

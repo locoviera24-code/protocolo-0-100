@@ -1,5 +1,7 @@
 plugins { id 'com.android.application' }
 
+def appVersion = new groovy.json.JsonSlurper().parse(rootProject.file('../app-version.json'))
+
 def releaseKeystorePath = System.getenv('ANDROID_KEYSTORE_PATH')
 def releaseStorePassword = System.getenv('ANDROID_KEYSTORE_PASSWORD')
 def releaseKeyAlias = System.getenv('ANDROID_KEY_ALIAS')
@@ -19,8 +21,8 @@ android {
         applicationId 'com.protocolo.cien'
         minSdk 23
         targetSdk 35
-        versionCode 33
-        versionName '2.7.0'
+        versionCode appVersion.versionCode as int
+        versionName appVersion.version as String
     }
 
     signingConfigs {

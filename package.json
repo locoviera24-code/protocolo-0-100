@@ -11,6 +11,7 @@
     "test:layout": "node scripts/test-layout-coordinator.mjs",
     "test:home-settings": "node scripts/test-home-settings.mjs",
     "test:progress": "node scripts/test-progress-view.mjs",
+    "test:version": "node scripts/sync-app-version.mjs --check && node scripts/test-version-alignment.mjs",
     "test:e2e": "playwright test"
   },
   "devDependencies": {
