@@ -9,6 +9,7 @@
     "test:design": "node scripts/test-design-system.mjs",
     "test:router": "node scripts/test-router.mjs",
     "test:layout": "node scripts/test-layout-coordinator.mjs",
+    "test:home-settings": "node scripts/test-home-settings.mjs",
     "test:e2e": "playwright test"
   },
   "devDependencies": {

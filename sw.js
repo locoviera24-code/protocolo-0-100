@@ -1,6 +1,6 @@
 const CACHE_PREFIX = 'protocolo-0-100-pwa-';
-// v49 coordina topbar, contexto, acciones sticky, banners y teclado.
-const CACHE_NAME = `${CACHE_PREFIX}v49`;
+// v50 agrega Inicio adaptativo y Ajustes/Datos/Acerca de funcionales.
+const CACHE_NAME = `${CACHE_PREFIX}v50`;
 const CORE_ASSETS = ['./', './index.html', './styles/tokens.css', './styles/base.css', './styles/components.css', './styles/features.css', './styles/gym.css', './styles/gym-party.css', './styles/modules.css', './styles/responsive.css', './ui/router.js', './ui/navigation.js', './nutrition-data.js', './fdc-client.js', './workout-store.js', './workout-plan.js', './workout-metrics.js', './workout-ranking.js', './workout-ui.js', './workout-features.js', './firebase-service.js', './gym-party-sync.js', './gym-party-metrics.js', './gym-party-ui.js', './gym-party.js', './advanced-features.js', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
 const CORE_URLS = new Set(CORE_ASSETS.map(asset => new URL(asset, self.location.href).href));
 

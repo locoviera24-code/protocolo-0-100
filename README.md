@@ -34,6 +34,11 @@ centralizan en hojas externas: `styles/tokens.css`, `styles/base.css`,
 `styles/gym-party.css`, `styles/modules.css` y `styles/responsive.css`.
 Gym y Gym Party ya no crean bloques CSS desde JavaScript.
 
+En móvil, Inicio muestra primero un estado compacto con score, racha, datos
+pendientes y una acción. **Más > Ajustes** guarda apariencia, densidad, modo
+guiado/compacto, unidad y preferencias de módulos. **Datos y copias** muestra
+uso local, schema, última exportación y restablecimientos selectivos.
+
 ## Arquitectura
 
 La raiz del repositorio es la fuente de la PWA y tambien se sincroniza dentro del APK:
@@ -295,6 +300,7 @@ node ./scripts/test-accessibility.mjs
 npm run test:design
 npm run test:router
 npm run test:layout
+npm run test:home-settings
 npm run test:rules
 npm run test:e2e
 ```

@@ -171,6 +171,34 @@ body[data-module="mas"] .grid { display: block; }
 .homeEyebrow { margin-bottom: var(--space-1); color: var(--color-primary); font-size: var(--font-small); font-weight: 650; }
 .homeHeader .subtitle { color: var(--color-text-secondary); font-size: var(--font-body); }
 .homeHeader .mantra { margin-top: var(--space-2); padding: 0; border: 0; background: transparent; color: var(--color-text-muted); font-size: var(--font-small); font-weight: 500; }
+.homeStatusCard {
+  display: none;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface-raised);
+}
+.homeStatusMain, .homeStatusMetrics { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.homeStatusMain > div { display: grid; }
+.homeStatusMain > div > strong { font-size: var(--font-screen); line-height: 1; }
+.homeStatusMetrics { color: var(--color-text-secondary); font-size: var(--font-small); }
+.homeStatusMetrics span:first-child { white-space: nowrap; }
+.homeStatusCard[data-home-state="partial"] .statusChip, .homeStatusCard[data-home-state="ready"] .statusChip { border-color: var(--color-warning); color: var(--color-warning); }
+.homeStatusCard[data-home-state="complete"] .statusChip { border-color: var(--color-success); color: var(--color-success); }
+.actionFocus.completed { padding-block: var(--space-3); border-color: var(--color-success); background: var(--color-success-soft); }
+.actionFocus.completed .actionWhy, .actionFocus.completed #markActionBtn, .actionFocus.completed #dismissActionBtn { display: none; }
+.actionFocus.completed .modalActionText { margin-bottom: var(--space-1); }
+.settingsSection h3 { margin-bottom: var(--space-3); }
+.settingsPrimaryAction { margin-block: var(--space-4); }
+.settingsPrimaryAction button { width: 100%; }
+.settingsLinks { margin-top: var(--space-4); }
+.dataStats { margin-top: var(--space-4); border-block: 1px solid var(--color-border-soft); }
+.dangerZone { margin-top: var(--space-5); border: 1px solid var(--color-danger); padding: var(--space-3); }
+.aboutRepoLink { text-decoration: none; }
+body[data-density="compact"] .moduleCard, body[data-density="compact"] .moduleHero, body[data-density="compact"] .panel .bd { padding: var(--space-3); }
+body[data-density="compact"] .moduleCard { margin-top: var(--space-2); }
 .homeDateControls { align-items: start; }
 .setupDetails { padding-inline: var(--space-2); }
 .setupDetails .field { padding-top: var(--space-2); }

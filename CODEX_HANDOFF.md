@@ -1098,3 +1098,38 @@ Nutricion y Gym, centralizar mensajes/estados y terminar accesibilidad.
 Pendiente: completar contenido y preferencias de Inicio/Mas, consolidar
 Progreso, simplificar Nutricion y Gym, centralizar mensajes/estados y ampliar
 accesibilidad visual.
+
+## 30. Refactor UX/UI - bloque 4: Inicio y Ajustes
+
+- Inicio tiene `#homeStatusCard` antes del formulario en movil. Resume score,
+  estado, racha, datos esenciales pendientes y una accion contextual.
+- Estados: `empty`, `partial`, `ready` y `complete`. La accion cambia
+  entre empezar, continuar, guardar y ver progreso.
+- El aside de score inferior se oculta en movil para no duplicar la informacion;
+  permanece en escritorio. Al completar la accion diaria, `#actionFocusCard`
+  se compacta y muestra la proxima recomendacion.
+- Nueva clave `protocolo_0_100_ui_preferences_v1`: apariencia, densidad,
+  modo guiado/compacto, kg/lb, RIR/RPE, orientacion nutricional, recordatorios
+  y sync automatico.
+- Ajustes aplica `data-density` y `data-experience-mode` sin modificar datos
+  de usuario; kg/lb y RIR se sincronizan con `gymSettings`.
+- Datos y copias muestra ultima exportacion
+  (`protocolo_0_100_backup_meta_v1`), estimacion de localStorage, schema y
+  cantidad de claves. Permite reset selectivo de protocolo, Gym, Nutricion o UI
+  y un borrado total separado en zona de peligro.
+- El backup completo incluye `uiPreferences`; la importacion las restaura.
+  `firebaseConfig` y credenciales siguen excluidos.
+- Acerca de muestra web `2.7.0`, cache, fecha y version Android. El puente
+  `AndroidBridge.getAppInfo()` devuelve versionName/versionCode sin exponer
+  identificadores privados.
+- Cache actual: `protocolo-0-100-pwa-v50`.
+- Pruebas: `scripts/test-home-settings.mjs` y
+  `tests/e2e/home-settings.spec.mjs`.
+- Verificacion del bloque: validador web/PWA/Android, contratos de design,
+  router, layout e Inicio/Ajustes OK; Playwright completo con 37 pruebas OK y
+  14 omisiones intencionales por proyecto; `:app:assembleDebug` OK con Java 17.
+  Gradle solo informa la advertencia previa de una API WebView obsoleta.
+
+Pendiente: onboarding completo del modo guiado, Progreso consolidado, flujo de
+Nutricion por pasos, combobox Gym, mensajes/estados centrales e historiales
+responsive.

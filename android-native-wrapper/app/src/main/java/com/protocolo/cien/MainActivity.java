@@ -253,6 +253,28 @@ public class MainActivity extends Activity {
         public void updateWorkoutWidget() {
             WorkoutWidgetUpdateService.updateAll(activity);
         }
+
+        @JavascriptInterface
+        public String getAppInfo() {
+            JSONObject out = new JSONObject();
+            try {
+                android.content.pm.PackageInfo info = activity.getPackageManager()
+                        .getPackageInfo(activity.getPackageName(), 0);
+                long versionCode = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
+                        ? info.getLongVersionCode()
+                        : info.versionCode;
+                out.put("versionName", info.versionName == null ? "" : info.versionName);
+                out.put("versionCode", versionCode);
+                out.put("packageName", activity.getPackageName());
+            } catch (Exception error) {
+                try {
+                    out.put("versionName", "");
+                    out.put("versionCode", 0);
+                } catch (Exception ignored) {
+                }
+            }
+            return out.toString();
+        }
     }
 
     private void dispatchWidgetIntentToWeb(Intent intent) {

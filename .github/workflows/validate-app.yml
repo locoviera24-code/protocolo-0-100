@@ -73,6 +73,9 @@ jobs:
       - name: Probar presupuesto sticky y teclado
         run: npm run test:layout
 
+      - name: Probar Inicio y Ajustes
+        run: npm run test:home-settings
+
       - name: Probar seguridad del WebView Android
         run: node ./scripts/test-android-webview-security.mjs
 

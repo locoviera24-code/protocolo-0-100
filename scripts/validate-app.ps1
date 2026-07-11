@@ -87,8 +87,8 @@ $requiredFiles = @(
     'scripts/test-android-webview-security.mjs',
     'scripts/test-android-release.mjs',
     'scripts/test-accessibility.mjs',
-    'scripts/test-module-boundaries.mjs', 'scripts/test-design-system.mjs', 'scripts/design-token-allowlist.json', 'scripts/test-router.mjs', 'scripts/test-layout-coordinator.mjs',
-    'scripts/serve-static.mjs', 'playwright.config.mjs', 'tests/e2e/gym-flow.spec.mjs', 'tests/e2e/visual-navigation.spec.mjs', 'tests/e2e/router.spec.mjs', 'tests/e2e/layout-sticky.spec.mjs',
+    'scripts/test-module-boundaries.mjs', 'scripts/test-design-system.mjs', 'scripts/design-token-allowlist.json', 'scripts/test-router.mjs', 'scripts/test-layout-coordinator.mjs', 'scripts/test-home-settings.mjs',
+    'scripts/serve-static.mjs', 'playwright.config.mjs', 'tests/e2e/gym-flow.spec.mjs', 'tests/e2e/visual-navigation.spec.mjs', 'tests/e2e/router.spec.mjs', 'tests/e2e/layout-sticky.spec.mjs', 'tests/e2e/home-settings.spec.mjs',
     'manifest.webmanifest', 'sw.js',
     'styles/tokens.css', 'styles/base.css', 'styles/components.css', 'styles/features.css', 'styles/gym.css', 'styles/gym-party.css', 'styles/modules.css', 'styles/responsive.css',
     'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetProvider.java',
@@ -118,6 +118,11 @@ foreach ($contract in @('pushState','replaceState','popstate','parentFor','modul
 foreach ($contract in @('visualViewport','focusin','ResizeObserver','layoutStickyAction','layoutContextNav','layout-refresh','keyboardOpen')) {
     Assert-True ($appNavigation.Contains($contract)) "Falta coordinador de layout: $contract"
 }
+foreach ($contract in @('homeStatusCard','renderHomeStatus','settingsExperienceMode','saveUiSettings','renderSettingsData','resetDataScope','resetAllAppData','BACKUP_META_KEY')) {
+    Assert-True ($html.Contains($contract)) "Falta Inicio/Ajustes: $contract"
+}
+Assert-True ($advanced.Contains("uiPreferences:getLocalData('protocolo_0_100_ui_preferences_v1'")) 'El backup completo no incluye preferencias UI'
+Assert-True ($mainActivity.Contains('getAppInfo()')) 'AndroidBridge no expone versión para Acerca de'
 foreach ($contract in @('routeBackBtn','applyAppRoute','APP_VIEW_META','data-more-view="settings"','id="tab-data"','id="tab-privacy"','id="tab-about"')) {
     Assert-True ($html.Contains($contract)) "Falta navegación jerárquica: $contract"
 }

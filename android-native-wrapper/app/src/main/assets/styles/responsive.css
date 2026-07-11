@@ -35,6 +35,8 @@
   .formGrid, .checks { grid-template-columns: 1fr 1fr; }
   .actionDetails, .insightGrid, .guideGrid, .moduleGrid { grid-template-columns: 1fr; }
   .ring { margin-inline: auto; }
+  .homeStatusCard { display: grid; }
+  .grid > aside.protocolOnly { display: none; }
 }
 
 @media (max-width: 600px) {
