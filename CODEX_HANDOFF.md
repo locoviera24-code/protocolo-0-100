@@ -1008,7 +1008,7 @@ Estado verificado el 2026-07-11 sobre el codigo real:
 - `ensureStyles()` fue eliminado de `gym-party.js`; su layout vive en
   `styles/gym-party.css`.
 - El orden CSS es tokens, base, componentes, features, Gym, Gym Party, modulos
-  y responsive. `sw.js` usa `protocolo-0-100-pwa-v47`.
+  y responsive.
 - Los controles de formulario usan `width: 100%` y `min-width: 0`. Esto
   evita que el ancho intrinseco de un `select` amplie el layout viewport y
   desplace la barra inferior fuera del visual viewport en Chromium movil.
@@ -1030,3 +1030,36 @@ Pendientes reales del rediseño:
 - Progreso consolidado, flujo Nutricion por pasos y combobox de Gym;
 - mensajes/estados centrales, modos guiado/compacto, historiales responsive y
   modularizacion adicional de los orquestadores.
+
+## 28. Refactor UX/UI - bloque 2: router y navegacion
+
+- `ui/router.js` implementa rutas `module/view`, `pushState`,
+  `replaceState`, `popstate`, historial interno, parent route y Atrás.
+- Rutas canonicas: `home/register`, `home/overview`, `gym/train`,
+  `gym/routine`, `gym/group`, `gym/progress`, `nutrition/meals`,
+  `progress/overview` y `more/*`.
+- Los alias `protocolo`, `nutricion`, `progreso`, `mas` y
+  `gym-party` siguen funcionando. El alias Gym Party se normaliza a
+  `?module=gym&view=group`.
+- `setModule()` y `activateTab()` se mantienen como APIs compatibles y
+  delegan al router una vez iniciado. Widget Android, shortcuts PWA y enlaces
+  de invitacion conservan sus entradas.
+- La topbar tiene `#routeBackBtn`; las vistas internas actualizan titulo,
+  subtitulo, foco, `document.title` y `#globalLiveRegion`. Solo el destino
+  principal activo conserva `aria-current="page"`.
+- `Mas` tiene pantallas propias para Telefono, Plan, Ayuda, Ajustes, Datos y
+  copias, Privacidad y Acerca de. `Ajustes` ya no abre `tab-dashboard`.
+- Se elimino el gesto global `touchstart/touchend` que abria un drawer oculto
+  y podia interferir con el gesto Atrás de iPhone.
+- `manifest.webmanifest` usa shortcuts canonicos con `module/view`.
+- `scripts/test-router.mjs` cubre aliases, URL, historial y popstate;
+  `tests/e2e/router.spec.mjs` cubre deep links, recarga, Atrás, foco y Mas.
+- Cache actual: `protocolo-0-100-pwa-v48`. `ui/router.js` se publica,
+  cachea y sincroniza dentro del APK.
+- Verificacion del bloque: validador con 267 IDs unicos y assets Android
+  sincronizados; pruebas router/design OK; Playwright 24 OK y 6 omisiones
+  intencionales en Android Chromium, iPhone WebKit y escritorio Chromium.
+
+Pendiente despues de este bloque: coordinar sticky/teclado, completar el
+contenido funcional de Ajustes/Datos/Acerca de, consolidar Progreso, simplificar
+Nutricion y Gym, centralizar mensajes/estados y terminar accesibilidad.

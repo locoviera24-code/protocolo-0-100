@@ -71,6 +71,9 @@ jobs:
       - name: Probar presupuestos del sistema visual
         run: npm run test:design
 
+      - name: Probar router y deep links
+        run: npm run test:router
+
       - name: Probar seguridad del WebView Android
         run: node ./scripts/test-android-webview-security.mjs
 

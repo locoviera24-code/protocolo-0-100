@@ -71,6 +71,9 @@ jobs:
       - name: Probar presupuestos del sistema visual
         run: npm run test:design
 
+      - name: Probar router y deep links
+        run: npm run test:router
+
       - name: Probar accesibilidad web y movil
         run: node ./scripts/test-accessibility.mjs
 

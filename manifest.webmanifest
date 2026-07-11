@@ -32,21 +32,21 @@
       "name": "Entrenamiento de hoy",
       "short_name": "Gym",
       "description": "Abrir la rutina y el progreso de hoy",
-      "url": "./index.html?module=gym",
+      "url": "./index.html?module=gym&view=train",
       "icons": [{"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png"}]
     },
     {
       "name": "Gym Party",
       "short_name": "Gym Party",
       "description": "Abrir la sala privada compartida",
-      "url": "./index.html?module=gym-party",
+      "url": "./index.html?module=gym&view=group",
       "icons": [{"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png"}]
     },
     {
       "name": "Registrar serie",
       "short_name": "Serie rápida",
       "description": "Abrir directamente el registro rápido",
-      "url": "./index.html?module=gym&quickLog=1",
+      "url": "./index.html?module=gym&view=train&quickLog=1",
       "icons": [{"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png"}]
     }
   ],

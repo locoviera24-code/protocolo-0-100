@@ -21,6 +21,11 @@ lateral compacta. Gym Party se abre desde **Gym > Grupo**, desde un acceso
 discreto en Inicio o mediante un enlace `gymPartyCode`; ya no ocupa un boton
 permanente en todas las pantallas.
 
+La navegación conserva estado en URLs `module/view`, por ejemplo
+`?module=gym&view=train`, `?module=gym&view=group` y
+`?module=more&view=settings`. Atrás, recarga y los botones del navegador
+restauran la misma vista; los enlaces antiguos siguen aceptándose como alias.
+
 La interfaz conserva todos los controles y datos, pero muestra primero la tarea
 principal. Ajustes, explicaciones, acciones destructivas, micronutrientes,
 recompensas y administracion de sala usan secciones plegables. Los estilos se
@@ -36,6 +41,7 @@ La raiz del repositorio es la fuente de la PWA y tambien se sincroniza dentro de
 ```text
 index.html                  Interfaz, protocolo, gym y nutricion
 styles/*.css                Tokens, base, componentes y estilos por modulo
+ui/router.js                Router module/view, historial, deep links y Atrás
 workout-store.js            Acceso conservador y versionado a localStorage Gym
 workout-plan.js             Normalizacion, deduplicacion e insercion en rutinas
 workout-ui.js               Renderizadores pequenos y anuncios accesibles de Gym
@@ -286,6 +292,7 @@ node ./scripts/test-android-webview-security.mjs
 node ./scripts/test-android-release.mjs
 node ./scripts/test-accessibility.mjs
 npm run test:design
+npm run test:router
 npm run test:rules
 npm run test:e2e
 ```

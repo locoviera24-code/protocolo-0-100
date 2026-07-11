@@ -23,6 +23,7 @@ $workoutPlan = Read-Utf8 'workout-plan.js'
 $workoutMetrics = Read-Utf8 'workout-metrics.js'
 $workoutRanking = Read-Utf8 'workout-ranking.js'
 $workoutUi = Read-Utf8 'workout-ui.js'
+$appRouter = Read-Utf8 'ui/router.js'
 $workout = Read-Utf8 'workout-features.js'
 $firebaseConfig = Read-Utf8 'firebase-config.js'
 $firebaseService = Read-Utf8 'firebase-service.js'
@@ -80,13 +81,13 @@ $duplicates = $staticIds | Group-Object | Where-Object Count -gt 1 | Select-Obje
 Assert-True ($duplicates.Count -eq 0) "Hay IDs HTML duplicados: $($duplicates -join ', ')"
 
 $requiredFiles = @(
-    'nutrition-data.js', 'fdc-client.js', 'workout-store.js', 'workout-plan.js', 'workout-metrics.js', 'workout-ranking.js', 'workout-ui.js', 'workout-features.js', 'advanced-features.js',
+    'nutrition-data.js', 'fdc-client.js', 'workout-store.js', 'workout-plan.js', 'workout-metrics.js', 'workout-ranking.js', 'workout-ui.js', 'workout-features.js', 'advanced-features.js', 'ui/router.js',
     'firebase-config.js', 'firebase-service.js', 'gym-party-sync.js', 'gym-party-metrics.js', 'gym-party-ui.js', 'gym-party.js',
     'scripts/test-android-webview-security.mjs',
     'scripts/test-android-release.mjs',
     'scripts/test-accessibility.mjs',
-    'scripts/test-module-boundaries.mjs', 'scripts/test-design-system.mjs', 'scripts/design-token-allowlist.json',
-    'scripts/serve-static.mjs', 'playwright.config.mjs', 'tests/e2e/gym-flow.spec.mjs', 'tests/e2e/visual-navigation.spec.mjs',
+    'scripts/test-module-boundaries.mjs', 'scripts/test-design-system.mjs', 'scripts/design-token-allowlist.json', 'scripts/test-router.mjs',
+    'scripts/serve-static.mjs', 'playwright.config.mjs', 'tests/e2e/gym-flow.spec.mjs', 'tests/e2e/visual-navigation.spec.mjs', 'tests/e2e/router.spec.mjs',
     'manifest.webmanifest', 'sw.js',
     'styles/tokens.css', 'styles/base.css', 'styles/components.css', 'styles/features.css', 'styles/gym.css', 'styles/gym-party.css', 'styles/modules.css', 'styles/responsive.css',
     'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetProvider.java',
@@ -106,6 +107,15 @@ foreach ($script in @('nutrition-data.js', 'fdc-client.js', 'workout-store.js', 
     Assert-True ($html.Contains("<script src=`"$script`"></script>")) "index.html no carga $script"
     Assert-True ($serviceWorker.Contains("'./$script'")) "sw.js no cachea $script"
 }
+Assert-True ($html.Contains('<script src="ui/router.js"></script>')) 'index.html no carga ui/router.js'
+Assert-True ($serviceWorker.Contains("'./ui/router.js'")) 'sw.js no cachea ui/router.js'
+foreach ($contract in @('pushState','replaceState','popstate','parentFor','moduleAliases','gym-party','current')) {
+    Assert-True ($appRouter.Contains($contract)) "Falta contrato del router: $contract"
+}
+foreach ($contract in @('routeBackBtn','applyAppRoute','APP_VIEW_META','data-more-view="settings"','id="tab-data"','id="tab-privacy"','id="tab-about"')) {
+    Assert-True ($html.Contains($contract)) "Falta navegación jerárquica: $contract"
+}
+Assert-True (-not $html.Contains("addEventListener('touchstart'")) 'No debe reactivarse el drawer oculto con gesto lateral'
 foreach ($style in @('styles/tokens.css', 'styles/base.css', 'styles/components.css', 'styles/features.css', 'styles/gym.css', 'styles/gym-party.css', 'styles/modules.css', 'styles/responsive.css')) {
     Assert-True ($html.Contains("<link rel=`"stylesheet`" href=`"$style`"")) "index.html no carga $style"
     Assert-True ($serviceWorker.Contains("'./$style'")) "sw.js no cachea $style"
@@ -176,9 +186,9 @@ Assert-True ($manifest.scope -eq './') 'El manifest debe conservar scope relativ
 Assert-True ($manifest.display -eq 'standalone') 'El manifest debe mantener display standalone'
 Assert-True ($manifest.id -eq './') 'El manifest debe declarar un id estable y relativo'
 Assert-True (($manifest.display_override -contains 'standalone')) 'El manifest debe declarar display_override'
-Assert-True (($manifest.shortcuts.url -contains './index.html?module=gym')) 'Falta shortcut PWA a Gym'
-Assert-True (($manifest.shortcuts.url -contains './index.html?module=gym-party')) 'Falta shortcut PWA a Gym Party'
-Assert-True (($manifest.shortcuts.url -contains './index.html?module=gym&quickLog=1')) 'Falta shortcut PWA a registro rapido'
+Assert-True (($manifest.shortcuts.url -contains './index.html?module=gym&view=train')) 'Falta shortcut PWA a Gym'
+Assert-True (($manifest.shortcuts.url -contains './index.html?module=gym&view=group')) 'Falta shortcut PWA a Gym Party'
+Assert-True (($manifest.shortcuts.url -contains './index.html?module=gym&view=train&quickLog=1')) 'Falta shortcut PWA a registro rapido'
 foreach ($icon in @('icons/icon-192.png', 'icons/icon-512.png')) {
     Assert-True (($manifest.icons.src -contains $icon)) "El manifest no declara $icon"
     Assert-True ($serviceWorker.Contains("'./$icon'")) "sw.js no cachea $icon"
@@ -217,7 +227,7 @@ Assert-True (-not $serviceWorker.Contains('then(() => self.skipWaiting())')) 'El
 foreach ($contract in @('Nueva versi','Actualizar ahora','protocolo_pwa_update_accepted',"postMessage({type:'SKIP_WAITING'})")) {
     Assert-True (($advanced + $html).Contains($contract)) "Falta UX de actualizacion PWA: $contract"
 }
-foreach ($contract in @("launchParams.get('module')","launchParams.get('quickLog')","window.openQuickSetLogger?.()")) {
+foreach ($contract in @('initialRouteParams','initialRouteParams.quickLog','window.openQuickSetLogger?.()')) {
     Assert-True ($html.Contains($contract)) "Falta manejo de shortcuts PWA: $contract"
 }
 Assert-True (-not $serviceWorker.Contains('keys.filter(k => k !== CACHE_NAME)')) 'sw.js no debe borrar caches ajenos a la app'
@@ -457,7 +467,7 @@ foreach ($removedAction in @(
     Assert-True (-not $gymParty.Contains($removedAction)) "Gym Party no debe mostrar control removido: $removedAction"
 }
 Assert-True (-not $html.Contains('data-module-target="gym-party"')) 'Gym Party no debe duplicarse en la navegacion principal'
-Assert-True ($html.Contains("'gym-party':['Gym Party'")) 'setModule debe conservar compatibilidad con Gym Party'
+Assert-True ($html.Contains("'gym-party':{module:'gym',view:'group'}")) 'setModule debe conservar compatibilidad con Gym Party'
 Assert-True ($html.Contains('id="tab-gym-party"')) 'Falta pestaña Gym Party'
 Assert-True ($html.Contains('<script src="gym-party.js"></script>')) 'index.html no carga gym-party.js'
 Assert-True ($html.Contains('id="openGymPartyTopBtn" hidden')) 'El acceso superior legacy de Gym Party debe quedar oculto'

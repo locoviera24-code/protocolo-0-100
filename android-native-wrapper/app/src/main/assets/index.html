@@ -25,7 +25,8 @@
   <div class="srOnly" id="globalLiveRegion" role="status" aria-live="polite" aria-atomic="true"></div>
   <div class="moduleTopbar">
     <button type="button" class="menuBtn" id="openDrawerBtn" aria-label="Abrir menú" aria-controls="sideDrawer" aria-expanded="false"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
-    <div class="topbarTitle"><strong id="currentModuleTitle">Protocolo 0→100</strong><span id="currentModuleSubtitle">Atención, pantalla y hábitos diarios</span></div>
+    <button type="button" class="routeBackBtn hidden" id="routeBackBtn" aria-label="Volver a la pantalla anterior"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button>
+    <div class="topbarTitle"><strong id="currentModuleTitle" tabindex="-1">Protocolo 0→100</strong><span id="currentModuleSubtitle">Atención, pantalla y hábitos diarios</span></div>
     <button type="button" class="quickPartyBtn" id="openGymPartyTopBtn" hidden aria-hidden="true" tabindex="-1">Gym Party</button>
   </div>
   <div class="drawerBackdrop" id="drawerBackdrop"></div>
@@ -477,10 +478,13 @@
               <div class="muted small">Configuración, privacidad y funciones de consulta.</div>
             </div>
             <div class="moreGrid">
-              <button type="button" class="moreLink" data-more-tab="telefono"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M10 5h4M11 18.5h2"/></svg><span><strong>Teléfono</strong><small>Uso e importación Android</small></span></button>
-              <button type="button" class="moreLink" data-more-tab="plan"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M6 3h12v18H6zM9 7h6M9 11h6M9 15h4"/></svg><span><strong>Plan 0→100</strong><small>Programa completo</small></span></button>
-              <button type="button" class="moreLink" data-more-tab="guia"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.8 9a2.4 2.4 0 1 1 3.6 2.1c-.9.5-1.4 1-1.4 2M12 17h.01"/></svg><span><strong>Guía</strong><small>Ayuda y criterios</small></span></button>
-              <button type="button" class="moreLink" data-more-tab="dashboard"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="11" cy="18" r="2"/></svg><span><strong>Ajustes y datos</strong><small>Backup, historial y exportación</small></span></button>
+              <button type="button" class="moreLink" data-more-view="phone"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M10 5h4M11 18.5h2"/></svg><span><strong>Teléfono</strong><small>Uso e importación Android</small></span></button>
+              <button type="button" class="moreLink" data-more-view="plan"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M6 3h12v18H6zM9 7h6M9 11h6M9 15h4"/></svg><span><strong>Plan 0→100</strong><small>Programa completo</small></span></button>
+              <button type="button" class="moreLink" data-more-view="help"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.8 9a2.4 2.4 0 1 1 3.6 2.1c-.9.5-1.4 1-1.4 2M12 17h.01"/></svg><span><strong>Ayuda</strong><small>Guía y criterios</small></span></button>
+              <button type="button" class="moreLink" data-more-view="settings"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="11" cy="18" r="2"/></svg><span><strong>Ajustes</strong><small>Experiencia y módulos</small></span></button>
+              <button type="button" class="moreLink" data-more-view="data"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M5 5h14v14H5zM8 9h8M8 13h8M8 17h5"/></svg><span><strong>Datos y copias</strong><small>Exportar, importar y restablecer</small></span></button>
+              <button type="button" class="moreLink" data-more-view="privacy"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.6 2.8 8.2 7 10 4.2-1.8 7-5.4 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></svg><span><strong>Privacidad</strong><small>Qué se guarda y comparte</small></span></button>
+              <button type="button" class="moreLink" data-more-view="about"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/></svg><span><strong>Acerca de</strong><small>Versión, licencias y fuentes</small></span></button>
             </div>
             <div class="footerNote">Tus datos personales permanecen locales salvo lo que aceptes compartir en Gym Party.</div>
           </div>
@@ -526,6 +530,33 @@
             <div class="guideIntro"><strong>Guía de sentido:</strong> cada signo <strong>?</strong> te trae a esta sección. En cada explicación vas a encontrar cuatro cosas: <strong>qué mide</strong>, <strong>qué debes hacer</strong>, <strong>cuál es su sentido</strong> dentro del protocolo y <strong>cuál es su objetivo operativo</strong>. La idea no es llenar datos por llenar, sino hacer visible lo que querés mejorar.</div>
             <div class="guideGrid" id="helpGuide"></div>
           </div>
+
+          <section id="tab-settings" class="hidden routeSubpage" aria-labelledby="settingsViewTitle">
+            <div class="moduleHero"><h2 id="settingsViewTitle" tabindex="-1">Ajustes</h2><div class="muted small">Personalizá la experiencia sin alterar tus registros.</div></div>
+            <div class="moduleGrid">
+              <button type="button" class="moreLink" data-more-view="data"><span><strong>Datos y copias</strong><small>Exportación, importación y almacenamiento</small></span></button>
+              <button type="button" class="moreLink" data-more-view="privacy"><span><strong>Privacidad</strong><small>Control de datos locales y compartidos</small></span></button>
+            </div>
+          </section>
+
+          <section id="tab-data" class="hidden routeSubpage" aria-labelledby="dataViewTitle">
+            <div class="moduleHero"><h2 id="dataViewTitle" tabindex="-1">Datos y copias</h2><div class="muted small">Tus datos siguen siendo locales salvo lo que compartís expresamente.</div></div>
+            <div class="moduleCard">
+              <h3>Copia completa</h3>
+              <div class="buttons"><button type="button" class="good" id="settingsExportJsonBtn">Exportar copia JSON</button><button type="button" class="secondary" id="settingsImportBtn">Importar copia JSON</button><button type="button" class="secondary" id="settingsExportCsvBtn">Exportar resumen CSV</button></div>
+              <div class="muted small">La copia incluye protocolo, Gym, Gym Party y nutrición; no incluye la configuración Firebase ni credenciales.</div>
+            </div>
+          </section>
+
+          <section id="tab-privacy" class="hidden routeSubpage" aria-labelledby="privacyViewTitle">
+            <div class="moduleHero"><h2 id="privacyViewTitle" tabindex="-1">Privacidad</h2><div class="muted small">Control local y consentimiento explícito.</div></div>
+            <div class="moduleCard"><h3>Datos personales</h3><p>Hábitos, nutrición, sueño, pantalla y notas permanecen en este dispositivo. Gym Party comparte solo los datos de gimnasio que aceptás compartir.</p><button type="button" class="secondary" data-route-module="gym" data-route-view="group">Revisar privacidad de Gym Party</button></div>
+          </section>
+
+          <section id="tab-about" class="hidden routeSubpage" aria-labelledby="aboutViewTitle">
+            <div class="moduleHero"><h2 id="aboutViewTitle" tabindex="-1">Acerca de</h2><div class="muted small">Protocolo 0→100</div></div>
+            <div class="moduleCard"><div class="quickStats"><div class="quickStat"><span>Web</span><strong>2.7.0</strong></div><div class="quickStat"><span>Caché</span><strong>v47</strong></div><div class="quickStat"><span>Datos</span><strong>local-first</strong></div><div class="quickStat"><span>Licencia</span><strong>Repo</strong></div></div><p class="muted small">Herramienta orientativa de autoorganización. No reemplaza asesoramiento profesional de salud o entrenamiento.</p></div>
+          </section>
 
         </div>
       </div>
@@ -590,6 +621,7 @@
 
 <script src="nutrition-data.js"></script>
 <script src="fdc-client.js"></script>
+<script src="ui/router.js"></script>
 <script>
 const STORAGE_KEY = 'protocolo_0_100_tracker_v1';
 const START_KEY = 'protocolo_0_100_start_date_v1';
@@ -1659,47 +1691,129 @@ function trapOverlayFocus(event,container){
 }
 function openDrawer(){lastFocusedBeforeOverlay=document.activeElement;document.body.classList.add('drawerOpen');document.getElementById('openDrawerBtn')?.setAttribute('aria-expanded','true');document.getElementById('sideDrawer')?.setAttribute('aria-hidden','false');document.getElementById('closeDrawerBtn')?.focus();}
 function closeDrawer(){const wasOpen=document.body.classList.contains('drawerOpen');document.body.classList.remove('drawerOpen');document.getElementById('openDrawerBtn')?.setAttribute('aria-expanded','false');document.getElementById('sideDrawer')?.setAttribute('aria-hidden','true');if(wasOpen&&lastFocusedBeforeOverlay?.focus)lastFocusedBeforeOverlay.focus();}
-function setModule(module){
-  const meta={
-    protocolo:['Inicio','Tu día, atención y hábitos'],
-    gym:['Gym','Entrenamiento, rutina y grupo'],
-    'gym-party':['Gym Party','Sala privada y comparativas de entrenamiento'],
-    nutricion:['Nutrición','Comidas y cobertura del día'],
-    progreso:['Progreso','Tendencias, historial y logros'],
-    mas:['Más','Ajustes, privacidad y herramientas']
+const APP_VIEW_META={
+  'home/register':['Inicio','Tu día, atención y hábitos'],
+  'home/overview':['Resumen diario','Tendencias y registros del protocolo'],
+  'gym/train':['Entrenamiento','Rutina de hoy y registro rápido'],
+  'gym/routine':['Rutina','Plan semanal y biblioteca de ejercicios'],
+  'gym/group':['Gym Party','Sala privada y comparativas de entrenamiento'],
+  'gym/progress':['Progreso de Gym','Sesiones, volumen e historial'],
+  'nutrition/meals':['Nutrición','Comidas y cobertura del día'],
+  'nutrition/coverage':['Cobertura nutricional','Micronutrientes y recomendaciones'],
+  'nutrition/targets':['Objetivos nutricionales','Metas y configuración'],
+  'nutrition/history':['Historial nutricional','Registros y tendencias'],
+  'progress/overview':['Progreso','Tendencias, historial y logros'],
+  'more/root':['Más','Ajustes, privacidad y herramientas'],
+  'more/phone':['Teléfono','Uso e importación Android'],
+  'more/plan':['Plan 0→100','Programa completo'],
+  'more/help':['Ayuda','Guía y criterios'],
+  'more/settings':['Ajustes','Experiencia y módulos'],
+  'more/data':['Datos y copias','Exportar, importar y restablecer'],
+  'more/privacy':['Privacidad','Datos locales y compartidos'],
+  'more/about':['Acerca de','Versión, licencias y fuentes']
+};
+const APP_TAB_IDS=['registro','dashboard','gym','gym-party','nutricion','progreso','mas','telefono','plan','guia','settings','data','privacy','about'];
+function routeForLegacyModule(module){
+  const routes={
+    protocolo:{module:'home',view:lastProtocolTab==='dashboard'?'overview':'register'},
+    home:{module:'home',view:'register'},
+    gym:{module:'gym',view:'train'},
+    'gym-party':{module:'gym',view:'group'},
+    nutricion:{module:'nutrition',view:'meals'},
+    nutrition:{module:'nutrition',view:'meals'},
+    progreso:{module:'progress',view:'overview'},
+    progress:{module:'progress',view:'overview'},
+    mas:{module:'more',view:'root'},
+    more:{module:'more',view:'root'}
   };
-  activeModule=meta[module]?module:'protocolo';
+  return routes[module]||routes.protocolo;
+}
+function tabForRoute(route){
+  if(route.module==='home')return route.view==='overview'?'dashboard':'registro';
+  if(route.module==='gym')return route.view==='group'?'gym-party':'gym';
+  if(route.module==='nutrition')return 'nutricion';
+  if(route.module==='progress')return 'progreso';
+  if(route.module==='more')return ({root:'mas',phone:'telefono',plan:'plan',help:'guia',settings:'settings',data:'data',privacy:'privacy',about:'about'})[route.view]||'mas';
+  return 'registro';
+}
+function internalModuleForRoute(route){
+  if(route.module==='home')return 'protocolo';
+  if(route.module==='gym')return route.view==='group'?'gym-party':'gym';
+  if(route.module==='nutrition')return 'nutricion';
+  if(route.module==='progress')return 'progreso';
+  return 'mas';
+}
+function activateTab(tabName,{internal=false}={}){
+  if(!internal&&window.APP_ROUTER?.isStarted()){
+    const routes={registro:{module:'home',view:'register'},dashboard:{module:'home',view:'overview'},gym:{module:'gym',view:'train'},'gym-party':{module:'gym',view:'group'},nutricion:{module:'nutrition',view:'meals'},progreso:{module:'progress',view:'overview'},mas:{module:'more',view:'root'},telefono:{module:'more',view:'phone'},plan:{module:'more',view:'plan'},guia:{module:'more',view:'help'},settings:{module:'more',view:'settings'},data:{module:'more',view:'data'},privacy:{module:'more',view:'privacy'},about:{module:'more',view:'about'}};
+    if(routes[tabName])return window.APP_ROUTER.navigate(routes[tabName]);
+  }
+  if(['registro','dashboard'].includes(tabName))lastProtocolTab=tabName;
+  document.querySelectorAll('.tab').forEach(button=>{const selected=button.dataset.tab===tabName;button.classList.toggle('active',selected);button.setAttribute('aria-selected',String(selected));});
+  APP_TAB_IDS.forEach(name=>document.getElementById('tab-'+name)?.classList.toggle('hidden',name!==tabName));
+  if(tabName==='dashboard')drawChart();
+  if(tabName==='gym')renderGym();
+  if(tabName==='gym-party'&&window.renderGymParty)window.renderGymParty();
+  if(tabName==='nutricion')renderNutrition();
+  if(tabName==='progreso'&&window.renderAdvancedProgress)window.renderAdvancedProgress();
+}
+function applyGymRouteView(view,{focus=false}={}){
+  document.querySelectorAll('[data-gym-section]').forEach(button=>button.classList.toggle('active',button.dataset.gymSection===view));
+  if(view==='routine'){
+    const details=document.querySelector('#workoutConfigPanel details');if(details)details.open=true;
+    if(focus)document.getElementById('workoutConfigPanel')?.scrollIntoView({behavior:preferredMotionBehavior(),block:'start'});
+  }else if(view==='progress'){
+    const details=document.querySelector('.gymHistoryDetails');if(details)details.open=true;
+    if(focus)document.querySelector('.gymHistoryDetails')?.scrollIntoView({behavior:preferredMotionBehavior(),block:'start'});
+  }else if(view==='train'&&focus)document.getElementById('quickSetLoggerPanel')?.scrollIntoView({behavior:preferredMotionBehavior(),block:'start'});
+}
+function applyAppRoute(route,meta={}){
+  const normalized=window.APP_ROUTER?.normalize(route)||routeForLegacyModule('protocolo');
+  activeModule=internalModuleForRoute(normalized);
   document.body.dataset.module=activeModule;
   localStorage.setItem(ACTIVE_MODULE_KEY,activeModule);
-  document.getElementById('currentModuleTitle').textContent=meta[activeModule][0];
-  document.getElementById('currentModuleSubtitle').textContent=meta[activeModule][1];
-  document.querySelectorAll('[data-module-target]').forEach(btn=>{const target=btn.dataset.moduleTarget;const active=target===activeModule||(target==='gym'&&activeModule==='gym-party');btn.classList.toggle('active',active);btn.setAttribute('aria-current',active?'page':'false');});
-  if(activeModule==='protocolo') activateTab(lastProtocolTab); else activateTab(activeModule);
+  const viewMeta=APP_VIEW_META[`${normalized.module}/${normalized.view}`]||APP_VIEW_META['home/register'];
+  document.getElementById('currentModuleTitle').textContent=viewMeta[0];
+  document.getElementById('currentModuleSubtitle').textContent=viewMeta[1];
+  document.title=`${viewMeta[0]} | Protocolo 0→100`;
+  document.querySelectorAll('[data-module-target]').forEach(button=>{
+    const target=button.dataset.moduleTarget;
+    const selected=(target==='protocolo'&&normalized.module==='home')||(target==='gym'&&normalized.module==='gym')||(target==='nutricion'&&normalized.module==='nutrition')||(target==='progreso'&&normalized.module==='progress')||(target==='mas'&&normalized.module==='more');
+    button.classList.toggle('active',selected);
+    if(selected)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');
+  });
+  activateTab(tabForRoute(normalized),{internal:true});
+  if(normalized.module==='gym'&&normalized.view!=='group')requestAnimationFrame(()=>applyGymRouteView(normalized.view,{focus:!!meta.focus}));
+  const root=(normalized.module==='home'&&normalized.view==='register')||(normalized.module==='gym'&&normalized.view==='train')||(normalized.module==='nutrition'&&normalized.view==='meals')||(normalized.module==='progress'&&normalized.view==='overview')||(normalized.module==='more'&&normalized.view==='root');
+  document.getElementById('routeBackBtn')?.classList.toggle('hidden',root);
   closeActionModal();
   closeDrawer();
-  window.scrollTo({top:0,behavior:preferredMotionBehavior()});
+  if(meta.source!=='start')window.scrollTo({top:0,behavior:preferredMotionBehavior()});
+  if(meta.focus){
+    const heading=document.querySelector(`#tab-${tabForRoute(normalized)} [tabindex="-1"]`)||document.getElementById('currentModuleTitle');
+    requestAnimationFrame(()=>heading?.focus({preventScroll:true}));
+  }
+  if(meta.announce!==false){
+    const live=document.getElementById('globalLiveRegion');if(live){live.textContent='';requestAnimationFrame(()=>{live.textContent=`${viewMeta[0]}. ${viewMeta[1]}`;});}
+  }
+  window.dispatchEvent(new CustomEvent('app-route-change',{detail:{...normalized,activeModule}}));
 }
-function activateTab(tabName){
-  if(activeModule==='protocolo' && ['registro','dashboard'].includes(tabName)) lastProtocolTab=tabName;
-  document.querySelectorAll('.tab').forEach(b=>{const active=b.dataset.tab===tabName;b.classList.toggle('active',active);b.setAttribute('aria-selected',String(active));});
-  ['registro','dashboard','gym','gym-party','nutricion','progreso','mas','telefono','plan','guia'].forEach(t=>{
-    const el=document.getElementById('tab-'+t); if(el) el.classList.toggle('hidden', t!==tabName);
-  });
-  if(tabName==='dashboard') drawChart();
-  if(tabName==='gym') renderGym();
-  if(tabName==='gym-party' && window.renderGymParty) window.renderGymParty();
-  if(tabName==='nutricion') renderNutrition();
-  if(tabName==='progreso' && window.renderAdvancedProgress) window.renderAdvancedProgress();
+window.applyCurrentRouteView=()=>{
+  const route=window.APP_ROUTER?.current();
+  if(route)applyAppRoute(route,{source:'hydrate',focus:false,announce:false});
+};
+function setModule(module,options={}){
+  const route=routeForLegacyModule(module);
+  if(window.APP_ROUTER?.isStarted()&&!options.internal)return window.APP_ROUTER.navigate(route,{replace:!!options.replace});
+  applyAppRoute(route,{source:'legacy',focus:options.focus!==false});
 }
 function openGuide(id){
   renderHelpGuide();
-  activateTab('guia');
-  const card=document.getElementById('help-'+id);
-  if(card){
-    card.scrollIntoView({behavior:preferredMotionBehavior(), block:'start'});
-    card.classList.add('highlight');
-    setTimeout(()=>card.classList.remove('highlight'),2400);
-  }
+  window.APP_ROUTER?.navigate({module:'more',view:'help'});
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    const card=document.getElementById('help-'+id);
+    if(card){card.scrollIntoView({behavior:preferredMotionBehavior(),block:'start'});card.classList.add('highlight');setTimeout(()=>card.classList.remove('highlight'),2400);}
+  }));
 }
 
 
@@ -2093,23 +2207,20 @@ const syncBtn=document.getElementById('syncAndroidUsageBtn'); if(syncBtn) syncBt
 const requestUsageBtn=document.getElementById('requestUsageAccessBtn'); if(requestUsageBtn) requestUsageBtn.addEventListener('click', requestUsageAccess);
 const installBtn=document.getElementById('installPwaBtn'); if(installBtn) installBtn.addEventListener('click', installPwa);
 const copyPhoneBtn=document.getElementById('copyPhoneToFormBtn'); if(copyPhoneBtn) copyPhoneBtn.addEventListener('click', copyPhoneMetricsToForm);
+document.getElementById('settingsExportJsonBtn')?.addEventListener('click',exportJson);
+document.getElementById('settingsExportCsvBtn')?.addEventListener('click',exportCsv);
+document.getElementById('settingsImportBtn')?.addEventListener('click',()=>document.getElementById('importFile').click());
 document.getElementById('openDrawerBtn').addEventListener('click', openDrawer);
 document.getElementById('openGymPartyTopBtn').addEventListener('click', ()=>setModule('gym-party'));
+document.getElementById('routeBackBtn').addEventListener('click',()=>window.APP_ROUTER?.back());
 document.getElementById('closeDrawerBtn').addEventListener('click', closeDrawer);
 document.getElementById('drawerBackdrop').addEventListener('click', closeDrawer);
 document.querySelectorAll('[data-module-target]').forEach(btn=>btn.addEventListener('click',()=>setModule(btn.dataset.moduleTarget)));
-document.querySelectorAll('[data-more-tab]').forEach(btn=>btn.addEventListener('click',()=>{setModule('mas');activateTab(btn.dataset.moreTab);}));
+document.querySelectorAll('[data-more-view]').forEach(btn=>btn.addEventListener('click',()=>window.APP_ROUTER?.navigate({module:'more',view:btn.dataset.moreView})));
+document.querySelectorAll('[data-route-module]').forEach(btn=>btn.addEventListener('click',()=>window.APP_ROUTER?.navigate({module:btn.dataset.routeModule,view:btn.dataset.routeView||''})));
 document.querySelectorAll('[data-open-gym-party]').forEach(btn=>btn.addEventListener('click',()=>setModule('gym-party')));
 document.querySelectorAll('[data-gym-section]').forEach(btn=>btn.addEventListener('click',()=>{
-  const target=btn.dataset.gymSection;
-  document.querySelectorAll('[data-gym-section]').forEach(item=>item.classList.toggle('active',item===btn));
-  if(target==='routine'){
-    const details=document.querySelector('#workoutConfigPanel details');if(details)details.open=true;
-    document.getElementById('workoutConfigPanel')?.scrollIntoView({behavior:preferredMotionBehavior(),block:'start'});
-  }else if(target==='progress'){
-    const details=document.querySelector('.gymHistoryDetails');if(details)details.open=true;
-    document.querySelector('.gymHistoryDetails')?.scrollIntoView({behavior:preferredMotionBehavior(),block:'start'});
-  }else document.getElementById('quickSetLoggerPanel')?.scrollIntoView({behavior:preferredMotionBehavior(),block:'start'});
+  window.APP_ROUTER?.navigate({module:'gym',view:btn.dataset.gymSection});
 }));
 if(window.visualViewport){const updateKeyboardState=()=>document.body.classList.toggle('keyboardOpen',window.innerHeight-window.visualViewport.height>160);window.visualViewport.addEventListener('resize',updateKeyboardState);window.visualViewport.addEventListener('scroll',updateKeyboardState);}
 document.getElementById('gymMuscle').addEventListener('change', populateGymExercises);
@@ -2175,9 +2286,6 @@ document.addEventListener('keydown', e=>{
   if(document.body.classList.contains('drawerOpen'))trapOverlayFocus(e,document.getElementById('sideDrawer'));
   else if(!document.getElementById('actionModalBackdrop')?.classList.contains('hidden'))trapOverlayFocus(e,document.getElementById('actionModalBackdrop'));
 });
-let swipeStartX=null,swipeStartY=null;
-document.addEventListener('touchstart',e=>{const t=e.touches[0];swipeStartX=t.clientX;swipeStartY=t.clientY;},{passive:true});
-document.addEventListener('touchend',e=>{if(swipeStartX===null)return;const t=e.changedTouches[0],dx=t.clientX-swipeStartX,dy=Math.abs(t.clientY-swipeStartY);if(dy<80&&swipeStartX<30&&dx>75)openDrawer();if(dy<80&&document.body.classList.contains('drawerOpen')&&dx<-75)closeDrawer();swipeStartX=null;swipeStartY=null;},{passive:true});
 document.addEventListener('click', e=>{
   const removeGym=e.target.closest('[data-remove-gym]');
   if(removeGym){ gymDraft=gymDraft.filter(i=>i.id!==removeGym.dataset.removeGym); renderGymDraft(); return; }
@@ -2213,16 +2321,13 @@ applyAccessibilityEnhancements(document);
 if('MutationObserver'in window)new MutationObserver(queueAccessibilityEnhancements).observe(document.body,{childList:true,subtree:true});
 loadEntryForDate();
 renderAll();
-const launchParams=new URLSearchParams(location.search);
-const launchModule=launchParams.get('module');
-const launchQuickLog=launchParams.get('quickLog')==='1';
-setModule(launchModule||localStorage.getItem(ACTIVE_MODULE_KEY)||'protocolo');
-if(launchModule||launchQuickLog){
-  launchParams.delete('module'); launchParams.delete('quickLog');
-  const cleanQuery=launchParams.toString();
-  history.replaceState(null,'',location.pathname+(cleanQuery?'?'+cleanQuery:'')+location.hash);
+const initialRouteParams=window.APP_ROUTER.fromLocation();
+window.APP_ROUTER.start(applyAppRoute,routeForLegacyModule(localStorage.getItem(ACTIVE_MODULE_KEY)||'protocolo'));
+setTimeout(()=>applyAppRoute(window.APP_ROUTER.current(),{source:'hydrate',focus:false,announce:false}),0);
+if(initialRouteParams.quickLog){
+  window.APP_ROUTER.consume('quickLog');
+  setTimeout(()=>window.openQuickSetLogger?.(),0);
 }
-if(launchQuickLog) setTimeout(()=>window.openQuickSetLogger?.(),0);
 maybeAutoShowActionModal();
 </script>
 <script src="workout-store.js"></script>

@@ -573,6 +573,7 @@
     document.getElementById('refreshWorkoutWidgetBtn')?.addEventListener('click',()=>{syncWorkoutWidget();flash('Widget actualizado manualmente.');});
     ['gymWidgetEnabled','gymShowRir','gymShowRestDays','gymRestTimerEnabled','gymHapticEnabled'].forEach(id=>document.getElementById(id)?.addEventListener('change',saveSettingsFromUi));
     ['gymUnit','gymMode','gymRestSeconds'].forEach(id=>document.getElementById(id)?.addEventListener('change',saveSettingsFromUi));
+    window.applyCurrentRouteView?.();
   }
   function renderWorkoutDashboard(){
     injectWorkoutUi();
