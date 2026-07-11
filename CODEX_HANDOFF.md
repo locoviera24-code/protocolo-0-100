@@ -992,5 +992,41 @@ Bugs/limitaciones conocidos:
   abrir, guardar, recuperar conexion o pulsar sincronizar.
 - El acceso en otro dispositivo exige vincular email/clave antes de perder la
   sesion anonima original.
-- Los estilos historicos inline siguen existiendo como compatibilidad; los cinco
-  CSS externos los sobrescriben. Extraerlos debe hacerse de forma incremental.
+- El gran bloque CSS historico de `index.html` ya fue extraido; no reintroducir
+  bloques `<style>` ni hojas inyectadas desde JavaScript.
+
+## 27. Refactor UX/UI - bloque 1: migracion CSS
+
+Estado verificado el 2026-07-11 sobre el codigo real:
+
+- `index.html` ya no contiene un bloque `<style>`. Las reglas historicas que
+  siguen siendo necesarias viven en `styles/features.css`; durante la
+  extraccion se descartaron 299 selectores ya cubiertos por base, componentes,
+  modulos o responsive.
+- `ensureWorkoutStyles()` fue eliminado de `workout-features.js`; su layout
+  vive en `styles/gym.css`.
+- `ensureStyles()` fue eliminado de `gym-party.js`; su layout vive en
+  `styles/gym-party.css`.
+- El orden CSS es tokens, base, componentes, features, Gym, Gym Party, modulos
+  y responsive. `sw.js` usa `protocolo-0-100-pwa-v47`.
+- Los controles de formulario usan `width: 100%` y `min-width: 0`. Esto
+  evita que el ancho intrinseco de un `select` amplie el layout viewport y
+  desplace la barra inferior fuera del visual viewport en Chromium movil.
+- `scripts/test-design-system.mjs` impide reintroducir bloques `<style>`,
+  hojas inyectadas, emojis en navegacion y nuevas constantes visuales fuera de
+  `scripts/design-token-allowlist.json`.
+- El sincronizador Android, el validador y los cuatro workflows incluyen las
+  ocho hojas externas y `npm run test:design`.
+
+Linea base previa al bloque: validacion y diez pruebas Node OK; Firestore
+Emulator OK; Playwright 15 OK y 6 omisiones intencionales por plataforma;
+`npm audit` sin vulnerabilidades.
+
+Pendientes reales del rediseño:
+
+- router jerarquico con historial, deep links y Atrás;
+- coordinador de sticky, teclado y safe areas;
+- Inicio adaptativo y pantallas reales de Mas, Ajustes, Datos y Acerca de;
+- Progreso consolidado, flujo Nutricion por pasos y combobox de Gym;
+- mensajes/estados centrales, modos guiado/compacto, historiales responsive y
+  modularizacion adicional de los orquestadores.

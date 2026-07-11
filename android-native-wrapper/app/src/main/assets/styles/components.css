@@ -49,6 +49,8 @@ button.danger, .btn-danger { border-color: rgba(239, 133, 133, .35); background:
 .buttons > button { flex: 0 1 auto; }
 
 input, select, textarea {
+  width: 100%;
+  min-width: 0;
   min-height: var(--control-height);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-control);

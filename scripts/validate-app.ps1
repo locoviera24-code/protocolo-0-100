@@ -35,6 +35,9 @@ $serviceWorker = Read-Utf8 'sw.js'
 $styleTokens = Read-Utf8 'styles/tokens.css'
 $styleBase = Read-Utf8 'styles/base.css'
 $styleComponents = Read-Utf8 'styles/components.css'
+$styleFeatures = Read-Utf8 'styles/features.css'
+$styleGym = Read-Utf8 'styles/gym.css'
+$styleGymParty = Read-Utf8 'styles/gym-party.css'
 $styleModules = Read-Utf8 'styles/modules.css'
 $styleResponsive = Read-Utf8 'styles/responsive.css'
 $manifestText = Read-Utf8 'manifest.webmanifest'
@@ -59,6 +62,7 @@ $androidSecurityTest = Read-Utf8 'scripts/test-android-webview-security.mjs'
 $androidReleaseTest = Read-Utf8 'scripts/test-android-release.mjs'
 $accessibilityTest = Read-Utf8 'scripts/test-accessibility.mjs'
 $moduleBoundaryTest = Read-Utf8 'scripts/test-module-boundaries.mjs'
+$designSystemTest = Read-Utf8 'scripts/test-design-system.mjs'
 $playwrightConfig = Read-Utf8 'playwright.config.mjs'
 $playwrightGymTest = Read-Utf8 'tests/e2e/gym-flow.spec.mjs'
 $playwrightVisualTest = Read-Utf8 'tests/e2e/visual-navigation.spec.mjs'
@@ -81,10 +85,10 @@ $requiredFiles = @(
     'scripts/test-android-webview-security.mjs',
     'scripts/test-android-release.mjs',
     'scripts/test-accessibility.mjs',
-    'scripts/test-module-boundaries.mjs',
+    'scripts/test-module-boundaries.mjs', 'scripts/test-design-system.mjs', 'scripts/design-token-allowlist.json',
     'scripts/serve-static.mjs', 'playwright.config.mjs', 'tests/e2e/gym-flow.spec.mjs', 'tests/e2e/visual-navigation.spec.mjs',
     'manifest.webmanifest', 'sw.js',
-    'styles/tokens.css', 'styles/base.css', 'styles/components.css', 'styles/modules.css', 'styles/responsive.css',
+    'styles/tokens.css', 'styles/base.css', 'styles/components.css', 'styles/features.css', 'styles/gym.css', 'styles/gym-party.css', 'styles/modules.css', 'styles/responsive.css',
     'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetProvider.java',
     'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetUpdateService.java',
     'android-native-wrapper/app/src/main/res/xml/workout_widget_info.xml',
@@ -102,11 +106,16 @@ foreach ($script in @('nutrition-data.js', 'fdc-client.js', 'workout-store.js', 
     Assert-True ($html.Contains("<script src=`"$script`"></script>")) "index.html no carga $script"
     Assert-True ($serviceWorker.Contains("'./$script'")) "sw.js no cachea $script"
 }
-foreach ($style in @('styles/tokens.css', 'styles/base.css', 'styles/components.css', 'styles/modules.css', 'styles/responsive.css')) {
+foreach ($style in @('styles/tokens.css', 'styles/base.css', 'styles/components.css', 'styles/features.css', 'styles/gym.css', 'styles/gym-party.css', 'styles/modules.css', 'styles/responsive.css')) {
     Assert-True ($html.Contains("<link rel=`"stylesheet`" href=`"$style`"")) "index.html no carga $style"
     Assert-True ($serviceWorker.Contains("'./$style'")) "sw.js no cachea $style"
     Assert-True ($deployWorkflow.Contains($style.Split('/')[0] + '/**')) "Pages no observa cambios de estilos"
 }
+Assert-True (-not $html.Contains('<style')) 'index.html no debe contener CSS inline en bloques <style>'
+Assert-True (-not ($workout + $gymParty).Contains('style.textContent')) 'Gym y Gym Party no deben inyectar hojas CSS'
+Assert-True ($styleGym.Contains('.quickLogger')) 'styles/gym.css no contiene el registro rapido'
+Assert-True ($styleGymParty.Contains('.partyWorkoutLogger')) 'styles/gym-party.css no contiene el registrador compartido'
+Assert-True ($designSystemTest.Contains('design-token-allowlist.json')) 'Falta validacion de presupuestos visuales'
 foreach ($contract in @('.bottomNav', 'grid-template-columns: repeat(5', 'data-module')) {
     Assert-True (($styleModules + $html).Contains($contract)) "Falta navegación principal: $contract"
 }
@@ -383,7 +392,7 @@ foreach ($contract in @(
     'Solo se compartir',
     'Modo demo'
 )) {
-    Assert-True ($gymParty.Contains($contract)) "Falta contrato Gym Party: $contract"
+    Assert-True (($gymParty + $styleGymParty).Contains($contract)) "Falta contrato Gym Party: $contract"
 }
 foreach ($contract in @('prepareLocalRows','mergeRemoteRows','markRowsSynced','markRowsError','backoffDelay','latestRemoteTimestamp','timeContext','syncState','remote-newer')) {
     Assert-True ($gymPartySync.Contains($contract)) "Falta contrato de sync incremental: $contract"
@@ -413,8 +422,9 @@ foreach ($contract in @('assembleRelease','ANDROID_KEYSTORE_BASE64','ANDROID_KEY
 }
 Assert-True (-not $apkWorkflow.Contains('gh release')) 'El workflow debug no debe publicar GitHub Releases'
 Assert-True ($androidReleaseTest.Contains('Release Android separado')) 'Falta prueba de separacion debug/release'
+$accessibilitySource = $html + $styleBase + $styleResponsive + $styleGym + $styleGymParty
 foreach ($contract in @('globalLiveRegion',':focus-visible','prefers-reduced-motion','safe-area-inset-bottom','applyAccessibilityEnhancements','label.htmlFor=control.id','trapOverlayFocus','preferredMotionBehavior')) {
-    Assert-True ($html.Contains($contract)) "Falta contrato de accesibilidad: $contract"
+    Assert-True ($accessibilitySource.Contains($contract)) "Falta contrato de accesibilidad: $contract"
 }
 Assert-True ($accessibilityTest.Contains('Accesibilidad correcta')) 'Falta prueba automatica de accesibilidad'
 Assert-True ($releaseWorkflow.Contains('node ./scripts/test-accessibility.mjs')) 'El release Android debe probar accesibilidad web'

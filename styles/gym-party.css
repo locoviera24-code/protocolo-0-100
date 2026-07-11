@@ -1,0 +1,106 @@
+.partyGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}
+.partyGrid.compact{align-items:start}
+.partyHeroCard p{line-height:1.45}
+.partyMembers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}
+.partyMemberCard,.partyCompareCard{border:1px solid var(--line);border-radius:16px;padding:13px;background:rgba(255,255,255,.04)}
+.partyCompareGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.partyCompareGrid.compact{grid-template-columns:repeat(2,minmax(0,1fr))}
+.partyCompareCard span{display:block;color:var(--muted);font-size:12px}.partyCompareCard strong{display:block;font-size:26px;margin:6px 0}.partyCompareCard small{color:var(--muted);line-height:1.35}
+.partyChartGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.partyBarRow{display:grid;grid-template-columns:110px minmax(0,1fr) 86px;gap:9px;align-items:center;font-size:12px;margin:8px 0}
+.partyBar{height:15px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.07);overflow:hidden}
+.partyBar i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+.gymPartyHelp{display:inline-grid;place-items:center;width:21px;height:21px;min-width:21px;padding:0;margin-left:4px;border-radius:999px;background:rgba(114,214,255,.12);color:#dff6ff;border:1px solid rgba(114,214,255,.34);font-size:12px}
+.partySimpleShell{max-width:760px;margin:0 auto}
+.partyStartCard,.partyDashboardSimple{padding:18px}
+.partyStartCard h2,.partyDashboardSimple h2{font-size:30px;margin:8px 0 6px}
+.partyLead{font-size:17px;line-height:1.35;color:#e9f7ff;margin:0 0 14px}
+.partyStepPill{display:inline-flex;align-items:center;width:max-content;border-radius:999px;padding:7px 10px;background:rgba(146,255,194,.16);border:1px solid rgba(146,255,194,.34);font-size:12px;font-weight:800;color:#dffff0}
+.partyMiniSteps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:14px 0}
+.partyMiniSteps span{border:1px solid var(--line);border-radius:14px;padding:10px;text-align:center;background:rgba(255,255,255,.04);font-weight:800;font-size:13px}
+.partyFormCard{border:1px solid rgba(146,255,194,.28);border-radius:18px;padding:14px;background:rgba(146,255,194,.06);margin-top:12px}
+.partyFormCard.flat{background:rgba(255,255,255,.04);border-color:var(--line)}
+.partyDashboardSimple,.partyWorkoutLogger,.partyQuickSummary,.partyFoldCard{box-shadow:0 12px 34px rgba(0,0,0,.14)}
+.partyFocusHint{border:1px solid rgba(146,255,194,.24);border-radius:14px;padding:10px 12px;background:rgba(146,255,194,.065);color:#dffff0;font-size:13px;font-weight:750;margin-top:12px}
+.partyPrimaryAction{width:100%;min-height:54px;font-size:16px;margin-top:8px}
+.partyFold,.partyNestedFold{border:1px solid var(--line);border-radius:16px;padding:12px 14px;margin-top:12px;background:rgba(255,255,255,.035)}
+.partyFold summary,.partyNestedFold summary,.partyFoldCard summary{cursor:pointer;font-weight:850}
+.partyFoldCard{padding:14px 16px}
+.partySecondaryActions{gap:8px;margin-top:12px}
+.partySecondaryActions button{flex:1 1 150px}
+.partyCodeBox{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid rgba(146,255,194,.34);border-radius:18px;padding:13px 14px;background:rgba(146,255,194,.08);margin:12px 0}
+.partyCodeBox span{color:var(--muted);font-size:13px}.partyCodeBox strong{font-size:28px;letter-spacing:2px}
+.partyMainActions{display:grid;grid-template-columns:1.2fr 1fr .8fr;gap:10px;margin-top:12px}
+.partyMainActions button{min-height:50px}
+.partyDateControls{display:grid;grid-template-columns:1fr;gap:8px;align-items:end;margin:0 0 10px}
+.partyDateControls .field{margin:0}
+.partyAccessBox{display:grid;gap:9px}
+.partyAccessGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.partyAccessGrid .field{margin:0}
+.partySaveRow{margin-top:12px}
+.partyStickySave{position:sticky;bottom:max(8px,env(safe-area-inset-bottom));z-index:35;display:grid;grid-template-columns:1.4fr 1fr .85fr;gap:8px;padding:9px;border:1px solid rgba(114,214,255,.30);border-radius:15px;background:rgba(11,18,32,.96);box-shadow:0 12px 30px rgba(0,0,0,.3);backdrop-filter:blur(12px)}
+.partyStickySave button{min-height:50px}.partyQuickAdjust{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:6px}.partyQuickAdjust button{min-height:36px;padding:6px 4px;font-size:11px}
+.partyRestTimer{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:8px 0;padding:9px 11px;border-radius:12px;background:rgba(114,214,255,.08);color:#dff6ff}.partyRestTimer.hidden{display:none}
+.partyInlineAction{width:100%;min-height:46px;margin-top:8px}
+.partyGameCard{border-color:rgba(146,255,194,.28)}
+.partyLevelBar{height:14px;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:rgba(255,255,255,.07);margin:12px 0}
+.partyLevelBar i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--accent2),var(--accent))}
+.partyBadgeTrack{margin:10px 0}
+.partyDashboardTop,.partyMuscleMapCard,.partyQuickSummary{background:linear-gradient(180deg,rgba(114,214,255,.08),rgba(146,255,194,.035))}
+.partyMuscleMapCard{border-color:rgba(114,214,255,.25);overflow:hidden}
+.partyMuscleMapShell{display:grid;grid-template-columns:minmax(280px,.9fr) minmax(0,1.1fr);gap:14px;align-items:stretch;margin-top:12px}
+.partyHumanPanel{border:1px solid rgba(114,214,255,.23);border-radius:20px;background:radial-gradient(circle at 50% 18%,rgba(114,214,255,.18),rgba(255,255,255,.035) 42%,rgba(0,0,0,.08));padding:12px;min-height:430px}
+.partyHumanCanvas{position:relative;min-height:408px}
+.partyHumanSvg{position:absolute;inset:0;width:100%;height:100%;filter:drop-shadow(0 16px 26px rgba(0,0,0,.24))}
+.partyBodyPart{fill:url(#partyBodySkin);stroke:rgba(223,246,255,.42);stroke-width:1.1}
+.partyBodyPart.head{fill:rgba(255,255,255,.13)}
+.partyBodyShade{fill:rgba(114,214,255,.075);stroke:rgba(146,255,194,.16);stroke-width:.7}
+.partyMuscleLine{stroke:rgba(114,214,255,.34);stroke-width:1.2;stroke-dasharray:4 4}
+.partyMuscleLine.on{stroke:url(#partyBodyGlow);stroke-width:2.1;stroke-dasharray:none}
+.partyMuscleDot{fill:url(#partyBodyGlow);stroke:rgba(255,255,255,.75);stroke-width:.7}
+.partyMuscleDot.on{filter:drop-shadow(0 0 8px rgba(146,255,194,.7))}
+.partyMuscleButton{position:absolute;transform:translate(-4px,-50%);min-width:116px;text-align:left;border:1px solid rgba(114,214,255,.28);border-radius:14px;background:rgba(8,18,28,.78);backdrop-filter:blur(8px);padding:8px 10px;color:#e9f7ff}
+.partyMuscleButton strong,.partyMuscleButton span{display:block}
+.partyMuscleButton span{font-size:11px;color:var(--muted);margin-top:2px}
+.partyMuscleButton.on{border-color:rgba(146,255,194,.75);background:linear-gradient(135deg,rgba(146,255,194,.20),rgba(114,214,255,.14));box-shadow:0 0 0 1px rgba(146,255,194,.16),0 14px 30px rgba(0,0,0,.22)}
+.partyMuscleInsight{display:grid;gap:12px}
+.partyMuscleCompare,.partyMuscleExerciseList,.partyMiniChart{border:1px solid var(--line);border-radius:16px;padding:12px;background:rgba(255,255,255,.035)}
+.partyMuscleChartGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.partyWeekBars{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px;align-items:end;min-height:130px;margin-top:8px}
+.partyWeekBarItem{display:grid;grid-template-rows:1fr auto auto;gap:5px;align-items:end;text-align:center;font-size:11px;color:var(--muted)}
+.partyWeekBar{height:92px;border:1px solid rgba(114,214,255,.22);border-radius:12px;background:rgba(255,255,255,.04);display:flex;align-items:end;overflow:hidden}
+.partyWeekBar i{display:block;width:100%;border-radius:12px 12px 0 0;background:linear-gradient(180deg,var(--accent),var(--accent2))}
+.partyWeekBarItem strong{color:#e9f7ff;font-size:11px}
+.partyExerciseCompareCard{border:1px solid var(--line);border-radius:16px;padding:12px;background:rgba(255,255,255,.035);margin-top:10px}
+.partyExerciseCompareCard.on{border-color:rgba(146,255,194,.62);background:rgba(146,255,194,.08)}
+.partyExerciseMetricGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:10px 0}
+.partyExerciseMetricGrid div{border:1px solid rgba(255,255,255,.08);border-radius:13px;padding:9px;background:rgba(0,0,0,.10)}
+.partyExerciseMetricGrid span,.partyExerciseMetricGrid small{display:block;color:var(--muted);font-size:11px}.partyExerciseMetricGrid strong{display:block;font-size:18px;margin:3px 0;color:#fff}
+.partyTip{border:1px solid rgba(114,214,255,.28);border-radius:14px;padding:10px 12px;background:rgba(114,214,255,.08);font-weight:750;margin-top:10px}
+.partyQuickSummary{margin-top:12px}
+.partyWorkoutLogger{margin-top:12px}
+.partySetCounters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:10px 0}
+.partySetCounters div{border:1px solid var(--line);border-radius:14px;padding:11px;background:rgba(255,255,255,.04)}
+.partySetCounters span,.partySetCounters small{display:block;color:var(--muted);font-size:12px}.partySetCounters strong{display:block;font-size:28px;margin:3px 0}
+.partySetCounters.compact{gap:8px;margin:12px 0 6px}
+.partySetCounters.compact div{padding:8px 10px;border-radius:12px;background:rgba(255,255,255,.028)}
+.partySetCounters.compact strong{font-size:19px;margin:1px 0}.partySetCounters.compact span,.partySetCounters.compact small{font-size:11px}
+.partyLoggedSets{border-top:1px solid rgba(255,255,255,.08);margin:10px 0 4px;padding-top:9px}
+.partyLoggedSetsHeader{display:flex;align-items:center;justify-content:space-between;gap:10px;color:var(--muted);font-size:12px}
+.partyLoggedSetsHeader strong{color:#e9f7ff;font-size:13px}.partyLoggedSetsHeader span{font-size:11px}
+.partySetList{display:grid;gap:8px;margin:10px 0}
+.partySetList.compact{gap:6px;margin:7px 0 0}
+.partySetList.empty{border:1px dashed rgba(255,255,255,.12);border-radius:14px;padding:10px;color:var(--muted);background:rgba(255,255,255,.025)}
+.partySetRow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;border:1px solid rgba(255,255,255,.10);border-radius:14px;padding:9px 10px;background:rgba(0,0,0,.10)}
+.partySetList.compact .partySetRow{padding:7px 8px;border-radius:12px;background:rgba(0,0,0,.07)}
+.partySetRow.editing{border-color:rgba(146,255,194,.62);background:rgba(146,255,194,.08)}
+.partySetRow strong,.partySetRow span{display:block}.partySetRow span{color:var(--muted);font-size:12px;margin-top:2px}
+.partySetList.compact .partySetRow strong{font-size:13px}.partySetList.compact .partySetRow span{font-size:11px}
+.partySetRowActions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.partySetRowActions button{min-height:34px;padding:7px 10px;font-size:12px}
+.partySetList.compact .partySetRowActions button{min-height:30px;padding:6px 8px;font-size:11px}
+.partyQuickInputs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.partyQuickInputs input{font-size:22px;font-weight:850;text-align:center;min-height:54px}
+.partyWeightChips{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:10px 0}
+.partyWeightChips button{min-height:42px}
+@media(max-width:850px){.partyGrid,.partyMembers,.partyChartGrid,.partyCompareGrid,.partyCompareGrid.compact,.partyMiniSteps,.partyMainActions,.partyDateControls,.partyAccessGrid,.partyQuickInputs,.partySetCounters,.partySetRow,.partyMuscleMapShell,.partyMuscleChartGrid,.partyExerciseMetricGrid{grid-template-columns:1fr}.partySetRowActions{justify-content:stretch}.partySetRowActions button{flex:1}.partyHumanPanel{min-height:390px}.partyHumanCanvas{min-height:368px}.partyMuscleButton{min-width:104px;font-size:12px}.partyWeightChips{grid-template-columns:repeat(2,minmax(0,1fr))}.partyBarRow{grid-template-columns:92px minmax(0,1fr) 72px}.partyCodeBox{align-items:flex-start;flex-direction:column}.partyCodeBox strong{font-size:24px}.partyStickySave{grid-template-columns:1.25fr .9fr .75fr}.partyStickySave button{padding:8px 6px;font-size:12px}}
+

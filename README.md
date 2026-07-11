@@ -24,8 +24,10 @@ permanente en todas las pantallas.
 La interfaz conserva todos los controles y datos, pero muestra primero la tarea
 principal. Ajustes, explicaciones, acciones destructivas, micronutrientes,
 recompensas y administracion de sala usan secciones plegables. Los estilos se
-centralizan en `styles/tokens.css`, `styles/base.css`,
-`styles/components.css`, `styles/modules.css` y `styles/responsive.css`.
+centralizan en hojas externas: `styles/tokens.css`, `styles/base.css`,
+`styles/components.css`, `styles/features.css`, `styles/gym.css`,
+`styles/gym-party.css`, `styles/modules.css` y `styles/responsive.css`.
+Gym y Gym Party ya no crean bloques CSS desde JavaScript.
 
 ## Arquitectura
 
@@ -33,7 +35,7 @@ La raiz del repositorio es la fuente de la PWA y tambien se sincroniza dentro de
 
 ```text
 index.html                  Interfaz, protocolo, gym y nutricion
-styles/*.css                Tokens, base, componentes, modulos y responsive
+styles/*.css                Tokens, base, componentes y estilos por modulo
 workout-store.js            Acceso conservador y versionado a localStorage Gym
 workout-plan.js             Normalizacion, deduplicacion e insercion en rutinas
 workout-ui.js               Renderizadores pequenos y anuncios accesibles de Gym
@@ -283,6 +285,7 @@ node ./scripts/test-module-boundaries.mjs
 node ./scripts/test-android-webview-security.mjs
 node ./scripts/test-android-release.mjs
 node ./scripts/test-accessibility.mjs
+npm run test:design
 npm run test:rules
 npm run test:e2e
 ```

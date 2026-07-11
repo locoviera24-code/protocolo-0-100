@@ -68,6 +68,9 @@ jobs:
       - name: Probar limites modulares
         run: npm run test:modules
 
+      - name: Probar presupuestos del sistema visual
+        run: npm run test:design
+
       - name: Probar seguridad del WebView Android
         run: node ./scripts/test-android-webview-security.mjs
 

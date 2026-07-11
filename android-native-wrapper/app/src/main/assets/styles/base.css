@@ -3,6 +3,7 @@
 html {
   min-width: 320px;
   min-height: 100%;
+  overflow-x: hidden;
   background: var(--color-bg);
   scroll-padding-bottom: calc(var(--nav-height) + var(--safe-bottom) + var(--space-4));
 }

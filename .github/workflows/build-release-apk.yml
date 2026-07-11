@@ -68,6 +68,9 @@ jobs:
       - name: Probar limites modulares
         run: npm run test:modules
 
+      - name: Probar presupuestos del sistema visual
+        run: npm run test:design
+
       - name: Probar accesibilidad web y movil
         run: node ./scripts/test-accessibility.mjs
 

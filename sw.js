@@ -1,7 +1,7 @@
 const CACHE_PREFIX = 'protocolo-0-100-pwa-';
-// v45 corresponde al rediseño completo y la migracion Firebase de 2.7.0.
-const CACHE_NAME = `${CACHE_PREFIX}v45`;
-const CORE_ASSETS = ['./', './index.html', './styles/tokens.css', './styles/base.css', './styles/components.css', './styles/modules.css', './styles/responsive.css', './nutrition-data.js', './fdc-client.js', './workout-store.js', './workout-plan.js', './workout-metrics.js', './workout-ranking.js', './workout-ui.js', './workout-features.js', './firebase-service.js', './gym-party-sync.js', './gym-party-metrics.js', './gym-party-ui.js', './gym-party.js', './advanced-features.js', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
+// v47 externaliza el CSS y corrige el ancho intrinseco de controles moviles.
+const CACHE_NAME = `${CACHE_PREFIX}v47`;
+const CORE_ASSETS = ['./', './index.html', './styles/tokens.css', './styles/base.css', './styles/components.css', './styles/features.css', './styles/gym.css', './styles/gym-party.css', './styles/modules.css', './styles/responsive.css', './nutrition-data.js', './fdc-client.js', './workout-store.js', './workout-plan.js', './workout-metrics.js', './workout-ranking.js', './workout-ui.js', './workout-features.js', './firebase-service.js', './gym-party-sync.js', './gym-party-metrics.js', './gym-party-ui.js', './gym-party.js', './advanced-features.js', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
 const CORE_URLS = new Set(CORE_ASSETS.map(asset => new URL(asset, self.location.href).href));
 
 function canonicalUrl(requestUrl) {
