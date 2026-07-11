@@ -2706,16 +2706,22 @@
   }
   async function syncFirebaseNow({silent=false,full=false,force=false}={}){
     const m=activeMembership(); if(!m||m.backendMode!=='firebase') return;
-    const runtime=await loadFirebaseRuntime(),{db,auth,firestoreMod}=runtime; assertFirebaseSessionMatchesMembership(auth,m);
+    let stage='cargar Firebase';
     try{
+      const runtime=await loadFirebaseRuntime(),{db,auth,firestoreMod}=runtime;
+      stage='validar sesion';
+      assertFirebaseSessionMatchesMembership(auth,m);
+      stage='preparar consultas';
       const membersQuery=firestoreMod.query(firestoreMod.collection(db,collections.members),firestoreMod.where('partyId','==',m.partyId),firestoreMod.where('active','==',true),firestoreMod.limit(MAX_GYM_PARTY_MEMBERS+1));
       const shouldFull=full||!lastRemoteSyncAt();
+      stage='leer datos compartidos';
       const [partySnap,membersSnap,remoteSessions,remoteSets]=await Promise.all([
         firebaseStage('leer sala',()=>firestoreMod.getDoc(firestoreMod.doc(db,collections.parties,m.partyId))),
         firebaseStage('leer miembros',()=>firestoreMod.getDocs(membersQuery)),
         firebaseStage('leer sesiones',()=>fetchRemoteCollection(runtime,collections.sessions,{full:shouldFull,pageSize:120})),
         firebaseStage('leer series',()=>fetchRemoteCollection(runtime,collections.sets,{full:shouldFull,pageSize:300}))
       ]);
+      stage='integrar datos';
       const localSessions=sharedSessions(),localSets=sharedSets();
       const partySessions=localSessions.filter(row=>row.partyId===m.partyId),partySets=localSets.filter(row=>row.partyId===m.partyId);
       const mergedSessions=syncEngine()?.mergeRemoteRows?.(partySessions,remoteSessions)||upsertById(partySessions,remoteSessions);
@@ -2724,7 +2730,9 @@
       saveSharedSets([...localSets.filter(row=>row.partyId!==m.partyId),...mergedSets]);
       discardResolvedQueueRows([...mergedSessions,...mergedSets]);
       reconcileOwnRemoteWorkouts(m,mergedSessions,mergedSets);
-      const upload=await firebaseStage('subir cambios',()=>uploadSyncQueue(runtime,{force}));
+      stage='subir cambios';
+      const upload=await firebaseStage(stage,()=>uploadSyncQueue(runtime,{force}));
+      stage='guardar estado';
       const members=membersSnap.docs.map(docSnap=>docSnap.data()),party={...(m.party||currentParty()||{}),...(partySnap.exists()?partySnap.data():{}),members,membersCount:members.length,maxMembers:partySnap.data()?.maxMembers||MAX_GYM_PARTY_MEMBERS};
       saveMembership({...m,party,inviteCode:party.inviteCode||m.inviteCode,updatedAt:nowIso()});
       const latest=syncEngine()?.latestRemoteTimestamp?.([...remoteSessions,...remoteSets])||''; if(latest) setLastRemoteSyncAt(latest);
@@ -2732,8 +2740,11 @@
       if(!silent) flashMessage(`Gym Party sincronizada: ${upload.uploaded} subida(s), ${remoteSessions.length+remoteSets.length} cambio(s) remoto(s).`);
       return {uploaded:upload.uploaded,downloaded:remoteSessions.length+remoteSets.length,full:shouldFull};
     }catch(error){
-      saveSettings({syncLastError:String(error?.message||error).slice(0,300),syncLastFailedAt:nowIso()});
-      throw error;
+      const traced=error?.gymPartyStage
+        ? error
+        : Object.assign(new Error(`${stage}: ${error?.message||error}`),{code:error?.code||'',gymPartyStage:stage,cause:error});
+      saveSettings({syncLastError:String(traced.message).slice(0,300),syncLastFailedAt:nowIso(),syncLastFailedStage:traced.gymPartyStage||stage});
+      throw traced;
     }
   }
 
