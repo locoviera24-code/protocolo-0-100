@@ -1642,7 +1642,7 @@
     const saveText = editingSet ? 'Guardar cambios' : 'Guardar serie';
     const gymSettings=api.getGymSettings?.()||{};
     const hint = h ? `Ultima vez: ${h.name} - ${h.lastWeight||0} ${state.unit} x ${h.lastReps||0} reps.` : 'Sin historial previo. Empeza conservador y prioriza tecnica.';
-    return `<div class="moduleCard partyWorkoutLogger">
+    return `<div class="moduleCard partyWorkoutLogger" id="partyTrainSection">
       <div class="actionFocusTop">
         <div>
           <span class="partyStepPill">Rutina del widget</span>
@@ -1732,7 +1732,7 @@
         <div class="actionFocusTop">
           <div>
             <span class="partyStepPill">Gym Party - ${escape(syncText)}</span>
-            <h2>Registra tu entrenamiento</h2>
+            <h2>Entrenamiento compartido</h2>
             <div class="muted small">${escape(party.name || 'Gym Party')} - ${members.length}/${MAX_GYM_PARTY_MEMBERS} miembro(s)</div>
           </div>
           <span class="statusChip good">${escape(dateLabel)}</span>
@@ -1740,12 +1740,17 @@
         ${m.backendMode === 'demo' ? '<div class="partyTip">Demo: datos ficticios.</div>' : ''}
         ${syncError?`<div class="auditItem warn">Ultimo error de sincronizacion: ${escape(syncError)}. Tus datos siguen guardados localmente.</div>`:''}
         ${maxWarning}
-        <div class="partyFocusHint">Foco: guarda la serie actual. Lo social y las graficas quedan abajo, plegados.</div>
       </div>
+
+      <nav class="partySectionNav" aria-label="Secciones de Gym Party">
+        <button type="button" class="active" data-gym-party-action="party-focus-section" data-party-section-target="partyTrainSection">Entrenar</button>
+        <button type="button" data-gym-party-action="party-focus-section" data-party-section-target="partyGroupSection">Grupo</button>
+        <button type="button" data-gym-party-action="party-focus-section" data-party-section-target="partyProgressSection">Progreso</button>
+      </nav>
 
       ${workoutQuickLoggerHtml()}
 
-      <div class="moduleCard partyQuickSummary">
+      <div class="moduleCard partyQuickSummary" id="partyProgressSection">
         <h3>Esta semana</h3>
         <div class="partyCompareGrid">
           <div class="partyCompareCard"><span>Sesiones</span><strong>${self.current.sessionsCount || 0}</strong><small>registradas</small></div>
@@ -1771,8 +1776,8 @@
         ${recentSessionsHtml(data)}
       </details>
 
-      <details class="moduleCard partyFoldCard">
-        <summary>Invitar amigo y administrar sala</summary>
+      <details class="moduleCard partyFoldCard" id="partyGroupSection">
+        <summary>Grupo e invitaciones</summary>
         ${inviteHint}
         <div class="partyCodeBox">
           <span>Codigo para invitar</span>
@@ -1959,6 +1964,15 @@
     setTimeout(updatePartyRestTimer,0);
   }
 
+  function focusPartySection(event){
+    const button=event?.target?.closest?.('[data-party-section-target]');
+    const target=document.getElementById(button?.dataset?.partySectionTarget||'');
+    if(!target)return;
+    if(target.tagName==='DETAILS')target.open=true;
+    document.querySelectorAll('.partySectionNav [data-party-section-target]').forEach(item=>item.classList.toggle('active',item===button));
+    target.scrollIntoView({behavior:window.preferredMotionBehavior?.()||'smooth',block:'start'});
+  }
+
   function runGymPartyAction(action, event){
     if(event){
       event.preventDefault();
@@ -1995,6 +2009,7 @@
     else if(action === 'party-undo-delete-set') undoPartyWorkoutSetDelete();
     else if(action === 'party-add-exercise') addPartyManualExercise();
     else if(action === 'party-finish-workout') finishPartyWorkout();
+    else if(action === 'party-focus-section') focusPartySection(event);
     else if(action === 'party-select-muscle') selectPartyMuscle(event);
     else if(action === 'party-focus-muscle-compare') selectPartyMuscle(event, {flash: true});
     else if(action === 'party-compare-exercise') comparePartyExercise(event);

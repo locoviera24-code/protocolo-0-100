@@ -6,7 +6,7 @@ async function createLocalParty(page,{alias='Yo',name='Sala E2E'}={}){
   await page.locator('#gymPartyCreateAlias').fill(alias);
   await page.locator('#gymPartyCreateName').fill(name);
   await page.locator('[data-gym-party-action="create"]').click();
-  await expect(page.getByText('Registra tu entrenamiento',{exact:true})).toBeVisible();
+  await expect(page.getByRole('heading',{name:'Entrenamiento compartido',level:2,exact:true})).toBeVisible();
 }
 
 async function setWorkoutDate(page,date){

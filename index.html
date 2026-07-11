@@ -476,21 +476,21 @@
 
           <div id="tab-gym" class="hidden">
             <div class="moduleHero">
-              <h3>🏋️ Entrenamiento y progresión</h3>
-              <div class="muted small">Armá la sesión con plantillas o ejercicios propios. Registrá series, repeticiones, peso y esfuerzo para comparar tu progreso.</div>
+              <h3>Gym</h3>
+              <div class="muted small">Registrá la próxima serie y seguí tu rutina.</div>
               <div class="quickStats" id="gymStats"></div>
             </div>
 
-            <div class="homeShortcut">
-              <h3>🤝 Sesión privada compartida</h3>
-              <p class="muted small">Para entrenar con un amigo: creás código, se lo mandás y la app sincroniza sesiones, series, reps y kilos.</p>
-              <div class="buttons">
-                <button type="button" class="good" data-open-gym-party>Abrir Gym Party</button>
-              </div>
+            <div class="gymSectionNav" aria-label="Secciones de Gym">
+              <button type="button" class="active" data-gym-section="train">Entrenar</button>
+              <button type="button" data-gym-section="routine">Rutina</button>
+              <button type="button" data-open-gym-party>Grupo</button>
+              <button type="button" data-gym-section="progress">Progreso</button>
             </div>
 
-            <div class="moduleCard">
-              <h3>Sesión de entrenamiento</h3>
+            <details class="moduleCard gymLegacyDetails">
+              <summary>Registro por sesión (avanzado)</summary>
+              <h3>Sesión completa</h3>
               <div class="formGrid">
                 <div class="field"><label>Fecha</label><input type="date" id="gymDate"></div>
                 <div class="field"><label>Nombre de rutina</label><input type="text" id="gymRoutineName" placeholder="Ej. Push A"></div>
@@ -513,17 +513,18 @@
                 <button type="button" class="good" id="saveGymSessionBtn">Guardar sesión</button>
                 <button type="button" class="secondary" id="clearGymSessionBtn">Nueva sesión</button>
               </div>
-            </div>
-            <div class="moduleCard">
+            </details>
+            <details class="moduleCard gymHistoryDetails">
+              <summary>Historial completo</summary>
               <h3>Historial de entrenamiento</h3>
               <div class="history"><table id="gymHistoryTable"></table></div>
-            </div>
+            </details>
           </div>
 
           <div id="tab-gym-party" class="hidden">
             <div class="moduleHero">
-              <h3>🤝 Gym Party</h3>
-              <div class="muted small">Entrenar juntos, medir mejor. Compará progreso con un amigo sin convertirlo en una competencia tóxica.</div>
+              <h3>Gym Party</h3>
+              <div class="muted small">Entrenamiento compartido, grupo y progreso semanal.</div>
             </div>
             <div id="gymPartyRoot"></div>
           </div>
@@ -2365,6 +2366,17 @@ document.getElementById('drawerBackdrop').addEventListener('click', closeDrawer)
 document.querySelectorAll('[data-module-target]').forEach(btn=>btn.addEventListener('click',()=>setModule(btn.dataset.moduleTarget)));
 document.querySelectorAll('[data-more-tab]').forEach(btn=>btn.addEventListener('click',()=>{setModule('mas');activateTab(btn.dataset.moreTab);}));
 document.querySelectorAll('[data-open-gym-party]').forEach(btn=>btn.addEventListener('click',()=>setModule('gym-party')));
+document.querySelectorAll('[data-gym-section]').forEach(btn=>btn.addEventListener('click',()=>{
+  const target=btn.dataset.gymSection;
+  document.querySelectorAll('[data-gym-section]').forEach(item=>item.classList.toggle('active',item===btn));
+  if(target==='routine'){
+    const details=document.querySelector('#workoutConfigPanel details');if(details)details.open=true;
+    document.getElementById('workoutConfigPanel')?.scrollIntoView({behavior:preferredMotionBehavior(),block:'start'});
+  }else if(target==='progress'){
+    const details=document.querySelector('.gymHistoryDetails');if(details)details.open=true;
+    document.querySelector('.gymHistoryDetails')?.scrollIntoView({behavior:preferredMotionBehavior(),block:'start'});
+  }else document.getElementById('quickSetLoggerPanel')?.scrollIntoView({behavior:preferredMotionBehavior(),block:'start'});
+}));
 if(window.visualViewport){const updateKeyboardState=()=>document.body.classList.toggle('keyboardOpen',window.innerHeight-window.visualViewport.height>160);window.visualViewport.addEventListener('resize',updateKeyboardState);window.visualViewport.addEventListener('scroll',updateKeyboardState);}
 document.getElementById('gymMuscle').addEventListener('change', populateGymExercises);
 document.getElementById('loadGymTemplateBtn').addEventListener('click', loadGymTemplate);

@@ -314,7 +314,10 @@ foreach ($contract in @(
     'noRoomHtmlSimple',
     'dashboardHtmlSimple',
     'partyFocusHint',
-    'Invitar amigo y administrar sala',
+    'Grupo e invitaciones',
+    'partyTrainSection',
+    'partyGroupSection',
+    'partyProgressSection',
     'partyPrimaryAction',
     'workoutQuickLoggerHtml',
     'data-gym-party-action="party-save-set"',
@@ -439,6 +442,9 @@ Assert-True ($html.Contains('id="tab-gym-party"')) 'Falta pestaña Gym Party'
 Assert-True ($html.Contains('<script src="gym-party.js"></script>')) 'index.html no carga gym-party.js'
 Assert-True ($html.Contains('id="openGymPartyTopBtn" hidden')) 'El acceso superior legacy de Gym Party debe quedar oculto'
 Assert-True ($html.Contains('data-open-gym-party')) 'Faltan tarjetas/accesos rapidos a Gym Party'
+foreach ($contract in @('data-gym-section="train"','data-gym-section="routine"','data-gym-section="progress"','gymLegacyDetails')) {
+    Assert-True ($html.Contains($contract)) "Falta jerarquia Gym: $contract"
+}
 Assert-True ($html.Contains('function maybeAutoShowActionModal(){ renderActionCard(); }')) 'La accion diaria no debe abrir un modal automatico'
 
 $workoutLower = $workout.ToLowerInvariant()
