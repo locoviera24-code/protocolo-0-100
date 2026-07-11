@@ -237,6 +237,28 @@ service cloud.firestore {
         && optionalDate(data, "updatedAt");
     }
 
+    function validSessionUpdate(data, sessionId) {
+      return data.keys().hasOnly([
+          "id", "partyId", "userId", "localSessionId", "date", "localDate", "weekday",
+          "routineName", "startedAt", "finishedAt", "durationMinutes", "exercisesCompleted",
+          "totalSets", "totalReps", "totalVolume", "externalLoadVolume", "bodyweightReps",
+          "addedLoadVolume", "bestWeight", "bestSetVolume", "maxReps", "timeZone", "utcOffset",
+          "revision", "deletedAt", "deletedReason", "createdAt", "updatedAt"
+        ])
+        && data.id == sessionId
+        && validString(data.partyId, 1, 128)
+        && validString(data.userId, 1, 128)
+        && validString(data.localSessionId, 1, 160)
+        && validString(data.date, 10, 10)
+        && validString(data.weekday, 1, 20)
+        && validString(data.routineName, 1, 100)
+        && optionalNumber(data, "durationMinutes", 0, 2880)
+        && optionalNumber(data, "totalSets", 0, 1000)
+        && optionalNumber(data, "totalReps", 0, 100000)
+        && optionalNumber(data, "totalVolume", 0, 100000000)
+        && optionalNumber(data, "revision", 1, 1000000);
+    }
+
     function validWeeklyStat(data) {
       return data.keys().hasOnly([
           "partyId", "userId", "weekStart", "sessionsCount", "totalSets", "totalReps",
@@ -380,12 +402,11 @@ service cloud.firestore {
         && request.resource.data.userId == request.auth.uid
         && isMember(request.resource.data.partyId);
       allow update: if signedIn()
-        && validSession(request.resource.data, sessionId)
+        && validSessionUpdate(request.resource.data, sessionId)
         && resource.data.userId == request.auth.uid
-        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.userId == request.auth.uid
         && request.resource.data.partyId == resource.data.partyId
-        && request.resource.data.id == resource.data.id
-        && request.resource.data.localSessionId == resource.data.localSessionId
+        && request.resource.data.id == sessionId
         && isMember(resource.data.partyId);
       allow delete: if false;
     }
@@ -399,10 +420,9 @@ service cloud.firestore {
       allow update: if signedIn()
         && validSet(request.resource.data, setId)
         && resource.data.userId == request.auth.uid
-        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.userId == request.auth.uid
         && request.resource.data.partyId == resource.data.partyId
-        && request.resource.data.id == resource.data.id
-        && request.resource.data.sessionId == resource.data.sessionId
+        && request.resource.data.id == setId
         && isMember(resource.data.partyId);
       allow delete: if false;
     }

@@ -62,8 +62,15 @@ try{
 
   await env.withSecurityRulesDisabled(async context=>{
     await setDoc(doc(context.firestore(),'workout_sets_shared','set_legacy'),{...ownerSet,id:'set_legacy',source:'local',pendingSync:false});
+    const legacySession={...ownerSession,source:'local',pendingSync:false};
+    delete legacySession.id;
+    delete legacySession.localSessionId;
+    await setDoc(doc(context.firestore(),'workout_sessions_shared','session_legacy'),legacySession);
   });
   await assertSucceeds(setDoc(doc(ownerDb,'workout_sets_shared','set_legacy'),{...ownerSet,id:'set_legacy'}));
+  await assertSucceeds(setDoc(doc(ownerDb,'workout_sessions_shared','session_legacy'),{...ownerSession,id:'session_legacy',localSessionId:'local_session_legacy'}));
+  await assertFails(setDoc(doc(ownerDb,'workout_sessions_shared','session_legacy'),{...ownerSession,id:'session_legacy',localSessionId:'local_session_legacy',totalSets:-1}));
+  await assertFails(setDoc(doc(memberDb,'workout_sessions_shared','session_legacy'),{...ownerSession,id:'session_legacy',userId:'member',localSessionId:'stolen'}));
 
   await assertSucceeds(getDocs(query(collection(ownerDb,'gym_party_members'),where('partyId','==','party_secure'),where('active','==',true),limit(11))));
   await assertSucceeds(getDocs(query(collection(ownerDb,'workout_sessions_shared'),where('partyId','==','party_secure'),orderBy('updatedAt','asc'),orderBy(documentId(),'asc'),limit(120))));

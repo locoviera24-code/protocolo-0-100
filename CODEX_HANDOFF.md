@@ -927,10 +927,21 @@ Correccion Firebase adicional:
   hayan quedado en `syncQueue` o en un backup antiguo.
 - Si un batch es rechazado, `uploadSyncQueue()` reintenta cada documento,
   sincroniza los validos y conserva solo los fallidos con colección/ID/error.
+- Rules permite que el dueño complete `id`/`localSessionId` o `sessionId`
+  ausentes en documentos legacy propios, sin cambiar `partyId` ni `userId`.
 - La prueba real previa confirmo que lecturas de sala, miembros, sesiones y series
   funcionan; el rechazo estaba exclusivamente en `subir cambios` legacy.
 - No se exportan `firebaseConfig`, email portable ni codigo pendiente. No hay
   service accounts, keystores ni claves privadas rastreadas.
+
+Verificacion Firebase real posterior:
+
+- Las Rules con `validSessionUpdate()` fueron publicadas en Firebase Console el
+  2026-07-11 despues de pasar Emulator.
+- La sala real `party_1782432255538_au3hta` sincronizo 16 documentos legacy,
+  descargo 1 cambio remoto y quedo en `0 pendiente(s)`.
+- El conflicto remoto detectado se resolvio mediante la estrategia LWW existente;
+  no se perdieron sesiones ni series locales.
 
 Compatibilidad que no debe reescribirse:
 
