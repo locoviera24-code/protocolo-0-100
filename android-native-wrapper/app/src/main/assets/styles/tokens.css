@@ -1,0 +1,68 @@
+:root {
+  color-scheme: dark;
+
+  --color-bg: #0b1220;
+  --color-surface: #111a2b;
+  --color-surface-raised: #172238;
+  --color-surface-soft: rgba(255, 255, 255, .035);
+  --color-surface-hover: rgba(255, 255, 255, .06);
+  --color-border: #2a3a52;
+  --color-border-soft: rgba(255, 255, 255, .08);
+  --color-text: #f4f7fb;
+  --color-text-secondary: #afbdd0;
+  --color-text-muted: #8796ab;
+  --color-primary: #72d6ff;
+  --color-primary-strong: #42bde9;
+  --color-primary-soft: rgba(114, 214, 255, .11);
+  --color-success: #78dfa8;
+  --color-success-soft: rgba(120, 223, 168, .1);
+  --color-warning: #e9c46a;
+  --color-warning-soft: rgba(233, 196, 106, .1);
+  --color-danger: #ef8585;
+  --color-danger-soft: rgba(239, 133, 133, .1);
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  --font-screen: clamp(1.5rem, 1.3rem + .8vw, 2rem);
+  --font-section: 1.125rem;
+  --font-card: 1rem;
+  --font-body: .9375rem;
+  --font-small: .8125rem;
+  --font-label: .75rem;
+
+  --radius-control: 10px;
+  --radius-card: 12px;
+  --radius-panel: 16px;
+  --radius-modal: 18px;
+  --shadow-subtle: 0 8px 24px rgba(0, 0, 0, .2);
+  --shadow-overlay: 0 20px 60px rgba(0, 0, 0, .42);
+  --control-height: 46px;
+  --touch-target: 44px;
+  --content-width: 1120px;
+  --nav-height: 66px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --z-nav: 80;
+  --z-drawer: 200;
+  --z-modal: 300;
+
+  /* Compatibilidad con los estilos históricos. */
+  --bg: var(--color-bg);
+  --panel: var(--color-surface);
+  --panel2: var(--color-surface-raised);
+  --muted: var(--color-text-secondary);
+  --text: var(--color-text);
+  --line: var(--color-border);
+  --accent: var(--color-primary);
+  --accent2: var(--color-success);
+  --warn: var(--color-warning);
+  --bad: var(--color-danger);
+  --good: var(--color-success);
+  --shadow: var(--shadow-subtle);
+  --radius: var(--radius-panel);
+}

@@ -32,6 +32,9 @@ $gymPartyUi = Read-Utf8 'gym-party-ui.js'
 $gymParty = Read-Utf8 'gym-party.js'
 $advanced = Read-Utf8 'advanced-features.js'
 $serviceWorker = Read-Utf8 'sw.js'
+$styleTokens = Read-Utf8 'styles/tokens.css'
+$styleBase = Read-Utf8 'styles/base.css'
+$styleComponents = Read-Utf8 'styles/components.css'
 $manifestText = Read-Utf8 'manifest.webmanifest'
 $androidBuild = Read-Utf8 'android-native-wrapper/app/build.gradle'
 $androidProperties = Read-Utf8 'android-native-wrapper/gradle.properties'
@@ -78,6 +81,7 @@ $requiredFiles = @(
     'scripts/test-module-boundaries.mjs',
     'scripts/serve-static.mjs', 'playwright.config.mjs', 'tests/e2e/gym-flow.spec.mjs',
     'manifest.webmanifest', 'sw.js',
+    'styles/tokens.css', 'styles/base.css', 'styles/components.css',
     'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetProvider.java',
     'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetUpdateService.java',
     'android-native-wrapper/app/src/main/res/xml/workout_widget_info.xml',
@@ -94,6 +98,20 @@ foreach ($file in $requiredFiles) {
 foreach ($script in @('nutrition-data.js', 'fdc-client.js', 'workout-store.js', 'workout-plan.js', 'workout-metrics.js', 'workout-ranking.js', 'workout-ui.js', 'workout-features.js', 'firebase-service.js', 'gym-party-sync.js', 'gym-party-metrics.js', 'gym-party-ui.js', 'gym-party.js', 'advanced-features.js')) {
     Assert-True ($html.Contains("<script src=`"$script`"></script>")) "index.html no carga $script"
     Assert-True ($serviceWorker.Contains("'./$script'")) "sw.js no cachea $script"
+}
+foreach ($style in @('styles/tokens.css', 'styles/base.css', 'styles/components.css')) {
+    Assert-True ($html.Contains("<link rel=`"stylesheet`" href=`"$style`"")) "index.html no carga $style"
+    Assert-True ($serviceWorker.Contains("'./$style'")) "sw.js no cachea $style"
+    Assert-True ($deployWorkflow.Contains($style.Split('/')[0] + '/**')) "Pages no observa cambios de estilos"
+}
+foreach ($contract in @('--color-bg', '--color-primary', '--space-4', '--radius-control', '--touch-target')) {
+    Assert-True ($styleTokens.Contains($contract)) "Falta token visual: $contract"
+}
+foreach ($contract in @(':focus-visible', 'prefers-reduced-motion', 'overflow-x: hidden', '.icon')) {
+    Assert-True ($styleBase.Contains($contract)) "Falta contrato visual base: $contract"
+}
+foreach ($contract in @('.btn-primary', '.btn-secondary', '.btn-text', '.btn-danger', 'min-height: var(--touch-target)')) {
+    Assert-True ($styleComponents.Contains($contract)) "Falta componente visual: $contract"
 }
 foreach ($order in @(
     @('workout-store.js','workout-features.js'),

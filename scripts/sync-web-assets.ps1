@@ -25,6 +25,9 @@ $relativeFiles = @(
     'advanced-features.js',
     'manifest.webmanifest',
     'sw.js',
+    'styles/tokens.css',
+    'styles/base.css',
+    'styles/components.css',
     'icons/icon-192.png',
     'icons/icon-512.png'
 )
