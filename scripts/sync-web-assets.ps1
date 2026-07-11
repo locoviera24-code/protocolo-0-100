@@ -26,6 +26,7 @@ $relativeFiles = @(
     'manifest.webmanifest',
     'sw.js',
     'ui/router.js',
+    'ui/navigation.js',
     'styles/tokens.css',
     'styles/base.css',
     'styles/components.css',

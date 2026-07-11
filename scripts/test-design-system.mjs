@@ -6,7 +6,7 @@ const allow=JSON.parse(await readFile(new URL('./design-token-allowlist.json',im
 const styleNames=(await readdir(new URL('../styles/',import.meta.url))).filter(name=>name.endsWith('.css'));
 const styleSources=await Promise.all(styleNames.map(async name=>[name,await readFile(new URL('../styles/'+name,import.meta.url),'utf8')]));
 const appStyles=styleSources.filter(([name])=>name!=='tokens.css').map(([,source])=>source).join('\n');
-const sourceNames=['index.html','ui/router.js','workout-features.js','gym-party.js','advanced-features.js'];
+const sourceNames=['index.html','ui/router.js','ui/navigation.js','workout-features.js','gym-party.js','advanced-features.js'];
 const sourceText=(await Promise.all(sourceNames.map(name=>readFile(new URL('../'+name,import.meta.url),'utf8')))).join('\n');
 
 function values(pattern,text,group=0){

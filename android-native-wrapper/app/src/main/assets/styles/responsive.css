@@ -1,14 +1,12 @@
 @media (max-width: 1023px) {
-  body { padding-bottom: calc(var(--nav-height) + var(--safe-bottom) + var(--space-4)); }
+  body { padding-bottom: calc(var(--layout-bottom-nav-height) + var(--space-4)); }
   .bottomNav { display: grid; }
   .menuBtn { display: none; }
   .sideDrawer, .drawerBackdrop { display: none; }
   .moduleTopbar { padding-inline: var(--space-4); }
-  .app { padding: var(--space-4); padding-bottom: calc(var(--nav-height) + var(--safe-bottom) + var(--space-5)); }
-  body .quickStickyActions, .dailySaveBar, .partyStickySave { bottom: calc(var(--nav-height) + var(--safe-bottom) + var(--space-2)) !important; }
+  .app { padding: var(--space-4); padding-bottom: calc(var(--layout-bottom-nav-height) + var(--space-5)); }
   body.keyboardOpen .bottomNav { display: none; }
   body.keyboardOpen { padding-bottom: var(--space-4); }
-  body.keyboardOpen .quickStickyActions, body.keyboardOpen .dailySaveBar, body.keyboardOpen .partyStickySave { bottom: var(--space-2) !important; }
 }
 
 @media (min-width: 1024px) {
@@ -54,10 +52,10 @@
   body .quickPrimaryInputs .quickSetNumberField { grid-column: 1 / -1; }
   body .quickStickyActions { grid-template-columns: minmax(0, 1.4fr) repeat(2, minmax(0, .8fr)); padding: 7px; }
   body .quickStickyActions button { padding-inline: 7px; font-size: var(--font-label); }
-  .nutritionNav { top: 60px; margin-inline: -4px; }
+  .nutritionNav { margin-inline: -4px; }
   .nutritionHeroHead { align-items: stretch; flex-direction: column; }
   .nutritionHeroHead button { width: 100%; }
-  .gymSectionNav, .partySectionNav { top: 60px; margin-inline: -4px; }
+  .gymSectionNav, .partySectionNav { margin-inline: -4px; }
 }
 
 @media (max-width: 380px) {

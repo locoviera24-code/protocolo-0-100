@@ -74,6 +74,9 @@ jobs:
       - name: Probar router y deep links
         run: npm run test:router
 
+      - name: Probar presupuesto sticky y teclado
+        run: npm run test:layout
+
       - name: Probar accesibilidad web y movil
         run: node ./scripts/test-accessibility.mjs
 

@@ -42,6 +42,7 @@ La raiz del repositorio es la fuente de la PWA y tambien se sincroniza dentro de
 index.html                  Interfaz, protocolo, gym y nutricion
 styles/*.css                Tokens, base, componentes y estilos por modulo
 ui/router.js                Router module/view, historial, deep links y Atrás
+ui/navigation.js            Coordinador de sticky, banners, teclado y safe areas
 workout-store.js            Acceso conservador y versionado a localStorage Gym
 workout-plan.js             Normalizacion, deduplicacion e insercion en rutinas
 workout-ui.js               Renderizadores pequenos y anuncios accesibles de Gym
@@ -293,6 +294,7 @@ node ./scripts/test-android-release.mjs
 node ./scripts/test-accessibility.mjs
 npm run test:design
 npm run test:router
+npm run test:layout
 npm run test:rules
 npm run test:e2e
 ```

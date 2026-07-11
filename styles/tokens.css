@@ -46,7 +46,15 @@
   --touch-target: 44px;
   --content-width: 1120px;
   --nav-height: 66px;
+  --topbar-height: 60px;
+  --topbar-compact-height: 52px;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --layout-topbar-height: var(--topbar-height);
+  --layout-context-height: 0px;
+  --layout-bottom-nav-height: 0px;
+  --layout-action-height: 0px;
+  --layout-banner-height: 0px;
+  --layout-keyboard-inset: 0px;
   --z-nav: 80;
   --z-drawer: 200;
   --z-modal: 300;

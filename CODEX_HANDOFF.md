@@ -1063,3 +1063,38 @@ Pendientes reales del rediseño:
 Pendiente despues de este bloque: coordinar sticky/teclado, completar el
 contenido funcional de Ajustes/Datos/Acerca de, consolidar Progreso, simplificar
 Nutricion y Gym, centralizar mensajes/estados y terminar accesibilidad.
+
+## 29. Refactor UX/UI - bloque 3: presupuesto sticky
+
+- `ui/navigation.js` mide la topbar, la navegacion contextual visible, la
+  unica accion sticky activa, la barra inferior, banners y `visualViewport`.
+- Publica en `:root` las variables `--layout-topbar-height`,
+  `--layout-context-height`, `--layout-bottom-nav-height`,
+  `--layout-action-height`, `--layout-banner-height` y
+  `--layout-keyboard-inset`.
+- `.gymSectionNav`, `.partySectionNav` y `.nutritionNav` usan la altura
+  medida de la topbar. `.dailySaveBar`, `.quickStickyActions` y
+  `.partyStickySave` comparten una sola regla de posicion; una segunda accion
+  visible se degrada automaticamente a posicion estatica.
+- El teclado se detecta combinando `focusin/focusout` con
+  `visualViewport`; al abrirse se oculta la barra inferior y se mantiene la
+  accion del formulario por encima del inset disponible.
+- `.updateBanner`, `.appBanner` y `#toast` reservan barra inferior y
+  accion activa. `advanced-features.js` emite `layout-refresh` al crear el
+  aviso PWA.
+- En movil la topbar se compacta al bajar; en escritorio las acciones quedan
+  estaticas. Scroll padding y scroll margin usan las alturas activas.
+- La heuristica antigua basada solo en diferencia de altura fue eliminada de
+  `index.html`.
+- Cache actual: `protocolo-0-100-pwa-v49`; `ui/navigation.js` se publica,
+  cachea y sincroniza dentro del APK.
+- Pruebas: `scripts/test-layout-coordinator.mjs` valida contratos y
+  `tests/e2e/layout-sticky.spec.mjs` verifica 320x568, teclado, banner y
+  escritorio.
+- Verificacion del bloque: validador con assets Android y cache v49 OK; layout
+  E2E 3 OK y 6 omisiones por proyecto; router+navegacion visual 16 OK y 5
+  omisiones intencionales, sin scroll horizontal entre 320 y 430 px.
+
+Pendiente: completar contenido y preferencias de Inicio/Mas, consolidar
+Progreso, simplificar Nutricion y Gym, centralizar mensajes/estados y ampliar
+accesibilidad visual.

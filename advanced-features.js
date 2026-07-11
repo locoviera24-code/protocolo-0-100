@@ -640,6 +640,7 @@
         (registration.waiting||worker).postMessage({type:'SKIP_WAITING'});
       });
       document.body.appendChild(banner);
+      window.dispatchEvent(new Event('layout-refresh'));
     };
     navigator.serviceWorker.ready.then(registration=>{
       registration.update().catch(()=>{});

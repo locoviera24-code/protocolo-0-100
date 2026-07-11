@@ -24,6 +24,7 @@ $workoutMetrics = Read-Utf8 'workout-metrics.js'
 $workoutRanking = Read-Utf8 'workout-ranking.js'
 $workoutUi = Read-Utf8 'workout-ui.js'
 $appRouter = Read-Utf8 'ui/router.js'
+$appNavigation = Read-Utf8 'ui/navigation.js'
 $workout = Read-Utf8 'workout-features.js'
 $firebaseConfig = Read-Utf8 'firebase-config.js'
 $firebaseService = Read-Utf8 'firebase-service.js'
@@ -81,13 +82,13 @@ $duplicates = $staticIds | Group-Object | Where-Object Count -gt 1 | Select-Obje
 Assert-True ($duplicates.Count -eq 0) "Hay IDs HTML duplicados: $($duplicates -join ', ')"
 
 $requiredFiles = @(
-    'nutrition-data.js', 'fdc-client.js', 'workout-store.js', 'workout-plan.js', 'workout-metrics.js', 'workout-ranking.js', 'workout-ui.js', 'workout-features.js', 'advanced-features.js', 'ui/router.js',
+    'nutrition-data.js', 'fdc-client.js', 'workout-store.js', 'workout-plan.js', 'workout-metrics.js', 'workout-ranking.js', 'workout-ui.js', 'workout-features.js', 'advanced-features.js', 'ui/router.js', 'ui/navigation.js',
     'firebase-config.js', 'firebase-service.js', 'gym-party-sync.js', 'gym-party-metrics.js', 'gym-party-ui.js', 'gym-party.js',
     'scripts/test-android-webview-security.mjs',
     'scripts/test-android-release.mjs',
     'scripts/test-accessibility.mjs',
-    'scripts/test-module-boundaries.mjs', 'scripts/test-design-system.mjs', 'scripts/design-token-allowlist.json', 'scripts/test-router.mjs',
-    'scripts/serve-static.mjs', 'playwright.config.mjs', 'tests/e2e/gym-flow.spec.mjs', 'tests/e2e/visual-navigation.spec.mjs', 'tests/e2e/router.spec.mjs',
+    'scripts/test-module-boundaries.mjs', 'scripts/test-design-system.mjs', 'scripts/design-token-allowlist.json', 'scripts/test-router.mjs', 'scripts/test-layout-coordinator.mjs',
+    'scripts/serve-static.mjs', 'playwright.config.mjs', 'tests/e2e/gym-flow.spec.mjs', 'tests/e2e/visual-navigation.spec.mjs', 'tests/e2e/router.spec.mjs', 'tests/e2e/layout-sticky.spec.mjs',
     'manifest.webmanifest', 'sw.js',
     'styles/tokens.css', 'styles/base.css', 'styles/components.css', 'styles/features.css', 'styles/gym.css', 'styles/gym-party.css', 'styles/modules.css', 'styles/responsive.css',
     'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetProvider.java',
@@ -109,8 +110,13 @@ foreach ($script in @('nutrition-data.js', 'fdc-client.js', 'workout-store.js', 
 }
 Assert-True ($html.Contains('<script src="ui/router.js"></script>')) 'index.html no carga ui/router.js'
 Assert-True ($serviceWorker.Contains("'./ui/router.js'")) 'sw.js no cachea ui/router.js'
+Assert-True ($html.Contains('<script src="ui/navigation.js"></script>')) 'index.html no carga ui/navigation.js'
+Assert-True ($serviceWorker.Contains("'./ui/navigation.js'")) 'sw.js no cachea ui/navigation.js'
 foreach ($contract in @('pushState','replaceState','popstate','parentFor','moduleAliases','gym-party','current')) {
     Assert-True ($appRouter.Contains($contract)) "Falta contrato del router: $contract"
+}
+foreach ($contract in @('visualViewport','focusin','ResizeObserver','layoutStickyAction','layoutContextNav','layout-refresh','keyboardOpen')) {
+    Assert-True ($appNavigation.Contains($contract)) "Falta coordinador de layout: $contract"
 }
 foreach ($contract in @('routeBackBtn','applyAppRoute','APP_VIEW_META','data-more-view="settings"','id="tab-data"','id="tab-privacy"','id="tab-about"')) {
     Assert-True ($html.Contains($contract)) "Falta navegación jerárquica: $contract"

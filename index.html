@@ -622,6 +622,7 @@
 <script src="nutrition-data.js"></script>
 <script src="fdc-client.js"></script>
 <script src="ui/router.js"></script>
+<script src="ui/navigation.js"></script>
 <script>
 const STORAGE_KEY = 'protocolo_0_100_tracker_v1';
 const START_KEY = 'protocolo_0_100_start_date_v1';
@@ -2222,7 +2223,6 @@ document.querySelectorAll('[data-open-gym-party]').forEach(btn=>btn.addEventList
 document.querySelectorAll('[data-gym-section]').forEach(btn=>btn.addEventListener('click',()=>{
   window.APP_ROUTER?.navigate({module:'gym',view:btn.dataset.gymSection});
 }));
-if(window.visualViewport){const updateKeyboardState=()=>document.body.classList.toggle('keyboardOpen',window.innerHeight-window.visualViewport.height>160);window.visualViewport.addEventListener('resize',updateKeyboardState);window.visualViewport.addEventListener('scroll',updateKeyboardState);}
 document.getElementById('gymMuscle').addEventListener('change', populateGymExercises);
 document.getElementById('loadGymTemplateBtn').addEventListener('click', loadGymTemplate);
 document.getElementById('addGymExerciseBtn').addEventListener('click', addGymExercise);
