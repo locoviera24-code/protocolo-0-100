@@ -224,7 +224,15 @@
     const m = activeMembership();
     return {...defaultPrivacy, ...(m?.privacy || {})};
   }
-  function firestorePayload(value){
+  const firestoreFieldAllowlist={
+    [collections.sessions]:new Set([
+      'id','partyId','userId','localSessionId','date','localDate','weekday','routineName','startedAt','finishedAt','durationMinutes','exercisesCompleted','totalSets','totalReps','totalVolume','externalLoadVolume','bodyweightReps','addedLoadVolume','bestWeight','bestSetVolume','maxReps','timeZone','utcOffset','revision','deletedAt','deletedReason','createdAt','updatedAt'
+    ]),
+    [collections.sets]:new Set([
+      'id','partyId','sessionId','userId','localExerciseId','localSetId','exerciseId','exerciseName','muscleGroup','setNumber','reps','weightKg','rir','rpe','isBodyweight','date','localDate','timeZone','utcOffset','revision','deleted','deletedAt','deletedReason','createdAt','updatedAt'
+    ])
+  };
+  function firestorePayload(value,collectionName=''){
     const clean={...value};
     delete clean.source;
     delete clean.pendingSync;
@@ -236,7 +244,8 @@
     delete clean._syncFingerprint;
     delete clean.conflict;
     delete clean.lastSyncedAt;
-    return clean;
+    const allowlist=firestoreFieldAllowlist[collectionName];
+    return Object.fromEntries(Object.entries(clean).filter(([key,item])=>(!allowlist||allowlist.has(key))&&item!==undefined));
   }
   function privacyFromMember(member = {}){
     return {
@@ -2664,30 +2673,48 @@
     if(isSession) saveSharedSessions(next); else saveSharedSets(next);
   }
   async function uploadSyncQueue(runtime,{force=false}={}){
-    const {db,firestoreMod}=runtime; let queue=syncQueue(); const now=Date.now();
+    const {db,firestoreMod}=runtime; let queue=syncQueue(); const now=Date.now(); let uploaded=0;
     const due=queue.filter(op=>force||!op.nextAttemptAt||new Date(op.nextAttemptAt).getTime()<=now);
     for(let index=0;index<due.length;index+=400){
       const chunk=due.slice(index,index+400),batch=firestoreMod.writeBatch(db),timestamp=firestoreMod.serverTimestamp();
-      chunk.forEach(op=>batch.set(firestoreMod.doc(db,op.collection,op.payload.id),{...firestorePayload(op.payload),updatedAt:timestamp}));
+      chunk.forEach(op=>batch.set(firestoreMod.doc(db,op.collection,op.payload.id),{...firestorePayload(op.payload,op.collection),updatedAt:timestamp}));
       try{
         await batch.commit();
         const completed=new Set(chunk.map(op=>op.id)); queue=queue.filter(op=>!completed.has(op.id)); saveSyncQueue(queue);
         for(const collectionName of [collections.sessions,collections.sets]) markUploadedRows(collectionName,chunk.filter(op=>op.collection===collectionName).map(op=>op.payload.id));
+        uploaded+=chunk.length;
       }catch(error){
-        const failed=new Set(chunk.map(op=>op.id));
+        const succeeded=[];
+        const isolatedFailures=[];
+        for(const op of chunk){
+          try{
+            await firestoreMod.setDoc(firestoreMod.doc(db,op.collection,op.payload.id),{...firestorePayload(op.payload,op.collection),updatedAt:firestoreMod.serverTimestamp()});
+            succeeded.push(op);
+          }catch(isolatedError){
+            isolatedFailures.push({op,error:isolatedError});
+          }
+        }
+        if(succeeded.length){
+          const completed=new Set(succeeded.map(op=>op.id));queue=queue.filter(op=>!completed.has(op.id));saveSyncQueue(queue);uploaded+=succeeded.length;
+          for(const collectionName of [collections.sessions,collections.sets])markUploadedRows(collectionName,succeeded.filter(op=>op.collection===collectionName).map(op=>op.payload.id));
+        }
+        if(!isolatedFailures.length)continue;
+        const failed=new Set(isolatedFailures.map(item=>item.op.id));
+        const firstFailure=isolatedFailures[0];
+        const detailedError=Object.assign(new Error(`${firstFailure.op.collection}/${firstFailure.op.payload.id}: ${firstFailure.error?.message||error?.message||error}`),{code:firstFailure.error?.code||error?.code||'',cause:firstFailure.error||error});
         queue=queue.map(op=>{
           if(!failed.has(op.id)) return op;
           const attempts=number(op.attempts)+1,delay=syncEngine()?.backoffDelay?.(attempts)||Math.min(300000,1000*(2**attempts));
-          return {...op,attempts,lastError:String(error?.message||error).slice(0,300),nextAttemptAt:new Date(Date.now()+delay).toISOString()};
+          return {...op,attempts,lastError:String(detailedError.message).slice(0,300),nextAttemptAt:new Date(Date.now()+delay).toISOString()};
         });
         saveSyncQueue(queue);
         for(const collectionName of [collections.sessions,collections.sets]){
-          const rows=chunk.filter(op=>op.collection===collectionName); if(rows.length) markUploadedRows(collectionName,rows.map(op=>op.payload.id),error,Math.max(...rows.map(op=>number(op.attempts)+1)));
+          const rows=isolatedFailures.map(item=>item.op).filter(op=>op.collection===collectionName); if(rows.length) markUploadedRows(collectionName,rows.map(op=>op.payload.id),detailedError,Math.max(...rows.map(op=>number(op.attempts)+1)));
         }
-        throw error;
+        throw detailedError;
       }
     }
-    return {uploaded:due.length,remaining:syncQueue().length};
+    return {uploaded,remaining:syncQueue().length};
   }
   async function fetchRemoteCollection(runtime,collectionName,{full=false,pageSize=250}={}){
     const m=activeMembership(),{db,firestoreMod}=runtime,watermark=lastRemoteSyncAt(); let cursor=null,pages=0; const rows=[];
@@ -2920,7 +2947,8 @@
     waitForInitialAuth,
     assertFirebaseSessionMatchesMembership,
     restoreFirebaseMembershipForCurrentUser,
-    privacyFromMember
+    privacyFromMember,
+    firestorePayload
   };
   window.renderGymParty = renderGymParty;
 

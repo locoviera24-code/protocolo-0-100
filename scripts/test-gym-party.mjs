@@ -22,8 +22,8 @@ assert.match(source, /revokeInvite/);
 assert.match(source, /deactivateFirebaseMembership/);
 assert.match(source, /deleteSharedDataAndLeave/);
 assert.match(source, /tombstoneOwnSharedCollection/);
-assert.match(source,/batch\.set\(firestoreMod\.doc\(db,op\.collection,op\.payload\.id\),\{\.\.\.firestorePayload\(op\.payload\),updatedAt:timestamp\}\)/);
-assert.doesNotMatch(source,/firestorePayload\(op\.payload\),updatedAt:timestamp\},\{merge:true\}/);
+assert.match(source,/batch\.set\(firestoreMod\.doc\(db,op\.collection,op\.payload\.id\),\{\.\.\.firestorePayload\(op\.payload,op\.collection\),updatedAt:timestamp\}\)/);
+assert.doesNotMatch(source,/firestorePayload\(op\.payload,op\.collection\),updatedAt:timestamp\},\{merge:true\}/);
 
 function createContext() {
   const store = new Map();
@@ -95,6 +95,14 @@ const privacyFromMember = party.privacyFromMember({shareGymData: true, shareSetD
 assert.equal(privacyFromMember.shareGymData, true);
 assert.equal(privacyFromMember.shareSetDetails, false);
 assert.equal(privacyFromMember.hideAbsoluteWeights, true);
+const cleanLegacySession=party.firestorePayload({
+  id:'shared_session',partyId:'party',userId:'user',localSessionId:'local',date:'2026-06-24',weekday:'Miercoles',routineName:'Torso',totalSets:3,
+  source:'local',pendingSync:true,dirty:true,legacyField:'remove',deleted:true
+},party.collections.sessions);
+assert.equal(cleanLegacySession.totalSets,3);
+assert.equal(Object.hasOwn(cleanLegacySession,'legacyField'),false);
+assert.equal(Object.hasOwn(cleanLegacySession,'deleted'),false);
+assert.equal(Object.hasOwn(cleanLegacySession,'source'),false);
 
 const demo2 = party.buildDemoData(2);
 assert.equal(demo2.members.length, 2);
