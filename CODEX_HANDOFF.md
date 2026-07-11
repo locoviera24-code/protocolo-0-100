@@ -4,7 +4,7 @@ Ultima actualizacion: 2026-06-30
 Rama esperada: `main`
 Version actual: `2.6.1`
 Android: `versionCode 32`, `versionName "2.6.1"`
-Service worker cache: `protocolo-0-100-pwa-v38`
+Service worker cache: `protocolo-0-100-pwa-v39`
 Backup consolidado: `schemaVersion: 3`
 
 Leer primero este archivo y luego `README.md`, `index.html`,
@@ -24,7 +24,7 @@ Estado actual:
 - Gym Party implementado como modulo web/PWA opcional.
 - Nutricion local/FDC opcional.
 - Backups JSON `schemaVersion: 3`.
-- PWA offline con cache v38 y actualizacion consentida desde el aviso visible.
+- PWA offline con cache v39 y actualizacion consentida desde el aviso visible.
 - APK con widget Android y permiso `INTERNET` para Firebase/Gym Party.
 
 ## 2. Funcionalidades ya existen
@@ -85,7 +85,7 @@ Web:
   tombstones, backoff y contexto horario.
 - `gym-party.js`: modulo Gym Party, registro rapido, graficas y edicion/eliminacion de series.
 - `advanced-features.js`: version `2.6.1`, backup/importacion Gym Party.
-- `sw.js`: cache v38, actualizacion consentida, incluye modulos nuevos y evita
+- `sw.js`: cache v39, actualizacion consentida, incluye modulos nuevos y evita
   persistir una configuracion Firebase obsoleta.
 - `README.md`: documenta Gym Party, demo, Firebase, privacidad y pruebas.
 - `CODEX_HANDOFF.md`: este handoff.
@@ -872,7 +872,7 @@ Correccion:
 - `firebase/rules.test.mjs` crea un documento legacy con `source` y
   `pendingSync`, confirma que el reemplazo sanitizado esta permitido y prueba
   tambien las consultas reales de miembros/sesiones/sets.
-- Version objetivo: `2.6.1`, Android `versionCode 32`, cache PWA `v38`.
+- Version objetivo: `2.6.1`, Android `versionCode 32`, cache PWA `v39`.
 - Las seis definiciones de `firebase/firestore.indexes.json` fueron creadas en
   Firebase Console y quedaron `Habilitado` el 2026-07-10.
 - Las Rules endurecidas validadas en Emulator fueron publicadas en el proyecto
