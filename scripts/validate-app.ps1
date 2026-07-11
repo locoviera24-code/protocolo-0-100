@@ -445,6 +445,9 @@ Assert-True ($html.Contains('data-open-gym-party')) 'Faltan tarjetas/accesos rap
 foreach ($contract in @('data-gym-section="train"','data-gym-section="routine"','data-gym-section="progress"','gymLegacyDetails')) {
     Assert-True ($html.Contains($contract)) "Falta jerarquia Gym: $contract"
 }
+foreach ($contract in @('nutritionHeroHead','data-open-nutrition-view="registrar"','nutritionAssistantDetails','id="fdcSearchCard"','progressRewardsDetails','progressSecondaryDetails')) {
+    Assert-True ($html.Contains($contract)) "Falta jerarquia progresiva: $contract"
+}
 Assert-True ($html.Contains('function maybeAutoShowActionModal(){ renderActionCard(); }')) 'La accion diaria no debe abrir un modal automatico'
 
 $workoutLower = $workout.ToLowerInvariant()

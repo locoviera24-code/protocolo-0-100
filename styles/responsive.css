@@ -54,6 +54,8 @@
   body .quickStickyActions { grid-template-columns: minmax(0, 1.4fr) repeat(2, minmax(0, .8fr)); padding: 7px; }
   body .quickStickyActions button { padding-inline: 7px; font-size: var(--font-label); }
   .nutritionNav { top: 60px; margin-inline: -4px; }
+  .nutritionHeroHead { align-items: stretch; flex-direction: column; }
+  .nutritionHeroHead button { width: 100%; }
   .gymSectionNav, .partySectionNav { top: 60px; margin-inline: -4px; }
 }
 

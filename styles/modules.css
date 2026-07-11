@@ -233,10 +233,24 @@ body .partySetCounters > div:last-child { border-right: 0; }
 
 .nutritionNav { position: sticky; top: 64px; z-index: 20; padding: 6px; border: 1px solid var(--color-border-soft); border-radius: var(--radius-card); background: rgba(17, 26, 43, .96); }
 .nutritionNav button { flex: 1 0 auto; }
+.nutritionHeroHead { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); }
+.nutritionHeroHead h3 { margin-bottom: var(--space-1); }
+#tab-nutricion:not(.hidden) { display: flex; flex-direction: column; }
+#tab-nutricion > .moduleHero { order: 1; }
+#tab-nutricion > .nutritionNav { order: 2; }
+#nutritionBuilderCard { order: 3; }
+#nutritionAssistantCard { order: 4; }
+#fdcSearchCard { order: 5; }
+#nutritionCoverageCard, #nutritionTargetsCard, #nutritionDiagnosisCard, #nutritionTrendsCard, #customFoodsCard, #fdcSettingsCard, #nutritionHistoryCard { order: 3; }
+.nutritionAssistantDetails > summary { color: var(--color-text); }
+#nutritionAssistantCard, #fdcSearchCard { padding: var(--space-3) var(--space-4); border: 1px solid var(--color-border-soft); border-radius: var(--radius-panel); background: var(--color-surface); }
 .coverageGrid, .recommendGrid { gap: var(--space-2); }
 .coverageRow, .recommendCard, .fdcResultCard { border-color: var(--color-border-soft); border-radius: var(--radius-control); background: var(--color-surface-soft); }
 
 body[data-module="progreso"] .moduleGrid { margin-top: var(--space-4); }
 body[data-module="progreso"] .moduleCard { box-shadow: none; }
+.progressRewardsDetails, .progressSecondaryDetails { padding: var(--space-3) var(--space-4); }
+.progressRewardsDetails > summary, .progressSecondaryDetails > summary { color: var(--color-text-secondary); }
+.progressRewardsDetails .moduleCard { border: 0; padding: var(--space-3); background: var(--color-surface-soft); }
 .coinBalance { color: var(--color-text); }
 .legalBox { border-color: var(--color-border-soft); background: var(--color-surface-soft); color: var(--color-text-secondary); }
