@@ -13,12 +13,27 @@ PWA y APK Android para medir habitos, atencion, actividad fisica y nutricion con
 - **Progreso integral:** scores separados e integral, Focus Coins no financieros, recompensas, rankings mensuales opcionales y referidos simulados.
 - **Telefono Android:** importacion opcional de estadisticas de uso con permiso explicito.
 
+## Navegacion y diseno
+
+La version `v2.7.0` usa una barra inferior movil con cinco destinos: **Inicio**,
+**Gym**, **Nutricion**, **Progreso** y **Mas**. En escritorio usa una barra
+lateral compacta. Gym Party se abre desde **Gym > Grupo**, desde un acceso
+discreto en Inicio o mediante un enlace `gymPartyCode`; ya no ocupa un boton
+permanente en todas las pantallas.
+
+La interfaz conserva todos los controles y datos, pero muestra primero la tarea
+principal. Ajustes, explicaciones, acciones destructivas, micronutrientes,
+recompensas y administracion de sala usan secciones plegables. Los estilos se
+centralizan en `styles/tokens.css`, `styles/base.css`,
+`styles/components.css`, `styles/modules.css` y `styles/responsive.css`.
+
 ## Arquitectura
 
 La raiz del repositorio es la fuente de la PWA y tambien se sincroniza dentro del APK:
 
 ```text
 index.html                  Interfaz, protocolo, gym y nutricion
+styles/*.css                Tokens, base, componentes, modulos y responsive
 workout-store.js            Acceso conservador y versionado a localStorage Gym
 workout-plan.js             Normalizacion, deduplicacion e insercion en rutinas
 workout-ui.js               Renderizadores pequenos y anuncios accesibles de Gym
@@ -67,13 +82,13 @@ Estados principales:
 
 Acceso rapido:
 
-- boton **Gym Party** fijo en la barra superior;
-- tarjeta **Entrenar con un amigo** en la pantalla principal;
-- tarjeta **Sesion privada compartida** dentro de Gym.
+- acceso discreto **Entrenamiento compartido** en Inicio;
+- seccion **Gym > Grupo**;
+- enlaces de invitacion con `gymPartyCode`.
 
 Flujo recomendado:
 
-1. Tocar **Gym Party**.
+1. Abrir **Gym > Grupo**.
 2. Escribir alias y tocar **Crear codigo para invitar**.
 3. Tocar **Enviar codigo**.
 4. El amigo abre el link/codigo desde iPhone, Safari o PWA.
@@ -87,7 +102,7 @@ Torso C, Sabado descanso suave y Domingo revision/descanso.
 
 La vista principal se mantiene deliberadamente limpia: foco en registrar el
 entrenamiento y revisar el resumen semanal. El codigo para invitar, sincronizar,
-exportar y administrar sala queda en **Invitar amigo y administrar sala**,
+exportar y administrar sala queda en **Grupo e invitaciones**,
 plegado por defecto. Las graficas, racha, sesiones recientes, exportacion y
 privacidad quedan en secciones plegadas. Cada serie guardada aparece como una
 tarjeta compacta con **Editar** y **Eliminar**, para corregir
@@ -172,7 +187,7 @@ en segundo plano. Si usa modo privado, borra datos del sitio o cambia de
 navegador/dispositivo, debera unirse otra vez con el codigo.
 
 Para cambiar de dispositivo sin perder continuidad, primero abrir
-**Invitar amigo y administrar sala > Guardar acceso para otro dispositivo** y
+**Grupo e invitaciones > Guardar acceso para otro dispositivo** y
 guardar email/clave. En el telefono nuevo usar **Entrar desde otro dispositivo**
 con ese email/clave. El email se usa solo para Firebase Auth; no se comparte con
 los miembros de la sala ni sale en backups.
@@ -296,7 +311,7 @@ keystore codificado en `ANDROID_KEYSTORE_BASE64` y nunca lo guarda en el repo.
 
 - **PWA:** el workflow `Publicar PWA en GitHub Pages` publica los archivos raiz.
 - **APK debug:** el workflow `Construir APK Android` publica un artifact temporal para pruebas.
-- **APK release:** el workflow `Publicar APK Android release` compila `v2.6.1` con firma privada desde GitHub Secrets, publica el APK versionado y adjunta su checksum SHA-256.
+- **APK release:** el workflow `Publicar APK Android release` compila `v2.7.0` con firma privada desde GitHub Secrets, publica el APK versionado y adjunta su checksum SHA-256.
 
 La PWA no activa una nueva version a mitad de un registro: muestra aviso y solo
 envia `SKIP_WAITING` cuando el usuario toca **Actualizar ahora**. El APK release

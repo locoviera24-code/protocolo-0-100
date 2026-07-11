@@ -38,7 +38,7 @@ test('barra inferior navega sin tapar contenido movil',async ({page},testInfo)=>
 
   await nav.locator('[data-module-target="mas"]').click();
   await expect(page.locator('body')).toHaveAttribute('data-module','mas');
-  await expect(page.getByRole('heading',{name:'Más herramientas'})).toBeVisible();
+  await expect(page.getByRole('button',{name:/Teléfono/}).first()).toBeVisible();
   await expectNoHorizontalOverflow(page);
   await page.screenshot({path:testInfo.outputPath('mobile-more.png'),fullPage:true});
 });

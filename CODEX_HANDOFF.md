@@ -2,9 +2,9 @@
 
 Ultima actualizacion: 2026-06-30
 Rama esperada: `main`
-Version actual: `2.6.1`
-Android: `versionCode 32`, `versionName "2.6.1"`
-Service worker cache: `protocolo-0-100-pwa-v44`
+Version actual: `2.7.0`
+Android: `versionCode 33`, `versionName "2.7.0"`
+Service worker cache: `protocolo-0-100-pwa-v45`
 Backup consolidado: `schemaVersion: 3`
 
 Leer primero este archivo y luego `README.md`, `index.html`,
@@ -24,7 +24,7 @@ Estado actual:
 - Gym Party implementado como modulo web/PWA opcional.
 - Nutricion local/FDC opcional.
 - Backups JSON `schemaVersion: 3`.
-- PWA offline con cache v44 y actualizacion consentida desde el aviso visible.
+- PWA offline con cache v45 y actualizacion consentida desde el aviso visible.
 - APK con widget Android y permiso `INTERNET` para Firebase/Gym Party.
 
 ## 2. Funcionalidades ya existen
@@ -84,8 +84,8 @@ Web:
 - `gym-party-sync.js`: sincronizacion incremental con dirty/revision, LWW,
   tombstones, backoff y contexto horario.
 - `gym-party.js`: modulo Gym Party, registro rapido, graficas y edicion/eliminacion de series.
-- `advanced-features.js`: version `2.6.1`, backup/importacion Gym Party.
-- `sw.js`: cache v44, actualizacion consentida, incluye modulos nuevos y evita
+- `advanced-features.js`: version `2.7.0`, backup/importacion Gym Party.
+- `sw.js`: cache v45, actualizacion consentida, incluye modulos nuevos y evita
   persistir una configuracion Firebase obsoleta.
 - `README.md`: documenta Gym Party, demo, Firebase, privacidad y pruebas.
 - `CODEX_HANDOFF.md`: este handoff.
@@ -104,8 +104,8 @@ Android:
 - `android-native-wrapper/app/src/main/java/com/protocolo/cien/MainActivity.java`:
   usa `WebViewAssetLoader` sobre HTTPS interno, bloquea file/content/universal
   access y mixed content, activa Safe Browsing y limita origenes remotos.
-- `android-native-wrapper/app/build.gradle`: `versionCode 32`,
-  `versionName 2.6.1`, firma release solo desde variables seguras.
+- `android-native-wrapper/app/build.gradle`: `versionCode 33`,
+  `versionName 2.7.0`, firma release solo desde variables seguras.
 - `android-native-wrapper/app/src/main/assets/*`: sincronizado desde raiz.
 
 Scripts/workflows:
@@ -881,3 +881,105 @@ Correccion:
   OK con consultas reales y limpieza de documento legacy; Playwright 5 OK y 1
   omitida intencionalmente; `assembleRelease` firmado con la clave permanente
   OK.
+
+## 26. Release 2.7.0 - arquitectura visual y sync legacy
+
+Estado funcional:
+
+- Navegacion movil inferior: `Inicio`, `Gym`, `Nutricion`, `Progreso`, `Mas`.
+- Navegacion de escritorio: lateral compacta permanente desde 1024 px.
+- `setModule('gym-party')`, URLs `gymPartyCode`, shortcuts PWA y claves de
+  localStorage se mantienen sin migraciones destructivas.
+- El boton superior permanente de Gym Party queda oculto por compatibilidad;
+  los accesos visibles son Inicio, `Gym > Grupo` y enlaces de invitacion.
+- Inicio muestra fecha, plan, una accion principal y registro esencial. La
+  explicacion, campos secundarios y acciones destructivas quedan plegados.
+- Gym prioriza `#quickSetLoggerPanel`; el registro legacy y el historial completo
+  siguen disponibles en `details`. `workoutConfigPanel` conserva rutina/widget.
+- Gym Party ofrece `Entrenar`, `Grupo`, `Progreso`; el registrador sigue usando
+  `workoutSessions`, biblioteca, rutina semanal e historial compartidos.
+- Nutricion prioriza calorias, proteina, fibra, agua y agregar alimento. Asistente,
+  USDA/FDC, micronutrientes y configuracion siguen disponibles bajo demanda.
+- Progreso prioriza tendencia y consejo. Focus Coins, insignias, rankings,
+  referidos y terminos siguen intactos en paneles secundarios.
+
+Sistema visual y archivos:
+
+- `styles/tokens.css`: colores semanticos, tipografia, espacios, radios, alturas,
+  z-index, safe areas y alias compatibles con CSS historico.
+- `styles/base.css`: base, tipografia, iconos SVG, foco y movimiento reducido.
+- `styles/components.css`: botones, formularios, estados, superficies y modales.
+- `styles/modules.css`: navegacion, Inicio, Gym, Gym Party, Nutricion y Progreso.
+- `styles/responsive.css`: 320-430 px, tablet, escritorio, teclado y print.
+- `index.html`: barra inferior/lateral, modulo `tab-mas`, jerarquia de Inicio,
+  Nutricion/Progreso y controles secundarios.
+- `workout-features.js`: inserta el dashboard debajo de `.gymSectionNav` para
+  conservar el orden visual sin cambiar APIs.
+- `gym-party.js`: secciones compartidas y sanitizacion Firestore por allowlist.
+- `scripts/sync-web-assets.ps1`, `sw.js`, workflow Pages y validador incluyen CSS.
+- `tests/e2e/visual-navigation.spec.mjs` y `playwright.config.mjs` cubren Android,
+  iPhone y escritorio 1440x900.
+
+Correccion Firebase adicional:
+
+- `firestorePayload(value, collectionName)` aplica allowlist independiente para
+  `workout_sessions_shared` y `workout_sets_shared`; elimina campos legacy aunque
+  hayan quedado en `syncQueue` o en un backup antiguo.
+- Si un batch es rechazado, `uploadSyncQueue()` reintenta cada documento,
+  sincroniza los validos y conserva solo los fallidos con colección/ID/error.
+- La prueba real previa confirmo que lecturas de sala, miembros, sesiones y series
+  funcionan; el rechazo estaba exclusivamente en `subir cambios` legacy.
+- No se exportan `firebaseConfig`, email portable ni codigo pendiente. No hay
+  service accounts, keystores ni claves privadas rastreadas.
+
+Compatibilidad que no debe reescribirse:
+
+- No reemplazar `index.html`, `workout-features.js` o `gym-party.js` completos.
+- No renombrar IDs, `data-*`, `AndroidBridge`, claves `protocolo_0_100_*`,
+  colecciones Firestore ni acciones de widget sin migracion y pruebas.
+- No separar Gym Party del registro local: debe seguir sincronizando el mismo
+  `workoutSession`, series e historial.
+- Mantener los cinco CSS externos en PWA, workflow Pages y assets del APK.
+
+Pruebas relevantes para continuar:
+
+1. `powershell -ExecutionPolicy Bypass -File scripts/validate-app.ps1 -CheckAndroidAssets`
+2. `node scripts/test-service-worker.mjs`
+3. `node scripts/test-workout-features.mjs`
+4. `node scripts/test-gym-party.mjs`
+5. `node scripts/test-gym-party-sync.mjs`
+6. `npm run test:e2e`
+7. `npm run test:rules`
+8. Gradle `:app:assembleDebug` y `:app:assembleRelease` con firma segura.
+
+Antes de continuar leer: este archivo completo, `README.md`, los cinco archivos
+en `styles/`, `index.html`, `workout-features.js`, `gym-party.js`,
+`firebase/firestore.rules`, `tests/e2e/*.mjs`, `sw.js` y el wrapper Android.
+
+Verificacion local final de `2.7.0`:
+
+- Validador con assets Android: OK, cache `v45`, 71 alimentos, 28 nutrientes y
+  255 IDs estaticos unicos.
+- Node: service worker, Workout, metricas, Gym Party, sync incremental, limites
+  modulares, WebView, release y accesibilidad: OK.
+- Firestore Emulator con Java 21: owner atomico, consultas de sync, limpieza
+  legacy y seis negativas criticas: OK.
+- Playwright: 15 pruebas OK y 6 omisiones intencionales por plataforma; Android
+  Chromium, iPhone WebKit y escritorio Chromium 1440x900.
+- Anchos 320, 360, 390, 412 y 430 px: sin scroll horizontal accidental.
+- `npm audit --audit-level=moderate`: 0 vulnerabilidades.
+- `assembleDebug` y `assembleRelease`: OK. APK release local: 1.145.085 bytes,
+  firma v1/v2 valida con certificado permanente y SHA-256
+  `3A6063BA1E518BAF7D5A5603514365951524982479AFA005F09D5F5D59571A16`.
+- Archivo local verificable: `dist/protocolo-0-100-v2.7.0-release.apk` y `.sha256`.
+
+Bugs/limitaciones conocidos:
+
+- El widget nativo requiere comprobacion manual en un launcher Android real;
+  RemoteViews no puede replicar toda la UI web.
+- Gym Party evita listeners permanentes para ahorrar cuota Spark; sincroniza al
+  abrir, guardar, recuperar conexion o pulsar sincronizar.
+- El acceso en otro dispositivo exige vincular email/clave antes de perder la
+  sesion anonima original.
+- Los estilos historicos inline siguen existiendo como compatibilidad; los cinco
+  CSS externos los sobrescriben. Extraerlos debe hacerse de forma incremental.
