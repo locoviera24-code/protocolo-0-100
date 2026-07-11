@@ -111,3 +111,42 @@
   --shadow: var(--shadow-subtle);
   --radius: var(--radius-panel);
 }
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --color-bg: #f4f7fb;
+  --color-surface: #ffffff;
+  --color-surface-raised: #eaf0f7;
+  --color-surface-soft: rgba(15, 36, 58, .04);
+  --color-surface-hover: rgba(15, 36, 58, .07);
+  --color-border: #b8c5d5;
+  --color-border-soft: rgba(15, 36, 58, .13);
+  --color-text: #142033;
+  --color-text-secondary: #43556d;
+  --color-text-muted: #65778d;
+  --color-primary: #087aa8;
+  --color-primary-strong: #05658d;
+  --color-primary-soft: rgba(8, 122, 168, .11);
+  --color-success: #16784a;
+  --color-success-soft: rgba(22, 120, 74, .1);
+  --color-warning: #8a6100;
+  --color-warning-soft: rgba(138, 97, 0, .1);
+  --color-danger: #b33a3a;
+  --color-danger-soft: rgba(179, 58, 58, .1);
+  --surface-input: #ffffff;
+  --surface-navigation: rgba(244, 247, 251, .96);
+  --surface-navigation-strong: rgba(244, 247, 251, .98);
+  --surface-glass: rgba(15, 36, 58, .04);
+  --surface-glass-soft: rgba(15, 36, 58, .025);
+  --surface-glass-strong: rgba(15, 36, 58, .09);
+  --surface-ink-soft: rgba(15, 36, 58, .06);
+  --surface-ink-strong: rgba(15, 36, 58, .14);
+  --state-info-border: rgba(8, 122, 168, .35);
+  --state-info-soft: rgba(8, 122, 168, .1);
+  --state-success-border: rgba(22, 120, 74, .35);
+  --state-warning-border: rgba(138, 97, 0, .35);
+  --state-danger-border: rgba(179, 58, 58, .35);
+  --state-warning-text: #684900;
+  --state-danger-text: #8f2f2f;
+  --chart-grid: rgba(15, 36, 58, .13);
+}

@@ -566,7 +566,7 @@
             <div class="moduleCard settingsSection"><h3>Módulos y avisos</h3><div class="checks">
               <label class="check"><input type="checkbox" id="settingsShowRir"><span>Mostrar RIR/RPE en Gym.</span></label>
               <label class="check"><input type="checkbox" id="settingsNutritionGuidance"><span>Mostrar orientación nutricional.</span></label>
-              <label class="check"><input type="checkbox" id="settingsNotifications"><span>Permitir recordatorios cuando estén disponibles.</span></label>
+              <label class="check"><input type="checkbox" id="settingsNotifications"><span>Recordatorio interno al abrir la app. La web no puede garantizar avisos en segundo plano.</span></label>
               <label class="check"><input type="checkbox" id="settingsAutoSync"><span>Sincronizar Gym Party al abrirla.</span></label>
             </div></div>
             <div class="settingsPrimaryAction"><button type="button" class="good" id="saveUiSettingsBtn">Guardar ajustes</button></div>
@@ -802,20 +802,41 @@ function setLocalData(key, value){ localStorage.setItem(key, JSON.stringify(valu
 function uiPreferences(){
   return {appearance:'dark',density:'comfortable',experienceMode:'guided',unit:'kg',showRir:true,nutritionGuidance:true,notifications:false,autoSync:true,...getLocalData(UI_PREFERENCES_KEY,{})};
 }
+let systemThemeQuery=null,systemThemeBound=false;
+function resolvedTheme(appearance){return appearance==='system'&&systemThemeQuery?.matches?'light':'dark';}
+function applyResolvedTheme(preferences=uiPreferences()){
+  const theme=resolvedTheme(preferences.appearance);
+  document.documentElement.dataset.appearance=preferences.appearance;
+  document.documentElement.dataset.theme=theme;
+  const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=theme==='light'?'#f4f7fb':'#0b1220';
+}
+function bindSystemTheme(){
+  if(systemThemeBound||!window.matchMedia)return;
+  systemThemeBound=true;systemThemeQuery=window.matchMedia('(prefers-color-scheme: light)');
+  systemThemeQuery.addEventListener?.('change',()=>{if(uiPreferences().appearance==='system')applyResolvedTheme();});
+}
 function applyUiPreferences(){
   const preferences=uiPreferences();
-  document.documentElement.dataset.appearance=preferences.appearance;document.body.dataset.density=preferences.density;document.body.dataset.experienceMode=preferences.experienceMode;
+  bindSystemTheme();applyResolvedTheme(preferences);document.body.dataset.density=preferences.density;document.body.dataset.experienceMode=preferences.experienceMode;
   const values={settingsAppearance:preferences.appearance,settingsDensity:preferences.density,settingsExperienceMode:preferences.experienceMode,settingsUnit:preferences.unit};
   Object.entries(values).forEach(([id,value])=>{const element=document.getElementById(id);if(element)element.value=value;});
   const checks={settingsShowRir:preferences.showRir,settingsNutritionGuidance:preferences.nutritionGuidance,settingsNotifications:preferences.notifications,settingsAutoSync:preferences.autoSync};
   Object.entries(checks).forEach(([id,value])=>{const element=document.getElementById(id);if(element)element.checked=!!value;});
+  document.getElementById('nutritionDiagnosisCard')?.classList.toggle('preferenceHidden',!preferences.nutritionGuidance);
   return preferences;
 }
 function saveUiSettings(){
   const preferences={appearance:document.getElementById('settingsAppearance').value,density:document.getElementById('settingsDensity').value,experienceMode:document.getElementById('settingsExperienceMode').value,unit:document.getElementById('settingsUnit').value,showRir:document.getElementById('settingsShowRir').checked,nutritionGuidance:document.getElementById('settingsNutritionGuidance').checked,notifications:document.getElementById('settingsNotifications').checked,autoSync:document.getElementById('settingsAutoSync').checked,updatedAt:new Date().toISOString()};
   setLocalData(UI_PREFERENCES_KEY,preferences);
   window.WORKOUT_FEATURES?.updateGymSettings?.({...window.WORKOUT_FEATURES.getGymSettings?.(),unit:preferences.unit,showRir:preferences.showRir});
-  applyUiPreferences();flash('Ajustes guardados.');
+  applyUiPreferences();window.dispatchEvent(new CustomEvent('app-settings-change',{detail:preferences}));flash('Ajustes guardados.');
+}
+function maybeShowInternalReminder(){
+  const preferences=uiPreferences();if(!preferences.notifications||sessionStorage.getItem('protocolo_internal_reminder_shown')==='1')return;
+  const today=todayStr(),hasProtocol=getEntries().some(entry=>entry.date===today),hasGym=getLocalData('protocolo_0_100_workout_sessions_v1',[]).some(session=>session.date===today);
+  if(hasProtocol||hasGym)return;
+  sessionStorage.setItem('protocolo_internal_reminder_shown','1');
+  setTimeout(()=>flash('Recordatorio interno: hoy todavía no hay un registro. Podés hacerlo cuando te resulte útil.'),350);
 }
 function estimatedLocalStorage(){let bytes=0;for(let index=0;index<localStorage.length;index++){const key=localStorage.key(index)||'';bytes+=(key.length+(localStorage.getItem(key)||'').length)*2;}return bytes;}
 function formatStorage(bytes){return bytes<1024?(bytes+' B'):bytes<1048576?((bytes/1024).toFixed(1)+' KB'):((bytes/1048576).toFixed(1)+' MB');}
@@ -2458,6 +2479,7 @@ document.getElementById('nutritionDate').value = todayStr();
 populateGymMuscles();
 populateFoods();
 applyUiPreferences();
+maybeShowInternalReminder();
 loadNutritionTargets();
 loadBodyMetricsForDate();
 renderHelpGuide();
@@ -2474,6 +2496,7 @@ if(initialRouteParams.quickLog){
   setTimeout(()=>window.openQuickSetLogger?.(),0);
 }
 maybeAutoShowActionModal();
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')maybeShowInternalReminder();});
 </script>
 <script src="workout-store.js"></script>
 <script src="workout-plan.js"></script>

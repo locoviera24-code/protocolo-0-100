@@ -90,7 +90,7 @@ $requiredFiles = @(
     'scripts/test-android-webview-security.mjs',
     'scripts/test-android-release.mjs',
     'scripts/test-accessibility.mjs',
-    'scripts/test-module-boundaries.mjs', 'scripts/test-design-system.mjs', 'scripts/design-token-allowlist.json', 'scripts/test-router.mjs', 'scripts/test-layout-coordinator.mjs', 'scripts/test-home-settings.mjs', 'scripts/test-progress-view.mjs', 'scripts/sync-app-version.mjs', 'scripts/test-version-alignment.mjs',
+    'scripts/test-module-boundaries.mjs', 'scripts/test-design-system.mjs', 'scripts/design-token-allowlist.json', 'scripts/test-router.mjs', 'scripts/test-layout-coordinator.mjs', 'scripts/test-home-settings.mjs', 'scripts/test-progress-view.mjs', 'scripts/sync-app-version.mjs', 'scripts/test-version-alignment.mjs', 'scripts/test-settings-contract.mjs',
     'scripts/serve-static.mjs', 'playwright.config.mjs', 'tests/e2e/gym-flow.spec.mjs', 'tests/e2e/visual-navigation.spec.mjs', 'tests/e2e/router.spec.mjs', 'tests/e2e/layout-sticky.spec.mjs', 'tests/e2e/home-settings.spec.mjs', 'tests/e2e/progress.spec.mjs',
     'manifest.webmanifest', 'sw.js',
     'styles/tokens.css', 'styles/base.css', 'styles/components.css', 'styles/features.css', 'styles/gym.css', 'styles/gym-party.css', 'styles/modules.css', 'styles/responsive.css',

@@ -83,6 +83,9 @@ jobs:
       - name: Probar Inicio y Ajustes
         run: npm run test:home-settings
 
+      - name: Probar contratos funcionales de Ajustes
+        run: npm run test:settings
+
       - name: Probar Progreso consolidado
         run: npm run test:progress
 

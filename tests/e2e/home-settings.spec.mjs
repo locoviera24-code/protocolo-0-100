@@ -43,6 +43,33 @@ test('Ajustes persisten y se incluyen en backup',async ({page})=>{
   expect(backup.uiPreferences.unit).toBe('lb');
 });
 
+test('Seguir sistema, modo compacto y orientación tienen efecto real',async ({page})=>{
+  await page.emulateMedia({colorScheme:'light'});
+  await clean(page,'/index.html?module=more&view=settings');
+  await page.locator('#settingsAppearance').selectOption('system');
+  await page.locator('#settingsDensity').selectOption('compact');
+  await page.locator('#settingsExperienceMode').selectOption('compact');
+  await page.locator('#settingsNutritionGuidance').uncheck();
+  await page.locator('#saveUiSettingsBtn').click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme','light');
+  await expect(page.locator('body')).toHaveAttribute('data-density','compact');
+  await expect(page.locator('body')).toHaveAttribute('data-experience-mode','compact');
+  await page.goto('/index.html?module=nutrition&view=meals');
+  await expect(page.locator('#nutritionDiagnosisCard')).toHaveClass(/preferenceHidden/);
+  await page.emulateMedia({colorScheme:'dark'});
+  await expect(page.locator('html')).toHaveAttribute('data-theme','dark');
+});
+
+test('Recordatorio habilitado funciona solo al abrir la app',async ({page})=>{
+  await page.goto('/index.html');
+  await page.evaluate(()=>{
+    localStorage.clear();sessionStorage.clear();
+    localStorage.setItem('protocolo_0_100_ui_preferences_v1',JSON.stringify({notifications:true}));
+  });
+  await page.reload();
+  await expect(page.locator('#toast')).toContainText('Recordatorio interno');
+});
+
 test('Datos muestra almacenamiento y restablece solo un área',async ({page})=>{
   await clean(page,'/index.html?module=more&view=data');
   await page.evaluate(()=>{

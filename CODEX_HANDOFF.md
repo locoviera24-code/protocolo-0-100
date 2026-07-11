@@ -1198,3 +1198,27 @@ combobox Gym, mensajes/estados centrales, accesibilidad final y rendimiento.
 
 Pendiente real: migrar los 19 estilos inline permitidos, terminar responsive
 de historiales/Nutricion y crear el sistema central de mensajes/estados.
+
+## 33. Refactor robusta - contratos funcionales de Ajustes (parcial)
+
+- Apariencia `system` observa `(prefers-color-scheme: light)`, reacciona a
+  cambios y aplica un juego completo de tokens claros/oscuros. Tambien actualiza
+  `meta[name=theme-color]`.
+- Densidad compacta reduce espacios de tarjetas, listas, formularios y tablas
+  sin modificar `--touch-target: 44px`.
+- Modo compacto oculta explicaciones repetidas, ejemplos y heroes secundarios;
+  modo guiado conserva toda la ayuda. La funcionalidad permanece disponible.
+- `settingsNutritionGuidance=false` oculta diagnostico, recomendaciones y
+  combinaciones, sin borrar comidas ni objetivos.
+- Recordatorios significa ahora un recordatorio interno al abrir/volver a la
+  app. La etiqueta aclara que la web no garantiza notificaciones de fondo.
+- `settingsAutoSync=false` impide sync automatico al abrir Gym Party, despues
+  de guardar y al recuperar conexion; la cola local sigue guardandose y el
+  boton manual continua disponible.
+- Pruebas: `scripts/test-settings-contract.mjs` y Playwright de Ajustes en los
+  tres proyectos. Resultado: 16 OK, 2 omisiones moviles intencionales.
+
+Pendiente antes de declarar Ajustes completo: conversion canonica kg/lb en web,
+Gym Party y widget Android; onboarding reabrible del modo guiado; probar autosync
+con Firebase Emulator y aclarar/implementar recordatorios Android fuera del
+cronometro de descanso.

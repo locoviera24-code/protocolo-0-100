@@ -224,6 +224,9 @@
     const m = activeMembership();
     return {...defaultPrivacy, ...(m?.privacy || {})};
   }
+  function autoSyncEnabled(){
+    try{return JSON.parse(localStorage.getItem('protocolo_0_100_ui_preferences_v1')||'{}').autoSync!==false;}catch(error){return true;}
+  }
   const firestoreFieldAllowlist={
     [collections.sessions]:new Set([
       'id','partyId','userId','localSessionId','date','localDate','weekday','routineName','startedAt','finishedAt','durationMinutes','exercisesCompleted','totalSets','totalReps','totalVolume','externalLoadVolume','bodyweightReps','addedLoadVolume','bestWeight','bestSetVolume','maxReps','timeZone','utcOffset','revision','deletedAt','deletedReason','createdAt','updatedAt'
@@ -1999,7 +2002,7 @@
   function refreshPartyWorkoutShare(){
     syncFromLocalWorkouts({silent: true});
     const m = activeMembership();
-    if(m?.backendMode === 'firebase' && typeof navigator !== 'undefined' && navigator.onLine !== false){
+    if(autoSyncEnabled() && m?.backendMode === 'firebase' && typeof navigator !== 'undefined' && navigator.onLine !== false){
       syncFirebaseNow({silent: true}).catch(() => flashMessage('Guardado localmente. Se sincronizara al volver a intentar.'));
     }
   }
@@ -2760,7 +2763,7 @@
     if(typeof window.addEventListener === 'function'){
       window.addEventListener('online', () => {
         const m = activeMembership();
-        if(m?.backendMode === 'firebase' && syncQueue().length){
+        if(autoSyncEnabled() && m?.backendMode === 'firebase' && syncQueue().length){
           syncNow({force:false}).catch(() => flashMessage('Hay datos pendientes; probá sincronizar manualmente.'));
         }
       });
@@ -2801,6 +2804,7 @@
   }
   function resumeFirebaseMembership(){
     if(window.__gymPartyResumeSyncStarted) return;
+    if(!autoSyncEnabled()) return;
     const m = activeMembership();
     if(!m || m.backendMode !== 'firebase') return;
     if(typeof navigator !== 'undefined' && navigator.onLine === false) return;

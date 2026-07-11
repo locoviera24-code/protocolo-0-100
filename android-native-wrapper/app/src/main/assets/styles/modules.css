@@ -417,6 +417,31 @@ body[data-density="compact"] .panel .bd {
 body[data-density="compact"] .moduleCard {
   margin-top: var(--space-2);
 }
+body[data-density="compact"] {
+  --space-3: 10px;
+  --space-4: 12px;
+  --space-5: 18px;
+  --space-6: 24px;
+}
+body[data-density="compact"] .formGrid,
+body[data-density="compact"] .entryList,
+body[data-density="compact"] .quickStats,
+body[data-density="compact"] .partyWorkoutLogger {
+  gap: var(--space-2);
+}
+body[data-density="compact"] th,
+body[data-density="compact"] td {
+  padding-block: var(--space-2);
+}
+body[data-experience-mode="compact"] .moduleHero > .muted,
+body[data-experience-mode="compact"] .guideIntro,
+body[data-experience-mode="compact"] .sectionIntro,
+body[data-experience-mode="compact"] .assistantExamples,
+body[data-experience-mode="compact"] .homeHeader .mantra,
+body[data-experience-mode="compact"] .partyStartCard > p {
+  display: none;
+}
+.preferenceHidden { display: none !important; }
 .homeDateControls {
   align-items: start;
 }
