@@ -10,7 +10,7 @@
     "test:router": "node scripts/test-router.mjs",
     "test:layout": "node scripts/test-layout-coordinator.mjs",
     "test:home-settings": "node scripts/test-home-settings.mjs",
-    "test:progress": "node scripts/test-progress-view.mjs",
+    "test:progress": "node scripts/test-progress-view.mjs && node scripts/test-muscle-progress.mjs",
     "test:version": "node scripts/sync-app-version.mjs --check && node scripts/test-version-alignment.mjs",
     "test:settings": "node scripts/test-settings-contract.mjs",
     "test:data": "node scripts/test-data-layer.mjs && node scripts/test-backup-service.mjs",

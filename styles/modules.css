@@ -959,6 +959,125 @@ body .partySetCounters > div:last-child {
 body[data-module="progreso"] .moduleGrid {
   margin-top: var(--space-4);
 }
+.progressGymNav {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+  padding: var(--space-1);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-card);
+  background: var(--surface-navigation-strong);
+}
+.progressGymNav button {
+  flex: 1 1 0;
+  min-height: var(--control-height);
+  border: 0;
+  color: var(--color-text-secondary);
+  background: transparent;
+}
+.progressGymNav button.active {
+  color: var(--color-text);
+  background: var(--color-primary-soft);
+}
+.progressMuscleIntro {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+.progressMuscleIntro .field {
+  min-width: 220px;
+}
+.progressMuscleLayout {
+  display: grid;
+  grid-template-columns: minmax(300px, .85fr) minmax(0, 1.15fr);
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+}
+.progressMuscleDetails {
+  display: grid;
+  align-content: start;
+  gap: var(--space-4);
+}
+.progressMuscleMapCard {
+  overflow: hidden;
+  border-color: var(--state-info-border);
+  background: radial-gradient(circle at 50% 18%, var(--state-info-soft), var(--surface-glass-soft) 48%, var(--surface-ink-soft));
+}
+.progressMuscleCanvas {
+  position: relative;
+  min-height: 500px;
+}
+.progressHumanSvg {
+  position: absolute;
+  inset: var(--space-4) 0;
+  width: 100%;
+  height: calc(100% - var(--space-6));
+}
+.progressBodyPart {
+  fill: var(--surface-glass-strong);
+  stroke: var(--state-info-border);
+  stroke-width: 1.1;
+}
+.progressBodyShade {
+  fill: var(--state-info-soft);
+  stroke: var(--color-success-soft);
+  stroke-width: .7;
+}
+.progressMuscleLine {
+  stroke: var(--muscle-line);
+  stroke-width: 1.2;
+  stroke-dasharray: 4 4;
+}
+.progressMuscleLine.active {
+  stroke: var(--muscle-active);
+  stroke-width: 2;
+  stroke-dasharray: none;
+}
+.progressMuscleDot {
+  fill: var(--muscle-active);
+  stroke: var(--color-text-secondary);
+  stroke-width: .7;
+}
+.progressMuscleButton {
+  position: absolute;
+  transform: translate(-4px, -50%);
+  min-width: 112px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--state-info-border);
+  border-radius: var(--radius-card);
+  color: var(--color-text);
+  text-align: left;
+  background: var(--surface-scrim);
+}
+.progressMuscleButton strong,
+.progressMuscleButton span {
+  display: block;
+}
+.progressMuscleButton span {
+  margin-top: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--font-label);
+}
+.progressMuscleButton.active {
+  border-color: var(--state-success-border);
+  background: var(--muscle-active-soft);
+  box-shadow: var(--elevation-focus);
+}
+.progressExerciseRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) repeat(3, auto);
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-soft);
+}
+.progressExerciseRow span {
+  color: var(--color-text-muted);
+  font-size: var(--font-small);
+}
 body[data-module="progreso"] .moduleCard {
   box-shadow: none;
 }

@@ -15,7 +15,7 @@ PWA y APK Android para medir habitos, atencion, actividad fisica y nutricion con
 
 ## Navegacion y diseno
 
-La version actual `v2.7.0` (build web `56`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
+La version actual `v2.7.0` (build web `57`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
 **Gym**, **Nutricion**, **Progreso** y **Mas**. En escritorio usa una barra
 lateral compacta. Gym Party se abre desde **Gym > Grupo**, desde un acceso
 discreto en Inicio o mediante un enlace `gymPartyCode`; ya no ocupa un boton
@@ -62,6 +62,9 @@ nutrition/food-entry-flow.js Estado del futuro flujo guiado de alta
 nutrition/meal-history.js   Recientes, frecuentes y copia de comidas
 nutrition/nutrition-confidence.js Cobertura conocida, estimada y desconocida
 nutrition/nutrition-view.js View models del dia y progreso principal
+progress/progress-data-model.js Ventanas temporales y cambios comparables
+progress/gym-progress-model.js Sesiones y grupos musculares canonicos
+progress/muscle-progress.js Series, volumen y frecuencia por musculo
 workout-store.js            Acceso conservador y versionado al repositorio Gym
 workout-plan.js             Normalizacion, deduplicacion e insercion en rutinas
 workout-ui.js               Renderizadores pequenos y anuncios accesibles de Gym
@@ -321,6 +324,12 @@ Rutina predeterminada: lunes Torso A, martes Pierna A, miercoles Torso B, jueves
 logros. Sus deep links usan `?module=progress&view=overview|habits|gym|nutrition|history|achievements`.
 El selector de periodo permite comparar 7, 30, 90 dias o todo el historial;
 los graficos incluyen resumen textual y una escala comun accesible.
+
+Dentro de **Progreso > Gym > Musculos**, el mapa corporal abre cada grupo y
+muestra series de la semana, ultimas cuatro semanas, frecuencia, volumen,
+ejercicios y periodo anterior. Cada serie se atribuye una sola vez al grupo
+primario registrado; los musculos secundarios no se suman de forma oculta.
+Deep link: `?module=progress&view=gym&progressScope=muscle&muscle=pecho`.
 
 Validar estructura:
 

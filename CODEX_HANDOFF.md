@@ -4,7 +4,7 @@ Ultima actualizacion: 2026-07-12
 Rama esperada: `main`
 Version actual: `2.7.0` (fuente unica: `app-version.json`)
 Android: `versionCode 33`, `versionName "2.7.0"`
-Service worker cache: `protocolo-0-100-pwa-2.7.0-b56`
+Service worker cache: `protocolo-0-100-pwa-2.7.0-b57`
 Backup consolidado: `schemaVersion: 3`
 
 Leer primero este archivo y luego `README.md`, `index.html`,
@@ -24,7 +24,7 @@ Estado actual:
 - Gym Party implementado como modulo web/PWA opcional.
 - Nutricion local/FDC opcional.
 - Backups JSON `schemaVersion: 3`.
-- PWA offline con cache derivada `protocolo-0-100-pwa-2.7.0-b56` y
+- PWA offline con cache derivada `protocolo-0-100-pwa-2.7.0-b57` y
   actualizacion consentida desde el aviso visible.
 - APK con widget Android y permiso `INTERNET` para Firebase/Gym Party.
 
@@ -86,7 +86,7 @@ Web:
   tombstones, backoff y contexto horario.
 - `gym-party.js`: modulo Gym Party, registro rapido, graficas y edicion/eliminacion de series.
 - `advanced-features.js`: version `2.7.0`, backup/importacion Gym Party.
-- `sw.js`: cache build 56, actualizacion consentida, incluye modulos nuevos y evita
+- `sw.js`: cache build 57, actualizacion consentida, incluye modulos nuevos y evita
   persistir una configuracion Firebase obsoleta.
 - `README.md`: documenta Gym Party, demo, Firebase, privacidad y pruebas.
 - `CODEX_HANDOFF.md`: este handoff.
@@ -1435,5 +1435,39 @@ Pendiente real de Nutricion: menu contextual para editar/duplicar/mover/copiar
 y eliminar con Deshacer; favoritos; cobertura honesta completa por nutriente;
 clave FDC en modo desarrollador. El flujo principal ya no es monolitico.
 
-Proximo bloque prioritario: extraer los modelos de Progreso Gym e implementar
-la vista personal por musculo, seguida por ejercicio, e1RM y records.
+## 39. Progreso personal por musculo
+
+Implementado despues de `4f7a613`:
+
+- Nuevos modulos puros: `progress/progress-data-model.js`,
+  `progress/gym-progress-model.js` y `progress/muscle-progress.js`.
+- `Progreso > Gym` tiene dos alcances reales: Resumen y Musculos. No se
+  agregaron botones vacios para Ejercicios o Records; pertenecen al siguiente
+  bloque.
+- Deep links: `progressScope=muscle&muscle=<id>`. Seleccionar otro musculo crea
+  historial y Atrás restaura selector, metricas y ejercicios.
+- El mapa corporal es interactivo y accesible; incluye resumen textual. En 320
+  px no recorta botones ni genera scroll horizontal.
+- Formula principal: cada set guardado cuenta una vez en `exercise.muscle` o
+  en el `group` canonico de la biblioteca. `secondaryMuscles` se conserva como
+  metadato, pero no se suma al total principal.
+- Por musculo se calculan series de la semana, series de cuatro semanas,
+  sesiones, frecuencia semanal, volumen externo, ejercicios, cambio contra el
+  periodo anterior, cuatro barras semanales y ultima fecha.
+- Estados: `no-data`, `insufficient`, `partial` y `sufficient`. No se muestran
+  series optimas universales ni diagnosticos de sobreentrenamiento.
+- Peso corporal conserva reps y frecuencia sin presentar `0 kg` como fuerza.
+- `scripts/test-muscle-progress.mjs` verifica periodo real, no doble conteo,
+  peso corporal, cambios y estados. `tests/e2e/progress-muscle.spec.mjs` pasa
+  9/9 en Android Chromium, iPhone WebKit y escritorio, incluyendo 320 px.
+- Regresion completa: 100 aprobadas, 14 omisiones intencionales, cero fallos.
+  Assets Android sincronizados y `:app:assembleDebug` termino correctamente.
+
+Estado publicable: version `2.7.0`, Android `33`, build/cache `57`
+(`protocolo-0-100-pwa-2.7.0-b57`). Los tres modulos se precachean, se publican
+en Pages y se sincronizan al APK.
+
+Pendiente exacto: Progreso por ejercicio, busqueda accesible, variantes,
+mejores series/pesos, e1RM conservador, records derivados y sugerencia de
+progresion. Despues, corregir el resumen integral y retirar escritura nueva en
+`gymSessions`.

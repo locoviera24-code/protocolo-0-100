@@ -4,6 +4,17 @@
   const NUTRITION_KEY='protocolo_0_100_nutrition_entries_v1';
   const LEGACY_GYM_KEY='protocolo_0_100_gym_sessions_v1';
   const views=new Set(['overview','habits','gym','nutrition','history','achievements']);
+  const muscleMapTargets=[
+    {name:'Pecho',label:'Pecho',x:50,y:29,labelX:4,labelY:16,anchorX:27,anchorY:24},
+    {name:'Espalda',label:'Espalda',x:50,y:39,labelX:60,labelY:18,anchorX:70,anchorY:26},
+    {name:'Hombro',label:'Hombro',x:33,y:31,labelX:4,labelY:34,anchorX:27,anchorY:38},
+    {name:'Bíceps',label:'Bíceps',x:26,y:43,labelX:3,labelY:52,anchorX:27,anchorY:55},
+    {name:'Tríceps',label:'Tríceps',x:74,y:43,labelX:60,labelY:42,anchorX:70,anchorY:47},
+    {name:'Cuádriceps / pierna',label:'Cuádriceps',x:43,y:67,labelX:3,labelY:70,anchorX:28,anchorY:73},
+    {name:'Aductores',label:'Aductores',x:51,y:69,labelX:60,labelY:62,anchorX:70,anchorY:66},
+    {name:'Pantorrillas',label:'Pantorrillas',x:43,y:88,labelX:3,labelY:88,anchorX:28,anchorY:91},
+    {name:'Tibial anterior',label:'Tibial',x:57,y:84,labelX:60,labelY:82,anchorX:70,anchorY:86}
+  ];
   let activeView='overview';
 
   function read(key,fallback){
@@ -107,6 +118,40 @@
     const chart=document.getElementById('progressGymChart'),caption=document.getElementById('progressGymChartSummary');
     if(chart)chart.innerHTML=barRows(weeks,{value:row=>row.sets,label:row=>row.label.slice(5),detail:row=>`${row.sessions} sesión(es) · ${displayVolume(row.volume).toLocaleString()} ${unit}`,display:row=>`${row.sets} series`,empty:'Registrá una sesión para ver la evolución semanal.'});
     if(caption)caption.textContent=weeks.length?`Resumen textual: ${weeks.map(week=>`semana ${week.label}, ${week.sets} series y ${displayVolume(week.volume)} ${unit}`).join('; ')}. Más volumen no siempre significa mejor.`:'Resumen textual: no hay sesiones en el período.';
+    renderGymScope();
+  }
+  function gymScopeFromUrl(){const params=new URLSearchParams(location.search);return params.get('progressScope')==='muscle'?'muscle':'summary';}
+  function selectedMuscleFromUrl(){return new URLSearchParams(location.search).get('muscle')||'';}
+  function setGymScope(scope,muscle='',{push=true}={}){
+    const url=new URL(location.href);url.searchParams.set('progressScope',scope);
+    if(scope==='muscle'&&muscle)url.searchParams.set('muscle',muscle);else if(scope!=='muscle')url.searchParams.delete('muscle');
+    if(push){const state=history.state||{},index=(Number(state.index)||0)+1;history.pushState({...state,index,progressScope:scope,muscle:scope==='muscle'?muscle:''},'',`${url.pathname}${url.search}${url.hash}`);}else history.replaceState(history.state,'',`${url.pathname}${url.search}${url.hash}`);
+    renderGymScope();
+  }
+  function muscleMapHtml(model,selected){
+    const byName=new Map(model.muscles.map(item=>[item.name,item])),maxSets=Math.max(1,...model.muscles.map(item=>item.thisWeek.sets));
+    return `<div class="progressMuscleCanvas"><svg class="progressHumanSvg" viewBox="0 0 100 110" role="img" aria-label="Mapa muscular personal. ${escape(model.muscles.map(item=>`${item.name}: ${item.thisWeek.sets} series esta semana`).join('. '))}">
+      <ellipse class="progressBodyPart" cx="50" cy="10" rx="7.4" ry="8.4"></ellipse><path class="progressBodyPart" d="M44 18 Q50 21 56 18 L58 25 Q50 29 42 25 Z"></path><path class="progressBodyPart" d="M29 29 Q38 23 50 24 Q62 23 71 29 Q66 43 63 57 Q59 68 50 70 Q41 68 37 57 Q34 43 29 29 Z"></path>
+      <path class="progressBodyShade" d="M36 31 Q43 28 49 34 L49 47 Q41 45 34 39 Z"></path><path class="progressBodyShade" d="M64 31 Q57 28 51 34 L51 47 Q59 45 66 39 Z"></path><path class="progressBodyShade" d="M42 50 Q50 54 58 50 L55 64 Q50 67 45 64 Z"></path>
+      <path class="progressBodyPart" d="M29 31 Q19 39 21 55 Q22 66 28 67 Q29 55 35 39 Z"></path><path class="progressBodyPart" d="M27 64 Q20 73 22 86 Q26 90 31 85 Q31 73 32 66 Z"></path><path class="progressBodyPart" d="M71 31 Q81 39 79 55 Q78 66 72 67 Q71 55 65 39 Z"></path><path class="progressBodyPart" d="M73 64 Q80 73 78 86 Q74 90 69 85 Q69 73 68 66 Z"></path>
+      <path class="progressBodyPart" d="M39 68 Q50 73 61 68 L65 78 Q57 84 50 83 Q43 84 35 78 Z"></path><path class="progressBodyPart" d="M38 78 Q32 91 35 106 Q41 108 45 104 Q45 91 50 82 Z"></path><path class="progressBodyPart" d="M62 78 Q68 91 65 106 Q59 108 55 104 Q55 91 50 82 Z"></path><path class="progressBodyShade" d="M36 82 Q42 86 44 101 Q39 104 36 101 Q34 90 36 82 Z"></path><path class="progressBodyShade" d="M64 82 Q58 86 56 101 Q61 104 64 101 Q66 90 64 82 Z"></path>
+      ${muscleMapTargets.map(target=>{const row=byName.get(target.name),active=row?.id===selected,opacity=Math.max(.18,Math.min(1,(row?.thisWeek.sets||0)/maxSets));return `<line class="progressMuscleLine ${active?'active':''}" x1="${target.x}" y1="${target.y}" x2="${target.anchorX}" y2="${target.anchorY}"></line><circle class="progressMuscleDot" cx="${target.x}" cy="${target.y}" r="${active?4.3:3.2}" style="opacity:${opacity}"></circle>`;}).join('')}</svg>
+      ${muscleMapTargets.map(target=>{const row=byName.get(target.name),active=row?.id===selected;return `<button type="button" class="progressMuscleButton ${active?'active':''}" style="left:${target.labelX}%;top:${target.labelY}%" data-progress-muscle="${escape(row?.id||'')}" ${row?'':'disabled'}><strong>${escape(target.label)}</strong><span>${row?.thisWeek.sets||0} series</span></button>`;}).join('')}</div>`;
+  }
+  function renderGymScope(){
+    const scope=gymScopeFromUrl();document.querySelectorAll('[data-progress-gym-scope]').forEach(button=>button.classList.toggle('active',button.dataset.progressGymScope===scope));document.querySelectorAll('[data-progress-gym-panel]').forEach(panel=>panel.classList.toggle('hidden',panel.dataset.progressGymPanel!==scope));
+    if(scope!=='muscle')return;
+    const model=window.MUSCLE_PROGRESS.build({sessions:workoutSessions(),library:window.WORKOUT_FEATURES?.getExerciseLibrary?.()||[],days:document.getElementById('progressPeriod')?.value||'30',today:today()}),select=document.getElementById('progressMuscleSelect');
+    if(!model.muscles.length){if(select)select.innerHTML='<option>Sin datos</option>';document.getElementById('progressMuscleMap').innerHTML='<div class="emptyState">Registrá series para activar el mapa muscular.</div>';document.getElementById('progressMuscleSummary').innerHTML='';document.getElementById('progressMuscleWeeklyChart').innerHTML='<div class="emptyState">Todavía no hay semanas comparables.</div>';document.getElementById('progressMuscleExercises').innerHTML='<div class="emptyState">Todavía no hay ejercicios registrados.</div>';document.getElementById('progressMuscleChartSummary').textContent='Resumen textual: no hay series registradas.';return;}
+    let selected=selectedMuscleFromUrl();if(!model.byId[selected])selected=model.muscles[0].id;
+    if(select){select.innerHTML=model.muscles.map(item=>`<option value="${escape(item.id)}">${escape(item.name)}</option>`).join('');select.value=selected;}
+    const muscle=model.byId[selected],unit=window.WORKOUT_FEATURES?.getGymSettings?.().unit||'kg',displayVolume=value=>window.WORKOUT_FEATURES?.displayVolume?.(value,unit)??Math.round(value),stateLabels={'no-data':'Sin datos','insufficient':'Datos insuficientes',partial:'Información parcial',sufficient:'Datos suficientes'};
+    document.getElementById('progressMuscleMap').innerHTML=muscleMapHtml(model,selected);
+    document.getElementById('progressMuscleSummary').innerHTML=[kpi('Series esta semana',muscle.thisWeek.sets,`${muscle.thisWeek.sessions} sesión(es)`),kpi('Series últimas 4 semanas',muscle.lastFourWeeks.sets,`${muscle.frequencyPerWeek} sesión(es)/semana`),kpi('Volumen externo',`${displayVolume(muscle.current.volume).toLocaleString()} ${unit}`,muscle.volumeChange===null?'Sin período anterior':`${muscle.volumeChange>0?'+':''}${muscle.volumeChange}% vs anterior`),kpi('Cobertura de datos',stateLabels[muscle.state],muscle.current.lastDate?`Último registro: ${muscle.current.lastDate}`:'Sin fecha registrada')].join('');
+    document.getElementById('progressMuscleWeeklyChart').innerHTML=barRows(muscle.weekly,{value:row=>row.sets,label:row=>row.label,detail:row=>`${row.sessions} sesión(es) · ${displayVolume(row.volume)} ${unit}`,display:row=>`${row.sets} series`,empty:'No hay series en las últimas cuatro semanas.'});
+    document.getElementById('progressMuscleChartSummary').textContent=`Resumen textual: ${muscle.name}, ${muscle.thisWeek.sets} series esta semana y ${muscle.lastFourWeeks.sets} en cuatro semanas. Más series no siempre significa mejor.`;
+    document.getElementById('progressMuscleExercises').innerHTML=muscle.current.exercises.length?muscle.current.exercises.map(item=>`<article class="progressExerciseRow"><strong>${escape(item.name)}</strong><span>${item.sets} series</span><span>${item.reps} reps</span><span>${item.bodyweight&&!item.volume?'Peso corporal':`${displayVolume(item.volume).toLocaleString()} ${unit}`}</span></article>`).join(''):'<div class="emptyState">No hay ejercicios de este músculo en el período seleccionado.</div>';
+    if(selectedMuscleFromUrl()!==selected)setGymScope('muscle',selected,{push:false});
   }
   function renderNutrition(){
     const days=selectedDays(),all=nutritionEntries(),current=all.filter(entry=>within(entry.date,days)),previous=all.filter(entry=>previousWindow(entry.date,days));
@@ -135,6 +180,9 @@
     document.querySelectorAll('[data-progress-view]').forEach(button=>button.addEventListener('click',()=>applyRoute(button.dataset.progressView,{navigate:true})));
     document.getElementById('progressPeriod')?.addEventListener('change',render);
     document.getElementById('progressArea')?.addEventListener('change',render);
+    document.querySelectorAll('[data-progress-gym-scope]').forEach(button=>button.addEventListener('click',()=>setGymScope(button.dataset.progressGymScope,button.dataset.progressGymScope==='muscle'?(selectedMuscleFromUrl()||document.getElementById('progressMuscleSelect')?.value||''):'')));
+    document.getElementById('progressMuscleSelect')?.addEventListener('change',event=>setGymScope('muscle',event.target.value));
+    document.getElementById('progressMuscleMap')?.addEventListener('click',event=>{const button=event.target.closest('[data-progress-muscle]');if(button?.dataset.progressMuscle)setGymScope('muscle',button.dataset.progressMuscle);});
     document.addEventListener('click',event=>{if(event.target.closest('[data-open-progress]'))window.APP_ROUTER?.navigate({module:'progress',view:'overview'});});
     window.addEventListener('app-route-change',event=>{if(event.detail?.module==='progress')applyRoute(event.detail.view);});
     const route=window.APP_ROUTER?.current();if(route?.module==='progress')applyRoute(route.view);else render();

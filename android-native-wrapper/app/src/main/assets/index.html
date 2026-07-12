@@ -515,8 +515,25 @@
             </section>
 
             <section class="hidden" data-progress-panel="gym" role="tabpanel" aria-labelledby="progress-tab-gym">
-              <div class="progressKpiGrid" id="progressGymSummary"></div>
-              <section class="moduleCard" aria-labelledby="progressGymChartTitle"><h2 id="progressGymChartTitle">Entrenamiento por semana</h2><div id="progressGymChart"></div><p class="chartCaption" id="progressGymChartSummary"></p></section>
+              <nav class="progressGymNav" aria-label="Análisis de Gym">
+                <button type="button" class="active" data-progress-gym-scope="summary">Resumen</button>
+                <button type="button" data-progress-gym-scope="muscle">Músculos</button>
+              </nav>
+              <div data-progress-gym-panel="summary">
+                <div class="progressKpiGrid" id="progressGymSummary"></div>
+                <section class="moduleCard" aria-labelledby="progressGymChartTitle"><h2 id="progressGymChartTitle">Entrenamiento por semana</h2><div id="progressGymChart"></div><p class="chartCaption" id="progressGymChartSummary"></p></section>
+              </div>
+              <section class="hidden" data-progress-gym-panel="muscle" aria-labelledby="progressMuscleTitle">
+                <div class="moduleCard progressMuscleIntro"><div><h2 id="progressMuscleTitle">Progreso por músculo</h2><p class="muted small">Cada serie cuenta una vez en el grupo primario registrado. Los músculos secundarios no se suman automáticamente.</p></div><div class="field"><label for="progressMuscleSelect">Músculo</label><select id="progressMuscleSelect"></select></div></div>
+                <div class="progressMuscleLayout">
+                  <section class="moduleCard progressMuscleMapCard" aria-label="Mapa muscular personal"><div id="progressMuscleMap"></div></section>
+                  <div class="progressMuscleDetails">
+                    <div class="progressKpiGrid" id="progressMuscleSummary"></div>
+                    <section class="moduleCard" aria-labelledby="progressMuscleWeeklyTitle"><h3 id="progressMuscleWeeklyTitle">Series por semana</h3><div id="progressMuscleWeeklyChart"></div><p class="chartCaption" id="progressMuscleChartSummary"></p></section>
+                    <section class="moduleCard" aria-labelledby="progressMuscleExercisesTitle"><h3 id="progressMuscleExercisesTitle">Ejercicios del período</h3><div class="entryList" id="progressMuscleExercises"></div></section>
+                  </div>
+                </div>
+              </section>
             </section>
 
             <section class="hidden" data-progress-panel="nutrition" role="tabpanel" aria-labelledby="progress-tab-nutrition">
@@ -2706,6 +2723,9 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 <script src="gym-party-metrics.js"></script>
 <script src="gym-party-ui.js"></script>
 <script src="gym-party.js"></script>
+<script src="progress/progress-data-model.js"></script>
+<script src="progress/gym-progress-model.js"></script>
+<script src="progress/muscle-progress.js"></script>
 <script src="progress/progress-view.js"></script>
 <script src="advanced-features.js"></script>
 </body>

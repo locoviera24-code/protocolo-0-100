@@ -208,6 +208,25 @@
   .partySectionNav {
     margin-inline: -4px;
   }
+  .progressMuscleIntro {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .progressMuscleIntro .field {
+    min-width: 0;
+  }
+  .progressMuscleLayout {
+    grid-template-columns: 1fr;
+  }
+  .progressMuscleCanvas {
+    min-height: 460px;
+  }
+  .progressExerciseRow {
+    grid-template-columns: 1fr 1fr;
+  }
+  .progressExerciseRow strong {
+    grid-column: 1 / -1;
+  }
 }
 
 @media (max-width: 380px) {
@@ -272,6 +291,11 @@
   .updateBanner button {
     flex: 0 0 auto;
     padding-inline: var(--space-3);
+  }
+  .progressMuscleButton {
+    min-width: 92px;
+    padding: var(--space-1) var(--space-2);
+    font-size: var(--font-label);
   }
   body .quickStickyActions {
     grid-template-columns: 1fr;
