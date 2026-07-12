@@ -586,6 +586,7 @@
               <div class="muted small">La copia incluye protocolo, Gym, Gym Party y nutrición; no incluye la configuración Firebase ni credenciales.</div>
             </div>
             <div class="quickStats dataStats"><div class="quickStat"><span>Última copia</span><strong id="lastBackupAt">Nunca</strong></div><div class="quickStat"><span>Almacenamiento local</span><strong id="localStorageEstimate">0 KB</strong></div><div class="quickStat"><span>Schema</span><strong id="dataSchemaVersion">3</strong></div><div class="quickStat"><span>Claves locales</span><strong id="localStorageKeyCount">0</strong></div></div>
+            <div class="moduleCard"><div class="sectionHeading"><div><h3>Copia interna recuperable</h3><p class="muted small" id="dataLayerDescription">Las claves históricas siguen activas mientras se crea una copia transaccional local para historiales crecientes.</p></div><strong id="indexedDbStatus">Preparando</strong></div></div>
             <div class="moduleCard"><h3>Restablecimiento selectivo</h3><p class="muted small">Borra solo el área elegida. Las demás permanecen intactas.</p><div class="buttons"><button type="button" class="secondary" data-reset-scope="protocol">Protocolo diario</button><button type="button" class="secondary" data-reset-scope="gym">Gym local</button><button type="button" class="secondary" data-reset-scope="nutrition">Nutrición</button><button type="button" class="secondary" data-reset-scope="ui">Preferencias visuales</button></div></div>
             <details class="moduleCard dangerZone"><summary>Zona de peligro</summary><p>Esta acción borra todos los datos locales de Protocolo 0→100 en este navegador.</p><button type="button" class="danger" id="resetAllDataBtn">Borrar todos los datos locales</button></details>
           </section>
@@ -662,6 +663,8 @@
   </div>
 
 <script src="app-version.js"></script>
+<script src="data/indexeddb.js"></script>
+<script src="data/repositories.js"></script>
 <script src="nutrition-data.js"></script>
 <script src="fdc-client.js"></script>
 <script src="ui/router.js"></script>
@@ -795,10 +798,14 @@ function planForDay(day){
   return p;
 }
 
-function getEntries(){ try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]')}catch(e){return []} }
-function setEntries(entries){ localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); }
-function getLocalData(key, fallback){ try{ const value=JSON.parse(localStorage.getItem(key)); return value ?? fallback; }catch(e){ return fallback; } }
-function setLocalData(key, value){ localStorage.setItem(key, JSON.stringify(value)); }
+function getEntries(){ return window.APP_REPOSITORIES?.protocol.get(STORAGE_KEY,[])??[]; }
+function setEntries(entries){ return window.APP_REPOSITORIES?.protocol.set(STORAGE_KEY,entries)??entries; }
+function getLocalData(key, fallback){ return window.APP_DATA?.read(key,fallback)??fallback; }
+function setLocalData(key, value){ return window.APP_DATA?.write(key,value)??value; }
+window.addEventListener('app-data-error',event=>{
+  const message=event.detail?.userMessage;
+  if(message)setTimeout(()=>flash(message),0);
+});
 function uiPreferences(){
   return {appearance:'dark',density:'comfortable',experienceMode:'guided',unit:'kg',showRir:true,nutritionGuidance:true,notifications:false,autoSync:true,...getLocalData(UI_PREFERENCES_KEY,{})};
 }
@@ -846,6 +853,16 @@ function renderSettingsData(){
   const last=document.getElementById('lastBackupAt');if(last)last.textContent=meta.lastExportAt?new Intl.DateTimeFormat('es-PY',{dateStyle:'short',timeStyle:'short'}).format(new Date(meta.lastExportAt)):'Nunca';
   const storage=document.getElementById('localStorageEstimate');if(storage)storage.textContent=formatStorage(estimatedLocalStorage());
   const count=document.getElementById('localStorageKeyCount');if(count)count.textContent=String(localStorage.length);
+  const indexedStatus=document.getElementById('indexedDbStatus');
+  if(indexedStatus&&window.APP_DATA){
+    indexedStatus.textContent='Preparando';
+    window.APP_DATA.ready().then(()=>window.APP_DATA.diagnostics()).then(diagnostics=>{
+      const domains=Object.values(diagnostics.domains||{}),complete=domains.filter(item=>item.status==='complete').length;
+      indexedStatus.textContent=!diagnostics.indexedDB?'No disponible':complete===domains.length?'Lista':`${complete}/${domains.length} áreas`;
+      const description=document.getElementById('dataLayerDescription');
+      if(description&&diagnostics.lastError)description.textContent=diagnostics.lastError.type==='quota'?'No queda espacio suficiente para actualizar la copia interna. Los datos históricos permanecen en sus claves actuales.':'La copia interna tuvo un problema recuperable. Los datos históricos permanecen en sus claves actuales.';
+    }).catch(()=>{indexedStatus.textContent='No disponible';});
+  }
   const web=document.getElementById('aboutWebVersion');if(web)web.textContent=APP_WEB_VERSION;
   const android=document.getElementById('aboutAndroidVersion');if(android)android.textContent=androidVersionLabel();
   const cache=document.getElementById('aboutCacheVersion');if(cache)cache.textContent=APP_CACHE_VERSION;
@@ -858,15 +875,33 @@ function resetKeysForScope(scope){
   if(scope==='nutrition')return keys.filter(key=>(/protocolo_0_100_(nutrition|body_metrics|custom_foods|saved_meals|fdc_)/).test(key||''));
   if(scope==='ui')return keys.filter(key=>[UI_PREFERENCES_KEY,ACTIVE_MODULE_KEY].includes(key));return [];
 }
-function resetDataScope(scope){
+async function resetDataScope(scope){
   const labels={protocol:'el protocolo diario',gym:'los datos locales de Gym',nutrition:'Nutrición',ui:'las preferencias visuales'};
   if(!labels[scope]||!confirm('¿Borrar '+labels[scope]+'? Las demás áreas permanecerán intactas.'))return;
-  resetKeysForScope(scope).forEach(key=>localStorage.removeItem(key));location.reload();
+  const keys=resetKeysForScope(scope);
+  if(window.APP_DATA)await window.APP_DATA.purgeKeys(keys);
+  else keys.forEach(key=>localStorage.removeItem(key));
+  if(scope==='protocol'){
+    document.getElementById('startDate').value=todayStr();
+    document.getElementById('entryDate').value=todayStr();
+    fillForm(null);
+  }
+  if(scope==='gym'){
+    gymDraft=[];
+    window.WORKOUT_FEATURES?.ensureWorkoutData?.();
+  }
+  if(scope==='nutrition'){
+    populateFoods();loadNutritionTargets();loadBodyMetricsForDate();
+  }
+  if(scope==='ui')applyUiPreferences();
+  renderAll();renderSettingsData();flash('Datos de '+labels[scope]+' eliminados en este dispositivo.');
 }
-function resetAllAppData(){
+async function resetAllAppData(){
   if(!confirm('¿Borrar todos los datos locales de Protocolo 0→100? Esta acción no se puede deshacer sin una copia.'))return;
   const keys=[];for(let index=0;index<localStorage.length;index++)keys.push(localStorage.key(index));
-  keys.filter(key=>key?.startsWith('protocolo_0_100_')).forEach(key=>localStorage.removeItem(key));location.reload();
+  if(window.APP_DATA)await window.APP_DATA.clearAllData();
+  else keys.filter(key=>key?.startsWith('protocolo_0_100_')).forEach(key=>localStorage.removeItem(key));
+  location.reload();
 }
 function uid(prefix){ return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2,8)}`; }
 

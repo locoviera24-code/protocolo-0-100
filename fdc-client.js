@@ -44,9 +44,11 @@
   };
 
   function read(key,fallback){
+    if(window.APP_DATA)return window.APP_DATA.read(key,fallback);
     try{const value=JSON.parse(localStorage.getItem(key));return value??fallback}catch(e){return fallback}
   }
   function write(key,value){
+    if(window.APP_DATA){window.APP_DATA.write(key,value);return true}
     try{localStorage.setItem(key,JSON.stringify(value));return true}catch(e){return false}
   }
   function normalizeText(value){

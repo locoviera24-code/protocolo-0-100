@@ -1,10 +1,10 @@
 # CODEX_HANDOFF - Protocolo 0->100
 
-Ultima actualizacion: 2026-06-30
+Ultima actualizacion: 2026-07-12
 Rama esperada: `main`
 Version actual: `2.7.0` (fuente unica: `app-version.json`)
 Android: `versionCode 33`, `versionName "2.7.0"`
-Service worker cache: `protocolo-0-100-pwa-2.7.0-b52`
+Service worker cache: `protocolo-0-100-pwa-2.7.0-b53`
 Backup consolidado: `schemaVersion: 3`
 
 Leer primero este archivo y luego `README.md`, `index.html`,
@@ -24,7 +24,8 @@ Estado actual:
 - Gym Party implementado como modulo web/PWA opcional.
 - Nutricion local/FDC opcional.
 - Backups JSON `schemaVersion: 3`.
-- PWA offline con cache v45 y actualizacion consentida desde el aviso visible.
+- PWA offline con cache derivada `protocolo-0-100-pwa-2.7.0-b53` y
+  actualizacion consentida desde el aviso visible.
 - APK con widget Android y permiso `INTERNET` para Firebase/Gym Party.
 
 ## 2. Funcionalidades ya existen
@@ -85,7 +86,7 @@ Web:
   tombstones, backoff y contexto horario.
 - `gym-party.js`: modulo Gym Party, registro rapido, graficas y edicion/eliminacion de series.
 - `advanced-features.js`: version `2.7.0`, backup/importacion Gym Party.
-- `sw.js`: cache v45, actualizacion consentida, incluye modulos nuevos y evita
+- `sw.js`: cache build 53, actualizacion consentida, incluye modulos nuevos y evita
   persistir una configuracion Firebase obsoleta.
 - `README.md`: documenta Gym Party, demo, Firebase, privacidad y pruebas.
 - `CODEX_HANDOFF.md`: este handoff.
@@ -459,7 +460,10 @@ arrastrar la configuracion Firebase en JSON compartidos.
   transacciones/actualizaciones acotadas, pero sigue optimizado para hasta 10.
 - `index.html`, `workout-features.js` y `gym-party.js` siguen siendo grandes;
   la fase 15 inicio extraccion incremental sin reescribirlos.
-- No hay IndexedDB; localStorage puede quedarse corto con historiales enormes.
+- IndexedDB funciona como espejo transaccional por dominios, pero
+  `localStorage` sigue siendo la fuente sincrona compatible. La lectura
+  primaria desde IndexedDB y el retiro gradual de claves grandes siguen
+  pendientes hasta completar pruebas por dominio.
 
 ## 12. Decisiones tecnicas importantes
 
@@ -1181,12 +1185,12 @@ combobox Gym, mensajes/estados centrales, accesibilidad final y rendimiento.
   heredados/dinamicos siguen inventariados y son deuda explicita, no se
   consideran migrados.
 - `app-version.json` es la fuente unica: version `2.7.0`, Android
-  `versionCode 33`, build web/cache `52` y fecha `2026-07-11`.
+  `versionCode 33`, build web/cache `53` y fecha `2026-07-12`.
 - `app-version.js` es el artefacto generado para web y service worker;
   `scripts/sync-app-version.mjs` lo regenera y alinea package/lockfile.
 - `index.html`, Acerca de, `advanced-features.js`, `sw.js`, Gradle y el workflow
   release consumen o validan esa fuente. Cache derivado:
-  `protocolo-0-100-pwa-2.7.0-b52`; APK:
+  `protocolo-0-100-pwa-2.7.0-b53`; APK:
   `protocolo-0-100-v2.7.0-release.apk`.
 - `scripts/test-version-alignment.mjs` y `npm run test:version` fallan ante
   divergencias. Pages y workflows Android ejecutan este contrato.
@@ -1227,3 +1231,40 @@ de historiales/Nutricion y crear el sistema central de mensajes/estados.
 Pendiente antes de declarar Ajustes completo: onboarding reabrible del modo
 guiado; probar autosync con Firebase Emulator y aclarar/implementar recordatorios
 Android fuera del cronometro de descanso.
+
+## 34. Refactor robusta - repositorios e IndexedDB gradual
+
+- `data/indexeddb.js` crea `protocolo_0_100_data` con almacenes `records`,
+  `meta` y `recovery`. El modo inicial es `shadow`: conserva todas las claves
+  historicas como fuente sincrona y replica en una cola asincrona.
+- Migraciones v1 por dominio: `protocol`, `workout`, `nutrition`, `gymParty`,
+  `settings` y `backup`. Son idempotentes, crean snapshot previo y una
+  transaccion fallida restaura el estado local.
+- `data/repositories.js` expone `ProtocolRepository`, `WorkoutRepository`,
+  `NutritionRepository`, `GymPartyLocalRepository`, `SettingsRepository` y
+  `BackupRepository`, ademas de instancias en `window.APP_REPOSITORIES`.
+- `index.html`, `workout-store.js`, `workout-ranking.js`, `fdc-client.js` y
+  `gym-party.js` escriben por la capa compatible. Backups JSON y nombres de
+  claves no cambiaron.
+- `BroadcastChannel` y el evento `storage` anuncian entre pestanas solo clave,
+  dominio, origen y fecha; nunca transmiten el contenido del registro.
+- Errores de cuota/migracion se clasifican y emiten como `app-data-error` con
+  un mensaje recuperable. `Mas > Datos y copias` muestra el estado de la copia
+  interna sin exponer datos.
+- El espejo elimina `firebaseConfig` de los ajustes Gym Party y no incluye la
+  clave FDC. El restablecimiento selectivo purga clave, espejo y snapshots del
+  area; borrar todo limpia tambien metadatos y recuperacion IndexedDB.
+- Assets nuevos se cachean en PWA, se publican en Pages y se sincronizan al
+  APK. Cache actual: `protocolo-0-100-pwa-2.7.0-b53`.
+- Pruebas: `scripts/test-data-layer.mjs` y
+  `tests/e2e/data-layer.spec.mjs`. Cubren migracion real, idempotencia, espejo,
+  rollback, dos pestanas, exclusion Firebase y purga.
+- Verificacion del bloque: Node/validador OK; Android Chromium 24 OK y 2
+  omisiones; iPhone WebKit 19 OK y 7 omisiones; escritorio Chromium 21 OK y 5
+  omisiones. La carrera de recarga del reset selectivo detectada en escritorio
+  se elimino y su regresion paso 3 repeticiones. Firestore Emulator y
+  `:app:assembleDebug` terminaron correctamente.
+
+Pendiente real de esta fase: migrar la lectura primaria de cada dominio solo
+despues de medir estabilidad; probar cuota agotada con una inyeccion controlada;
+conectar `BackupRepository` con la futura importacion con preview y Deshacer.

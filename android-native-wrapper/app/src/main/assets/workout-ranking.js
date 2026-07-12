@@ -17,6 +17,11 @@
   function dateFromString(value){ const [y,m,d]=String(value||'').slice(0,10).split('-').map(Number); return new Date(y||1970,(m||1)-1,d||1); }
   function dayKeyForDate(value){ return ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][dateFromString(value).getDay()]; }
   function read(){
+    if(window.APP_DATA){
+      const value=window.APP_DATA.read(STORAGE_KEY,null);
+      if(value?.schemaVersion===SCHEMA_VERSION && value.exercises && typeof value.exercises==='object') return value;
+      return {schemaVersion:SCHEMA_VERSION,exercises:{},updatedAt:null};
+    }
     try{
       const raw=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null');
       if(raw?.schemaVersion===SCHEMA_VERSION && raw.exercises && typeof raw.exercises==='object') return raw;
@@ -25,7 +30,8 @@
   }
   function write(value){
     const next={schemaVersion:SCHEMA_VERSION,exercises:value?.exercises||{},updatedAt:new Date().toISOString()};
-    localStorage.setItem(STORAGE_KEY,JSON.stringify(next));
+    if(window.APP_DATA)window.APP_DATA.write(STORAGE_KEY,next);
+    else localStorage.setItem(STORAGE_KEY,JSON.stringify(next));
     return next;
   }
   function exerciseIdOf(exercise){ return String(exercise?.exerciseId||exercise?.id||'').trim(); }

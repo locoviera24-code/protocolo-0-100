@@ -10,6 +10,7 @@ on:
       - index.html
       - app-version.json
       - app-version.js
+      - data/**
       - nutrition-data.js
       - fdc-client.js
       - workout-features.js
@@ -96,6 +97,9 @@ jobs:
       - name: Probar contratos funcionales de Ajustes
         run: npm run test:settings
 
+      - name: Probar repositorios e IndexedDB
+        run: npm run test:data
+
       - name: Probar Progreso consolidado
         run: npm run test:progress
 
@@ -110,12 +114,13 @@ jobs:
 
       - name: Preparar archivos publicos
         run: |
-          mkdir -p dist-pages/icons dist-pages/styles dist-pages/ui dist-pages/progress
+          mkdir -p dist-pages/icons dist-pages/styles dist-pages/ui dist-pages/progress dist-pages/data
           cp index.html app-version.json app-version.js nutrition-data.js fdc-client.js workout-store.js workout-plan.js workout-metrics.js workout-ranking.js workout-ui.js workout-features.js firebase-config.js firebase-service.js gym-party-sync.js gym-party-metrics.js gym-party-ui.js gym-party.js advanced-features.js manifest.webmanifest sw.js dist-pages/
           cp icons/icon-192.png icons/icon-512.png dist-pages/icons/
           cp styles/*.css dist-pages/styles/
           cp ui/*.js dist-pages/ui/
           cp progress/*.js dist-pages/progress/
+          cp data/*.js dist-pages/data/
 
       - name: Generar configuracion Firebase opcional
         shell: pwsh

@@ -15,7 +15,7 @@ PWA y APK Android para medir habitos, atencion, actividad fisica y nutricion con
 
 ## Navegacion y diseno
 
-La version actual `v2.7.0` (build web `52`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
+La version actual `v2.7.0` (build web `53`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
 **Gym**, **Nutricion**, **Progreso** y **Mas**. En escritorio usa una barra
 lateral compacta. Gym Party se abre desde **Gym > Grupo**, desde un acceso
 discreto en Inicio o mediante un enlace `gymPartyCode`; ya no ocupa un boton
@@ -52,7 +52,9 @@ index.html                  Interfaz, protocolo, gym y nutricion
 styles/*.css                Tokens, base, componentes y estilos por modulo
 ui/router.js                Router module/view, historial, deep links y Atrás
 ui/navigation.js            Coordinador de sticky, banners, teclado y safe areas
-workout-store.js            Acceso conservador y versionado a localStorage Gym
+data/indexeddb.js           Espejo transaccional, migraciones y recuperacion local
+data/repositories.js        Repositorios por dominio sobre claves compatibles
+workout-store.js            Acceso conservador y versionado al repositorio Gym
 workout-plan.js             Normalizacion, deduplicacion e insercion en rutinas
 workout-ui.js               Renderizadores pequenos y anuncios accesibles de Gym
 workout-features.js         Orquestador de rutina, registro, historial y widget Android

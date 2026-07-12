@@ -82,6 +82,9 @@ jobs:
       - name: Probar contratos funcionales de Ajustes
         run: npm run test:settings
 
+      - name: Probar repositorios e IndexedDB
+        run: npm run test:data
+
       - name: Probar Progreso consolidado
         run: npm run test:progress
 

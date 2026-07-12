@@ -84,6 +84,7 @@
   let partyRestTimerEndsAt = 0;
 
   function read(key, fallback){
+    if(window.APP_DATA) return window.APP_DATA.read(key, fallback);
     try{
       const raw = localStorage.getItem(key);
       return raw === null ? fallback : JSON.parse(raw) ?? fallback;
@@ -92,6 +93,7 @@
     }
   }
   function write(key, value){
+    if(window.APP_DATA) return window.APP_DATA.write(key, value);
     localStorage.setItem(key, JSON.stringify(value));
     return value;
   }
@@ -196,7 +198,8 @@
   function membership(){ return read(keys.membership, null); }
   function saveMembership(value){ return write(keys.membership, value); }
   function clearMembership(){
-    localStorage.removeItem(keys.membership);
+    if(window.APP_DATA) window.APP_DATA.remove(keys.membership);
+    else localStorage.removeItem(keys.membership);
     renderGymParty();
   }
   function activeMembership(){
