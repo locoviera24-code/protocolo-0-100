@@ -170,6 +170,37 @@
   .nutritionHeroHead button {
     width: 100%;
   }
+  .nutritionTodayHeader {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .nutritionDateField {
+    min-width: 0;
+  }
+  .nutritionTodayAction button {
+    width: 100%;
+  }
+  .nutritionWaterCard,
+  .nutritionWaterActions {
+    align-items: stretch;
+  }
+  .nutritionWaterActions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+  }
+  .nutritionWaterEdit,
+  .nutritionWaterEdit input,
+  .nutritionWaterActions #saveNutritionWaterBtn,
+  .nutritionWaterActions #undoNutritionWaterBtn {
+    width: 100%;
+  }
+  .nutritionSecondaryActions {
+    justify-content: stretch;
+  }
+  .nutritionSecondaryActions button {
+    flex: 1 1 auto;
+  }
   .gymSectionNav,
   .partySectionNav {
     margin-inline: -4px;
@@ -208,6 +239,19 @@
   .metricCard:first-child,
   .quickStat:first-child {
     border-top: 0;
+  }
+  #nutritionTodayCard .nutritionTodayStats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  #nutritionTodayCard .nutritionTodayStats .quickStat {
+    border-top: 0;
+    border-right: 1px solid var(--color-border-soft);
+  }
+  #nutritionTodayCard .nutritionTodayStats .quickStat:nth-child(2n) {
+    border-right: 0;
+  }
+  #nutritionTodayCard .nutritionTodayStats .quickStat:nth-child(n + 3) {
+    border-top: 1px solid var(--color-border-soft);
   }
   body .quickStickyActions {
     grid-template-columns: 1fr;

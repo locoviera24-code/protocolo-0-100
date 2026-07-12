@@ -4,7 +4,7 @@ Ultima actualizacion: 2026-07-12
 Rama esperada: `main`
 Version actual: `2.7.0` (fuente unica: `app-version.json`)
 Android: `versionCode 33`, `versionName "2.7.0"`
-Service worker cache: `protocolo-0-100-pwa-2.7.0-b54`
+Service worker cache: `protocolo-0-100-pwa-2.7.0-b55`
 Backup consolidado: `schemaVersion: 3`
 
 Leer primero este archivo y luego `README.md`, `index.html`,
@@ -24,7 +24,7 @@ Estado actual:
 - Gym Party implementado como modulo web/PWA opcional.
 - Nutricion local/FDC opcional.
 - Backups JSON `schemaVersion: 3`.
-- PWA offline con cache derivada `protocolo-0-100-pwa-2.7.0-b54` y
+- PWA offline con cache derivada `protocolo-0-100-pwa-2.7.0-b55` y
   actualizacion consentida desde el aviso visible.
 - APK con widget Android y permiso `INTERNET` para Firebase/Gym Party.
 
@@ -86,7 +86,7 @@ Web:
   tombstones, backoff y contexto horario.
 - `gym-party.js`: modulo Gym Party, registro rapido, graficas y edicion/eliminacion de series.
 - `advanced-features.js`: version `2.7.0`, backup/importacion Gym Party.
-- `sw.js`: cache build 54, actualizacion consentida, incluye modulos nuevos y evita
+- `sw.js`: cache build 55, actualizacion consentida, incluye modulos nuevos y evita
   persistir una configuracion Firebase obsoleta.
 - `README.md`: documenta Gym Party, demo, Firebase, privacidad y pruebas.
 - `CODEX_HANDOFF.md`: este handoff.
@@ -1346,6 +1346,59 @@ Pruebas nuevas:
   omisiones intencionales; cero fallos. `:app:assembleDebug` volvio a compilar
   con los siete assets Nutricion sincronizados.
 
-Pendiente exacto: fase 2, rediseñar la interfaz a Hoy/Agregar/Progreso y mover
-objetivos, perfil, personalizados y FDC a Ajustes. Agua y peso siguen dentro
-del formulario antiguo hasta ese bloque; no afirmar que la UX nueva existe.
+La extraccion de dominio quedo cerrada en `fc513ec`. El siguiente bloque de UX
+se documenta en la seccion 37.
+
+## 37. Nutricion - Hoy simple, agua separada y ajustes secundarios
+
+Implementado sobre `fc513ec`, sin cambiar claves ni schema:
+
+- La navegacion normal de Nutricion queda en tres destinos: `Hoy`, `Agregar` y
+  `Progreso`. Cobertura se abre como detalle secundario desde Hoy.
+- `#nutritionTodayCard` concentra fecha, calorias, proteina, fibra, agua, un
+  unico CTA `Agregar alimento`, comidas agrupadas y controles de hidratacion.
+- `renderNutrition()` usa `NUTRITION_VIEW.dayModel()` y
+  `NUTRITION_MODEL.groupByMeal()`. Ya no muestra una lista plana ni duplica el
+  score orientativo en la portada.
+- Agua se guarda con `saveNutritionWater()`, ofrece `+250 ml`, `+500 ml`,
+  edicion manual y `undoNutritionWater()`. Al guardar agua se conserva el peso
+  previo de esa fecha.
+- Peso corporal se guarda por separado con `saveNutritionWeight()` en
+  `Mas > Ajustes > Nutricion`; continua almacenado en la misma estructura
+  `bodyMetrics`, en kg canonicos. La preferencia lb convierte solo entrada,
+  salida e historial; no reescribe registros.
+- Objetivos, alimentos personalizados y configuracion FDC se mueven en runtime
+  a `#nutritionSettingsMount`. No aparecen en el flujo diario.
+- Los campos manuales de macros/micronutrientes estan plegados bajo `Crear
+  alimento personalizado`. Frecuentes, copia y acciones destructivas quedan
+  en un detalle secundario.
+- `nutritionDiagnosisCard` y los textos principales ahora hablan de
+  `Cobertura estimada de lo registrado`, sin presentar diagnostico clinico.
+- Se corrigieron los selectores CSS corruptos `#fdcSearchCard` y
+  `#fdcSettingsCard`. El validador de colores distingue IDs CSS que comienzan
+  con letras hexadecimales de colores reales.
+- `tests/e2e/nutrition-today.spec.mjs` prueba las tres vistas, ajustes fuera del
+  flujo, agrupacion por comida, agua/peso independientes, Deshacer y 320 px.
+
+Verificacion final del bloque:
+
+- Validadores y todos los `scripts/test-*.mjs`: correctos.
+- Playwright completo: 82 aprobadas, 14 omisiones intencionales, cero fallos
+  en Android Chromium, iPhone WebKit y escritorio Chromium.
+- Tras completar kg/lb corporal, la suite dirigida de Nutricion paso 12/12 en
+  las tres plataformas y el APK se recompilo correctamente.
+- Firestore Emulator: correcto; las denegaciones del log son los seis casos
+  negativos esperados por las reglas.
+- Assets web/Android: sincronizados y comprobados bit a bit.
+- Android `:app:assembleDebug`: `BUILD SUCCESSFUL` con Java 17.
+
+Estado de version del bloque: `2.7.0`, Android `33`, build/cache `55`:
+`protocolo-0-100-pwa-2.7.0-b55`.
+
+Pendiente exacto de Nutricion: convertir `Agregar` en el flujo guiado completo
+buscar > alimento > cantidad > comida > revisar > guardar; agregar menu
+contextual editar/duplicar/mover/copiar/eliminar con Deshacer; completar la
+cobertura honesta por nutriente y mover la clave FDC a modo desarrollador.
+
+Proximo bloque prioritario: extraer los modelos de Progreso Gym e implementar
+la vista personal por musculo, seguida por ejercicio, e1RM y records.

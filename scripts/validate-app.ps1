@@ -88,7 +88,7 @@ $duplicates = $staticIds | Group-Object | Where-Object Count -gt 1 | Select-Obje
 Assert-True ($duplicates.Count -eq 0) "Hay IDs HTML duplicados: $($duplicates -join ', ')"
 
 $requiredFiles = @(
-    'nutrition/nutrition-store.js', 'nutrition/nutrition-model.js', 'nutrition/food-search.js', 'nutrition/food-entry-flow.js', 'nutrition/meal-history.js', 'nutrition/nutrition-confidence.js', 'nutrition/nutrition-view.js', 'scripts/test-nutrition-modules.mjs', 'tests/e2e/nutrition-domain.spec.mjs',
+    'nutrition/nutrition-store.js', 'nutrition/nutrition-model.js', 'nutrition/food-search.js', 'nutrition/food-entry-flow.js', 'nutrition/meal-history.js', 'nutrition/nutrition-confidence.js', 'nutrition/nutrition-view.js', 'scripts/test-nutrition-modules.mjs', 'tests/e2e/nutrition-domain.spec.mjs', 'tests/e2e/nutrition-today.spec.mjs',
     'data/backup-service.js', 'scripts/test-backup-service.mjs', 'tests/e2e/backup-import.spec.mjs',
     'app-version.json', 'app-version.js', 'data/indexeddb.js', 'data/repositories.js', 'nutrition-data.js', 'fdc-client.js', 'workout-store.js', 'workout-plan.js', 'workout-metrics.js', 'workout-ranking.js', 'workout-ui.js', 'workout-features.js', 'advanced-features.js', 'ui/router.js', 'ui/navigation.js', 'progress/progress-view.js',
     'firebase-config.js', 'firebase-service.js', 'gym-party-sync.js', 'gym-party-metrics.js', 'gym-party-ui.js', 'gym-party.js',
@@ -518,7 +518,7 @@ Assert-True ($html.Contains('data-open-gym-party')) 'Faltan tarjetas/accesos rap
 foreach ($contract in @('data-gym-section="train"','data-gym-section="routine"','data-gym-section="progress"','gymLegacyDetails')) {
     Assert-True ($html.Contains($contract)) "Falta jerarquia Gym: $contract"
 }
-foreach ($contract in @('nutritionHeroHead','data-open-nutrition-view="registrar"','nutritionAssistantDetails','id="fdcSearchCard"','progressRewardsDetails','progressSecondaryDetails')) {
+foreach ($contract in @('id="nutritionTodayCard"','id="nutritionScoreSummary"','id="nutritionWaterAdd250"','data-open-nutrition-view="registrar"','nutritionAssistantDetails','id="fdcSearchCard"','progressRewardsDetails','progressSecondaryDetails')) {
     Assert-True ($html.Contains($contract)) "Falta jerarquia progresiva: $contract"
 }
 Assert-True ($html.Contains('function maybeAutoShowActionModal(){ renderActionCard(); }')) 'La accion diaria no debe abrir un modal automatico'

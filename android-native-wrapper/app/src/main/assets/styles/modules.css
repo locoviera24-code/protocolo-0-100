@@ -725,19 +725,19 @@ body .partySetCounters > div:last-child {
   display: flex;
   flex-direction: column;
 }
-#tab-nutricion > .moduleHero {
+#tab-nutricion > .nutritionNav {
   order: 1;
 }
-#tab-nutricion > .nutritionNav {
-  order: 2;
-}
 #nutritionBuilderCard {
+  order: 3;
+}
+#nutritionTodayCard {
   order: 3;
 }
 #nutritionAssistantCard {
   order: 4;
 }
-var(--color-danger)SearchCard {
+#fdcSearchCard {
   order: 5;
 }
 #nutritionCoverageCard,
@@ -745,7 +745,7 @@ var(--color-danger)SearchCard {
 #nutritionDiagnosisCard,
 #nutritionTrendsCard,
 #customFoodsCard,
-var(--color-danger)SettingsCard,
+#fdcSettingsCard,
 #nutritionHistoryCard {
   order: 3;
 }
@@ -753,11 +753,103 @@ var(--color-danger)SettingsCard,
   color: var(--color-text);
 }
 #nutritionAssistantCard,
-var(--color-danger)SearchCard {
+#fdcSearchCard {
   padding: var(--space-3) var(--space-4);
   border: 1px solid var(--color-border-soft);
   border-radius: var(--radius-panel);
   background: var(--color-surface);
+}
+.nutritionTodayHeader,
+.nutritionWaterCard,
+.nutritionMealGroup > header,
+.nutritionFoodRow,
+.nutritionSecondaryActions,
+.nutritionWaterActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.nutritionTodayHeader,
+.nutritionMealGroup > header,
+.nutritionFoodRow {
+  justify-content: space-between;
+}
+.nutritionDateField {
+  min-width: 160px;
+}
+.nutritionTodayStats {
+  margin-top: var(--space-4);
+}
+.nutritionTodayAction {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--space-3);
+}
+.nutritionMealList {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+.nutritionMealGroup {
+  overflow: hidden;
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-soft);
+}
+.nutritionMealGroup > header {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border-soft);
+  background: var(--surface-glass);
+}
+.nutritionMealGroup > header span {
+  color: var(--color-text-muted);
+  font-size: var(--font-label);
+}
+.nutritionFoodRow {
+  min-height: var(--control-height);
+  padding: var(--space-2) var(--space-3);
+}
+.nutritionFoodRow + .nutritionFoodRow {
+  border-top: 1px solid var(--color-border-soft);
+}
+.nutritionFoodRow .textButton,
+.nutritionSecondaryActions .textButton,
+.nutritionWaterActions .textButton {
+  min-height: var(--control-height);
+  border: 0;
+  color: var(--color-primary);
+  background: transparent;
+}
+.nutritionWaterCard {
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin-top: var(--space-4);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-control);
+  background: var(--surface-glass-soft);
+}
+.nutritionWaterCard > div:first-child {
+  display: grid;
+  gap: var(--space-1);
+}
+.nutritionWaterActions {
+  flex-wrap: wrap;
+}
+.nutritionWaterEdit input {
+  width: 92px;
+}
+.nutritionSecondaryActions {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  margin-top: var(--space-2);
+}
+.nutritionMealTools {
+  margin-top: var(--space-3);
+}
+#nutritionSettingsMount {
+  display: grid;
+  gap: var(--space-4);
 }
 .coverageGrid,
 .recommendGrid {

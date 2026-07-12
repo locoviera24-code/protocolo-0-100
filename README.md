@@ -8,14 +8,14 @@ PWA y APK Android para medir habitos, atencion, actividad fisica y nutricion con
 - **Gym:** rutinas, ejercicios por musculo, series, repeticiones, peso, RIR, volumen e historial.
 - **Widget Android de gimnasio:** widget nativo de pantalla de inicio con rutina del dia, progreso y registro directo incremental de series.
 - **Gym Party:** sala privada opcional para compartir entrenamientos, comparar progreso semanal/mensual y probar graficas en modo demo.
-- **Nutricion:** alimentos base curados, busqueda por alias, cantidades en gramos, comidas frecuentes, alimentos propios, asistente por texto/voz, hidratacion y metas editables.
+- **Nutricion:** portada simple Hoy/Agregar/Progreso, comidas agrupadas, agua independiente, busqueda por alias, cantidades, frecuentes, alimentos propios y metas editables.
 - **USDA FoodData Central opcional:** busqueda paginada, detalle por `fdcId`, normalizacion por 100 g, cache offline e importador JSON.
 - **Progreso integral:** scores separados e integral, Focus Coins no financieros, recompensas, rankings mensuales opcionales y referidos simulados.
 - **Telefono Android:** importacion opcional de estadisticas de uso con permiso explicito.
 
 ## Navegacion y diseno
 
-La version actual `v2.7.0` (build web `54`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
+La version actual `v2.7.0` (build web `55`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
 **Gym**, **Nutricion**, **Progreso** y **Mas**. En escritorio usa una barra
 lateral compacta. Gym Party se abre desde **Gym > Grupo**, desde un acceso
 discreto en Inicio o mediante un enlace `gymPartyCode`; ya no ocupa un boton
@@ -94,8 +94,10 @@ firebase/                   Reglas, esquema y configuracion ejemplo para Gym Par
 Nutricion mantiene por compatibilidad sus APIs globales actuales, pero el
 nucleo ya se divide en `nutrition/*.js`. Las lecturas y escrituras pasan por
 `NutritionRepository` cuando existe y continúan en modo shadow: IndexedDB aún
-no es la fuente primaria. Esta extracción no cambia claves ni formatos de
-backup y prepara el rediseño posterior de Hoy/Agregar/Progreso.
+no es la fuente primaria. La vista normal tiene solo **Hoy**, **Agregar** y
+**Progreso**. Hoy agrupa alimentos por comida y separa el agua; peso corporal,
+objetivos, alimentos propios y FDC viven en **Mas > Ajustes > Nutricion**. Las
+claves y formatos de backup no cambiaron.
 
 Antes de importar un JSON, la app valida tamaño y schema, sanea claves y
 cadenas, muestra registros nuevos/reemplazados/conflictos y crea una copia

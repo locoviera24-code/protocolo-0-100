@@ -140,12 +140,6 @@
     const main=document.getElementById('nutritionCoverageGrid'), extended=document.getElementById('nutritionCoverageExtended');
     if(main) main.innerHTML=nutritionCoverageRows(PRIMARY_COVERAGE,date);
     if(extended) extended.innerHTML=nutritionCoverageRows(EXTENDED_COVERAGE,date);
-    const score=nutritionScoreForDate(date), totals=nutrientTotalsForDate(date), count=entriesForDate(date).length;
-    const box=document.getElementById('nutritionScoreSummary');
-    if(box) box.innerHTML=[
-      ['Score nutricional',`${score}/100`],['Alimentos registrados',count],
-      ['Fibra',displayNutrient('fiber',totals.fiber)],['Agua',displayNutrient('water',totals.water)]
-    ].map(([label,value])=>`<div class="quickStat"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join('');
   }
 
   function missingNutrients(date){
@@ -174,7 +168,7 @@
     if(!diagnosis||!recommendations||!combinations) return;
     const entries=entriesForDate(date),totals=nutrientTotalsForDate(date),targets=advancedTargets(),missing=missingNutrients(date);
     if(!entries.length && !totals.water){
-      diagnosis.innerHTML='<div class="emptyState">Registrá alimentos o agua para activar el diagnóstico orientativo.</div>';
+      diagnosis.innerHTML='<div class="emptyState">Registrá alimentos o agua para estimar la cobertura de lo registrado.</div>';
       recommendations.innerHTML=''; combinations.innerHTML=''; return;
     }
     const covered=Object.keys(SUGGESTION_LABELS).filter(key=>totals[key]>=targets[key]*.8 && totals[key]<=targets[key]*1.4).map(key=>SUGGESTION_LABELS[key]);
@@ -620,12 +614,13 @@
   }
 
   function setNutritionView(view){
-    document.querySelectorAll('[data-nutrition-view]').forEach(button=>button.classList.toggle('active',button.dataset.nutritionView===view));
+    const activeView=view==='coverage'?'resumen':view;
+    document.querySelectorAll('[data-nutrition-view]').forEach(button=>button.classList.toggle('active',button.dataset.nutritionView===activeView));
     document.querySelectorAll('[data-nutrition-panel]').forEach(panel=>panel.classList.toggle('hidden',panel.dataset.nutritionPanel!==view));
-    if(view==='diagnostico')renderDiagnosis();
+    if(view==='coverage'){renderCoverage();renderDiagnosis();}
     if(view==='tendencias')renderNutritionTrends();
-    if(view==='ajustes'){renderCustomFoods();renderFdcCachedFoods();loadAdvancedTargetFields();loadFdcConfigFields();}
   }
+  window.setNutritionView=setNutritionView;
   function renderAdvancedNutrition(){
     renderCoverage();renderDiagnosis();renderNutritionTrends();renderSavedMeals();renderCustomFoods();renderFdcCachedFoods();syncVersionedState();
   }

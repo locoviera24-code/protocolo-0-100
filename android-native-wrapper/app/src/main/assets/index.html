@@ -247,22 +247,40 @@
           </div>
 
           <div id="tab-nutricion" class="hidden">
-            <div class="moduleHero">
-              <div class="nutritionHeroHead"><div><h3>Nutrición de hoy</h3><div class="muted small">Calorías, proteína, fibra, agua y comidas registradas.</div></div><button type="button" class="good" data-open-nutrition-view="registrar">Agregar alimento</button></div>
-              <div class="progressStack" id="nutritionProgress"></div>
-              <div class="quickStats" id="nutritionScoreSummary"></div>
-            </div>
+            <h1 class="srOnly" id="nutritionViewHeading" tabindex="-1">Nutrición</h1>
 
             <div class="nutritionNav" aria-label="Secciones de nutrición">
               <button type="button" class="active" data-nutrition-view="resumen">Hoy</button>
-              <button type="button" data-nutrition-view="registrar">Comidas</button>
-              <button type="button" data-nutrition-view="diagnostico">Cobertura</button>
+              <button type="button" data-nutrition-view="registrar">Agregar</button>
               <button type="button" data-nutrition-view="tendencias">Progreso</button>
-              <button type="button" data-nutrition-view="ajustes">Ajustes</button>
             </div>
 
-            <div class="moduleCard" id="nutritionCoverageCard" data-nutrition-panel="resumen">
-              <div class="coverageToolbar"><div><h3>Cobertura diaria</h3><div class="muted small">Consumido frente a meta orientativa. El sodio se interpreta como límite máximo.</div></div><button type="button" class="secondary" data-open-nutrition-view="diagnostico">Ver diagnóstico</button></div>
+            <div class="moduleCard nutritionTodayCard" id="nutritionTodayCard" data-nutrition-panel="resumen">
+              <div class="nutritionTodayHeader">
+                <div><h2>Nutrición de hoy</h2><div class="muted small">Comidas y agua en una vista simple.</div></div>
+                <div class="field nutritionDateField"><label for="nutritionDate">Fecha</label><input type="date" id="nutritionDate"></div>
+              </div>
+              <div class="quickStats nutritionTodayStats" id="nutritionScoreSummary"></div>
+              <div class="nutritionTodayAction"><button type="button" class="good" data-open-nutrition-view="registrar">Agregar alimento</button></div>
+              <div class="entryList nutritionMealList" id="nutritionDayList"></div>
+              <section class="nutritionWaterCard" aria-labelledby="nutritionWaterTitle">
+                <div><span class="muted small" id="nutritionWaterTitle">Agua</span><strong id="nutritionWaterSummary">0 / 2500 ml</strong></div>
+                <div class="nutritionWaterActions">
+                  <button type="button" class="secondary" id="nutritionWaterAdd250">+250 ml</button>
+                  <button type="button" class="secondary" id="nutritionWaterAdd500">+500 ml</button>
+                  <label class="nutritionWaterEdit"><span class="srOnly">Cantidad de agua en mililitros</span><input type="number" inputmode="decimal" id="nutritionWater" min="0" step="50" placeholder="ml"></label>
+                  <button type="button" class="secondary" id="saveNutritionWaterBtn">Guardar</button>
+                  <button type="button" class="textButton hidden" id="undoNutritionWaterBtn">Deshacer</button>
+                </div>
+              </section>
+              <div class="nutritionSecondaryActions">
+                <button type="button" class="textButton" data-open-nutrition-view="coverage">Ver cobertura estimada</button>
+                <button type="button" class="textButton" data-open-nutrition-view="tendencias">Ver tendencias</button>
+              </div>
+            </div>
+
+            <div class="moduleCard" id="nutritionCoverageCard" data-nutrition-panel="coverage">
+              <div class="coverageToolbar"><div><h3>Cobertura estimada de lo registrado</h3><div class="muted small">Consumido frente a metas orientativas, según los datos disponibles.</div></div><button type="button" class="secondary" data-open-nutrition-view="resumen">Volver a Hoy</button></div>
               <div class="coverageGrid" id="nutritionCoverageGrid"></div>
               <details class="advancedDetails"><summary>Ver todos los micronutrientes</summary><div class="coverageGrid" id="nutritionCoverageExtended" style="margin-top:10px"></div></details>
             </div>
@@ -287,7 +305,7 @@
               </details>
             </div>
 
-            <div class="moduleCard" id="nutritionTargetsCard" data-nutrition-panel="ajustes">
+            <div class="moduleCard" id="nutritionTargetsCard" data-nutrition-settings-card>
               <h3>Objetivos diarios</h3>
               <div class="sectionIntro"><div><strong>Qué mide</strong>Metas para comparar lo registrado.</div><div><strong>Qué hacer</strong>Ajustalas si tenés una indicación profesional.</div><div><strong>Sentido</strong>Orientar decisiones, no castigar ni diagnosticar.</div></div>
               <div class="formGrid">
@@ -322,24 +340,22 @@
             </div>
 
             <div class="moduleCard" id="nutritionBuilderCard" data-nutrition-panel="registrar">
-              <h3>Registrar comida</h3>
+              <h3>Agregar alimento</h3>
+              <div class="muted small">Elegí un alimento, indicá la cantidad y guardalo en la comida correspondiente.</div>
               <div class="formGrid">
-                <div class="field"><label>Fecha</label><input type="date" id="nutritionDate"></div>
                 <div class="field"><label>Comida</label><select id="nutritionMeal"><option>Desayuno</option><option>Almuerzo</option><option>Merienda</option><option>Cena</option><option>Snack</option><option>Post-entreno</option><option>Otro</option></select></div>
                 <div class="field"><label>Buscar por nombre o alias</label><input type="search" id="nutritionFoodSearch" placeholder="Ej. mandioca, chipa, calcio…"></div>
                 <div class="field"><label>Alimento preestablecido</label><select id="nutritionFood"></select></div>
-                <div class="field"><label>Nombre personalizado (opcional)</label><input type="text" id="customFoodName" placeholder="Ej. receta casera"></div>
                 <div class="field"><label>Cantidad consumida (g)</label><input type="number" id="foodQuantity" min="1" step="1" value="100"></div>
-                <div class="field"><label>Calorías por 100 g</label><input type="number" id="foodCalories" min="0"></div>
-                <div class="field"><label>Proteína por 100 g</label><input type="number" id="foodProtein" min="0" step="0.1"></div>
-                <div class="field"><label>Carbohidratos por 100 g</label><input type="number" id="foodCarbs" min="0" step="0.1"></div>
-                <div class="field"><label>Grasas por 100 g</label><input type="number" id="foodFat" min="0" step="0.1"></div>
-                <div class="field"><label>Agua del día (ml)</label><input type="number" id="nutritionWater" min="0" step="100" placeholder="Ej. 2000"></div>
-                <div class="field"><label>Peso corporal (kg)</label><input type="number" id="nutritionWeight" min="0" step="0.1" placeholder="Opcional"></div>
               </div>
-              <details class="advancedDetails">
-                <summary>Micronutrientes del alimento personalizado</summary>
+              <details class="advancedDetails" id="customFoodDetails">
+                <summary>Crear alimento personalizado</summary>
                 <div class="formGrid" style="margin-top:10px">
+                  <div class="field"><label>Nombre</label><input type="text" id="customFoodName" placeholder="Ej. receta casera"></div>
+                  <div class="field"><label>Calorías por 100 g</label><input type="number" id="foodCalories" min="0"></div>
+                  <div class="field"><label>Proteína por 100 g</label><input type="number" id="foodProtein" min="0" step="0.1"></div>
+                  <div class="field"><label>Carbohidratos por 100 g</label><input type="number" id="foodCarbs" min="0" step="0.1"></div>
+                  <div class="field"><label>Grasas por 100 g</label><input type="number" id="foodFat" min="0" step="0.1"></div>
                   <div class="field"><label>Fibra (g/100 g)</label><input type="number" id="foodFiber" min="0" step="0.1"></div>
                   <div class="field"><label>Sodio (mg/100 g)</label><input type="number" id="foodSodium" min="0" step="0.1"></div>
                   <div class="field"><label>Potasio (mg/100 g)</label><input type="number" id="foodPotassium" min="0" step="0.1"></div>
@@ -360,13 +376,12 @@
               </div>
               <div class="buttons">
                 <button type="button" class="good" id="addFoodBtn">Agregar alimento</button>
-                <button type="button" class="secondary" id="saveBodyMetricsBtn">Guardar agua y peso</button>
-                <button type="button" class="secondary" id="saveFrequentMealBtn">Guardar comida frecuente</button>
-                <button type="button" class="secondary" id="repeatYesterdayMealBtn">Repetir comida de ayer</button>
               </div>
-              <div class="field" style="margin-top:10px"><label>Comidas frecuentes</label><select id="savedMealSelect"><option value="">Elegir comida guardada…</option></select></div>
-              <div class="buttons"><button type="button" class="secondary" id="loadSavedMealBtn">Agregar comida guardada</button><button type="button" class="secondary" id="copyCurrentMealBtn">Copiar comida a otra fecha</button><button type="button" class="danger" id="deleteSavedMealBtn">Eliminar frecuente</button><button type="button" class="danger" id="deleteCurrentMealBtn">Eliminar esta comida</button></div>
-              <div class="entryList" id="nutritionDayList"></div>
+              <details class="advancedDetails nutritionMealTools">
+                <summary>Comidas frecuentes y otras acciones</summary>
+                <div class="field"><label>Comidas frecuentes</label><select id="savedMealSelect"><option value="">Elegir comida guardada…</option></select></div>
+                <div class="buttons"><button type="button" class="secondary" id="saveFrequentMealBtn">Guardar como frecuente</button><button type="button" class="secondary" id="loadSavedMealBtn">Agregar frecuente</button><button type="button" class="secondary" id="repeatYesterdayMealBtn">Repetir la de ayer</button><button type="button" class="secondary" id="copyCurrentMealBtn">Copiar a otra fecha</button><button type="button" class="danger" id="deleteSavedMealBtn">Eliminar frecuente</button><button type="button" class="danger" id="deleteCurrentMealBtn">Eliminar esta comida</button></div>
+              </details>
             </div>
 
             <div class="moduleCard" id="fdcSearchCard" data-nutrition-panel="registrar">
@@ -379,8 +394,8 @@
               </details>
             </div>
 
-            <div class="moduleCard" id="nutritionDiagnosisCard" data-nutrition-panel="diagnostico">
-              <h3>Diagnóstico nutricional orientativo</h3>
+            <div class="moduleCard" id="nutritionDiagnosisCard" data-nutrition-panel="coverage">
+              <h3>Lectura orientativa de la cobertura</h3>
               <div class="sectionIntro"><div><strong>Qué mide</strong>Cobertura del día según alimentos registrados.</div><div><strong>Qué hacer</strong>Priorizá una o dos palancas, no todo a la vez.</div><div><strong>Objetivo</strong>Convertir faltantes aparentes en opciones concretas.</div></div>
               <div id="nutritionDiagnosis"></div>
               <h3 style="margin-top:14px">Mejores alimentos para completar hoy</h3>
@@ -396,13 +411,13 @@
               <div class="recommendGrid" id="nutritionTrendInsights" style="margin-top:10px"></div>
             </div>
 
-            <div class="moduleCard" id="customFoodsCard" data-nutrition-panel="ajustes">
+            <div class="moduleCard" id="customFoodsCard" data-nutrition-settings-card>
               <h3>Alimentos personalizados</h3>
               <div class="muted small">Los alimentos propios quedan en tu dispositivo. Podés editarlos o eliminarlos.</div>
               <div class="entryList" id="customFoodsList"></div>
             </div>
 
-            <div class="moduleCard" id="fdcSettingsCard" data-nutrition-panel="ajustes">
+            <div class="moduleCard" id="fdcSettingsCard" data-nutrition-settings-card>
               <h3>FoodData Central opcional</h3>
               <div class="formGrid">
                 <div class="field"><label>API key FDC personal</label><input type="password" id="fdcApiKey" autocomplete="off" placeholder="No incluida en el código público"></div>
@@ -569,6 +584,17 @@
               <label class="check"><input type="checkbox" id="settingsNotifications"><span>Recordatorio interno al abrir la app. La web no puede garantizar avisos en segundo plano.</span></label>
               <label class="check"><input type="checkbox" id="settingsAutoSync"><span>Sincronizar Gym Party al abrirla.</span></label>
             </div></div>
+            <section id="nutritionSettingsSection" aria-labelledby="nutritionSettingsTitle">
+              <div class="moduleCard settingsSection">
+                <h3 id="nutritionSettingsTitle">Nutrición</h3>
+                <p class="muted small">Objetivos, peso corporal, alimentos propios y fuentes externas. Estas opciones no interrumpen el registro diario.</p>
+                <div class="formGrid">
+                  <div class="field"><label for="nutritionWeight">Peso corporal</label><div class="inputSuffix"><input type="number" inputmode="decimal" id="nutritionWeight" min="0" step="0.1" placeholder="Opcional"><span id="nutritionWeightUnit">kg</span></div></div>
+                </div>
+                <div class="buttons"><button type="button" class="secondary" id="saveNutritionWeightBtn">Guardar peso para la fecha elegida</button></div>
+              </div>
+              <div id="nutritionSettingsMount"></div>
+            </section>
             <div class="settingsPrimaryAction"><button type="button" class="good" id="saveUiSettingsBtn">Guardar ajustes</button></div>
             <div class="moduleGrid settingsLinks">
               <button type="button" class="moreLink" data-more-view="data"><span><strong>Datos y copias</strong><small>Exportación, importación y almacenamiento</small></span></button>
@@ -851,6 +877,8 @@ function applyUiPreferences(){
   const checks={settingsShowRir:preferences.showRir,settingsNutritionGuidance:preferences.nutritionGuidance,settingsNotifications:preferences.notifications,settingsAutoSync:preferences.autoSync};
   Object.entries(checks).forEach(([id,value])=>{const element=document.getElementById(id);if(element)element.checked=!!value;});
   document.getElementById('nutritionDiagnosisCard')?.classList.toggle('preferenceHidden',!preferences.nutritionGuidance);
+  const nutritionWeightUnit=document.getElementById('nutritionWeightUnit');if(nutritionWeightUnit)nutritionWeightUnit.textContent=preferences.unit;
+  if(document.getElementById('nutritionDate')?.value)loadBodyMetricsForDate();
   return preferences;
 }
 function saveUiSettings(){
@@ -1277,39 +1305,85 @@ function removeFood(id){
   window.NUTRITION_STORE.removeEntry(id);
   renderNutrition();
 }
-function saveBodyMetrics(){
+let previousNutritionWater=null;
+function saveNutritionWater(value=num('nutritionWater'),announce=true){
   const date=document.getElementById('nutritionDate').value||todayStr();
   const metrics=window.NUTRITION_STORE.bodyMetrics();
-  metrics[date]={water:Math.max(0,num('nutritionWater')),weight:Math.max(0,num('nutritionWeight')),savedAt:new Date().toISOString()};
+  const current=metrics[date]||{};
+  previousNutritionWater={date,value:Number(current.water)||0};
+  metrics[date]={...current,water:Math.max(0,Number(value)||0),savedAt:new Date().toISOString()};
   window.NUTRITION_STORE.saveBodyMetrics(metrics);
+  document.getElementById('undoNutritionWaterBtn')?.classList.remove('hidden');
   renderNutrition();
-  flash('Agua y peso guardados.');
+  if(announce)flash('Agua guardada.');
+}
+function addNutritionWater(amount){
+  const current=Math.max(0,num('nutritionWater'));
+  saveNutritionWater(current+amount);
+}
+function undoNutritionWater(){
+  if(!previousNutritionWater)return;
+  const metrics=window.NUTRITION_STORE.bodyMetrics();
+  const current=metrics[previousNutritionWater.date]||{};
+  metrics[previousNutritionWater.date]={...current,water:previousNutritionWater.value,savedAt:new Date().toISOString()};
+  window.NUTRITION_STORE.saveBodyMetrics(metrics);
+  previousNutritionWater=null;
+  document.getElementById('undoNutritionWaterBtn')?.classList.add('hidden');
+  loadBodyMetricsForDate();renderNutrition();flash('Cambio de agua deshecho.');
+}
+function saveNutritionWeight(){
+  const date=document.getElementById('nutritionDate').value||todayStr();
+  const metrics=window.NUTRITION_STORE.bodyMetrics();
+  const current=metrics[date]||{};
+  const displayValue=Math.max(0,num('nutritionWeight'));
+  const weightKg=uiPreferences().unit==='lb'?displayValue/2.2046226218:displayValue;
+  metrics[date]={...current,weight:Math.round(weightKg*1000)/1000,savedAt:new Date().toISOString()};
+  window.NUTRITION_STORE.saveBodyMetrics(metrics);
+  renderNutrition();flash('Peso guardado.');
 }
 function nutritionTotals(entries){return window.NUTRITION_MODEL.totals(entries);}
 function loadBodyMetricsForDate(){
   const m=window.NUTRITION_STORE.bodyMetrics()[document.getElementById('nutritionDate').value||todayStr()]||{};
-  document.getElementById('nutritionWater').value=m.water||'';
-  document.getElementById('nutritionWeight').value=m.weight||'';
+  const water=document.getElementById('nutritionWater'),weight=document.getElementById('nutritionWeight');
+  if(water)water.value=m.water||'';
+  if(weight){const value=(Number(m.weight)||0)*(uiPreferences().unit==='lb'?2.2046226218:1);weight.value=value?Math.round(value*10)/10:'';}
 }
 function renderNutrition(){
   const date=document.getElementById('nutritionDate')?.value||todayStr();
   const all=window.NUTRITION_STORE.entries();
-  const day=all.filter(e=>e.date===date);
-  const total=nutritionTotals(day), targets=nutritionTargets();
+  const metrics=window.NUTRITION_STORE.bodyMetrics();
+  const model=window.NUTRITION_VIEW.dayModel(all,date,nutritionTargets(),metrics[date]);
+  const day=model.entries,total=model.totals,targets=model.targets;
   const progress=document.getElementById('nutritionProgress');
   if(progress){
-    const labels={calories:'Calorías',protein:'Proteína',carbs:'Carbohidratos',fat:'Grasas'};
-    progress.innerHTML=Object.keys(labels).map(k=>{const value=Math.round(total[k]);const target=Math.max(1,Number(targets[k])||1);const pct=Math.min(100,(value/target)*100);return `<div class="macroRow ${value>target?'over':''}"><strong>${labels[k]}</strong><div class="bar"><i style="width:${pct}%"></i></div><span>${value}/${target}${k==='calories'?' kcal':' g'}</span></div>`;}).join('');
+    const labels={calories:'Calorías',protein:'Proteína',fiber:'Fibra',water:'Agua'};
+    progress.innerHTML=window.NUTRITION_VIEW.progressRows(model).map(row=>{const pct=row.pct;return `<div class="macroRow ${row.over?'over':''}"><strong>${labels[row.key]}</strong><div class="bar"><i style="width:${pct}%"></i></div><span>${Math.round(row.value)}/${Math.round(row.target)}${row.key==='calories'?' kcal':row.key==='water'?' ml':' g'}</span></div>`;}).join('');
   }
+  const summary=document.getElementById('nutritionScoreSummary');
+  if(summary)summary.innerHTML=[['Calorías',`${Math.round(total.calories)} kcal`],['Proteína',`${Math.round(total.protein)} g`],['Fibra',`${Math.round(total.fiber)} g`],['Agua',`${Math.round(model.water)} ml`]].map(([label,value])=>`<div class="quickStat"><span>${label}</span><strong>${value}</strong></div>`).join('');
   const list=document.getElementById('nutritionDayList');
-  if(list) list.innerHTML=day.length?day.map(e=>`<div class="entryRow"><div><strong>${escapeHtml(e.name)}</strong><div class="meta">${escapeHtml(e.meal)} · ${e.grams?`${e.grams} g`:`${e.quantity||1} porción(es)`} · ${Math.round(e.calories)} kcal · P ${Math.round(e.protein)} · C ${Math.round(e.carbs)} · G ${Math.round(e.fat)}</div></div><button type="button" class="danger" data-remove-food="${escapeHtml(e.id)}">Quitar</button></div>`).join(''):'<div class="emptyState">Todavía no registraste comidas para esta fecha.</div>';
+  if(list){
+    const sections=window.NUTRITION_MODEL.MEALS.map(meal=>{
+      const entries=model.groups[meal]||[];if(!entries.length)return'';
+      const mealTotals=nutritionTotals(entries);
+      const rows=entries.map(e=>`<div class="nutritionFoodRow"><div><strong>${escapeHtml(e.name)}</strong><div class="meta">${e.grams?`${e.grams} g`:`${e.quantity||1} porción(es)`} · ${Math.round(e.calories)} kcal · P ${Math.round(e.protein)} g</div></div><button type="button" class="textButton" aria-label="Quitar ${escapeHtml(e.name)}" data-remove-food="${escapeHtml(e.id)}">Quitar</button></div>`).join('');
+      return `<section class="nutritionMealGroup"><header><strong>${escapeHtml(meal)}</strong><span>${Math.round(mealTotals.calories)} kcal</span></header>${rows}</section>`;
+    }).join('');
+    list.innerHTML=sections||'<div class="emptyState"><strong>Tu día está listo para empezar.</strong><span>Agregá el primer alimento cuando quieras.</span><button type="button" class="good" data-open-nutrition-view="registrar">Agregar alimento</button></div>';
+  }
+  const waterSummary=document.getElementById('nutritionWaterSummary');
+  if(waterSummary)waterSummary.textContent=`${Math.round(model.water)} / ${Math.round(Number(targets.water)||2500)} ml`;
+  const waterInput=document.getElementById('nutritionWater');if(waterInput&&document.activeElement!==waterInput)waterInput.value=model.water||'';
   const grouped={}; all.forEach(e=>{grouped[e.date]??=[];grouped[e.date].push(e);});
-  const metrics=getLocalData(BODY_METRICS_KEY,{});
   const dates=Array.from(new Set([...Object.keys(grouped),...Object.keys(metrics)])).sort().reverse().slice(0,30);
   const table=document.getElementById('nutritionHistoryTable'); if(table){
-    const rows=dates.map(d=>{const t=nutritionTotals(grouped[d]||[]);const m=metrics[d]||{};return `<tr><td>${d}</td><td>${Math.round(t.calories)}</td><td>${Math.round(t.protein)} g</td><td>${Math.round(t.carbs)} g</td><td>${Math.round(t.fat)} g</td><td>${m.water?`${m.water} ml`:'—'}</td><td>${m.weight?`${m.weight} kg`:'—'}</td></tr>`;}).join('');
+    const rows=dates.map(d=>{const t=nutritionTotals(grouped[d]||[]),m=metrics[d]||{},unit=uiPreferences().unit,weight=(Number(m.weight)||0)*(unit==='lb'?2.2046226218:1);return `<tr><td>${d}</td><td>${Math.round(t.calories)}</td><td>${Math.round(t.protein)} g</td><td>${Math.round(t.carbs)} g</td><td>${Math.round(t.fat)} g</td><td>${m.water?`${m.water} ml`:'—'}</td><td>${weight?`${Math.round(weight*10)/10} ${unit}`:'—'}</td></tr>`;}).join('');
     table.innerHTML=`<thead><tr><th>Fecha</th><th>Kcal</th><th>Proteína</th><th>Carbos</th><th>Grasas</th><th>Agua</th><th>Peso</th></tr></thead><tbody>${rows||'<tr><td colspan="7">Todavía no hay registros nutricionales.</td></tr>'}</tbody>`;
   }
+}
+function mountNutritionSettings(){
+  const mount=document.getElementById('nutritionSettingsMount');if(!mount)return;
+  document.querySelectorAll('[data-nutrition-settings-card]').forEach(card=>mount.appendChild(card));
 }
 function calcDay(){
   const manual = parseInt(document.getElementById('manualDay').value,10);
@@ -2430,7 +2504,11 @@ document.getElementById('clearGymSessionBtn').addEventListener('click', clearGym
 document.getElementById('nutritionFood').addEventListener('change', applySelectedFood);
 document.getElementById('saveNutritionTargetsBtn').addEventListener('click', saveNutritionTargets);
 document.getElementById('addFoodBtn').addEventListener('click', addFood);
-document.getElementById('saveBodyMetricsBtn').addEventListener('click', saveBodyMetrics);
+document.getElementById('saveNutritionWaterBtn').addEventListener('click', ()=>saveNutritionWater());
+document.getElementById('nutritionWaterAdd250').addEventListener('click', ()=>addNutritionWater(250));
+document.getElementById('nutritionWaterAdd500').addEventListener('click', ()=>addNutritionWater(500));
+document.getElementById('undoNutritionWaterBtn').addEventListener('click', undoNutritionWater);
+document.getElementById('saveNutritionWeightBtn').addEventListener('click', saveNutritionWeight);
 document.getElementById('analyzeNutritionBtn').addEventListener('click', analyzeNutritionText);
 document.getElementById('speakNutritionBtn').addEventListener('click', startNutritionVoice);
 document.getElementById('clearNutritionAssistantBtn').addEventListener('click', clearNutritionAssistant);
@@ -2487,6 +2565,8 @@ document.addEventListener('keydown', e=>{
   else if(!document.getElementById('actionModalBackdrop')?.classList.contains('hidden'))trapOverlayFocus(e,document.getElementById('actionModalBackdrop'));
 });
 document.addEventListener('click', e=>{
+  const nutritionView=e.target.closest('#nutritionDayList [data-open-nutrition-view]');
+  if(nutritionView&&typeof window.setNutritionView==='function'){window.setNutritionView(nutritionView.dataset.openNutritionView);return;}
   const removeGym=e.target.closest('[data-remove-gym]');
   if(removeGym){ gymDraft=gymDraft.filter(i=>i.id!==removeGym.dataset.removeGym); renderGymDraft(); return; }
   const loadGym=e.target.closest('[data-load-gym]');
@@ -2494,7 +2574,7 @@ document.addEventListener('click', e=>{
   const deleteGym=e.target.closest('[data-delete-gym]');
   if(deleteGym){ deleteGymSession(deleteGym.dataset.deleteGym); return; }
   const removeFoodBtn=e.target.closest('[data-remove-food]');
-  if(removeFoodBtn){ removeFood(removeFoodBtn.dataset.removeFood); }
+  if(removeFoodBtn){ removeFood(removeFoodBtn.dataset.removeFood); return; }
 });
 
 // Help click delegation
@@ -2511,6 +2591,7 @@ document.getElementById('startDate').value = savedStart;
 document.getElementById('entryDate').value = todayStr();
 document.getElementById('gymDate').value = todayStr();
 document.getElementById('nutritionDate').value = todayStr();
+mountNutritionSettings();
 populateGymMuscles();
 populateFoods();
 applyUiPreferences();
