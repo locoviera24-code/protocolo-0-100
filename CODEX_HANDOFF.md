@@ -4,7 +4,7 @@ Ultima actualizacion: 2026-07-12
 Rama esperada: `main`
 Version actual: `2.7.0` (fuente unica: `app-version.json`)
 Android: `versionCode 33`, `versionName "2.7.0"`
-Service worker cache: `protocolo-0-100-pwa-2.7.0-b53`
+Service worker cache: `protocolo-0-100-pwa-2.7.0-b54`
 Backup consolidado: `schemaVersion: 3`
 
 Leer primero este archivo y luego `README.md`, `index.html`,
@@ -24,7 +24,7 @@ Estado actual:
 - Gym Party implementado como modulo web/PWA opcional.
 - Nutricion local/FDC opcional.
 - Backups JSON `schemaVersion: 3`.
-- PWA offline con cache derivada `protocolo-0-100-pwa-2.7.0-b53` y
+- PWA offline con cache derivada `protocolo-0-100-pwa-2.7.0-b54` y
   actualizacion consentida desde el aviso visible.
 - APK con widget Android y permiso `INTERNET` para Firebase/Gym Party.
 
@@ -86,7 +86,7 @@ Web:
   tombstones, backoff y contexto horario.
 - `gym-party.js`: modulo Gym Party, registro rapido, graficas y edicion/eliminacion de series.
 - `advanced-features.js`: version `2.7.0`, backup/importacion Gym Party.
-- `sw.js`: cache build 53, actualizacion consentida, incluye modulos nuevos y evita
+- `sw.js`: cache build 54, actualizacion consentida, incluye modulos nuevos y evita
   persistir una configuracion Firebase obsoleta.
 - `README.md`: documenta Gym Party, demo, Firebase, privacidad y pruebas.
 - `CODEX_HANDOFF.md`: este handoff.
@@ -1185,12 +1185,12 @@ combobox Gym, mensajes/estados centrales, accesibilidad final y rendimiento.
   heredados/dinamicos siguen inventariados y son deuda explicita, no se
   consideran migrados.
 - `app-version.json` es la fuente unica: version `2.7.0`, Android
-  `versionCode 33`, build web/cache `53` y fecha `2026-07-12`.
+  `versionCode 33`, build web/cache `54` y fecha `2026-07-12`.
 - `app-version.js` es el artefacto generado para web y service worker;
   `scripts/sync-app-version.mjs` lo regenera y alinea package/lockfile.
 - `index.html`, Acerca de, `advanced-features.js`, `sw.js`, Gradle y el workflow
   release consumen o validan esa fuente. Cache derivado:
-  `protocolo-0-100-pwa-2.7.0-b53`; APK:
+  `protocolo-0-100-pwa-2.7.0-b54`; APK:
   `protocolo-0-100-v2.7.0-release.apk`.
 - `scripts/test-version-alignment.mjs` y `npm run test:version` fallan ante
   divergencias. Pages y workflows Android ejecutan este contrato.
@@ -1267,4 +1267,34 @@ Android fuera del cronometro de descanso.
 
 Pendiente real de esta fase: migrar la lectura primaria de cada dominio solo
 despues de medir estabilidad; probar cuota agotada con una inyeccion controlada;
-conectar `BackupRepository` con la futura importacion con preview y Deshacer.
+mantener la migracion gradual hasta retirar escrituras sincronas grandes.
+
+## 35. Refactor robusta - importacion segura y recuperable
+
+- `data/backup-service.js` valida tipo raiz, tamaño maximo de 8 MB, schema,
+  profundidad, cantidad de elementos, numeros y cadenas antes de escribir.
+- Rechaza JSON vacio/invalido y schemas posteriores a 3. Conserva backups
+  legacy con `entries[]` y acepta los aliases actuales `dailyLogs/meals`.
+- Sanea claves `__proto__`, `prototype` y `constructor`, elimina controles de
+  cadenas y limita tamaños. Nunca importa `firebaseConfig` de Gym Party ni la
+  configuracion FDC.
+- El modal `#importPreviewBackdrop` informa registros nuevos, reemplazos,
+  conflictos, areas y campos ignorados. Usa `textContent`, dialogo modal,
+  Escape, foco y confirmacion explicita.
+- `APP_DATA.replaceMany()` soporta claves raw controladas para `startDate` y
+  modulo activo. La importacion completa se aplica en una sola transaccion con
+  snapshot previo y rollback automatico.
+- `protocolo_0_100_import_history_v1` guarda solo metadatos de las ultimas 10
+  operaciones. `#importUndoPanel` permite restaurar el snapshot anterior y
+  reaparece tras recargar si la importacion sigue siendo la ultima operacion.
+- `window.importCompleteBackupData()` conserva su API publica y delega al
+  servicio seguro cuando la nueva capa esta disponible.
+- PWA, Pages, workflows y APK incluyen `data/backup-service.js`. Cache actual:
+  `protocolo-0-100-pwa-2.7.0-b54`.
+- Pruebas: `scripts/test-backup-service.mjs` y
+  `tests/e2e/backup-import.spec.mjs`. La matriz visible paso 6/6 en Android
+  Chromium, iPhone WebKit y escritorio Chromium.
+
+Pendiente real: agregar historial visual de migraciones, probar una interrupcion
+forzada de IndexedDB/cuota y consolidar este feedback en el sistema central de
+Snackbar/InlineValidation que sigue pendiente.

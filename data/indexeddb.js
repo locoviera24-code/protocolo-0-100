@@ -50,7 +50,8 @@
       'protocolo_0_100_backup_meta_v1'
     ],
     backup:[
-      'protocolo_0_100_state_v2'
+      'protocolo_0_100_state_v2',
+      'protocolo_0_100_import_history_v1'
     ]
   });
   const KEY_DOMAINS=Object.freeze(Object.entries(DOMAIN_KEYS).reduce((map,[domain,keys])=>{
@@ -289,12 +290,13 @@
     return initializationPromise;
   }
   async function flush(){await mirrorQueue;}
-  async function replaceMany(changes,{reason='transaction'}={}){
+  async function replaceMany(changes,{reason='transaction',rawKeys=[]}={}){
     const entries=Object.entries(changes||{});
     const keys=entries.map(([key])=>key);
     const snapshot=await createRecoverySnapshot(keys,reason);
     try{
-      const rawEntries=entries.map(([key,value])=>[key,value===undefined?null:JSON.stringify(value)]);
+      const rawSet=new Set(rawKeys);
+      const rawEntries=entries.map(([key,value])=>[key,value===undefined?null:rawSet.has(key)?String(value):JSON.stringify(value)]);
       rawEntries.forEach(([key,raw])=>{
         if(raw===null)localStorage.removeItem(key);
         else localStorage.setItem(key,raw);
@@ -325,10 +327,27 @@
     const snapshot=await requestResult(transaction.objectStore(RECOVERY_STORE).get(snapshotId));
     await done;
     if(!snapshot)return false;
-    const changes={};
-    Object.entries(snapshot.rawByKey||{}).forEach(([key,raw])=>{changes[key]=raw===null?undefined:JSON.parse(raw);});
-    const result=await replaceMany(changes,{reason:`restore:${snapshotId}`});
-    return result.ok;
+    const current=await createRecoverySnapshot(snapshot.keys||[],`before-restore:${snapshotId}`);
+    try{
+      restoreLocalSnapshot(snapshot);
+      const mirrored=Object.entries(snapshot.rawByKey||{}).filter(([key])=>shouldMirror(key));
+      if(mirrored.length){
+        const database=await openDatabase();
+        const writeTransaction=database.transaction(RECORDS_STORE,'readwrite');
+        const records=writeTransaction.objectStore(RECORDS_STORE);
+        mirrored.forEach(([key,raw])=>{
+          if(raw===null)records.delete(key);
+          else records.put({key,domain:domainForKey(key),raw:sanitizeRawForMirror(key,raw),updatedAt:new Date().toISOString()});
+        });
+        await transactionDone(writeTransaction);
+      }
+      (snapshot.keys||[]).forEach(key=>notifyChange(key));
+      return {ok:true,snapshotId,currentSnapshotId:current.id};
+    }catch(error){
+      restoreLocalSnapshot(current);
+      reportError(error,'restore-recovery');
+      return {ok:false,snapshotId,error:classifyError(error)};
+    }
   }
   async function purgeKeys(keys){
     const selected=[...new Set((keys||[]).filter(Boolean))];

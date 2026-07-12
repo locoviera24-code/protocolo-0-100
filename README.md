@@ -15,7 +15,7 @@ PWA y APK Android para medir habitos, atencion, actividad fisica y nutricion con
 
 ## Navegacion y diseno
 
-La version actual `v2.7.0` (build web `53`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
+La version actual `v2.7.0` (build web `54`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
 **Gym**, **Nutricion**, **Progreso** y **Mas**. En escritorio usa una barra
 lateral compacta. Gym Party se abre desde **Gym > Grupo**, desde un acceso
 discreto en Inicio o mediante un enlace `gymPartyCode`; ya no ocupa un boton
@@ -54,6 +54,7 @@ ui/router.js                Router module/view, historial, deep links y Atrás
 ui/navigation.js            Coordinador de sticky, banners, teclado y safe areas
 data/indexeddb.js           Espejo transaccional, migraciones y recuperacion local
 data/repositories.js        Repositorios por dominio sobre claves compatibles
+data/backup-service.js      Validacion, preview, importacion transaccional y Deshacer
 workout-store.js            Acceso conservador y versionado al repositorio Gym
 workout-plan.js             Normalizacion, deduplicacion e insercion en rutinas
 workout-ui.js               Renderizadores pequenos y anuncios accesibles de Gym
@@ -82,6 +83,13 @@ firebase/                   Reglas, esquema y configuracion ejemplo para Gym Par
 ```
 
 `advanced-features.js` mantiene un estado consolidado con `schemaVersion: 3`. No se incluyen API keys en backups. El service worker usa navegacion `network-first`, conserva offline los assets principales y no intercepta llamadas FDC ni otros origenes.
+
+Antes de importar un JSON, la app valida tamaño y schema, sanea claves y
+cadenas, muestra registros nuevos/reemplazados/conflictos y crea una copia
+interna. Tras aplicar el archivo, **Datos y copias** ofrece **Deshacer
+importación** incluso después de recargar mientras esa sea la última operación.
+Los backups antiguos con `entries[]` siguen siendo compatibles; un schema
+posterior al soportado se rechaza sin modificar datos.
 
 ## Gym Party
 

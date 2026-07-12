@@ -11,6 +11,7 @@ $relativeFiles = @(
     'app-version.js',
     'data/indexeddb.js',
     'data/repositories.js',
+    'data/backup-service.js',
     'nutrition-data.js',
     'fdc-client.js',
     'workout-store.js',

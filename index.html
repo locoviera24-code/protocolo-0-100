@@ -584,6 +584,7 @@
               <h3>Copia completa</h3>
               <div class="buttons"><button type="button" class="good" id="settingsExportJsonBtn">Exportar copia JSON</button><button type="button" class="secondary" id="settingsImportBtn">Importar copia JSON</button><button type="button" class="secondary" id="settingsExportCsvBtn">Exportar resumen CSV</button></div>
               <div class="muted small">La copia incluye protocolo, Gym, Gym Party y nutrición; no incluye la configuración Firebase ni credenciales.</div>
+              <div class="auditItem hidden" id="importUndoPanel"><span id="importUndoText">Importación aplicada.</span><button type="button" class="secondary" id="undoImportBtn">Deshacer importación</button></div>
             </div>
             <div class="quickStats dataStats"><div class="quickStat"><span>Última copia</span><strong id="lastBackupAt">Nunca</strong></div><div class="quickStat"><span>Almacenamiento local</span><strong id="localStorageEstimate">0 KB</strong></div><div class="quickStat"><span>Schema</span><strong id="dataSchemaVersion">3</strong></div><div class="quickStat"><span>Claves locales</span><strong id="localStorageKeyCount">0</strong></div></div>
             <div class="moduleCard"><div class="sectionHeading"><div><h3>Copia interna recuperable</h3><p class="muted small" id="dataLayerDescription">Las claves históricas siguen activas mientras se crea una copia transaccional local para historiales crecientes.</p></div><strong id="indexedDbStatus">Preparando</strong></div></div>
@@ -662,9 +663,22 @@
     </div>
   </div>
 
+  <div class="modalBackdrop hidden" id="importPreviewBackdrop" role="dialog" aria-modal="true" aria-labelledby="importPreviewTitle" aria-hidden="true">
+    <div class="actionModal">
+      <div class="modalHd"><div><span class="pill">Revisión segura</span><h2 id="importPreviewTitle">Antes de importar</h2><p class="muted small" id="importPreviewFile">Revisá los cambios detectados.</p></div><button type="button" class="closeBtn" id="closeImportPreviewBtn" aria-label="Cancelar importación">×</button></div>
+      <div class="modalBd">
+        <div class="quickStats"><div class="quickStat"><span>Nuevos</span><strong id="importPreviewAdded">0</strong></div><div class="quickStat"><span>Reemplazos</span><strong id="importPreviewReplaced">0</strong></div><div class="quickStat"><span>Conflictos</span><strong id="importPreviewConflicts">0</strong></div><div class="quickStat"><span>Áreas</span><strong id="importPreviewKeys">0</strong></div></div>
+        <div class="auditItem" id="importPreviewIgnored">No se ignoraron campos.</div>
+        <p class="muted small">Se creará una copia interna automática. Podés deshacer la importación después de aplicarla.</p>
+        <div class="buttons"><button type="button" class="good" id="confirmImportBtn">Importar datos</button><button type="button" class="secondary" id="cancelImportBtn">Cancelar</button></div>
+      </div>
+    </div>
+  </div>
+
 <script src="app-version.js"></script>
 <script src="data/indexeddb.js"></script>
 <script src="data/repositories.js"></script>
+<script src="data/backup-service.js"></script>
 <script src="nutrition-data.js"></script>
 <script src="fdc-client.js"></script>
 <script src="ui/router.js"></script>
@@ -862,6 +876,12 @@ function renderSettingsData(){
       const description=document.getElementById('dataLayerDescription');
       if(description&&diagnostics.lastError)description.textContent=diagnostics.lastError.type==='quota'?'No queda espacio suficiente para actualizar la copia interna. Los datos históricos permanecen en sus claves actuales.':'La copia interna tuvo un problema recuperable. Los datos históricos permanecen en sus claves actuales.';
     }).catch(()=>{indexedStatus.textContent='No disponible';});
+  }
+  const latestImport=window.BACKUP_SERVICE?.history?.()?.[0],undoPanel=document.getElementById('importUndoPanel');
+  if(undoPanel){
+    const canUndo=latestImport?.status==='applied'&&!!latestImport.snapshotId;
+    undoPanel.classList.toggle('hidden',!canUndo);
+    if(canUndo){lastImportSnapshotId=latestImport.snapshotId;document.getElementById('importUndoText').textContent=`Última importación: ${latestImport.records||0} registros revisados.`;}
   }
   const web=document.getElementById('aboutWebVersion');if(web)web.textContent=APP_WEB_VERSION;
   const android=document.getElementById('aboutAndroidVersion');if(android)android.textContent=androidVersionLabel();
@@ -2245,11 +2265,44 @@ function exportCsv(){
 function downloadBlob(content,name,type){
   const blob=new Blob([content],{type}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
-function importJson(file){
-  const reader=new FileReader(); reader.onload=()=>{
-    try{ const data=JSON.parse(reader.result); if(Array.isArray(data.entries)||data.schemaVersion){ if(Array.isArray(data.entries))setEntries(data.entries); if(Array.isArray(data.gymSessions)) setLocalData(GYM_SESSIONS_KEY,data.gymSessions); if(Array.isArray(data.nutritionEntries)) setLocalData(NUTRITION_ENTRIES_KEY,data.nutritionEntries); if(data.nutritionTargets) setLocalData(NUTRITION_TARGETS_KEY,data.nutritionTargets); if(data.bodyMetrics) setLocalData(BODY_METRICS_KEY,data.bodyMetrics); if(Array.isArray(data.customFoods)) setLocalData(CUSTOM_FOODS_KEY,data.customFoods); if(data.nutritionAliases) setLocalData(NUTRITION_ALIASES_KEY,data.nutritionAliases); if(data.startDate){document.getElementById('startDate').value=data.startDate; localStorage.setItem(START_KEY,data.startDate)} if(window.importCompleteBackupData)window.importCompleteBackupData(data); populateFoods(); loadNutritionTargets(); loadBodyMetricsForDate(); renderAll(); flash('Importación completa.'); } else alert('JSON inválido: no contiene datos compatibles.'); }
-    catch(e){ alert('No pude leer el JSON.'); }
-  }; reader.readAsText(file);
+let pendingBackupImport=null,lastImportSnapshotId='';
+function closeImportPreview(){
+  const backdrop=document.getElementById('importPreviewBackdrop');if(!backdrop)return;
+  backdrop.classList.add('hidden');backdrop.setAttribute('aria-hidden','true');pendingBackupImport=null;
+}
+function openImportPreview(prepared){
+  pendingBackupImport=prepared;const summary=prepared.summary,backdrop=document.getElementById('importPreviewBackdrop');
+  document.getElementById('importPreviewFile').textContent=`${prepared.meta.fileName||'backup.json'} · schema ${prepared.schemaVersion} · ${summary.records} registros detectados`;
+  document.getElementById('importPreviewAdded').textContent=summary.added;
+  document.getElementById('importPreviewReplaced').textContent=summary.replaced;
+  document.getElementById('importPreviewConflicts').textContent=summary.conflicts;
+  document.getElementById('importPreviewKeys').textContent=summary.keys;
+  document.getElementById('importPreviewIgnored').textContent=prepared.ignored.length?`Campos ignorados por seguridad o compatibilidad: ${prepared.ignored.join(', ')}`:'No se ignoraron campos.';
+  backdrop.classList.remove('hidden');backdrop.setAttribute('aria-hidden','false');document.getElementById('confirmImportBtn').focus();
+}
+async function importJson(file){
+  try{openImportPreview(await window.BACKUP_SERVICE.prepareFile(file));}
+  catch(error){flash(error.message||'No se pudo revisar el backup.');}
+}
+function refreshAfterBackupImport(){
+  const start=localStorage.getItem(START_KEY)||todayStr();document.getElementById('startDate').value=start;
+  applyUiPreferences();populateFoods();loadNutritionTargets();loadBodyMetricsForDate();window.WORKOUT_FEATURES?.ensureWorkoutData?.();
+  renderAll();window.renderAdvancedNutrition?.();window.renderAdvancedProgress?.();window.renderGymParty?.();
+}
+async function confirmBackupImport(){
+  if(!pendingBackupImport)return;const button=document.getElementById('confirmImportBtn');button.disabled=true;
+  try{
+    const result=await window.BACKUP_SERVICE.apply(pendingBackupImport);lastImportSnapshotId=result.snapshotId;
+    closeImportPreview();refreshAfterBackupImport();
+    const panel=document.getElementById('importUndoPanel');panel.classList.remove('hidden');document.getElementById('importUndoText').textContent=`Importación aplicada: ${result.entry.records} registros revisados.`;
+    flash('Importación completa. Podés deshacerla desde Datos y copias.');
+  }catch(error){flash(error.message||'La importación no pudo completarse.');}
+  finally{button.disabled=false;}
+}
+async function undoLastImport(){
+  if(!lastImportSnapshotId)return;
+  try{await window.BACKUP_SERVICE.undo(lastImportSnapshotId);lastImportSnapshotId='';document.getElementById('importUndoPanel').classList.add('hidden');refreshAfterBackupImport();flash('Importación deshecha. Se restauró la copia anterior.');}
+  catch(error){flash(error.message||'No se pudo deshacer la importación.');}
 }
 function loadEntryForDate(){
   const date=document.getElementById('entryDate').value||todayStr();
@@ -2411,6 +2464,11 @@ document.querySelectorAll('[data-reset-scope]').forEach(button=>button.addEventL
 document.getElementById('settingsExportJsonBtn')?.addEventListener('click',exportJson);
 document.getElementById('settingsExportCsvBtn')?.addEventListener('click',exportCsv);
 document.getElementById('settingsImportBtn')?.addEventListener('click',()=>document.getElementById('importFile').click());
+document.getElementById('confirmImportBtn')?.addEventListener('click',confirmBackupImport);
+document.getElementById('cancelImportBtn')?.addEventListener('click',closeImportPreview);
+document.getElementById('closeImportPreviewBtn')?.addEventListener('click',closeImportPreview);
+document.getElementById('undoImportBtn')?.addEventListener('click',undoLastImport);
+document.getElementById('importPreviewBackdrop')?.addEventListener('click',event=>{if(event.target===event.currentTarget)closeImportPreview();});
 document.getElementById('openDrawerBtn').addEventListener('click', openDrawer);
 document.getElementById('openGymPartyTopBtn').addEventListener('click', ()=>setModule('gym-party'));
 document.getElementById('routeBackBtn').addEventListener('click',()=>window.APP_ROUTER?.back());
@@ -2482,8 +2540,9 @@ document.getElementById('importFile').addEventListener('change', e=>{ if(e.targe
 const actionBackdrop=document.getElementById('actionModalBackdrop');
 if(actionBackdrop) actionBackdrop.addEventListener('click', e=>{ if(e.target===actionBackdrop) closeActionModal(); });
 document.addEventListener('keydown', e=>{
-  if(e.key==='Escape'){if(document.body.classList.contains('drawerOpen'))closeDrawer();else closeActionModal();return;}
+  if(e.key==='Escape'){if(!document.getElementById('importPreviewBackdrop')?.classList.contains('hidden'))closeImportPreview();else if(document.body.classList.contains('drawerOpen'))closeDrawer();else closeActionModal();return;}
   if(document.body.classList.contains('drawerOpen'))trapOverlayFocus(e,document.getElementById('sideDrawer'));
+  else if(!document.getElementById('importPreviewBackdrop')?.classList.contains('hidden'))trapOverlayFocus(e,document.getElementById('importPreviewBackdrop'));
   else if(!document.getElementById('actionModalBackdrop')?.classList.contains('hidden'))trapOverlayFocus(e,document.getElementById('actionModalBackdrop'));
 });
 document.addEventListener('click', e=>{

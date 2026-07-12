@@ -30,6 +30,7 @@ $appNavigation = Read-Utf8 'ui/navigation.js'
 $progressView = Read-Utf8 'progress/progress-view.js'
 $indexedData = Read-Utf8 'data/indexeddb.js'
 $repositories = Read-Utf8 'data/repositories.js'
+$backupService = Read-Utf8 'data/backup-service.js'
 $workout = Read-Utf8 'workout-features.js'
 $firebaseConfig = Read-Utf8 'firebase-config.js'
 $firebaseService = Read-Utf8 'firebase-service.js'
@@ -87,6 +88,7 @@ $duplicates = $staticIds | Group-Object | Where-Object Count -gt 1 | Select-Obje
 Assert-True ($duplicates.Count -eq 0) "Hay IDs HTML duplicados: $($duplicates -join ', ')"
 
 $requiredFiles = @(
+    'data/backup-service.js', 'scripts/test-backup-service.mjs', 'tests/e2e/backup-import.spec.mjs',
     'app-version.json', 'app-version.js', 'data/indexeddb.js', 'data/repositories.js', 'nutrition-data.js', 'fdc-client.js', 'workout-store.js', 'workout-plan.js', 'workout-metrics.js', 'workout-ranking.js', 'workout-ui.js', 'workout-features.js', 'advanced-features.js', 'ui/router.js', 'ui/navigation.js', 'progress/progress-view.js',
     'firebase-config.js', 'firebase-service.js', 'gym-party-sync.js', 'gym-party-metrics.js', 'gym-party-ui.js', 'gym-party.js',
     'scripts/test-android-webview-security.mjs',
@@ -113,7 +115,7 @@ foreach ($script in @('nutrition-data.js', 'fdc-client.js', 'workout-store.js', 
     Assert-True ($html.Contains("<script src=`"$script`"></script>")) "index.html no carga $script"
     Assert-True ($serviceWorker.Contains("'./$script'")) "sw.js no cachea $script"
 }
-foreach ($script in @('data/indexeddb.js', 'data/repositories.js')) {
+foreach ($script in @('data/indexeddb.js', 'data/repositories.js', 'data/backup-service.js')) {
     Assert-True ($html.Contains("<script src=`"$script`"></script>")) "index.html no carga $script"
     Assert-True ($serviceWorker.Contains("'./$script'")) "sw.js no cachea $script"
 }
@@ -123,6 +125,9 @@ foreach ($contract in @('ProtocolRepository','WorkoutRepository','NutritionRepos
 }
 foreach ($contract in @('createRecoverySnapshot','restoreRecovery','replaceMany','BroadcastChannel','QuotaExceededError')) {
     Assert-True ($indexedData.Contains($contract)) "Falta contrato IndexedDB: $contract"
+}
+foreach ($contract in @('MAX_FILE_BYTES','sanitize','prepareFile','prepareText','previewFor','replaceMany','undo')) {
+    Assert-True ($backupService.Contains($contract)) "Falta contrato de importacion segura: $contract"
 }
 Assert-True ($html.Contains('<script src="ui/router.js"></script>')) 'index.html no carga ui/router.js'
 Assert-True ($serviceWorker.Contains("'./ui/router.js'")) 'sw.js no cachea ui/router.js'

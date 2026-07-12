@@ -551,6 +551,10 @@
   }
   window.buildCompleteBackup=buildCompleteBackup;
   function importCompleteBackupData(data){
+    if(window.BACKUP_SERVICE&&window.APP_DATA){
+      const prepared=window.BACKUP_SERVICE.prepareText(JSON.stringify(data),{fileName:'importacion-interna.json'});
+      return window.BACKUP_SERVICE.apply(prepared).then(result=>{window.refreshAfterBackupImport?.();return result;});
+    }
     const state=data?.schemaVersion?data:null;
     if(state){
       if(Array.isArray(state.dailyLogs))setEntries(state.dailyLogs);

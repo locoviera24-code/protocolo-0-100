@@ -73,7 +73,7 @@
     });}
   }
   class BackupRepository extends BaseRepository{
-    constructor(){super('backup',{versionedState:'protocolo_0_100_state_v2'});}
+    constructor(){super('backup',{versionedState:'protocolo_0_100_state_v2',importHistory:'protocolo_0_100_import_history_v1'});}
     createRecovery(keys,reason='backup-before-change'){return data.createRecoverySnapshot(keys,reason);}
     restoreRecovery(snapshotId){return data.restoreRecovery(snapshotId);}
     diagnostics(){return data.diagnostics();}
