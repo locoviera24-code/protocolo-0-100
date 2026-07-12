@@ -227,6 +227,15 @@
   .progressExerciseRow strong {
     grid-column: 1 / -1;
   }
+  .progressExerciseFilters {
+    grid-template-columns: 1fr;
+  }
+  .progressGymNav {
+    overflow-x: auto;
+  }
+  .progressGymNav button {
+    flex: 1 0 auto;
+  }
 }
 
 @media (max-width: 380px) {

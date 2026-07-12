@@ -15,7 +15,7 @@ PWA y APK Android para medir habitos, atencion, actividad fisica y nutricion con
 
 ## Navegacion y diseno
 
-La version actual `v2.7.0` (build web `57`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
+La version actual `v2.7.0` (build web `58`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
 **Gym**, **Nutricion**, **Progreso** y **Mas**. En escritorio usa una barra
 lateral compacta. Gym Party se abre desde **Gym > Grupo**, desde un acceso
 discreto en Inicio o mediante un enlace `gymPartyCode`; ya no ocupa un boton
@@ -65,6 +65,8 @@ nutrition/nutrition-view.js View models del dia y progreso principal
 progress/progress-data-model.js Ventanas temporales y cambios comparables
 progress/gym-progress-model.js Sesiones y grupos musculares canonicos
 progress/muscle-progress.js Series, volumen y frecuencia por musculo
+progress/exercise-progress.js Fuerza, historial y sugerencia por ejercicio
+progress/personal-records.js Records derivados de sesiones canonicas
 workout-store.js            Acceso conservador y versionado al repositorio Gym
 workout-plan.js             Normalizacion, deduplicacion e insercion en rutinas
 workout-ui.js               Renderizadores pequenos y anuncios accesibles de Gym
@@ -330,6 +332,11 @@ muestra series de la semana, ultimas cuatro semanas, frecuencia, volumen,
 ejercicios y periodo anterior. Cada serie se atribuye una sola vez al grupo
 primario registrado; los musculos secundarios no se suman de forma oculta.
 Deep link: `?module=progress&view=gym&progressScope=muscle&muscle=pecho`.
+
+**Ejercicios** mantiene variantes separadas por ID y muestra mejor carga,
+mejor serie, e1RM estimado, reps, volumen, sesiones, gráfico seleccionable y
+recomendación explicada. **Récords** deriva marcas desde el historial. Para
+peso corporal se muestran reps y lastre, no `0 kg` como indicador de fuerza.
 
 Validar estructura:
 

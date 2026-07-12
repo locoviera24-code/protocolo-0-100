@@ -4,7 +4,7 @@ Ultima actualizacion: 2026-07-12
 Rama esperada: `main`
 Version actual: `2.7.0` (fuente unica: `app-version.json`)
 Android: `versionCode 33`, `versionName "2.7.0"`
-Service worker cache: `protocolo-0-100-pwa-2.7.0-b57`
+Service worker cache: `protocolo-0-100-pwa-2.7.0-b58`
 Backup consolidado: `schemaVersion: 3`
 
 Leer primero este archivo y luego `README.md`, `index.html`,
@@ -24,7 +24,7 @@ Estado actual:
 - Gym Party implementado como modulo web/PWA opcional.
 - Nutricion local/FDC opcional.
 - Backups JSON `schemaVersion: 3`.
-- PWA offline con cache derivada `protocolo-0-100-pwa-2.7.0-b57` y
+- PWA offline con cache derivada `protocolo-0-100-pwa-2.7.0-b58` y
   actualizacion consentida desde el aviso visible.
 - APK con widget Android y permiso `INTERNET` para Firebase/Gym Party.
 
@@ -86,7 +86,7 @@ Web:
   tombstones, backoff y contexto horario.
 - `gym-party.js`: modulo Gym Party, registro rapido, graficas y edicion/eliminacion de series.
 - `advanced-features.js`: version `2.7.0`, backup/importacion Gym Party.
-- `sw.js`: cache build 57, actualizacion consentida, incluye modulos nuevos y evita
+- `sw.js`: cache build 58, actualizacion consentida, incluye modulos nuevos y evita
   persistir una configuracion Firebase obsoleta.
 - `README.md`: documenta Gym Party, demo, Firebase, privacidad y pruebas.
 - `CODEX_HANDOFF.md`: este handoff.
@@ -1471,3 +1471,38 @@ Pendiente exacto: Progreso por ejercicio, busqueda accesible, variantes,
 mejores series/pesos, e1RM conservador, records derivados y sugerencia de
 progresion. Despues, corregir el resumen integral y retirar escritura nueva en
 `gymSessions`.
+
+## 40. Progreso por ejercicio, fuerza y records
+
+Implementado despues de `af6bafb`:
+
+- Nuevos modulos: `progress/exercise-progress.js` y
+  `progress/personal-records.js`.
+- `Progreso > Gym` agrega alcances funcionales Ejercicios y Records. Deep link:
+  `progressScope=exercise&exerciseId=<id>`; Atrás restaura el ejercicio.
+- Las variantes no se mezclan: se usa `exerciseId` canonico y aliases solo para
+  migracion/busqueda.
+- Metricas: ultima sesion, mejor carga, mejor serie, reps maximas, volumen,
+  series, sesiones, cambio contra periodo anterior e historial reciente.
+- e1RM usa Epley `peso * (1 + reps / 30)` solo entre 1 y 12 reps, con carga
+  positiva y fuera de peso corporal. La UI explica que es estimado.
+- Peso corporal muestra reps maximas, lastre y volumen de lastre; nunca usa
+  `0 kg` como indicador de fuerza.
+- Records son derivados del historial: carga, e1RM, reps, volumen de sesion,
+  reps de peso corporal y lastre. No dependen de una clave mutable ni se
+  duplican por volver a sincronizar una sesion.
+- Recomendacion conservadora exige dos sesiones y explica sus datos. Bloquea
+  aumentos ante dolor/molestia, caida de reps/carga o empeoramiento marcado de
+  RIR/RPE.
+- `scripts/test-exercise-progress.mjs` cubre variantes, e1RM, peso corporal,
+  recomendacion y records. `tests/e2e/progress-exercise.spec.mjs` pasa 9/9 en
+  Android Chromium, iPhone WebKit y escritorio.
+- Regresion completa: 109 aprobadas, 14 omisiones intencionales y cero fallos.
+  Assets Android sincronizados y APK debug compilado correctamente.
+
+Estado publicable: version `2.7.0`, Android `33`, build/cache `58`
+(`protocolo-0-100-pwa-2.7.0-b58`).
+
+Pendiente siguiente: corregir el resumen integral separando cobertura,
+constancia y tendencia; migrar `gymSessions` a solo legacy; luego menu completo
+de edicion en Nutricion y sistema central de mensajes.

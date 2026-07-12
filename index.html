@@ -518,6 +518,8 @@
               <nav class="progressGymNav" aria-label="Análisis de Gym">
                 <button type="button" class="active" data-progress-gym-scope="summary">Resumen</button>
                 <button type="button" data-progress-gym-scope="muscle">Músculos</button>
+                <button type="button" data-progress-gym-scope="exercise">Ejercicios</button>
+                <button type="button" data-progress-gym-scope="records">Récords</button>
               </nav>
               <div data-progress-gym-panel="summary">
                 <div class="progressKpiGrid" id="progressGymSummary"></div>
@@ -533,6 +535,17 @@
                     <section class="moduleCard" aria-labelledby="progressMuscleExercisesTitle"><h3 id="progressMuscleExercisesTitle">Ejercicios del período</h3><div class="entryList" id="progressMuscleExercises"></div></section>
                   </div>
                 </div>
+              </section>
+              <section class="hidden" data-progress-gym-panel="exercise" aria-labelledby="progressExerciseTitle">
+                <div class="moduleCard progressExerciseFilters"><div><h2 id="progressExerciseTitle">Progreso por ejercicio</h2><p class="muted small">Las variantes se mantienen separadas por su ID canónico.</p></div><div class="field"><label for="progressExerciseSearch">Buscar</label><input type="search" id="progressExerciseSearch" placeholder="Ej. press de banca"></div><div class="field"><label for="progressExerciseSelect">Ejercicio</label><select id="progressExerciseSelect"></select></div><div class="field"><label for="progressExerciseMetric">Métrica</label><select id="progressExerciseMetric"><option value="bestWeight">Peso máximo</option><option value="e1rm">e1RM estimado</option><option value="maxReps">Repeticiones</option><option value="volume">Volumen</option><option value="sets">Series</option></select></div></div>
+                <details class="moduleCard advancedDetails"><summary>Cómo se estima el 1RM</summary><p>Se usa Epley: peso × (1 + repeticiones / 30), solo con series de 1 a 12 repeticiones y carga externa mayor que cero. Es una estimación, no un 1RM real.</p></details>
+                <div class="progressKpiGrid" id="progressExerciseSummary"></div>
+                <section class="moduleCard progressRecommendation" aria-labelledby="progressRecommendationTitle"><h3 id="progressRecommendationTitle">Sugerencia conservadora</h3><strong id="progressRecommendationText"></strong><p class="muted small" id="progressRecommendationReason"></p></section>
+                <section class="moduleCard" aria-labelledby="progressExerciseChartTitle"><h3 id="progressExerciseChartTitle">Evolución</h3><div id="progressExerciseChart"></div><p class="chartCaption" id="progressExerciseChartSummary"></p></section>
+                <section class="moduleCard" aria-labelledby="progressExerciseHistoryTitle"><h3 id="progressExerciseHistoryTitle">Sesiones recientes</h3><div class="entryList" id="progressExerciseHistory"></div></section>
+              </section>
+              <section class="hidden" data-progress-gym-panel="records" aria-labelledby="progressRecordsTitle">
+                <div class="moduleCard"><h2 id="progressRecordsTitle">Récords personales</h2><p class="muted small">Derivados de las sesiones guardadas; sincronizar otra vez la misma sesión no crea un récord duplicado.</p><div class="entryList" id="progressRecordsList"></div></div>
               </section>
             </section>
 
@@ -2726,6 +2739,8 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 <script src="progress/progress-data-model.js"></script>
 <script src="progress/gym-progress-model.js"></script>
 <script src="progress/muscle-progress.js"></script>
+<script src="progress/exercise-progress.js"></script>
+<script src="progress/personal-records.js"></script>
 <script src="progress/progress-view.js"></script>
 <script src="advanced-features.js"></script>
 </body>

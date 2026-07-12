@@ -120,12 +120,14 @@
     if(caption)caption.textContent=weeks.length?`Resumen textual: ${weeks.map(week=>`semana ${week.label}, ${week.sets} series y ${displayVolume(week.volume)} ${unit}`).join('; ')}. Más volumen no siempre significa mejor.`:'Resumen textual: no hay sesiones en el período.';
     renderGymScope();
   }
-  function gymScopeFromUrl(){const params=new URLSearchParams(location.search);return params.get('progressScope')==='muscle'?'muscle':'summary';}
+  function gymScopeFromUrl(){const scope=new URLSearchParams(location.search).get('progressScope');return['muscle','exercise','records'].includes(scope)?scope:'summary';}
   function selectedMuscleFromUrl(){return new URLSearchParams(location.search).get('muscle')||'';}
-  function setGymScope(scope,muscle='',{push=true}={}){
+  function selectedExerciseFromUrl(){return new URLSearchParams(location.search).get('exerciseId')||'';}
+  function setGymScope(scope,selection='',{push=true}={}){
     const url=new URL(location.href);url.searchParams.set('progressScope',scope);
-    if(scope==='muscle'&&muscle)url.searchParams.set('muscle',muscle);else if(scope!=='muscle')url.searchParams.delete('muscle');
-    if(push){const state=history.state||{},index=(Number(state.index)||0)+1;history.pushState({...state,index,progressScope:scope,muscle:scope==='muscle'?muscle:''},'',`${url.pathname}${url.search}${url.hash}`);}else history.replaceState(history.state,'',`${url.pathname}${url.search}${url.hash}`);
+    if(scope==='muscle'&&selection)url.searchParams.set('muscle',selection);else if(scope!=='muscle')url.searchParams.delete('muscle');
+    if(scope==='exercise'&&selection)url.searchParams.set('exerciseId',selection);else if(scope!=='exercise')url.searchParams.delete('exerciseId');
+    if(push){const state=history.state||{},index=(Number(state.index)||0)+1;history.pushState({...state,index,progressScope:scope,muscle:scope==='muscle'?selection:'',exerciseId:scope==='exercise'?selection:''},'',`${url.pathname}${url.search}${url.hash}`);}else history.replaceState(history.state,'',`${url.pathname}${url.search}${url.hash}`);
     renderGymScope();
   }
   function muscleMapHtml(model,selected){
@@ -140,7 +142,7 @@
   }
   function renderGymScope(){
     const scope=gymScopeFromUrl();document.querySelectorAll('[data-progress-gym-scope]').forEach(button=>button.classList.toggle('active',button.dataset.progressGymScope===scope));document.querySelectorAll('[data-progress-gym-panel]').forEach(panel=>panel.classList.toggle('hidden',panel.dataset.progressGymPanel!==scope));
-    if(scope!=='muscle')return;
+    if(scope==='exercise'){renderExerciseProgress();return;}if(scope==='records'){renderPersonalRecords();return;}if(scope!=='muscle')return;
     const model=window.MUSCLE_PROGRESS.build({sessions:workoutSessions(),library:window.WORKOUT_FEATURES?.getExerciseLibrary?.()||[],days:document.getElementById('progressPeriod')?.value||'30',today:today()}),select=document.getElementById('progressMuscleSelect');
     if(!model.muscles.length){if(select)select.innerHTML='<option>Sin datos</option>';document.getElementById('progressMuscleMap').innerHTML='<div class="emptyState">Registrá series para activar el mapa muscular.</div>';document.getElementById('progressMuscleSummary').innerHTML='';document.getElementById('progressMuscleWeeklyChart').innerHTML='<div class="emptyState">Todavía no hay semanas comparables.</div>';document.getElementById('progressMuscleExercises').innerHTML='<div class="emptyState">Todavía no hay ejercicios registrados.</div>';document.getElementById('progressMuscleChartSummary').textContent='Resumen textual: no hay series registradas.';return;}
     let selected=selectedMuscleFromUrl();if(!model.byId[selected])selected=model.muscles[0].id;
@@ -153,6 +155,22 @@
     document.getElementById('progressMuscleExercises').innerHTML=muscle.current.exercises.length?muscle.current.exercises.map(item=>`<article class="progressExerciseRow"><strong>${escape(item.name)}</strong><span>${item.sets} series</span><span>${item.reps} reps</span><span>${item.bodyweight&&!item.volume?'Peso corporal':`${displayVolume(item.volume).toLocaleString()} ${unit}`}</span></article>`).join(''):'<div class="emptyState">No hay ejercicios de este músculo en el período seleccionado.</div>';
     if(selectedMuscleFromUrl()!==selected)setGymScope('muscle',selected,{push:false});
   }
+  function exerciseModel(){return window.EXERCISE_PROGRESS.build({sessions:workoutSessions(),library:window.WORKOUT_FEATURES?.getExerciseLibrary?.()||[],days:document.getElementById('progressPeriod')?.value||'30',today:today()});}
+  function displaySet(set,exercise,unit){if(!set)return'—';const weight=window.WORKOUT_FEATURES?.displayWeight?.(set.weight,unit)??set.weight;if(exercise.bodyweight)return set.weight?`${weight} ${unit} de lastre × ${set.reps}`:`${set.reps} reps (peso corporal)`;return`${weight} ${unit} × ${set.reps}`;}
+  function renderExerciseProgress(){
+    const model=exerciseModel(),search=document.getElementById('progressExerciseSearch'),select=document.getElementById('progressExerciseSelect'),query=window.GYM_PROGRESS_MODEL.normalize(search?.value||''),visible=model.exercises.filter(item=>!query||window.GYM_PROGRESS_MODEL.normalize(`${item.name} ${item.muscle}`).includes(query));
+    if(!model.exercises.length){if(select)select.innerHTML='<option>Sin datos</option>';document.getElementById('progressExerciseSummary').innerHTML='';document.getElementById('progressExerciseChart').innerHTML='<div class="emptyState">Registrá series para ver progreso por ejercicio.</div>';document.getElementById('progressExerciseHistory').innerHTML='<div class="emptyState">No hay sesiones registradas.</div>';document.getElementById('progressRecommendationText').textContent='No hay datos suficientes.';document.getElementById('progressRecommendationReason').textContent='Registrá al menos dos sesiones comparables.';return;}
+    let selected=selectedExerciseFromUrl();if(!model.byId[selected])selected=(visible[0]||model.exercises[0]).id;
+    if(select){select.innerHTML=(visible.length?visible:model.exercises).map(item=>`<option value="${escape(item.id)}">${escape(item.name)} · ${escape(item.muscle)}</option>`).join('');if([...select.options].some(option=>option.value===selected))select.value=selected;else selected=select.value;}
+    const exercise=model.byId[selected],unit=window.WORKOUT_FEATURES?.getGymSettings?.().unit||'kg',weight=value=>window.WORKOUT_FEATURES?.displayWeight?.(value,unit)??value,volume=value=>window.WORKOUT_FEATURES?.displayVolume?.(value,unit)??Math.round(value),latest=exercise.history[0];
+    document.getElementById('progressExerciseSummary').innerHTML=[kpi('Última sesión',latest?.date||'—',latest?`${latest.sets} series · ${latest.reps} reps`:'Sin sesiones'),kpi(exercise.bodyweight?'Mayor lastre':'Mejor peso',exercise.bodyweight?(exercise.all.addedLoadBest?`${weight(exercise.all.addedLoadBest)} ${unit}`:'Sin lastre'):`${weight(exercise.all.bestWeight)} ${unit}`,displaySet(exercise.all.bestSet,exercise,unit)),kpi('e1RM estimado',exercise.all.bestE1RM?`${weight(exercise.all.bestE1RM)} ${unit}`:'No aplica','Epley, solo series de 1 a 12 reps'),kpi(exercise.bodyweight?'Máximo peso corporal':'Mejor cantidad de reps',`${exercise.bodyweight?exercise.all.bodyweightMaxReps:exercise.all.maxReps} reps`,'Según series guardadas'),kpi(exercise.bodyweight?'Volumen de lastre':'Volumen del período',exercise.bodyweight&&!exercise.current.volume?'Sin lastre registrado':`${volume(exercise.current.volume).toLocaleString()} ${unit}`,exercise.change.volume===null?'Sin período anterior':`${exercise.change.volume>0?'+':''}${exercise.change.volume}% vs anterior`),kpi('Series del período',exercise.current.sets,`${exercise.current.sessions} sesión(es)`)].join('');
+    document.getElementById('progressRecommendationText').textContent=exercise.recommendation.text;document.getElementById('progressRecommendationReason').textContent=exercise.recommendation.reason;
+    const metricSelect=document.getElementById('progressExerciseMetric');if(exercise.bodyweight&&metricSelect.value==='bestWeight'&&!exercise.all.addedLoadBest)metricSelect.value='maxReps';const metric=metricSelect.value,labels={bestWeight:'Peso máximo',e1rm:'e1RM estimado',maxReps:'Repeticiones',volume:'Volumen',sets:'Series'},rows=exercise.history.slice().reverse(),valueOf=row=>metric==='e1rm'?(row.bestE1RM||0):metric==='maxReps'?row.maxReps:metric==='volume'?volume(row.volume):metric==='sets'?row.sets:weight(row.bestWeight),suffix=metric==='maxReps'?' reps':metric==='sets'?' series':` ${unit}`;
+    document.getElementById('progressExerciseChart').innerHTML=barRows(rows,{value:valueOf,label:row=>row.date,detail:row=>`${row.sets} series · ${row.reps} reps`,display:row=>`${valueOf(row)}${suffix}`,empty:'No hay sesiones para esta métrica.'});document.getElementById('progressExerciseChartSummary').textContent=`Resumen textual: ${labels[metric]} de ${exercise.name}. ${rows.map(row=>`${row.date}: ${valueOf(row)}${suffix}`).join('; ')||'sin datos'}.`;
+    document.getElementById('progressExerciseHistory').innerHTML=exercise.history.slice(0,12).map(row=>`<article class="progressSessionRow"><div><strong>${escape(row.date)}</strong><span>${row.sets} series · ${row.reps} reps</span></div><b>${escape(displaySet(row.bestSet,exercise,unit))}</b></article>`).join('');
+    if(selectedExerciseFromUrl()!==selected)setGymScope('exercise',selected,{push:false});
+  }
+  function renderPersonalRecords(){const records=window.PERSONAL_RECORDS.build(exerciseModel()),box=document.getElementById('progressRecordsList'),unit=window.WORKOUT_FEATURES?.getGymSettings?.().unit||'kg',value=record=>record.measure==='reps'?`${record.value} reps`:record.measure==='volume'?`${window.WORKOUT_FEATURES?.displayVolume?.(record.value,unit)??record.value} ${unit}`:`${window.WORKOUT_FEATURES?.displayWeight?.(record.value,unit)??record.value} ${unit}`;box.innerHTML=records.length?records.map(record=>`<article class="progressRecordRow"><div><strong>${escape(record.name)}</strong><span>${escape(record.label)}</span></div><b>${escape(value(record))}</b></article>`).join(''):'<div class="emptyState">Registrá series para derivar récords personales.</div>';}
   function renderNutrition(){
     const days=selectedDays(),all=nutritionEntries(),current=all.filter(entry=>within(entry.date,days)),previous=all.filter(entry=>previousWindow(entry.date,days));
     const dates=new Set(current.map(entry=>entry.date)),previousDates=new Set(previous.map(entry=>entry.date));
@@ -180,9 +198,12 @@
     document.querySelectorAll('[data-progress-view]').forEach(button=>button.addEventListener('click',()=>applyRoute(button.dataset.progressView,{navigate:true})));
     document.getElementById('progressPeriod')?.addEventListener('change',render);
     document.getElementById('progressArea')?.addEventListener('change',render);
-    document.querySelectorAll('[data-progress-gym-scope]').forEach(button=>button.addEventListener('click',()=>setGymScope(button.dataset.progressGymScope,button.dataset.progressGymScope==='muscle'?(selectedMuscleFromUrl()||document.getElementById('progressMuscleSelect')?.value||''):'')));
+    document.querySelectorAll('[data-progress-gym-scope]').forEach(button=>button.addEventListener('click',()=>{const scope=button.dataset.progressGymScope,selection=scope==='muscle'?(selectedMuscleFromUrl()||document.getElementById('progressMuscleSelect')?.value||''):scope==='exercise'?(selectedExerciseFromUrl()||document.getElementById('progressExerciseSelect')?.value||''):'';setGymScope(scope,selection);}));
     document.getElementById('progressMuscleSelect')?.addEventListener('change',event=>setGymScope('muscle',event.target.value));
     document.getElementById('progressMuscleMap')?.addEventListener('click',event=>{const button=event.target.closest('[data-progress-muscle]');if(button?.dataset.progressMuscle)setGymScope('muscle',button.dataset.progressMuscle);});
+    document.getElementById('progressExerciseSelect')?.addEventListener('change',event=>setGymScope('exercise',event.target.value));
+    document.getElementById('progressExerciseSearch')?.addEventListener('input',renderExerciseProgress);
+    document.getElementById('progressExerciseMetric')?.addEventListener('change',renderExerciseProgress);
     document.addEventListener('click',event=>{if(event.target.closest('[data-open-progress]'))window.APP_ROUTER?.navigate({module:'progress',view:'overview'});});
     window.addEventListener('app-route-change',event=>{if(event.detail?.module==='progress')applyRoute(event.detail.view);});
     const route=window.APP_ROUTER?.current();if(route?.module==='progress')applyRoute(route.view);else render();

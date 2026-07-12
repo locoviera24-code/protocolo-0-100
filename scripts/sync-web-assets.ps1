@@ -41,6 +41,8 @@ $relativeFiles = @(
     'progress/progress-data-model.js',
     'progress/gym-progress-model.js',
     'progress/muscle-progress.js',
+    'progress/exercise-progress.js',
+    'progress/personal-records.js',
     'progress/progress-view.js',
     'styles/tokens.css',
     'styles/base.css',

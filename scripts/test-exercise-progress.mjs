@@ -1,0 +1,11 @@
+import fs from 'node:fs';import vm from 'node:vm';import assert from 'node:assert/strict';
+const window={};const context=vm.createContext({window,console,Date,Math,Number,String,Object,Array,Set,Map,JSON});
+for(const file of ['progress-data-model.js','gym-progress-model.js','exercise-progress.js','personal-records.js'])vm.runInContext(fs.readFileSync(`progress/${file}`,'utf8'),context);
+const library=[{id:'press',name:'Press banca',group:'Pecho'},{id:'press-inclinado',name:'Press inclinado',group:'Pecho'},{id:'dominadas',name:'Dominadas',group:'Espalda',unit:'peso corporal'}];
+const ex=(id,name,sets,bodyweight=false)=>({id,exerciseId:id,name,muscle:id==='dominadas'?'Espalda':'Pecho',bodyweight,sets});
+const sessions=[{id:'a',date:'2026-07-10',exercises:[ex('press','Press banca',[{reps:8,weight:60},{reps:13,weight:60}]),ex('press-inclinado','Press inclinado',[{reps:8,weight:40}]),ex('dominadas','Dominadas',[{reps:10,weight:0,isBodyweight:true}],true)]},{id:'b',date:'2026-07-03',exercises:[ex('press','Press banca',[{reps:8,weight:60}])]}];
+const model=window.EXERCISE_PROGRESS.build({sessions,library,days:30,today:'2026-07-12'}),press=model.byId.press,pull=model.byId.dominadas;
+assert.equal(model.exercises.length,3);assert.equal(press.all.bestWeight,60);assert.equal(press.all.bestE1RM,76);assert.equal(window.EXERCISE_PROGRESS.e1rm(60,13),null);assert.equal(pull.all.bodyweightMaxReps,10);assert.equal(pull.all.bestE1RM,null);assert.equal(press.recommendation.kind,'rep');
+const painful=window.EXERCISE_PROGRESS.recommendation([{bestWeight:60,maxReps:8,rows:[{sets:[{note:'dolor de hombro'}]}]},{bestWeight:60,maxReps:8,rows:[]}]);assert.equal(painful.kind,'maintain');
+const records=window.PERSONAL_RECORDS.build(model);assert.equal(records.filter(item=>item.exerciseId==='press'&&item.type==='weight').length,1);assert.ok(records.some(item=>item.type==='reps-bodyweight'));assert.ok(!records.some(item=>item.type==='e1rm'&&item.exerciseId==='dominadas'));
+console.log('Progreso por ejercicio correcto: variantes, e1RM conservador, peso corporal, recomendacion y records derivados.');
