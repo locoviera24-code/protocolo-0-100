@@ -15,7 +15,7 @@ PWA y APK Android para medir habitos, atencion, actividad fisica y nutricion con
 
 ## Navegacion y diseno
 
-La version actual `v2.7.0` (build web `55`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
+La version actual `v2.7.0` (build web `56`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
 **Gym**, **Nutricion**, **Progreso** y **Mas**. En escritorio usa una barra
 lateral compacta. Gym Party se abre desde **Gym > Grupo**, desde un acceso
 discreto en Inicio o mediante un enlace `gymPartyCode`; ya no ocupa un boton
@@ -97,7 +97,9 @@ nucleo ya se divide en `nutrition/*.js`. Las lecturas y escrituras pasan por
 no es la fuente primaria. La vista normal tiene solo **Hoy**, **Agregar** y
 **Progreso**. Hoy agrupa alimentos por comida y separa el agua; peso corporal,
 objetivos, alimentos propios y FDC viven en **Mas > Ajustes > Nutricion**. Las
-claves y formatos de backup no cambiaron.
+claves y formatos de backup no cambiaron. **Agregar** guía alimento, cantidad,
+unidad, comida y revisión en cuatro pasos; muestra recientes/frecuentes,
+calcula macros antes de guardar y ofrece Deshacer.
 
 Antes de importar un JSON, la app valida tamaño y schema, sanea claves y
 cadenas, muestra registros nuevos/reemplazados/conflictos y crea una copia

@@ -276,6 +276,7 @@
               <div class="nutritionSecondaryActions">
                 <button type="button" class="textButton" data-open-nutrition-view="coverage">Ver cobertura estimada</button>
                 <button type="button" class="textButton" data-open-nutrition-view="tendencias">Ver tendencias</button>
+                <button type="button" class="textButton hidden" id="undoLastFoodBtn">Deshacer último alimento</button>
               </div>
             </div>
 
@@ -341,13 +342,17 @@
 
             <div class="moduleCard" id="nutritionBuilderCard" data-nutrition-panel="registrar">
               <h3>Agregar alimento</h3>
-              <div class="muted small">Elegí un alimento, indicá la cantidad y guardalo en la comida correspondiente.</div>
-              <div class="formGrid">
-                <div class="field"><label>Comida</label><select id="nutritionMeal"><option>Desayuno</option><option>Almuerzo</option><option>Merienda</option><option>Cena</option><option>Snack</option><option>Post-entreno</option><option>Otro</option></select></div>
-                <div class="field"><label>Buscar por nombre o alias</label><input type="search" id="nutritionFoodSearch" placeholder="Ej. mandioca, chipa, calcio…"></div>
-                <div class="field"><label>Alimento preestablecido</label><select id="nutritionFood"></select></div>
-                <div class="field"><label>Cantidad consumida (g)</label><input type="number" id="foodQuantity" min="1" step="1" value="100"></div>
-              </div>
+              <div class="muted small">Buscá, ajustá la porción y revisá antes de guardar.</div>
+              <ol class="nutritionFlowSteps" id="nutritionFlowSteps" aria-label="Progreso del registro">
+                <li data-food-flow-indicator="search">1. Alimento</li><li data-food-flow-indicator="amount">2. Cantidad</li><li data-food-flow-indicator="meal">3. Comida</li><li data-food-flow-indicator="review">4. Revisar</li>
+              </ol>
+              <section class="nutritionFlowPanel" data-food-flow-step="search" aria-labelledby="nutritionSearchStepTitle">
+                <h4 id="nutritionSearchStepTitle">¿Qué comiste?</h4>
+                <div class="formGrid nutritionSearchFields">
+                  <div class="field"><label>Buscar por nombre o alias</label><input type="search" id="nutritionFoodSearch" placeholder="Ej. mandioca, chipa, pollo…" autocomplete="off"></div>
+                </div>
+                <div class="nutritionFoodSuggestions" id="nutritionFoodSuggestions" aria-live="polite"></div>
+                <details class="advancedDetails nutritionFoodFallback"><summary>Ver lista completa</summary><div class="field"><label>Todos los alimentos</label><select id="nutritionFood"></select></div></details>
               <details class="advancedDetails" id="customFoodDetails">
                 <summary>Crear alimento personalizado</summary>
                 <div class="formGrid" style="margin-top:10px">
@@ -370,12 +375,33 @@
                   <div class="field"><label>Folato (mcg/100 g)</label><input type="number" id="foodFolate" min="0" step="0.1"></div>
                 </div>
                 <div class="muted small" style="margin-top:8px">Usá la etiqueta o una fuente confiable cuando esté disponible. Si no conocés un dato, dejalo vacío.</div>
+                <div class="buttons"><button type="button" class="secondary" id="useCustomFoodBtn">Usar este alimento</button></div>
               </details>
+              </section>
+              <section class="nutritionFlowPanel hidden" data-food-flow-step="amount" aria-labelledby="nutritionAmountStepTitle">
+                <h4 id="nutritionAmountStepTitle">¿Cuánto consumiste?</h4>
+                <div class="nutritionSelectedFood" id="nutritionSelectedFood"></div>
+                <div class="formGrid nutritionAmountFields">
+                  <div class="field"><label for="foodQuantity">Cantidad</label><input type="number" inputmode="decimal" id="foodQuantity" min="0.1" step="0.1" value="100"></div>
+                  <div class="field"><label for="foodUnit">Unidad</label><select id="foodUnit"><option value="g">g</option><option value="ml">ml</option><option value="unidad">unidad</option><option value="taza">taza</option><option value="cucharada">cucharada</option><option value="rebanada">rebanada</option><option value="lata">lata</option><option value="porcion">porción</option></select></div>
+                </div>
               <div class="foodQuickActions" aria-label="Porciones rápidas">
                 <button type="button" data-food-portion="50">50 g</button><button type="button" data-food-portion="100">100 g</button><button type="button" data-food-portion="150">150 g</button><button type="button" data-food-portion="200">200 g</button><button type="button" id="useFoodBasePortionBtn">Porción sugerida</button>
               </div>
-              <div class="buttons">
-                <button type="button" class="good" id="addFoodBtn">Agregar alimento</button>
+                <div class="nutritionFlowActions"><button type="button" class="secondary" data-food-flow-back>Volver</button><button type="button" class="good" id="foodAmountNextBtn">Continuar</button></div>
+              </section>
+              <section class="nutritionFlowPanel hidden" data-food-flow-step="meal" aria-labelledby="nutritionMealStepTitle">
+                <h4 id="nutritionMealStepTitle">¿En qué comida?</h4>
+                <div class="field"><label for="nutritionMeal">Comida</label><select id="nutritionMeal"><option>Desayuno</option><option>Almuerzo</option><option>Merienda</option><option>Cena</option><option>Snack</option><option>Post-entreno</option><option>Otro</option></select></div>
+                <div class="nutritionFlowActions"><button type="button" class="secondary" data-food-flow-back>Volver</button><button type="button" class="good" id="foodMealNextBtn">Revisar</button></div>
+              </section>
+              <section class="nutritionFlowPanel hidden" data-food-flow-step="review" aria-labelledby="nutritionReviewStepTitle">
+                <h4 id="nutritionReviewStepTitle">Revisá el registro</h4>
+                <div class="nutritionFoodReview" id="nutritionFoodReview"></div>
+                <div class="nutritionFlowActions"><button type="button" class="secondary" data-food-flow-back>Volver</button><button type="button" class="good" id="addFoodBtn">Guardar alimento</button></div>
+              </section>
+              <div class="nutritionFlowActions nutritionFlowCancel">
+                <button type="button" class="textButton" id="cancelFoodFlowBtn">Cancelar</button>
               </div>
               <details class="advancedDetails nutritionMealTools">
                 <summary>Comidas frecuentes y otras acciones</summary>
@@ -1048,6 +1074,61 @@ function loadNutritionTargets(){
 }
 function allFoods(){ return [...FOOD_CATALOG,...(window.NUTRITION_STORE?.customFoods?.()||[]),...(window.FDC_CLIENT?.cachedFoods?.()||[])]; }
 function availableFoods(){ return allFoods().slice(1); }
+let nutritionEntryFlow=window.NUTRITION_ENTRY_FLOW.create({date:todayStr(),meal:'Almuerzo'});
+let lastAddedFoodEntry=null;
+function foodIndexForEntry(entry,foods=allFoods()){
+  const byId=entry?.foodId&&foods.findIndex(food=>food.id===entry.foodId);if(byId>0)return byId;
+  return foods.findIndex(food=>normalizeFoodText(food.name)===normalizeFoodText(entry?.name));
+}
+function renderFoodSearchSuggestions(){
+  const box=document.getElementById('nutritionFoodSuggestions');if(!box)return;
+  const foods=allFoods(),query=document.getElementById('nutritionFoodSearch')?.value||'',entries=window.NUTRITION_STORE.entries(),seen=new Set(),groups=[];
+  const addGroup=(title,indexes)=>{const unique=indexes.filter(index=>index>0&&foods[index]&&!seen.has(foods[index].id||normalizeFoodText(foods[index].name))).slice(0,6);unique.forEach(index=>seen.add(foods[index].id||normalizeFoodText(foods[index].name)));if(unique.length)groups.push({title,indexes:unique});};
+  if(!query.trim()){
+    addGroup('Recientes',window.NUTRITION_MEAL_HISTORY.recent(entries).map(entry=>foodIndexForEntry(entry,foods)));
+    addGroup('Frecuentes',window.NUTRITION_MEAL_HISTORY.frequent(entries).map(entry=>foodIndexForEntry(entry,foods)));
+  }
+  const ranked=window.NUTRITION_FOOD_SEARCH.rank(foods.slice(1),query).map(item=>foods.indexOf(item.food));
+  addGroup(query.trim()?'Resultados':'Base local',ranked);
+  box.innerHTML=groups.length?groups.map(group=>`<section class="nutritionSuggestionGroup"><strong>${escapeHtml(group.title)}</strong><div class="nutritionSuggestionList">${group.indexes.map(index=>`<button type="button" class="nutritionSuggestion" data-food-flow-select="${index}"><span>${escapeHtml(foods[index].name)}</span><small>${escapeHtml(foods[index].category||'Alimento')}</small></button>`).join('')}</div></section>`).join(''):'<div class="emptyState">No encontré coincidencias locales. Podés crear un alimento personalizado o buscar en USDA.</div>';
+}
+function renderNutritionFoodFlow({focus=false}={}){
+  const state=nutritionEntryFlow.state(),steps=window.NUTRITION_ENTRY_FLOW.STEPS.filter(step=>step!=='food'),currentIndex=steps.indexOf(state.step==='food'?'search':state.step);
+  document.querySelectorAll('[data-food-flow-step]').forEach(panel=>panel.classList.toggle('hidden',panel.dataset.foodFlowStep!==state.step));
+  document.querySelectorAll('[data-food-flow-indicator]').forEach(indicator=>{const index=steps.indexOf(indicator.dataset.foodFlowIndicator);indicator.classList.toggle('active',index===currentIndex);indicator.classList.toggle('complete',index<currentIndex);});
+  const selected=document.getElementById('nutritionSelectedFood');if(selected)selected.innerHTML=state.food?`<strong>${escapeHtml(state.food.name)}</strong><span>${escapeHtml(state.food.category||'Alimento')}</span>`:'';
+  if(state.step==='search')renderFoodSearchSuggestions();
+  if(state.step==='review'){
+    const review=nutritionEntryFlow.review(),box=document.getElementById('nutritionFoodReview');
+    if(box&&review){const entry=review.entry;box.innerHTML=`<div class="nutritionReviewHead"><strong>${escapeHtml(entry.name)}</strong><span>${escapeHtml(String(review.amount))} ${escapeHtml(review.unit)} · ${escapeHtml(review.meal)}</span></div><div class="quickStats"><div class="quickStat"><span>Calorías</span><strong>${Math.round(entry.calories)} kcal</strong></div><div class="quickStat"><span>Proteína</span><strong>${Math.round(entry.protein)} g</strong></div><div class="quickStat"><span>Carbohidratos</span><strong>${Math.round(entry.carbs)} g</strong></div><div class="quickStat"><span>Grasas</span><strong>${Math.round(entry.fat)} g</strong></div></div>${review.estimatedMeasure?'<div class="muted small">La conversión de esta medida a gramos es estimada.</div>':''}`;}
+  }
+  if(focus&& !document.getElementById('nutritionBuilderCard')?.classList.contains('hidden'))requestAnimationFrame(()=>{const panel=document.querySelector(`[data-food-flow-step="${state.step}"]`),heading=panel?.querySelector('h4');panel?.scrollIntoView({block:'start',behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});if(heading){heading.tabIndex=-1;heading.focus({preventScroll:true});}});
+}
+function chooseFoodForFlow(index){
+  const foods=allFoods(),food=foods[Number(index)];if(!food||Number(index)===0)return;
+  document.getElementById('nutritionFood').value=String(index);applySelectedFood(false);
+  const amount=Math.max(1,Number(food.portionGrams)||100);document.getElementById('foodQuantity').value=String(amount);document.getElementById('foodUnit').value='g';
+  nutritionEntryFlow.set({food,amount,unit:'g',date:document.getElementById('nutritionDate').value||todayStr()}).go('amount');renderNutritionFoodFlow({focus:true});
+}
+function useCustomFoodForFlow(){
+  const name=document.getElementById('customFoodName').value.trim();if(!name){flash('Escribí el nombre del alimento personalizado.');return;}
+  const food={id:`draft-${Date.now()}`,name,calories:num('foodCalories'),protein:num('foodProtein'),carbs:num('foodCarbs'),fat:num('foodFat'),fiber:num('foodFiber'),sodium:num('foodSodium'),potassium:num('foodPotassium'),calcium:num('foodCalcium'),iron:num('foodIron'),magnesium:num('foodMagnesium'),zinc:num('foodZinc'),vitaminA:num('foodVitaminA'),vitaminC:num('foodVitaminC'),vitaminD:num('foodVitaminD'),b12:num('foodB12'),folate:num('foodFolate'),portionGrams:100,confidence:'aproximado',source:'etiqueta manual',custom:true,__customDraft:true};
+  document.getElementById('foodQuantity').value='100';document.getElementById('foodUnit').value='g';nutritionEntryFlow.set({food,amount:100,unit:'g'}).go('amount');renderNutritionFoodFlow({focus:true});
+}
+function resetNutritionFoodFlow({openToday=false}={}){
+  nutritionEntryFlow=window.NUTRITION_ENTRY_FLOW.create({date:document.getElementById('nutritionDate').value||todayStr(),meal:document.getElementById('nutritionMeal')?.value||'Almuerzo'});
+  document.getElementById('nutritionFoodSearch').value='';document.getElementById('nutritionFood').value='0';document.getElementById('customFoodName').value='';document.getElementById('customFoodDetails').open=false;renderNutritionFoodFlow();
+  if(openToday)window.setNutritionView?.('resumen',{focus:true});
+}
+function advanceFoodAmount(){
+  const amount=Math.max(.1,Number(document.getElementById('foodQuantity').value)||0);if(!amount){flash('Indicá una cantidad válida.');return;}
+  nutritionEntryFlow.set({amount,unit:document.getElementById('foodUnit').value}).go('meal');renderNutritionFoodFlow({focus:true});
+}
+function advanceFoodMeal(){
+  nutritionEntryFlow.set({meal:document.getElementById('nutritionMeal').value,date:document.getElementById('nutritionDate').value||todayStr()}).go('review');renderNutritionFoodFlow({focus:true});
+}
+function backNutritionFoodFlow(){nutritionEntryFlow.back();if(nutritionEntryFlow.state().step==='food')nutritionEntryFlow.go('search');renderNutritionFoodFlow({focus:true});}
+function undoLastFood(){if(!lastAddedFoodEntry)return;window.NUTRITION_STORE.removeEntry(lastAddedFoodEntry.id);lastAddedFoodEntry=null;document.getElementById('undoLastFoodBtn').classList.add('hidden');renderNutrition();flash('Alimento eliminado del registro.');}
 function saveCustomFoodDefinition(food){
   const foods=window.NUTRITION_STORE?.customFoods?.()||[];
   const key=normalizeFoodText(food.name);
@@ -1062,10 +1143,11 @@ function populateFoods(){
   select.innerHTML=allFoods().map((f,i)=>`<option value="${i}">${escapeHtml(f.name)}${f.fdcImported?' · USDA':f.custom?' · propio':''}</option>`).join('');
   applySelectedFood();
 }
-function applySelectedFood(){
+function applySelectedFood(advance=false){
   const foods=allFoods();
   const f=foods[Number(document.getElementById('nutritionFood')?.value)||0] || foods[0];
   [['foodCalories',f.calories],['foodProtein',f.protein],['foodCarbs',f.carbs],['foodFat',f.fat],['foodFiber',f.fiber],['foodSodium',f.sodium],['foodPotassium',f.potassium],['foodCalcium',f.calcium],['foodIron',f.iron],['foodMagnesium',f.magnesium],['foodZinc',f.zinc],['foodVitaminA',f.vitaminA],['foodVitaminC',f.vitaminC],['foodVitaminD',f.vitaminD],['foodB12',f.b12],['foodFolate',f.folate]].forEach(([id,v])=>{const el=document.getElementById(id);if(el)el.value=v||'';});
+  if(advance&&Number(document.getElementById('nutritionFood')?.value)>0)chooseFoodForFlow(document.getElementById('nutritionFood').value);
 }
 function saveNutritionTargets(){
   window.NUTRITION_STORE?.saveTargets?.({calories:Math.max(0,num('targetCalories')),protein:Math.max(0,num('targetProtein')),carbs:Math.max(0,num('targetCarbs')),fat:Math.max(0,num('targetFat'))});
@@ -1073,23 +1155,11 @@ function saveNutritionTargets(){
   flash('Objetivos nutricionales guardados.');
 }
 function addFood(){
-  const foods=allFoods();
-  const selected=foods[Number(document.getElementById('nutritionFood').value)||0] || foods[0];
-  const custom=document.getElementById('customFoodName').value.trim();
-  const name=custom || (selected===foods[0]?'':selected.name);
-  if(!name){ flash('Elegí un alimento o escribí uno personalizado.'); return; }
-  const grams=Math.max(1,num('foodQuantity')||100);
-  const date=document.getElementById('nutritionDate').value||todayStr();
-  const meal=document.getElementById('nutritionMeal').value;
-  let food=selected;
-  if(custom){
-    food=saveCustomFoodDefinition({name:custom,calories:num('foodCalories'),protein:num('foodProtein'),carbs:num('foodCarbs'),fat:num('foodFat'),fiber:num('foodFiber'),sodium:num('foodSodium'),potassium:num('foodPotassium'),calcium:num('foodCalcium'),iron:num('foodIron'),magnesium:num('foodMagnesium'),zinc:num('foodZinc'),vitaminA:num('foodVitaminA'),vitaminC:num('foodVitaminC'),vitaminD:num('foodVitaminD'),b12:num('foodB12'),folate:num('foodFolate')});
-    populateFoods();
-  }
-  window.NUTRITION_STORE.addEntry({...buildFoodEntry(food,grams,meal,date),source:custom?'alimento personalizado':food.source||'registro manual'});
-  document.getElementById('customFoodName').value='';
-  renderNutrition();
-  flash('Alimento añadido.');
+  const review=nutritionEntryFlow.review();if(!review){flash('Elegí un alimento antes de guardar.');return;}
+  let food=review.food;if(food.__customDraft){const {__customDraft,...definition}=food;food=saveCustomFoodDefinition(definition);populateFoods();}
+  const entry={...buildFoodEntry(food,review.grams,review.meal,review.date),source:food.custom?'alimento personalizado':food.source||'registro manual'};
+  window.NUTRITION_STORE.addEntry(entry);lastAddedFoodEntry=entry;document.getElementById('undoLastFoodBtn').classList.remove('hidden');
+  renderNutrition();resetNutritionFoodFlow({openToday:true});flash('Alimento guardado. Podés deshacerlo desde Hoy.');
 }
 function normalizeFoodText(value){return window.NUTRITION_MODEL.normalizeText(value);}
 function cleanFoodQuery(value){return window.NUTRITION_MODEL.cleanQuery(value);}
@@ -2501,7 +2571,14 @@ document.getElementById('loadGymTemplateBtn').addEventListener('click', loadGymT
 document.getElementById('addGymExerciseBtn').addEventListener('click', addGymExercise);
 document.getElementById('saveGymSessionBtn').addEventListener('click', saveGymSession);
 document.getElementById('clearGymSessionBtn').addEventListener('click', clearGymSession);
-document.getElementById('nutritionFood').addEventListener('change', applySelectedFood);
+document.getElementById('nutritionFood').addEventListener('change', ()=>applySelectedFood(true));
+document.getElementById('nutritionFoodSearch').addEventListener('input', renderFoodSearchSuggestions);
+document.getElementById('useCustomFoodBtn').addEventListener('click', useCustomFoodForFlow);
+document.getElementById('foodAmountNextBtn').addEventListener('click', advanceFoodAmount);
+document.getElementById('foodMealNextBtn').addEventListener('click', advanceFoodMeal);
+document.querySelectorAll('[data-food-flow-back]').forEach(button=>button.addEventListener('click',backNutritionFoodFlow));
+document.getElementById('cancelFoodFlowBtn').addEventListener('click',()=>resetNutritionFoodFlow({openToday:true}));
+document.getElementById('undoLastFoodBtn').addEventListener('click',undoLastFood);
 document.getElementById('saveNutritionTargetsBtn').addEventListener('click', saveNutritionTargets);
 document.getElementById('addFoodBtn').addEventListener('click', addFood);
 document.getElementById('saveNutritionWaterBtn').addEventListener('click', ()=>saveNutritionWater());
@@ -2566,7 +2643,9 @@ document.addEventListener('keydown', e=>{
 });
 document.addEventListener('click', e=>{
   const nutritionView=e.target.closest('#nutritionDayList [data-open-nutrition-view]');
-  if(nutritionView&&typeof window.setNutritionView==='function'){window.setNutritionView(nutritionView.dataset.openNutritionView);return;}
+  if(nutritionView&&typeof window.setNutritionView==='function'){window.setNutritionView(nutritionView.dataset.openNutritionView,{focus:true});return;}
+  const foodChoice=e.target.closest('[data-food-flow-select]');
+  if(foodChoice){chooseFoodForFlow(foodChoice.dataset.foodFlowSelect);return;}
   const removeGym=e.target.closest('[data-remove-gym]');
   if(removeGym){ gymDraft=gymDraft.filter(i=>i.id!==removeGym.dataset.removeGym); renderGymDraft(); return; }
   const loadGym=e.target.closest('[data-load-gym]');
@@ -2594,6 +2673,7 @@ document.getElementById('nutritionDate').value = todayStr();
 mountNutritionSettings();
 populateGymMuscles();
 populateFoods();
+renderNutritionFoodFlow();
 applyUiPreferences();
 maybeShowInternalReminder();
 loadNutritionTargets();

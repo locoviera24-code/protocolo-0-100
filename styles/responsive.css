@@ -201,6 +201,9 @@
   .nutritionSecondaryActions button {
     flex: 1 1 auto;
   }
+  .nutritionFlowActions button {
+    flex: 1 1 0;
+  }
   .gymSectionNav,
   .partySectionNav {
     margin-inline: -4px;
@@ -252,6 +255,23 @@
   }
   #nutritionTodayCard .nutritionTodayStats .quickStat:nth-child(n + 3) {
     border-top: 1px solid var(--color-border-soft);
+  }
+  .nutritionFlowSteps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .nutritionSuggestionList {
+    grid-template-columns: 1fr;
+  }
+  .updateBanner {
+    gap: var(--space-2);
+    padding: var(--space-2);
+  }
+  .updateBanner .muted {
+    display: none;
+  }
+  .updateBanner button {
+    flex: 0 0 auto;
+    padding-inline: var(--space-3);
   }
   body .quickStickyActions {
     grid-template-columns: 1fr;

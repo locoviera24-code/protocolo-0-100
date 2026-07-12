@@ -4,7 +4,7 @@ Ultima actualizacion: 2026-07-12
 Rama esperada: `main`
 Version actual: `2.7.0` (fuente unica: `app-version.json`)
 Android: `versionCode 33`, `versionName "2.7.0"`
-Service worker cache: `protocolo-0-100-pwa-2.7.0-b55`
+Service worker cache: `protocolo-0-100-pwa-2.7.0-b56`
 Backup consolidado: `schemaVersion: 3`
 
 Leer primero este archivo y luego `README.md`, `index.html`,
@@ -24,7 +24,7 @@ Estado actual:
 - Gym Party implementado como modulo web/PWA opcional.
 - Nutricion local/FDC opcional.
 - Backups JSON `schemaVersion: 3`.
-- PWA offline con cache derivada `protocolo-0-100-pwa-2.7.0-b55` y
+- PWA offline con cache derivada `protocolo-0-100-pwa-2.7.0-b56` y
   actualizacion consentida desde el aviso visible.
 - APK con widget Android y permiso `INTERNET` para Firebase/Gym Party.
 
@@ -86,7 +86,7 @@ Web:
   tombstones, backoff y contexto horario.
 - `gym-party.js`: modulo Gym Party, registro rapido, graficas y edicion/eliminacion de series.
 - `advanced-features.js`: version `2.7.0`, backup/importacion Gym Party.
-- `sw.js`: cache build 55, actualizacion consentida, incluye modulos nuevos y evita
+- `sw.js`: cache build 56, actualizacion consentida, incluye modulos nuevos y evita
   persistir una configuracion Firebase obsoleta.
 - `README.md`: documenta Gym Party, demo, Firebase, privacidad y pruebas.
 - `CODEX_HANDOFF.md`: este handoff.
@@ -1399,6 +1399,41 @@ Pendiente exacto de Nutricion: convertir `Agregar` en el flujo guiado completo
 buscar > alimento > cantidad > comida > revisar > guardar; agregar menu
 contextual editar/duplicar/mover/copiar/eliminar con Deshacer; completar la
 cobertura honesta por nutriente y mover la clave FDC a modo desarrollador.
+
+## 38. Nutricion - flujo guiado de alta
+
+Implementado despues de `d45f1bb`:
+
+- `#nutritionBuilderCard` usa cuatro pasos visibles: Alimento, Cantidad, Comida
+  y Revisar. Cada transicion mueve foco y scroll al encabezado correcto.
+- `NUTRITION_ENTRY_FLOW` es el controlador del recorrido; no se creo una
+  segunda estructura de entradas ni se cambiaron claves.
+- La primera pantalla usa `NUTRITION_FOOD_SEARCH.rank()` y
+  `NUTRITION_MEAL_HISTORY` para mostrar recientes, frecuentes y resultados
+  locales sin repetir alimentos entre grupos.
+- El selector completo se conserva como alternativa plegada para
+  compatibilidad. USDA sigue siendo una busqueda secundaria y explicita.
+- Cantidad acepta g, ml, unidad, taza, cucharada, rebanada, lata o porcion y
+  convierte mediante `NUTRITION_MODEL.amountToGrams()`.
+- Revision muestra nombre, cantidad, comida, calorias y macros antes de
+  escribir. Un alimento personalizado no se persiste hasta pulsar Guardar.
+- Guardar vuelve a Hoy y expone `Deshacer ultimo alimento`; si la persistencia
+  no se completa, no se ejecuta el cambio de vista.
+- El banner de actualizacion se contrae en 320 px para reducir obstruccion sin
+  tapar la navegacion.
+- Pruebas dirigidas: 21/21 en Android Chromium, iPhone WebKit y escritorio,
+  mas aserciones de foco, alimento personalizado, recientes, unidades y
+  Deshacer.
+- Regresion completa final: 91 aprobadas, 14 omisiones intencionales y cero
+  fallos. Assets Android comprobados bit a bit y `:app:assembleDebug` termino
+  con `BUILD SUCCESSFUL`.
+
+Estado publicable de este bloque: version `2.7.0`, Android `33`, build/cache
+`56` (`protocolo-0-100-pwa-2.7.0-b56`).
+
+Pendiente real de Nutricion: menu contextual para editar/duplicar/mover/copiar
+y eliminar con Deshacer; favoritos; cobertura honesta completa por nutriente;
+clave FDC en modo desarrollador. El flujo principal ya no es monolitico.
 
 Proximo bloque prioritario: extraer los modelos de Progreso Gym e implementar
 la vista personal por musculo, seguida por ejercicio, e1RM y records.

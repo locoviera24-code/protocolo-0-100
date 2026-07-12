@@ -6,9 +6,12 @@ test('Nutricion usa el repositorio y conserva entradas tras recargar',async({pag
   await page.goto('/index.html?module=nutrition&view=meals');
   await expect.poll(()=>page.evaluate(()=>!!window.NUTRITION_STORE&&!!window.NUTRITION_MODEL)).toBe(true);
   await page.locator('[data-open-nutrition-view="registrar"]').first().click();
+  await page.locator('.nutritionFoodFallback summary').click();
   await page.locator('#nutritionFood').selectOption({index:1});
   await page.locator('#foodQuantity').fill('150');
+  await page.locator('#foodAmountNextBtn').click();
   await page.locator('#nutritionMeal').selectOption('Almuerzo');
+  await page.locator('#foodMealNextBtn').click();
   await page.locator('#addFoodBtn').click();
   await expect(page.locator('#nutritionDayList')).not.toContainText('Todavía no registraste');
   const before=await page.evaluate(async()=>{await window.APP_DATA.flush();const local=window.NUTRITION_STORE.entries();const indexed=await window.APP_REPOSITORIES.nutrition.getAsync(window.NUTRITION_STORE.keys.entries,[]);return{local,indexed,backup:window.buildCompleteBackup()};});

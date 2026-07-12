@@ -613,12 +613,13 @@
     return syncVersionedState();
   }
 
-  function setNutritionView(view){
+  function setNutritionView(view,{focus=false}={}){
     const activeView=view==='coverage'?'resumen':view;
     document.querySelectorAll('[data-nutrition-view]').forEach(button=>button.classList.toggle('active',button.dataset.nutritionView===activeView));
     document.querySelectorAll('[data-nutrition-panel]').forEach(panel=>panel.classList.toggle('hidden',panel.dataset.nutritionPanel!==view));
     if(view==='coverage'){renderCoverage();renderDiagnosis();}
     if(view==='tendencias')renderNutritionTrends();
+    if(focus)requestAnimationFrame(()=>{const targetId={resumen:'nutritionTodayCard',registrar:'nutritionBuilderCard',coverage:'nutritionCoverageCard',tendencias:'nutritionTrendsCard'}[view],target=document.getElementById(targetId);target?.scrollIntoView({block:'start',behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});const heading=target?.querySelector('h2,h3,h4');if(heading){heading.tabIndex=-1;heading.focus({preventScroll:true});}});
   }
   window.setNutritionView=setNutritionView;
   function renderAdvancedNutrition(){
@@ -654,8 +655,8 @@
     }).catch(()=>{});
   }
   function setupEvents(){
-    document.querySelectorAll('[data-nutrition-view]').forEach(button=>button.addEventListener('click',()=>setNutritionView(button.dataset.nutritionView)));
-    document.querySelectorAll('[data-open-nutrition-view]').forEach(button=>button.addEventListener('click',()=>setNutritionView(button.dataset.openNutritionView)));
+    document.querySelectorAll('[data-nutrition-view]').forEach(button=>button.addEventListener('click',()=>setNutritionView(button.dataset.nutritionView,{focus:true})));
+    document.querySelectorAll('[data-open-nutrition-view]').forEach(button=>button.addEventListener('click',()=>setNutritionView(button.dataset.openNutritionView,{focus:true})));
     document.getElementById('nutritionFoodSearch')?.addEventListener('input',filterFoodSelect);
     document.getElementById('searchFdcBtn')?.addEventListener('click',()=>runFdcSearch(1));
     document.getElementById('fdcPrevPageBtn')?.addEventListener('click',()=>runFdcSearch(Math.max(1,fdcSearchPage-1)));
@@ -663,8 +664,8 @@
     document.getElementById('saveFdcConfigBtn')?.addEventListener('click',saveFdcConfig);
     document.getElementById('clearFdcApiKeyBtn')?.addEventListener('click',clearFdcApiKey);
     document.getElementById('importFdcDatasetBtn')?.addEventListener('click',importFdcDataset);
-    document.querySelectorAll('[data-food-portion]').forEach(button=>button.addEventListener('click',()=>{document.getElementById('foodQuantity').value=button.dataset.foodPortion;}));
-    document.getElementById('useFoodBasePortionBtn')?.addEventListener('click',()=>{const food=allFoods()[Number(document.getElementById('nutritionFood').value)||0];document.getElementById('foodQuantity').value=food?.portionGrams||100;});
+    document.querySelectorAll('[data-food-portion]').forEach(button=>button.addEventListener('click',()=>{document.getElementById('foodQuantity').value=button.dataset.foodPortion;document.getElementById('foodUnit').value='g';}));
+    document.getElementById('useFoodBasePortionBtn')?.addEventListener('click',()=>{const food=allFoods()[Number(document.getElementById('nutritionFood').value)||0];document.getElementById('foodQuantity').value=food?.portionGrams||100;document.getElementById('foodUnit').value='g';});
     document.getElementById('saveNutritionTargetsBtn')?.addEventListener('click',saveAdvancedTargets);
     document.getElementById('saveFrequentMealBtn')?.addEventListener('click',saveFrequentMeal);
     document.getElementById('loadSavedMealBtn')?.addEventListener('click',loadSavedMeal);
