@@ -88,6 +88,9 @@ jobs:
       - name: Probar Progreso consolidado
         run: npm run test:progress
 
+      - name: Probar dominio Nutricion
+        run: npm run test:nutrition
+
       - name: Probar seguridad del WebView Android
         run: node ./scripts/test-android-webview-security.mjs
 

@@ -7,7 +7,7 @@ const check=process.argv.includes('--check');
 
 async function ensure(url,expected,label){
   const current=await readFile(url,'utf8');
-  if(check&&current!==expected)throw new Error(`${label} no coincide con app-version.json`);
+  if(check&&current.replace(/\r\n/g,'\n')!==expected.replace(/\r\n/g,'\n'))throw new Error(`${label} no coincide con app-version.json`);
   if(!check&&current!==expected)await writeFile(url,expected,'utf8');
 }
 

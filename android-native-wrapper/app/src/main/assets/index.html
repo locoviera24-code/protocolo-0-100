@@ -680,6 +680,13 @@
 <script src="data/repositories.js"></script>
 <script src="data/backup-service.js"></script>
 <script src="nutrition-data.js"></script>
+<script src="nutrition/nutrition-store.js"></script>
+<script src="nutrition/nutrition-model.js"></script>
+<script src="nutrition/food-search.js"></script>
+<script src="nutrition/food-entry-flow.js"></script>
+<script src="nutrition/meal-history.js"></script>
+<script src="nutrition/nutrition-confidence.js"></script>
+<script src="nutrition/nutrition-view.js"></script>
 <script src="fdc-client.js"></script>
 <script src="ui/router.js"></script>
 <script src="ui/navigation.js"></script>
@@ -814,8 +821,8 @@ function planForDay(day){
 
 function getEntries(){ return window.APP_REPOSITORIES?.protocol.get(STORAGE_KEY,[])??[]; }
 function setEntries(entries){ return window.APP_REPOSITORIES?.protocol.set(STORAGE_KEY,entries)??entries; }
-function getLocalData(key, fallback){ return window.APP_DATA?.read(key,fallback)??fallback; }
-function setLocalData(key, value){ return window.APP_DATA?.write(key,value)??value; }
+function getLocalData(key, fallback){ return window.APP_REPOSITORIES?.forKey?.(key)?.get(key,fallback)??window.APP_DATA?.read(key,fallback)??fallback; }
+function setLocalData(key, value){ return window.APP_REPOSITORIES?.forKey?.(key)?.set(key,value)??window.APP_DATA?.write(key,value)??value; }
 window.addEventListener('app-data-error',event=>{
   const message=event.detail?.userMessage;
   if(message)setTimeout(()=>flash(message),0);
@@ -1006,20 +1013,20 @@ function renderGym(){
   table.innerHTML=`<thead><tr><th>Fecha</th><th>Rutina</th><th>Ejercicios</th><th>Series</th><th>Volumen</th><th>Acciones</th></tr></thead><tbody>${rows||'<tr><td colspan="6">Todavía no hay sesiones guardadas.</td></tr>'}</tbody>`;
 }
 
-function nutritionTargets(){ return {...{calories:2200,protein:140,carbs:250,fat:70},...getLocalData(NUTRITION_TARGETS_KEY,{})}; }
+function nutritionTargets(){ return window.NUTRITION_STORE?.targets?.()||{calories:2200,protein:140,carbs:250,fat:70}; }
 function loadNutritionTargets(){
   const t=nutritionTargets();
   [['targetCalories',t.calories],['targetProtein',t.protein],['targetCarbs',t.carbs],['targetFat',t.fat]].forEach(([id,v])=>{const el=document.getElementById(id);if(el)el.value=v;});
 }
-function allFoods(){ return [...FOOD_CATALOG,...getLocalData(CUSTOM_FOODS_KEY,[]),...(window.FDC_CLIENT?.cachedFoods?.()||[])]; }
+function allFoods(){ return [...FOOD_CATALOG,...(window.NUTRITION_STORE?.customFoods?.()||[]),...(window.FDC_CLIENT?.cachedFoods?.()||[])]; }
 function availableFoods(){ return allFoods().slice(1); }
 function saveCustomFoodDefinition(food){
-  const foods=getLocalData(CUSTOM_FOODS_KEY,[]);
+  const foods=window.NUTRITION_STORE?.customFoods?.()||[];
   const key=normalizeFoodText(food.name);
   const existing=foods.findIndex(f=>normalizeFoodText(f.name)===key);
   const clean={...food,id:food.id||`custom-${key.replace(/\s+/g,'-')||Date.now()}`,name:food.name.trim(),aliases:[food.name.trim(),...(food.aliases||[])],category:food.category||'personalizados',portionGrams:Number(food.portionGrams)||100,calories:Math.max(0,Number(food.calories)||0),protein:Math.max(0,Number(food.protein)||0),carbs:Math.max(0,Number(food.carbs)||0),fat:Math.max(0,Number(food.fat)||0),units:food.units||{},confidence:food.confidence||'aproximado',source:food.source||'etiqueta manual',custom:true};
   if(existing>=0) foods[existing]=clean; else foods.push(clean);
-  setLocalData(CUSTOM_FOODS_KEY,foods);
+  window.NUTRITION_STORE?.saveCustomFoods?.(foods);
   return clean;
 }
 function populateFoods(){
@@ -1033,7 +1040,7 @@ function applySelectedFood(){
   [['foodCalories',f.calories],['foodProtein',f.protein],['foodCarbs',f.carbs],['foodFat',f.fat],['foodFiber',f.fiber],['foodSodium',f.sodium],['foodPotassium',f.potassium],['foodCalcium',f.calcium],['foodIron',f.iron],['foodMagnesium',f.magnesium],['foodZinc',f.zinc],['foodVitaminA',f.vitaminA],['foodVitaminC',f.vitaminC],['foodVitaminD',f.vitaminD],['foodB12',f.b12],['foodFolate',f.folate]].forEach(([id,v])=>{const el=document.getElementById(id);if(el)el.value=v||'';});
 }
 function saveNutritionTargets(){
-  setLocalData(NUTRITION_TARGETS_KEY,{calories:Math.max(0,num('targetCalories')),protein:Math.max(0,num('targetProtein')),carbs:Math.max(0,num('targetCarbs')),fat:Math.max(0,num('targetFat'))});
+  window.NUTRITION_STORE?.saveTargets?.({calories:Math.max(0,num('targetCalories')),protein:Math.max(0,num('targetProtein')),carbs:Math.max(0,num('targetCarbs')),fat:Math.max(0,num('targetFat'))});
   renderNutrition();
   flash('Objetivos nutricionales guardados.');
 }
@@ -1051,65 +1058,20 @@ function addFood(){
     food=saveCustomFoodDefinition({name:custom,calories:num('foodCalories'),protein:num('foodProtein'),carbs:num('foodCarbs'),fat:num('foodFat'),fiber:num('foodFiber'),sodium:num('foodSodium'),potassium:num('foodPotassium'),calcium:num('foodCalcium'),iron:num('foodIron'),magnesium:num('foodMagnesium'),zinc:num('foodZinc'),vitaminA:num('foodVitaminA'),vitaminC:num('foodVitaminC'),vitaminD:num('foodVitaminD'),b12:num('foodB12'),folate:num('foodFolate')});
     populateFoods();
   }
-  const entries=getLocalData(NUTRITION_ENTRIES_KEY,[]);
-  entries.push({...buildFoodEntry(food,grams,meal,date),source:custom?'alimento personalizado':food.source||'registro manual'});
-  setLocalData(NUTRITION_ENTRIES_KEY,entries);
+  window.NUTRITION_STORE.addEntry({...buildFoodEntry(food,grams,meal,date),source:custom?'alimento personalizado':food.source||'registro manual'});
   document.getElementById('customFoodName').value='';
   renderNutrition();
   flash('Alimento añadido.');
 }
-function normalizeFoodText(value){ return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^\p{L}\p{N}\s]/gu,' ').replace(/\s+/g,' ').trim(); }
-function cleanFoodQuery(value){
-  return normalizeFoodText(value)
-    .replace(/\b(?:aproximadamente|aprox|unos|unas|el|la|los|las|de|del)\b/g,' ')
-    .replace(/\b(?:a la plancha|al horno|hervido|hervida|frito|frita)\b/g,' ')
-    .replace(/\s+/g,' ').trim();
-}
-function editDistance(a,b){
-  const row=Array.from({length:b.length+1},(_,i)=>i);
-  for(let i=1;i<=a.length;i++){
-    let previous=row[0]; row[0]=i;
-    for(let j=1;j<=b.length;j++){
-      const old=row[j];
-      row[j]=Math.min(row[j]+1,row[j-1]+1,previous+(a[i-1]===b[j-1]?0:1));
-      previous=old;
-    }
-  }
-  return row[b.length];
-}
-function textSimilarity(a,b){
-  if(!a||!b) return 0;
-  if(a===b) return 1;
-  const at=new Set(a.split(' ')), bt=new Set(b.split(' '));
-  const shared=[...at].filter(t=>bt.has(t)).length;
-  const tokenScore=shared/Math.max(at.size,bt.size);
-  const charScore=1-(editDistance(a,b)/Math.max(a.length,b.length));
-  const contained=(a.includes(b)||b.includes(a)) && Math.min(a.length,b.length)>=4 ? .92 : 0;
-  return Math.max(tokenScore*.88,charScore*.82,contained);
-}
+function normalizeFoodText(value){return window.NUTRITION_MODEL.normalizeText(value);}
+function cleanFoodQuery(value){return window.NUTRITION_MODEL.cleanQuery(value);}
+function editDistance(a,b){return window.NUTRITION_FOOD_SEARCH.editDistance(a,b);}
+function textSimilarity(a,b){return window.NUTRITION_FOOD_SEARCH.similarity(a,b);}
 function findCatalogFood(value){
-  const needle=cleanFoodQuery(value);
-  const learned=getLocalData(NUTRITION_ALIASES_KEY,{});
-  const learnedName=learned[needle];
-  if(learnedName){
-    const learnedFood=availableFoods().find(f=>normalizeFoodText(f.name)===normalizeFoodText(learnedName));
-    if(learnedFood) return {food:learnedFood,confidence:1,matchedAlias:needle,learned:true};
-  }
-  let best={food:null,confidence:0,matchedAlias:''};
-  availableFoods().forEach(food=>{
-    [food.name,...(food.aliases||[])].forEach(alias=>{
-      const normalizedAlias=cleanFoodQuery(alias);
-      const score=textSimilarity(needle,normalizedAlias);
-      if(score>best.confidence) best={food,confidence:score,matchedAlias:alias};
-    });
-  });
-  return best.confidence>=.56?best:{food:null,confidence:best.confidence,matchedAlias:best.matchedAlias};
+  return window.NUTRITION_FOOD_SEARCH.findBest(availableFoods(),value,window.NUTRITION_STORE.aliases());
 }
 function buildFoodEntry(food, grams, meal, date){
-  const factor=grams/100;
-  const nutrients={};
-  Object.keys(window.NUTRIENT_DEFINITIONS||{}).forEach(key=>{if(!['calories','protein','carbs','fat','water'].includes(key))nutrients[key]=Number(((Number(food[key]??food.nutrients?.[key])||0)*factor).toFixed(3));});
-  return {id:uid('food'),foodId:food.id||'',fdcId:food.fdcId||null,date,meal,name:food.name,grams,calories:Math.round(food.calories*factor),protein:Number((food.protein*factor).toFixed(1)),carbs:Number((food.carbs*factor).toFixed(1)),fat:Number((food.fat*factor).toFixed(1)),nutrients,source:food.source||'asistente local',sourceCitation:food.sourceCitation||'',savedAt:new Date().toISOString()};
+  return window.NUTRITION_MODEL.buildEntry(food,grams,meal,date,{id:uid('food')});
 }
 const ASSISTANT_UNIT_PATTERN='kg|kilogramos?|kilos?|gramos?|gr|g|mililitros?|ml|litros?|lts?|l|unidades?|uds?|tazas?|cucharadas?|cucharaditas?|scoops?|medidas?|rebanadas?|rodajas?|vasos?|porciones?|latas?|botellas?';
 function normalizeQuantityWords(value){
@@ -1119,32 +1081,11 @@ function normalizeQuantityWords(value){
   return text;
 }
 function canonicalUnit(value){
-  const unit=normalizeFoodText(value);
-  if(/^(g|gr|gramo|gramos)$/.test(unit)) return 'g';
-  if(/^(kg|kilo|kilos|kilogramo|kilogramos)$/.test(unit)) return 'kg';
-  if(/^(ml|mililitro|mililitros)$/.test(unit)) return 'ml';
-  if(/^(l|lt|lts|litro|litros)$/.test(unit)) return 'l';
-  if(/^(unidad|unidades|ud|uds)$/.test(unit)) return 'unidad';
-  if(/^taza/.test(unit)) return 'taza';
-  if(/^cucharadita/.test(unit)) return 'cucharadita';
-  if(/^cucharada/.test(unit)) return 'cucharada';
-  if(/^(scoop|scoops|medida|medidas)$/.test(unit)) return 'scoop';
-  if(/^(rebanada|rebanadas|rodaja|rodajas)$/.test(unit)) return 'rebanada';
-  if(/^vaso/.test(unit)) return 'vaso';
-  if(/^porcion/.test(unit)) return 'porcion';
-  if(/^lata/.test(unit)) return 'lata';
-  if(/^botella/.test(unit)) return 'botella';
-  return '';
+  return window.NUTRITION_MODEL.canonicalUnit(value);
 }
 function amountToGrams(amount,unit,food){
-  const n=Math.max(0,Number(amount)||0);
-  if(unit==='g') return {grams:n,warning:''};
-  if(unit==='kg') return {grams:n*1000,warning:''};
-  if(unit==='ml') return {grams:n,warning:'Se estimó 1 ml = 1 g; ajustá si el alimento tiene otra densidad.'};
-  if(unit==='l') return {grams:n*1000,warning:'Se estimó 1 ml = 1 g; ajustá si el alimento tiene otra densidad.'};
-  const generic={unidad:100,taza:240,cucharada:15,cucharadita:5,scoop:30,rebanada:30,vaso:250,porcion:100,lata:120,botella:500};
-  const unitGrams=food?.units?.[unit] || generic[unit] || 1;
-  return {grams:n*unitGrams,warning:food?.units?.[unit]?'':`La medida “${unit}” usa una estimación general; revisá los gramos.`};
+  const result=window.NUTRITION_MODEL.amountToGrams(amount,unit,food);
+  return {...result,warning:result.estimated?`La medida “${unit}” usa una estimación general; revisá los gramos.`:''};
 }
 function assistantContext(text){
   const normalized=normalizeFoodText(text);
@@ -1333,26 +1274,26 @@ function startNutritionVoice(){
 window.onAndroidSpeechResult=text=>{ document.getElementById('nutritionAssistantInput').value=text||''; analyzeNutritionText(); };
 window.onAndroidSpeechError=message=>{ document.getElementById('nutritionAssistantResult').innerHTML=`<div class="auditItem warn">${escapeHtml(message||'No pude reconocer la voz.')}</div>`; };
 function removeFood(id){
-  setLocalData(NUTRITION_ENTRIES_KEY,getLocalData(NUTRITION_ENTRIES_KEY,[]).filter(e=>e.id!==id));
+  window.NUTRITION_STORE.removeEntry(id);
   renderNutrition();
 }
 function saveBodyMetrics(){
   const date=document.getElementById('nutritionDate').value||todayStr();
-  const metrics=getLocalData(BODY_METRICS_KEY,{});
+  const metrics=window.NUTRITION_STORE.bodyMetrics();
   metrics[date]={water:Math.max(0,num('nutritionWater')),weight:Math.max(0,num('nutritionWeight')),savedAt:new Date().toISOString()};
-  setLocalData(BODY_METRICS_KEY,metrics);
+  window.NUTRITION_STORE.saveBodyMetrics(metrics);
   renderNutrition();
   flash('Agua y peso guardados.');
 }
-function nutritionTotals(entries){ return entries.reduce((t,e)=>({calories:t.calories+(Number(e.calories)||0),protein:t.protein+(Number(e.protein)||0),carbs:t.carbs+(Number(e.carbs)||0),fat:t.fat+(Number(e.fat)||0)}),{calories:0,protein:0,carbs:0,fat:0}); }
+function nutritionTotals(entries){return window.NUTRITION_MODEL.totals(entries);}
 function loadBodyMetricsForDate(){
-  const m=getLocalData(BODY_METRICS_KEY,{})[document.getElementById('nutritionDate').value||todayStr()]||{};
+  const m=window.NUTRITION_STORE.bodyMetrics()[document.getElementById('nutritionDate').value||todayStr()]||{};
   document.getElementById('nutritionWater').value=m.water||'';
   document.getElementById('nutritionWeight').value=m.weight||'';
 }
 function renderNutrition(){
   const date=document.getElementById('nutritionDate')?.value||todayStr();
-  const all=getLocalData(NUTRITION_ENTRIES_KEY,[]);
+  const all=window.NUTRITION_STORE.entries();
   const day=all.filter(e=>e.date===date);
   const total=nutritionTotals(day), targets=nutritionTargets();
   const progress=document.getElementById('nutritionProgress');

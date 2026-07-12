@@ -12,6 +12,7 @@ on:
       - app-version.js
       - data/**
       - nutrition-data.js
+      - nutrition/**
       - fdc-client.js
       - workout-features.js
       - workout-ranking.js
@@ -103,6 +104,9 @@ jobs:
       - name: Probar Progreso consolidado
         run: npm run test:progress
 
+      - name: Probar dominio Nutricion
+        run: npm run test:nutrition
+
       - name: Probar seguridad del WebView Android
         run: node ./scripts/test-android-webview-security.mjs
 
@@ -114,13 +118,14 @@ jobs:
 
       - name: Preparar archivos publicos
         run: |
-          mkdir -p dist-pages/icons dist-pages/styles dist-pages/ui dist-pages/progress dist-pages/data
+          mkdir -p dist-pages/icons dist-pages/styles dist-pages/ui dist-pages/progress dist-pages/data dist-pages/nutrition
           cp index.html app-version.json app-version.js nutrition-data.js fdc-client.js workout-store.js workout-plan.js workout-metrics.js workout-ranking.js workout-ui.js workout-features.js firebase-config.js firebase-service.js gym-party-sync.js gym-party-metrics.js gym-party-ui.js gym-party.js advanced-features.js manifest.webmanifest sw.js dist-pages/
           cp icons/icon-192.png icons/icon-512.png dist-pages/icons/
           cp styles/*.css dist-pages/styles/
           cp ui/*.js dist-pages/ui/
           cp progress/*.js dist-pages/progress/
           cp data/*.js dist-pages/data/
+          cp nutrition/*.js dist-pages/nutrition/
 
       - name: Generar configuracion Firebase opcional
         shell: pwsh

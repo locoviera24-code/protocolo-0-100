@@ -92,6 +92,9 @@ jobs:
       - name: Probar Progreso consolidado
         run: npm run test:progress
 
+      - name: Probar dominio Nutricion
+        run: npm run test:nutrition
+
       - name: Probar accesibilidad web y movil
         run: node ./scripts/test-accessibility.mjs
 

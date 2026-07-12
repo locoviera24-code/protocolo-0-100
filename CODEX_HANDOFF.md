@@ -1298,3 +1298,54 @@ mantener la migracion gradual hasta retirar escrituras sincronas grandes.
 Pendiente real: agregar historial visual de migraciones, probar una interrupcion
 forzada de IndexedDB/cuota y consolidar este feedback en el sistema central de
 Snackbar/InlineValidation que sigue pendiente.
+
+## 36. Nutricion - linea base y extraccion del dominio
+
+Linea base confirmada en `main` antes de editar:
+
+- HEAD `449af5e`, version `2.7.0`, Android `33`, build/cache `54`.
+- Assets Android sincronizados y validador estructural correcto con 331 IDs.
+- Playwright completo: 70 pruebas aprobadas y 14 omisiones intencionales.
+- Firestore Emulator correcto; las denegaciones `PERMISSION_DENIED` del log son
+  los casos negativos esperados por la suite.
+- `:app:assembleDebug` correcto.
+- Se detecto un fallo local de `test:version`: comparaba CRLF de Windows contra
+  LF generado. `scripts/sync-app-version.mjs` normaliza finales de linea en
+  modo check; los valores de version nunca estuvieron desalineados.
+
+Extraccion implementada sin modificar datos ni interfaz:
+
+- `nutrition/nutrition-store.js`: claves y acceso mediante
+  `NutritionRepository`, con fallback compatible.
+- `nutrition/nutrition-model.js`: normalizacion, comidas canonicas, unidades,
+  conversion a gramos, totales y construccion de entradas.
+- `nutrition/food-search.js`: busqueda pura por nombre/alias, tildes, plurales
+  y similitud.
+- `nutrition/food-entry-flow.js`: maquina de estados pura para
+  buscar/alimento/cantidad/comida/revision.
+- `nutrition/meal-history.js`: recientes, frecuencia y copia de comidas.
+- `nutrition/nutrition-confidence.js`: diferencia nutrientes conocidos,
+  estimados y desconocidos; desconocido no se persiste como cero en entradas
+  nuevas.
+- `nutrition/nutrition-view.js`: view models del dia y las cuatro metricas
+  principales.
+- Las APIs globales `nutritionTargets`, `allFoods`, `normalizeFoodText`,
+  `findCatalogFood`, `buildFoodEntry`, `canonicalUnit`, `amountToGrams`,
+  `nutritionTotals` y el render existente se mantienen como adaptadores.
+- `getLocalData/setLocalData` delegan al repositorio dueño de la clave cuando
+  esta disponible. IndexedDB permanece en modo shadow.
+- Los siete modulos se publican en Pages, se precachean y se copian al APK.
+
+Pruebas nuevas:
+
+- `scripts/test-nutrition-modules.mjs`: store, modelo, aliases/plurales,
+  porciones, flujo, historial, confianza y view.
+- `tests/e2e/nutrition-domain.spec.mjs`: 3/3 en Android Chromium, iPhone
+  WebKit y escritorio; valida repositorio, espejo IndexedDB, backup y recarga.
+- Regresion final completa despues de integrar: 73 pruebas aprobadas y 14
+  omisiones intencionales; cero fallos. `:app:assembleDebug` volvio a compilar
+  con los siete assets Nutricion sincronizados.
+
+Pendiente exacto: fase 2, rediseñar la interfaz a Hoy/Agregar/Progreso y mover
+objetivos, perfil, personalizados y FDC a Ajustes. Agua y peso siguen dentro
+del formulario antiguo hasta ese bloque; no afirmar que la UX nueva existe.

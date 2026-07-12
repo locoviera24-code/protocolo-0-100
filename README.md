@@ -55,6 +55,13 @@ ui/navigation.js            Coordinador de sticky, banners, teclado y safe areas
 data/indexeddb.js           Espejo transaccional, migraciones y recuperacion local
 data/repositories.js        Repositorios por dominio sobre claves compatibles
 data/backup-service.js      Validacion, preview, importacion transaccional y Deshacer
+nutrition/nutrition-store.js Repositorio compatible y claves del dominio Nutricion
+nutrition/nutrition-model.js Totales, porciones, comidas y entradas puras
+nutrition/food-search.js    Ranking tolerante a aliases, tildes y plurales
+nutrition/food-entry-flow.js Estado del futuro flujo guiado de alta
+nutrition/meal-history.js   Recientes, frecuentes y copia de comidas
+nutrition/nutrition-confidence.js Cobertura conocida, estimada y desconocida
+nutrition/nutrition-view.js View models del dia y progreso principal
 workout-store.js            Acceso conservador y versionado al repositorio Gym
 workout-plan.js             Normalizacion, deduplicacion e insercion en rutinas
 workout-ui.js               Renderizadores pequenos y anuncios accesibles de Gym
@@ -83,6 +90,12 @@ firebase/                   Reglas, esquema y configuracion ejemplo para Gym Par
 ```
 
 `advanced-features.js` mantiene un estado consolidado con `schemaVersion: 3`. No se incluyen API keys en backups. El service worker usa navegacion `network-first`, conserva offline los assets principales y no intercepta llamadas FDC ni otros origenes.
+
+Nutricion mantiene por compatibilidad sus APIs globales actuales, pero el
+nucleo ya se divide en `nutrition/*.js`. Las lecturas y escrituras pasan por
+`NutritionRepository` cuando existe y continúan en modo shadow: IndexedDB aún
+no es la fuente primaria. Esta extracción no cambia claves ni formatos de
+backup y prepara el rediseño posterior de Hoy/Agregar/Progreso.
 
 Antes de importar un JSON, la app valida tamaño y schema, sanea claves y
 cadenas, muestra registros nuevos/reemplazados/conflictos y crea una copia
