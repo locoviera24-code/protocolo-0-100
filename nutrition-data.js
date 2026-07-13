@@ -11,12 +11,12 @@
     return {
       id,name,aliases:[name,...aliases],category,portionGrams:portion,
       calories:macros[0],protein:macros[1],carbs:macros[2],fat:macros[3],
-      ...nutrients,nutrients,units:{porcion:portion,...units},confidence,source,...extra
+      ...nutrients,nutrients,reportedNutrients:Object.keys(micros),units:{porcion:portion,...units},confidence,source,...extra
     };
   };
   const F=makeFood;
   const db=[
-    {id:'select',name:'Seleccionar alimento…',aliases:[],category:'sistema',portionGrams:100,calories:0,protein:0,carbs:0,fat:0,...ZERO,nutrients:{...ZERO},units:{},confidence:'alto',source:'sistema'},
+    {id:'select',name:'Seleccionar alimento…',aliases:[],category:'sistema',portionGrams:100,calories:0,protein:0,carbs:0,fat:0,...ZERO,nutrients:{...ZERO},reportedNutrients:[],units:{},confidence:'alto',source:'sistema'},
     F('water','Agua',['agua mineral'],'bebidas',250,[0,0,0,0],{}, {vaso:250,taza:240,botella:500},'alto','base interna',{kind:'water'}),
     F('rice-white-cooked','Arroz blanco cocido',['arroz','arroz blanco','arroz cocido'],'cereales',150,[130,2.7,28,.3],{fiber:.4,sodium:1,potassium:35,calcium:10,iron:.2,magnesium:12,zinc:.5,phosphorus:43,selenium:7.5,b1:.02,b2:.01,b3:.4,b6:.09,folate:3,choline:2.1},{taza:158},'alto'),
     F('rice-brown-cooked','Arroz integral cocido',['arroz integral'],'cereales',150,[123,2.7,25.6,1],{fiber:1.6,sodium:4,potassium:86,calcium:3,iron:.6,magnesium:39,zinc:.7,phosphorus:103,selenium:5.8,b1:.1,b2:.02,b3:1.6,b6:.15,folate:9,choline:9.2},{taza:195},'alto'),

@@ -170,3 +170,37 @@ test('El menu permite duplicar, copiar a otra fecha y guardar frecuente',async({
   await page.getByRole('menuitem',{name:'Guardar como frecuente'}).click();
   expect(await page.evaluate(()=>window.NUTRITION_STORE.savedMeals().some(meal=>meal.name==='Avena de prueba'&&meal.items.length===1))).toBe(true);
 });
+
+test('La cobertura no interpreta nutrientes desconocidos como cero',async({page})=>{
+  await resetNutrition(page);
+  const date=await page.locator('#nutritionDate').inputValue();
+  await page.evaluate(date=>{window.NUTRITION_STORE.saveEntries([{id:'unknown-food',foodId:'missing-definition',date,meal:'Almuerzo',name:'Alimento sin ficha',grams:100,calories:200,protein:5,carbs:20,fat:10,nutrients:{},nutrientStatus:{iron:'unknown'},savedAt:new Date().toISOString()}]);window.renderNutrition();},date);
+  await expect(page.locator('#nutritionScoreSummary .quickStat').filter({hasText:'Fibra'})).toContainText('Sin datos');
+  await page.getByRole('button',{name:'Ver cobertura estimada'}).click();
+  await expect(page.locator('#nutritionCoverageSummary')).toContainText('ConfianzaInsuficiente');
+  await expect(page.locator('#nutritionCoverageSummary')).toContainText('No se calcula un score');
+  const iron=page.locator('#nutritionCoverageGrid .coverageRow').filter({hasText:'Hierro'});
+  await expect(iron).toContainText('No evaluable');
+  await expect(iron).toContainText('No se interpreta como cero');
+  await expect(page.locator('#nutritionDiagnosis')).not.toContainText('Hierro parece bajo');
+});
+
+test('Un cero informado se muestra como cero confirmado',async({page})=>{
+  await resetNutrition(page);
+  const date=await page.locator('#nutritionDate').inputValue();
+  await page.evaluate(date=>{const food=window.NUTRITION_DB.find(item=>item.id==='orange'),entry=window.NUTRITION_MODEL.buildEntry(food,140,'Merienda',date,{id:'orange-entry',definitions:window.NUTRIENT_DEFINITIONS});window.NUTRITION_STORE.saveEntries([entry]);window.renderNutrition();},date);
+  await page.getByRole('button',{name:'Ver cobertura estimada'}).click();
+  const sodium=page.locator('#nutritionCoverageGrid .coverageRow').filter({hasText:'Sodio'});
+  await expect(sodium).toContainText('cero(s) confirmado(s)');
+  await expect(sodium).not.toContainText('No evaluable');
+});
+
+test('Cobertura baja muestra rango y reserva el score exacto',async({page})=>{
+  await resetNutrition(page);
+  const date=await page.locator('#nutritionDate').inputValue();
+  await page.evaluate(date=>{const food={id:'partial-food',name:'Alimento parcial',aliases:[],category:'personalizados',portionGrams:100,calories:200,protein:10,carbs:20,fat:8,nutrients:{fiber:4,iron:2,calcium:100,potassium:200,magnesium:40},reportedNutrients:['fiber','iron','calcium','potassium','magnesium'],confidence:'alto',source:'prueba'},entry=window.NUTRITION_MODEL.buildEntry(food,100,'Cena',date,{id:'partial-entry',definitions:window.NUTRIENT_DEFINITIONS});window.NUTRITION_STORE.saveCustomFoods([food]);window.NUTRITION_STORE.saveEntries([entry]);window.renderNutrition();},date);
+  await page.getByRole('button',{name:'Ver cobertura estimada'}).click();
+  await expect(page.locator('#nutritionCoverageSummary')).toContainText('ConfianzaBaja');
+  await expect(page.locator('#nutritionCoverageSummary')).toContainText('Rango orientativo');
+  await expect(page.locator('#nutritionCoverageSummary')).toContainText('no se muestra una cifra exacta');
+});

@@ -1573,3 +1573,41 @@ Estado publicable: version `2.7.0`, Android `33`, build/cache `60`
 Pendiente siguiente: cobertura nutricional honesta por nutriente, distinguiendo
 conocido, estimado, desconocido, no informado y cero confirmado; luego sistema
 central de mensajes y estados.
+
+## 43. Cobertura nutricional honesta
+
+Implementado despues de `1e090e2`:
+
+- `nutrition/nutrition-confidence.js` define cinco estados: `known`,
+  `estimated`, `unknown`, `notReported` y `confirmedZero`.
+- `nutrition-data.js` y `fdc-client.js` agregan `reportedNutrients`. Mantienen
+  ceros numericos por compatibilidad, pero solo los ceros presentes en la
+  fuente o editados explicitamente cuentan como confirmados.
+- Entradas y backups previos siguen siendo legibles. Para alimentos legacy sin
+  metadatos, la normalizacion conservadora considera informados los valores no
+  nulos; no reescribe el historial.
+- La portada Hoy muestra `Sin datos` o `parcial` para fibra cuando corresponde.
+  Ya no presenta automaticamente `0 g` por ausencia de informacion.
+- `nutritionAssessmentForDate()` calcula primero cobertura y confianza. Con
+  cobertura insuficiente no produce score; con cobertura baja muestra rango;
+  con confianza media/alta permite score orientativo.
+- Cada fila explica proporcion de alimentos con dato, estimaciones, ceros
+  confirmados y campos desconocidos/no informados. Una fila no evaluable no
+  usa barra de meta ni lenguaje de bajo/alto.
+- Recomendaciones, combinaciones y tendencias solo usan nutrientes con al menos
+  55% de cobertura en el periodo. Ausencia de datos no genera una falsa
+  recomendacion por supuesto deficit.
+- `scripts/test-nutrition-modules.mjs` cubre los cinco estados y presentacion de
+  score. `scripts/test-fdc-confidence.mjs` valida ausente frente a cero FDC.
+- `tests/e2e/nutrition-today.spec.mjs` valida desconocido, cero confirmado y
+  rango con cobertura baja. Resultado dirigido: 33/33 en Android Chromium,
+  iPhone WebKit y escritorio.
+- Regresion completa: 130 aprobadas, 14 omisiones intencionales y cero fallos.
+- Assets Android sincronizados y verificados; `:app:assembleDebug` termino con
+  `BUILD SUCCESSFUL`.
+
+Estado publicable: version `2.7.0`, Android `33`, build/cache `61`
+(`protocolo-0-100-pwa-2.7.0-b61`).
+
+Pendiente siguiente: sistema central de mensajes/estados y migracion gradual
+de `flash`, errores inline, offline, sincronizacion y acciones Deshacer.

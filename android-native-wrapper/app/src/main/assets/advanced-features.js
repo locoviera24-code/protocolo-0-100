@@ -97,6 +97,15 @@
     return Object.fromEntries(Object.entries(totals).map(([key,value])=>[key,round(value,2)]));
   }
   function nutrientTotalsForDate(date){ return nutrientTotalsForEntries(entriesForDate(date),dateMetrics(date)); }
+  function coverageReportForDate(date,keys){
+    const entries=entriesForDate(date),metrics=dateMetrics(date),requested=[...new Set(keys||[])],foodKeys=requested.filter(key=>key!=='water'),base=window.NUTRITION_CONFIDENCE.coverage(entries,foodKeys,{foodResolver:foodForEntry}),rowsByKey=new Map(base.rows.map(row=>[row.key,row]));
+    if(requested.includes('water')){
+      const reported=Object.prototype.hasOwnProperty.call(metrics,'water'),value=Number(metrics.water)||0,counts={known:reported&&value!==0?1:0,estimated:0,unknown:0,notReported:reported?0:1,confirmedZero:reported&&value===0?1:0},evaluated=counts.known+counts.confirmedZero;
+      rowsByKey.set('water',{key:'water',...counts,total:1,evaluated,coveragePct:evaluated?100:0,confidence:evaluated?'high':'insufficient'});
+    }
+    const rows=requested.map(key=>rowsByKey.get(key)).filter(Boolean),total=rows.reduce((sum,row)=>sum+row.total,0),evaluated=rows.reduce((sum,row)=>sum+row.evaluated,0),coveragePct=total?Math.round(evaluated/total*100):0,counts=rows.reduce((sum,row)=>{window.NUTRITION_CONFIDENCE.STATES.forEach(state=>{sum[state]+=row[state]||0;});return sum;},Object.fromEntries(window.NUTRITION_CONFIDENCE.STATES.map(state=>[state,0])));
+    return{rows,coveragePct,confidence:window.NUTRITION_CONFIDENCE.confidenceFor(coveragePct),sampleSize:entries.length,counts};
+  }
   function coverageState(key,value,target){
     const definition=DEFINITIONS[key]||{};
     const pct=target>0?(value/target)*100:0;
@@ -114,37 +123,37 @@
     const digits=Math.abs(value)>=100?0:1;
     return `${round(value,digits)} ${definition.unit}`;
   }
-  function nutritionScoreForDate(date){
+  function nutritionAssessmentForDate(date){
     const entries=entriesForDate(date), metrics=dateMetrics(date);
-    if(!entries.length && !Number(metrics.water)) return 0;
+    const keys=['protein','fiber','potassium','calcium','iron','magnesium','zinc','vitaminA','vitaminC','vitaminD','vitaminE','vitaminK','b12','folate','water'],report=coverageReportForDate(date,keys);
+    if(!entries.length && !Object.prototype.hasOwnProperty.call(metrics,'water'))return{report,rawScore:null,presentation:window.NUTRITION_CONFIDENCE.scorePresentation(null,report.confidence)};
     const totals=nutrientTotalsForEntries(entries,metrics), targets=advancedTargets();
-    const keys=['protein','fiber','potassium','calcium','iron','magnesium','zinc','vitaminA','vitaminC','vitaminD','vitaminE','vitaminK','b12','folate','water'];
-    const coverage=keys.map(key=>Math.min(100,(totals[key]/Math.max(1,targets[key]))*100));
-    let score=coverage.reduce((sum,value)=>sum+value,0)/coverage.length;
-    if(totals.sodium>targets.sodium*1.1) score-=Math.min(20,((totals.sodium/targets.sodium)-1)*20);
-    if(entries.length>=3) score+=5;
-    return Math.round(clamp(score,0,100));
+    const eligible=report.rows.filter(row=>row.evaluated&&row.coveragePct>=55),coverage=eligible.map(row=>Math.min(100,(totals[row.key]/Math.max(1,targets[row.key]))*100)),rawScore=coverage.length?clamp(coverage.reduce((sum,value)=>sum+value,0)/coverage.length,0,100):null;
+    return{report,rawScore,presentation:window.NUTRITION_CONFIDENCE.scorePresentation(rawScore,report.confidence)};
   }
+  function nutritionScoreForDate(date){return nutritionAssessmentForDate(date).presentation.score;}
   function nutritionCoverageRows(keys,date){
-    const totals=nutrientTotalsForDate(date), targets=advancedTargets();
+    const totals=nutrientTotalsForDate(date),targets=advancedTargets(),report=coverageReportForDate(date,keys),rows=new Map(report.rows.map(row=>[row.key,row]));
     return keys.map(key=>{
-      const definition=DEFINITIONS[key]; if(!definition) return '';
-      const value=totals[key]||0,target=Math.max(.01,Number(targets[key])||definition.target||1);
-      const state=coverageState(key,value,target);
-      const width=Math.min(100,state.pct);
-      return `<div class="coverageRow ${state.key}" role="progressbar" aria-label="${escapeHtml(definition.label)}" aria-valuenow="${Math.round(state.pct)}" aria-valuemin="0" aria-valuemax="100"><div class="coverageTop"><strong>${escapeHtml(definition.label)}</strong><span>${escapeHtml(displayNutrient(key,value))} / ${escapeHtml(displayNutrient(key,target))} · ${Math.round(state.pct)}%</span></div><div class="bar"><i style="width:${width}%"></i></div><div style="margin-top:6px"><span class="statusChip ${state.key}">${state.label}</span></div></div>`;
+      const definition=DEFINITIONS[key],data=rows.get(key);if(!definition||!data)return'';
+      const value=totals[key]||0,target=Math.max(.01,Number(targets[key])||definition.target||1),knownText=`${data.coveragePct}% de ${data.total} registro(s) con dato`;let width=data.coveragePct;
+      if(!data.evaluated)return`<div class="coverageRow unavailable"><div class="coverageTop"><strong>${escapeHtml(definition.label)}</strong><span>No evaluable</span></div><p class="muted small">Desconocido: ${data.unknown}. No informado: ${data.notReported}. No se interpreta como cero.</p><span class="statusChip">Sin datos suficientes</span></div>`;
+      if(data.coveragePct<55)return`<div class="coverageRow partial" role="progressbar" aria-label="Cobertura de datos para ${escapeHtml(definition.label)}" aria-valuenow="${data.coveragePct}" aria-valuemin="0" aria-valuemax="100"><div class="coverageTop"><strong>${escapeHtml(definition.label)}</strong><span>${escapeHtml(displayNutrient(key,value))} conocido</span></div><div class="bar"><i style="width:${width}%"></i></div><p class="muted small">${knownText}. Informacion parcial; no se calcula porcentaje de meta.</p><span class="statusChip warn">Informacion parcial</span></div>`;
+      const state=coverageState(key,value,target),source=data.estimated?`${data.estimated} estimado(s)`:data.confirmedZero?`${data.confirmedZero} cero(s) confirmado(s)`:'datos conocidos';width=Math.min(100,state.pct);
+      return `<div class="coverageRow ${state.key}" role="progressbar" aria-label="${escapeHtml(definition.label)} segun lo registrado" aria-valuenow="${Math.round(state.pct)}" aria-valuemin="0" aria-valuemax="100"><div class="coverageTop"><strong>${escapeHtml(definition.label)}</strong><span>${escapeHtml(displayNutrient(key,value))} / ${escapeHtml(displayNutrient(key,target))} · ${Math.round(state.pct)}%</span></div><div class="bar"><i style="width:${width}%"></i></div><p class="muted small">${knownText} · ${source}.</p><span class="statusChip ${state.key}">${state.label} segun lo registrado</span></div>`;
     }).join('');
   }
   function renderCoverage(){
     const date=document.getElementById('nutritionDate')?.value||todayStr();
-    const main=document.getElementById('nutritionCoverageGrid'), extended=document.getElementById('nutritionCoverageExtended');
+    const main=document.getElementById('nutritionCoverageGrid'),extended=document.getElementById('nutritionCoverageExtended'),summary=document.getElementById('nutritionCoverageSummary'),assessment=nutritionAssessmentForDate(date),report=assessment.report,labels={high:'Alta',medium:'Media',low:'Baja',insufficient:'Insuficiente'};
+    if(summary){const result=assessment.presentation.kind==='score'?`Score orientativo: ${assessment.presentation.score}/100.`:assessment.presentation.kind==='range'?`Rango orientativo: ${assessment.presentation.range[0]}-${assessment.presentation.range[1]}/100; no se muestra una cifra exacta.`:'No se calcula un score con esta cobertura.';summary.innerHTML=`<div class="quickStats"><div class="quickStat"><span>Cobertura de datos</span><strong>${report.coveragePct}%</strong></div><div class="quickStat"><span>Confianza</span><strong>${labels[report.confidence]}</strong></div><div class="quickStat"><span>Alimentos</span><strong>${report.sampleSize}</strong></div></div><p class="muted small">${result} Conocidos: ${report.counts.known}; estimados: ${report.counts.estimated}; ceros confirmados: ${report.counts.confirmedZero}; desconocidos/no informados: ${report.counts.unknown+report.counts.notReported}.</p>`;}
     if(main) main.innerHTML=nutritionCoverageRows(PRIMARY_COVERAGE,date);
     if(extended) extended.innerHTML=nutritionCoverageRows(EXTENDED_COVERAGE,date);
   }
 
   function missingNutrients(date){
-    const totals=nutrientTotalsForDate(date),targets=advancedTargets();
-    return Object.keys(SUGGESTION_LABELS).map(key=>({key,value:totals[key]||0,target:targets[key]||1,pct:(totals[key]||0)/(targets[key]||1)*100})).filter(x=>x.pct<75).sort((a,b)=>a.pct-b.pct);
+    const totals=nutrientTotalsForDate(date),targets=advancedTargets(),report=coverageReportForDate(date,Object.keys(SUGGESTION_LABELS)),rows=new Map(report.rows.map(row=>[row.key,row]));
+    return Object.keys(SUGGESTION_LABELS).map(key=>({key,value:totals[key]||0,target:targets[key]||1,pct:(totals[key]||0)/(targets[key]||1)*100,data:rows.get(key)})).filter(item=>item.data?.coveragePct>=55&&item.pct<75).sort((a,b)=>a.pct-b.pct);
   }
   function scoredFoodsForDate(date){
     const missing=missingNutrients(date).slice(0,7),totals=nutrientTotalsForDate(date),targets=advancedTargets();
@@ -166,32 +175,33 @@
     const date=document.getElementById('nutritionDate')?.value||todayStr();
     const diagnosis=document.getElementById('nutritionDiagnosis'), recommendations=document.getElementById('nutritionRecommendations'), combinations=document.getElementById('nutritionCombinations');
     if(!diagnosis||!recommendations||!combinations) return;
-    const entries=entriesForDate(date),totals=nutrientTotalsForDate(date),targets=advancedTargets(),missing=missingNutrients(date);
+    const entries=entriesForDate(date),totals=nutrientTotalsForDate(date),targets=advancedTargets(),missing=missingNutrients(date),report=coverageReportForDate(date,Object.keys(SUGGESTION_LABELS)),rows=new Map(report.rows.map(row=>[row.key,row]));
     if(!entries.length && !totals.water){
       diagnosis.innerHTML='<div class="emptyState">Registrá alimentos o agua para estimar la cobertura de lo registrado.</div>';
       recommendations.innerHTML=''; combinations.innerHTML=''; return;
     }
-    const covered=Object.keys(SUGGESTION_LABELS).filter(key=>totals[key]>=targets[key]*.8 && totals[key]<=targets[key]*1.4).map(key=>SUGGESTION_LABELS[key]);
-    const sodiumState=coverageState('sodium',totals.sodium,targets.sodium);
+    const covered=Object.keys(SUGGESTION_LABELS).filter(key=>rows.get(key)?.coveragePct>=55&&totals[key]>=targets[key]*.8&&totals[key]<=targets[key]*1.4).map(key=>SUGGESTION_LABELS[key]),sodiumCoverage=coverageReportForDate(date,['sodium']).rows[0],sodiumState=sodiumCoverage?.coveragePct>=55?coverageState('sodium',totals.sodium,targets.sodium):null;
     const cards=[];
+    if(report.confidence==='insufficient')cards.push('<div class="auditItem warn"><strong>Cobertura insuficiente:</strong> faltan datos nutricionales en los alimentos registrados. No se interpretan los valores desconocidos como cero ni se generan conclusiones precisas.</div>');
+    else if(report.confidence==='low')cards.push('<div class="auditItem warn"><strong>Cobertura baja:</strong> las orientaciones se limitan a nutrientes con datos suficientes y no representan el dia completo.</div>');
     if(covered.length) cards.push(`<div class="auditItem good"><strong>Bien cubierto según lo registrado:</strong> ${escapeHtml(covered.slice(0,7).join(', '))}.</div>`);
     missing.slice(0,5).forEach(item=>cards.push(`<div class="auditItem warn"><strong>${escapeHtml(SUGGESTION_LABELS[item.key])} parece bajo según lo registrado (${Math.round(item.pct)}%):</strong> podrías priorizar ${escapeHtml(SPECIFIC_SUGGESTIONS[item.key]||'alimentos variados y poco procesados')}.</div>`));
-    if(sodiumState.key==='review') cards.push('<div class="auditItem warn"><strong>Sodio alto según lo registrado:</strong> conviene priorizar comidas menos procesadas y más alimentos frescos en la próxima elección.</div>');
+    if(sodiumState?.key==='review') cards.push('<div class="auditItem warn"><strong>Sodio alto según lo registrado:</strong> conviene priorizar comidas menos procesadas y más alimentos frescos en la próxima elección.</div>');
     const protocol=getEntries().find(e=>e.date===date);
     if(protocol && Number(protocol.anxiety)>=8) cards.push('<div class="auditItem warn"><strong>Mensaje de cuidado:</strong> hoy registraste ansiedad alta. Evitá compensar, restringir o buscar perfección; si la preocupación por comida o cuerpo es intensa, hablá con un adulto o profesional de salud.</div>');
-    diagnosis.innerHTML=cards.join('')||'<div class="auditItem good">La cobertura registrada se ve equilibrada. Sostené variedad y regularidad.</div>';
+    diagnosis.innerHTML=cards.join('')||'<div class="auditItem good">Los nutrientes evaluables se ven cubiertos según lo registrado. Esto no permite concluir sobre los nutrientes sin datos.</div>';
     const best=scoredFoodsForDate(date).slice(0,5);
-    recommendations.innerHTML=best.map((item,index)=>{
+    recommendations.innerHTML=missing.length?best.map((item,index)=>{
       const helps=item.helps.map(x=>SUGGESTION_LABELS[x.key]).join(', ')||'variedad nutricional';
       return `<div class="recommendCard"><strong>${index+1}. ${escapeHtml(item.food.name)}</strong><span>Porción orientativa: ${item.food.portionGrams||100} g. Puede ayudar con ${escapeHtml(helps)}.</span><div class="muted small" style="margin-top:6px">${escapeHtml(item.food.confidence)} · ${escapeHtml(item.food.source)}</div></div>`;
-    }).join('');
+    }).join(''):'<div class="emptyState">No hay nutrientes evaluables que requieran una sugerencia concreta.</div>';
     const top=best.map(x=>x.food);
     const light=top.find(f=>f.calories<100)||top[0], complete=top.find(f=>f.protein>=8)||top[0], post=top.find(f=>f.protein>=15)||allDefinedFoods().find(f=>f.id==='chicken-breast');
-    combinations.innerHTML=[
+    combinations.innerHTML=missing.length?[
       ['Opción liviana',light?`${light.name} + una fruta o verdura variada`:'Fruta + verdura variada'],
       ['Opción completa',complete?`${complete.name} + legumbre o cereal + verdura`:'Legumbre + cereal + verdura'],
       ['Opción post-entreno',post?`${post.name} + arroz, papa o banana`:'Proteína real + carbohidrato']
-    ].map(([title,text])=>`<div class="recommendCard"><strong>${escapeHtml(title)}</strong>${escapeHtml(text)}.<div class="muted small" style="margin-top:5px">Ajustá cantidad a hambre, contexto y objetivos personales.</div></div>`).join('');
+    ].map(([title,text])=>`<div class="recommendCard"><strong>${escapeHtml(title)}</strong>${escapeHtml(text)}.<div class="muted small" style="margin-top:5px">Ajustá cantidad a hambre, contexto y objetivos personales.</div></div>`).join(''):'';
   }
 
   function datesInRange(days){
@@ -204,7 +214,7 @@
     const box=document.getElementById('nutritionTrendStats'),insights=document.getElementById('nutritionTrendInsights');
     if(!box||!insights) return;
     const week=datesInRange(7),month=datesInRange(30),registered=month.filter(d=>entriesForDate(d).length||dateMetrics(d).water);
-    const weekTotals=week.map(nutrientTotalsForDate), monthScores=month.map(nutritionScoreForDate).filter(Boolean);
+    const weekTotals=week.map(nutrientTotalsForDate);
     const stats=[
       ['Kcal promedio semanal',Math.round(average(weekTotals.map(t=>t.calories)))],
       ['Proteína promedio',`${Math.round(average(weekTotals.map(t=>t.protein)))} g`],
@@ -213,11 +223,11 @@
     ];
     box.innerHTML=stats.map(([label,value])=>`<div class="quickStat"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join('');
     const targets=advancedTargets();
-    const nutrientAvg=Object.keys(SUGGESTION_LABELS).map(key=>({key,pct:average(weekTotals.map(t=>(t[key]||0)/(targets[key]||1)*100))})).sort((a,b)=>a.pct-b.pct);
+    const nutrientAvg=Object.keys(SUGGESTION_LABELS).map(key=>{const values=week.map((date,index)=>coverageReportForDate(date,[key]).rows[0]?.coveragePct>=55?(weekTotals[index][key]||0)/(targets[key]||1)*100:null).filter(Number.isFinite);return{key,pct:average(values),sampleSize:values.length};}).filter(item=>item.sampleSize).sort((a,b)=>a.pct-b.pct);
     const scored=month.map(date=>({date,score:nutritionScoreForDate(date)})).filter(x=>x.score);
     const best=scored.slice().sort((a,b)=>b.score-a.score)[0],low=scored.slice().sort((a,b)=>a.score-b.score)[0];
     insights.innerHTML=[
-      ['Micronutriente a priorizar',nutrientAvg[0]?`${SUGGESTION_LABELS[nutrientAvg[0].key]} · ${Math.round(nutrientAvg[0].pct)}% semanal`:'Faltan registros'],
+      ['Nutriente evaluable a priorizar',nutrientAvg[0]?`${SUGGESTION_LABELS[nutrientAvg[0].key]} · ${Math.round(nutrientAvg[0].pct)}% en ${nutrientAvg[0].sampleSize} dia(s) con datos`:'Faltan registros con datos suficientes'],
       ['Días comparables',best?`Mejor cobertura: ${best.date} (${best.score}/100). Menor: ${low.date} (${low.score}/100).`:'Registrá más días para comparar.'],
       ['Próxima semana',nutrientAvg[0]?`Elegí dos fuentes de ${SUGGESTION_LABELS[nutrientAvg[0].key].toLowerCase()} y repetilas de forma práctica.`:'Priorizá constancia de registro antes que precisión perfecta.']
     ].map(([title,text])=>`<div class="recommendCard"><strong>${escapeHtml(title)}</strong>${escapeHtml(text)}</div>`).join('');
@@ -399,7 +409,8 @@
     const nutrientKeys=Object.keys(DEFINITIONS);
     const nutrients={};
     nutrientKeys.forEach(key=>{if(!['calories','protein','carbs','fat','water'].includes(key))nutrients[key]=Number(food[key]??food.nutrients?.[key]??0)||0;});
-    return {...food,id:food.id||`custom-${normalizeFoodText(food.name).replace(/\s+/g,'-')||index}`,category:food.category||'personalizados',portionGrams:Number(food.portionGrams)||100,confidence:food.confidence||'aproximado',source:food.source||'etiqueta manual',nutrients,...nutrients,custom:true};
+    const reportedNutrients=Array.isArray(food.reportedNutrients)?food.reportedNutrients.filter(key=>key in nutrients):Object.keys(nutrients).filter(key=>Number(nutrients[key])!==0);
+    return {...food,id:food.id||`custom-${normalizeFoodText(food.name).replace(/\s+/g,'-')||index}`,category:food.category||'personalizados',portionGrams:Number(food.portionGrams)||100,confidence:food.confidence||'aproximado',source:food.source||'etiqueta manual',nutrients,reportedNutrients,...nutrients,custom:true};
   }
   function normalizeCustomFoods(){
     const foods=getLocalData(CUSTOM_FOODS_KEY,[]).map(ensureCustomFoodShape);
@@ -410,8 +421,8 @@
     const food=foods[index],ask=(label,key)=>window.prompt(label,String(food[key]??food.nutrients?.[key]??0));
     const name=(window.prompt('Nombre:',food.name)||food.name).trim();
     const fields={calories:'Calorías/100 g',protein:'Proteína/100 g',carbs:'Carbohidratos/100 g',fat:'Grasas/100 g',fiber:'Fibra/100 g',sodium:'Sodio mg/100 g',calcium:'Calcio mg/100 g',iron:'Hierro mg/100 g',vitaminC:'Vitamina C mg/100 g'};
-    const updated={...food,name};
-    Object.entries(fields).forEach(([key,label])=>{const value=ask(label,key);if(value!==null)updated[key]=Math.max(0,Number(value)||0);});
+    const updated={...food,name},reported=new Set(food.reportedNutrients||[]);
+    Object.entries(fields).forEach(([key,label])=>{const value=ask(label,key);if(value!==null){updated[key]=Math.max(0,Number(value)||0);if(!['calories','protein','carbs','fat'].includes(key))reported.add(key);}});updated.reportedNutrients=[...reported];
     foods[index]=ensureCustomFoodShape(updated,index);setLocalData(CUSTOM_FOODS_KEY,foods);populateFoods();renderCustomFoods();renderAdvancedNutrition();syncVersionedState();
   }
   function renderCustomFoods(){

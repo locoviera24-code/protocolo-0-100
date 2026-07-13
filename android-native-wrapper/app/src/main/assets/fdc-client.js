@@ -100,9 +100,9 @@
   function updateCachedFood(id,updates){
     const foods=cachedFoods(),index=foods.findIndex(food=>food.id===id||String(food.fdcId)===String(id));
     if(index<0)return null;
-    const original=foods[index],nutrients={...original.nutrients};
-    Object.keys(nutrients).forEach(key=>{if(updates[key]!==undefined)nutrients[key]=Math.max(0,Number(updates[key])||0)});
-    foods[index]={...original,...updates,nutrients,editedAt:new Date().toISOString(),source:SOURCE};
+    const original=foods[index],nutrients={...original.nutrients},reported=new Set(original.reportedNutrients||[]);
+    Object.keys(nutrients).forEach(key=>{if(updates[key]!==undefined){nutrients[key]=Math.max(0,Number(updates[key])||0);reported.add(key);}});
+    foods[index]={...original,...updates,nutrients,reportedNutrients:[...reported],editedAt:new Date().toISOString(),source:SOURCE};
     replaceCache(foods);
     return foods[index];
   }
@@ -136,7 +136,7 @@
         return definition.names.some(candidate=>name===candidate||name.includes(candidate));
       });
     }
-    return row?round(convertUnit(row.amount,row.unit,definition.unit)):0;
+    return row?round(convertUnit(row.amount,row.unit,definition.unit)):null;
   }
   function confidenceFor(dataType){
     if(['Foundation','SR Legacy'].includes(dataType))return 'alto';
@@ -157,13 +157,13 @@
     if(!food?.fdcId||!food?.description)return null;
     const rows=nutrientRows(food),values={};
     Object.entries(NUTRIENT_MAP).forEach(([key,definition])=>{values[key]=nutrientValue(rows,definition)});
-    const nutrients={...values};
+    const reportedNutrients=Object.entries(values).filter(([,value])=>value!==null).map(([key])=>key),compatibleValues=Object.fromEntries(Object.entries(values).map(([key,value])=>[key,value??0])),nutrients={...compatibleValues};
     delete nutrients.calories;delete nutrients.protein;delete nutrients.carbs;delete nutrients.fat;
     const description=String(food.description).trim(),brandOwner=String(food.brandOwner||food.brandName||'').trim();
     return {
       id:`fdc-${food.fdcId}`,fdcId:Number(food.fdcId),name:description,description,
       aliases:[description,brandOwner].filter(Boolean),category:categoryFor(food),portionGrams:normalizedServing(food),
-      calories:values.calories,protein:values.protein,carbs:values.carbs,fat:values.fat,...nutrients,nutrients,
+      calories:compatibleValues.calories,protein:compatibleValues.protein,carbs:compatibleValues.carbs,fat:compatibleValues.fat,...nutrients,nutrients,reportedNutrients,
       units:{porcion:normalizedServing(food)},dataType:String(food.dataType||'FDC'),brandOwner,
       servingSize:Number(food.servingSize)||null,servingSizeUnit:String(food.servingSizeUnit||''),
       confidence:confidenceFor(food.dataType),source:SOURCE,sourceCitation:CITATION,

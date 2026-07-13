@@ -15,6 +15,7 @@
     "test:settings": "node scripts/test-settings-contract.mjs",
     "test:data": "node scripts/test-data-layer.mjs && node scripts/test-backup-service.mjs",
     "test:nutrition": "node scripts/test-nutrition-modules.mjs",
+    "test:fdc": "node scripts/test-fdc-confidence.mjs",
     "test:e2e": "playwright test"
   },
   "devDependencies": {

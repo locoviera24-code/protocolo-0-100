@@ -282,6 +282,7 @@
 
             <div class="moduleCard" id="nutritionCoverageCard" data-nutrition-panel="coverage">
               <div class="coverageToolbar"><div><h3>Cobertura estimada de lo registrado</h3><div class="muted small">Consumido frente a metas orientativas, según los datos disponibles.</div></div><button type="button" class="secondary" data-open-nutrition-view="resumen">Volver a Hoy</button></div>
+              <div class="nutritionCoverageSummary" id="nutritionCoverageSummary" aria-live="polite"></div>
               <div class="coverageGrid" id="nutritionCoverageGrid"></div>
               <details class="advancedDetails"><summary>Ver todos los micronutrientes</summary><div class="coverageGrid" id="nutritionCoverageExtended" style="margin-top:10px"></div></details>
             </div>
@@ -1155,7 +1156,8 @@ function chooseFoodForFlow(index){
 }
 function useCustomFoodForFlow(){
   const name=document.getElementById('customFoodName').value.trim();if(!name){flash('Escribí el nombre del alimento personalizado.');return;}
-  const food={id:`draft-${Date.now()}`,name,calories:num('foodCalories'),protein:num('foodProtein'),carbs:num('foodCarbs'),fat:num('foodFat'),fiber:num('foodFiber'),sodium:num('foodSodium'),potassium:num('foodPotassium'),calcium:num('foodCalcium'),iron:num('foodIron'),magnesium:num('foodMagnesium'),zinc:num('foodZinc'),vitaminA:num('foodVitaminA'),vitaminC:num('foodVitaminC'),vitaminD:num('foodVitaminD'),b12:num('foodB12'),folate:num('foodFolate'),portionGrams:100,confidence:'aproximado',source:'etiqueta manual',custom:true,__customDraft:true};
+  const nutrientFields={fiber:'foodFiber',sodium:'foodSodium',potassium:'foodPotassium',calcium:'foodCalcium',iron:'foodIron',magnesium:'foodMagnesium',zinc:'foodZinc',vitaminA:'foodVitaminA',vitaminC:'foodVitaminC',vitaminD:'foodVitaminD',b12:'foodB12',folate:'foodFolate'},reportedNutrients=Object.entries(nutrientFields).filter(([,id])=>document.getElementById(id).value.trim()!=='').map(([key])=>key),nutrients=Object.fromEntries(Object.entries(nutrientFields).map(([key,id])=>[key,num(id)]));
+  const food={id:`draft-${Date.now()}`,name,calories:num('foodCalories'),protein:num('foodProtein'),carbs:num('foodCarbs'),fat:num('foodFat'),...nutrients,reportedNutrients,portionGrams:100,confidence:'aproximado',source:'etiqueta manual',custom:true,__customDraft:true};
   document.getElementById('foodQuantity').value='100';document.getElementById('foodUnit').value='g';nutritionEntryFlow.set({food,amount:100,unit:'g'}).go('amount');renderNutritionFoodFlow({focus:true});
 }
 function resetNutritionFoodFlow({openToday=false}={}){
@@ -1500,7 +1502,7 @@ function renderNutrition(){
     progress.innerHTML=window.NUTRITION_VIEW.progressRows(model).map(row=>{const pct=row.pct;return `<div class="macroRow ${row.over?'over':''}"><strong>${labels[row.key]}</strong><div class="bar"><i style="width:${pct}%"></i></div><span>${Math.round(row.value)}/${Math.round(row.target)}${row.key==='calories'?' kcal':row.key==='water'?' ml':' g'}</span></div>`;}).join('');
   }
   const summary=document.getElementById('nutritionScoreSummary');
-  if(summary)summary.innerHTML=[['Calorías',`${Math.round(total.calories)} kcal`],['Proteína',`${Math.round(total.protein)} g`],['Fibra',`${Math.round(total.fiber)} g`],['Agua',`${Math.round(model.water)} ml`]].map(([label,value])=>`<div class="quickStat"><span>${label}</span><strong>${value}</strong></div>`).join('');
+  if(summary){const foods=allFoods(),fiberData=window.NUTRITION_CONFIDENCE.coverage(day,['fiber'],{foodResolver:entry=>{const index=foodIndexForEntry(entry,foods);return index>=0?foods[index]:null;}}).rows[0],fiberValue=!fiberData?.evaluated?'Sin datos':fiberData.coveragePct<55?`${Math.round(total.fiber)} g parcial`:`${Math.round(total.fiber)} g`;summary.innerHTML=[['Calorías',`${Math.round(total.calories)} kcal`],['Proteína',`${Math.round(total.protein)} g`],['Fibra',fiberValue],['Agua',`${Math.round(model.water)} ml`]].map(([label,value])=>`<div class="quickStat"><span>${label}</span><strong>${value}</strong></div>`).join('');}
   const list=document.getElementById('nutritionDayList');
   if(list){
     const sections=window.NUTRITION_MODEL.MEALS.map(meal=>{

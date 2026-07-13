@@ -17,7 +17,7 @@
     if(normalized==='ml')return{grams:value,estimated:true};if(normalized==='l')return{grams:value*1000,estimated:true};
     const defined=number(food.units?.[normalized]);return{grams:value*(defined||GENERIC_UNITS[normalized]||1),estimated:!defined};
   }
-  function nutrientValue(food,key){const raw=food?.[key]??food?.nutrients?.[key];return raw===null||raw===undefined||raw===''?null:number(raw);}
+  function nutrientValue(food,key){if(Array.isArray(food?.reportedNutrients)&&!food.reportedNutrients.includes(key))return null;const raw=food?.[key]??food?.nutrients?.[key];return raw===null||raw===undefined||raw===''?null:number(raw);}
   function buildEntry(food,grams,meal,date,{id,now,definitions}={}){
     const amount=Math.max(1,number(grams)||100),factor=amount/100,nutrients={},nutrientStatus={};
     Object.keys(definitions||global.NUTRIENT_DEFINITIONS||{}).forEach(key=>{
