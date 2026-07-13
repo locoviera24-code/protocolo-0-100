@@ -704,7 +704,8 @@
   renderSavedMeals();
   loadFdcConfigFields();
   setupEvents();
-  setNutritionView('resumen');
+  const restoredNutritionDraft=window.restoreNutritionFoodDraft?.({announce:false})===true;
+  setNutritionView(restoredNutritionDraft?'registrar':'resumen');
   renderAdvancedNutrition();
   renderAdvancedProgress();
   setupUpdateNotice();

@@ -15,7 +15,7 @@ PWA y APK Android para medir habitos, atencion, actividad fisica y nutricion con
 
 ## Navegacion y diseno
 
-La version actual `v2.7.0` (build web `63`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
+La version actual `v2.7.0` (build web `64`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
 **Gym**, **Nutricion**, **Progreso** y **Mas**. En escritorio usa una barra
 lateral compacta. Gym Party se abre desde **Gym > Grupo**, desde un acceso
 discreto en Inicio o mediante un enlace `gymPartyCode`; ya no ocupa un boton
@@ -81,6 +81,8 @@ ui/inline-validation.js     Errores asociados al campo mediante ARIA
 ui/confirmation-dialog.js   Confirmaciones accesibles sin dialogo nativo
 ui/error-boundary.js        Log circular sanitizado y captura de fallos
 ui/recovery-view.js         Reintento, reinicio, modo seguro y diagnostico local
+app/drafts.js               Borradores versionados, expiracion y coordinacion entre pestanas
+app/dates.js                Medianoche, zona horaria, background y fechas manuales
 data/indexeddb.js           Espejo transaccional, migraciones y recuperacion local
 data/repositories.js        Repositorios por dominio sobre claves compatibles
 data/backup-service.js      Validacion, preview, importacion transaccional y Deshacer
@@ -134,6 +136,14 @@ objetivos, alimentos propios y FDC viven en **Mas > Ajustes > Nutricion**. Las
 claves y formatos de backup no cambiaron. **Agregar** guía alimento, cantidad,
 unidad, comida y revisión en cuatro pasos; muestra recientes/frecuentes,
 calcula macros antes de guardar y ofrece Deshacer.
+
+Los formularios de registro diario, alimento, serie Gym, rutina, creacion de
+Gym Party y privacidad guardan borradores locales con debounce. Se restauran
+tras recarga, cierre de PWA o reinicio del WebView, muestran una accion para
+descartarlos y se eliminan solo despues de un guardado exitoso. Los borradores
+vencen automaticamente, no incluyen configuracion Firebase ni credenciales y
+no sustituyen los backups exportables. La fecha seleccionada manualmente se
+conserva; el cambio de dia o zona horaria solo actualiza fechas automaticas.
 
 Antes de importar un JSON, la app valida tamaño y schema, sanea claves y
 cadenas, muestra registros nuevos/reemplazados/conflictos y crea una copia

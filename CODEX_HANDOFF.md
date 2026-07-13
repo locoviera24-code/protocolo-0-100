@@ -1700,3 +1700,59 @@ Estado publicable del bloque: version `2.7.0`, Android `33`, build/cache `63`
 Pendiente siguiente exacto: crear el dominio versionado de borradores con
 debounce, expiracion, descarte, restauracion segura y coordinacion temporal
 mediante `visibilitychange`, `pagehide`, `BroadcastChannel` y `storage`.
+
+## 46. Borradores persistentes y ciclo temporal
+
+Implementado despues de `b032084`:
+
+- `app/drafts.js` crea el dominio local versionado
+  `protocolo_0_100_drafts_v1`. Guarda con debounce, limita cada borrador a
+  256 KB y el conjunto a 40 elementos, vence por defecto a los 14 dias,
+  purga entradas expiradas y permite descartar manualmente desde el snackbar.
+- Los payloads eliminan campos de credenciales, secretos, tokens,
+  `firebaseConfig`, service accounts y API keys. Los borradores son estado
+  transitorio local y no se agregaron al backup exportable.
+- `pagehide` y `visibilitychange` fuerzan el flush pendiente. Los cambios se
+  coordinan entre pestanas con `BroadcastChannel` y fallback por evento
+  `storage`; los errores de cuota muestran un banner recuperable sin borrar el
+  formulario abierto.
+- Hay restauracion y limpieza despues de guardado exitoso para: registro diario
+  y nota; alta de alimento y alimento personalizado; serie Gym; rutina semanal;
+  creacion/union de Gym Party; privacidad de la sala; y serie desde Gym Party.
+  Los borradores de Gym y Gym Party amplian los `Map` en memoria existentes en
+  vez de reemplazar sus APIs.
+- Nutricion vuelve a abrir el flujo Agregar cuando existe un alimento pendiente
+  para la fecha seleccionada. Conserva alimento, paso, porcion, unidad, comida
+  y campos personalizados.
+- `app/dates.js` conserva fechas elegidas manualmente, detecta paso de
+  medianoche, zona horaria, regreso desde background y cambios entre pestanas.
+  Solo mueve fechas automaticas; nunca cambia una fecha marcada como manual.
+- `app-time-context-changed` vuelve a renderizar Inicio, Gym, Gym Party y widget
+  al cambiar el contexto temporal. Las selecciones manuales sobreviven recarga
+  y cierre de PWA.
+- `tests/e2e/drafts-time.spec.mjs` prueba recarga/pagehide real, alimento,
+  serie, rutina, formularios de sala, privacidad, expiracion, fecha manual y
+  dos pestanas. Resultado dirigido: 18/18 en Android Chromium, iPhone WebKit y
+  escritorio.
+- `app/drafts.js` y `app/dates.js` se agregaron al precache y al sincronizador
+  de assets Android. El wrapper contiene copias identicas.
+
+- Las 20 pruebas unitarias/estructurales pasan: version, modulos, diseno,
+  router, layout, Ajustes, datos, backup, Nutricion, FDC, Progreso, Gym, Gym
+  Party, service worker, accesibilidad estatica, seguridad/release Android y
+  sincronizacion de assets.
+- Regresion E2E completa: 183 casos, 169 aprobados, 14 omisiones intencionales
+  de matriz ya enumeradas en la seccion 45 y cero fallos, en 15.4 minutos.
+- Firestore Emulator con Java 21 paso reglas, owner atomico, consultas sync,
+  limpieza legacy y seis negativas criticas denegadas. Los mensajes
+  `PERMISSION_DENIED` del log corresponden a esas pruebas negativas esperadas.
+- Assets web/Android verificados y APK debug recompilado: Gradle
+  `:app:assembleDebug` termino con `BUILD SUCCESSFUL` (32 tareas).
+
+Estado publicable del bloque: version `2.7.0`, Android `33`, build/cache `64`
+(`protocolo-0-100-pwa-2.7.0-b64`).
+
+Pendiente siguiente exacto despues de cerrar este bloque: recetas y platos
+compuestos, porciones habituales/`Agregar igual`, parser numerico localizado y
+objetivos nutricionales transparentes. No iniciar taxonomia Gym hasta cerrar
+ese bloque de Nutricion con pruebas.

@@ -9,6 +9,8 @@ $assetRoot = Join-Path $repoRoot 'android-native-wrapper/app/src/main/assets'
 $relativeFiles = @(
     'index.html',
     'app-version.js',
+    'app/drafts.js',
+    'app/dates.js',
     'data/indexeddb.js',
     'data/repositories.js',
     'data/backup-service.js',

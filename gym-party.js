@@ -80,6 +80,7 @@
   let firebaseRuntime = null;
   let firebaseInitPromise = null;
   const partyQuickDrafts = new Map();
+  const partyDraftNotices = new Set();
   let partyRestTimerInterval = null;
   let partyRestTimerEndsAt = 0;
 
@@ -227,6 +228,27 @@
       shareGeneralScore: !!document.getElementById(`${prefix}GeneralScore`)?.checked
     };
   }
+  const partyPrivacySuffixes=['ShareGym','AggregateOnly','SetDetails','HideWeights','AnonymousAlias','GeneralScore'];
+  function partyFormDraftId(kind){return `gym-party-${kind}`;}
+  function partyFormFieldIds(kind){
+    if(kind==='create')return['gymPartyCreateName','gymPartyCreateAlias',...partyPrivacySuffixes.map(suffix=>`create${suffix}`)];
+    if(kind==='join')return['gymPartyJoinCode','gymPartyJoinAlias',...partyPrivacySuffixes.map(suffix=>`join${suffix}`)];
+    if(kind==='privacy')return partyPrivacySuffixes.map(suffix=>`partyPrivacy${suffix}`);
+    return[];
+  }
+  function capturePartyFormDraft(kind){
+    const fields={};let found=false;
+    partyFormFieldIds(kind).forEach(id=>{const element=document.getElementById(id);if(!element)return;found=true;fields[id]=element.type==='checkbox'?!!element.checked:element.value;});
+    if(found)window.APP_DRAFTS?.schedule?.({id:partyFormDraftId(kind),domain:`gym-party-${kind}`,payload:{fields},ttlMs:7*24*60*60*1000});
+  }
+  function restorePartyFormDraft(kind){
+    const id=partyFormDraftId(kind),draft=window.APP_DRAFTS?.get?.(id);if(!draft?.payload?.fields)return false;
+    let restored=false;Object.entries(draft.payload.fields).forEach(([fieldId,value])=>{const element=document.getElementById(fieldId);if(!element)return;restored=true;if(element.type==='checkbox')element.checked=!!value;else element.value=value??'';});
+    if(restored&&!partyDraftNotices.has(id)){
+      partyDraftNotices.add(id);window.APP_DRAFTS?.announceRestored?.({id,label:kind==='privacy'?'Borrador de privacidad restaurado.':'Borrador de Gym Party restaurado.',onDiscard:renderGymParty});
+    }
+    return restored;
+  }
   function privacyForShare(){
     const m = activeMembership();
     return {...defaultPrivacy, ...(m?.privacy || {})};
@@ -367,6 +389,7 @@
     };
     saveSettings({backendMode: 'local',pendingInviteCode:'',localParties:{...s.localParties,[partyId]:party}});
     saveMembership({partyId, inviteCode, userId, alias, role: 'owner', backendMode: 'local', active: true, privacy, joinedAt: nowIso(), party});
+    window.APP_DRAFTS?.remove?.(partyFormDraftId('create'));
     syncFromLocalWorkouts({silent: true});
     renderGymParty();
     flashMessage('Gym Party creada. Copia el codigo para invitar.');
@@ -398,6 +421,7 @@
     if((party.members || []).some(member => member.userId === userId)){
       flashMessage('Este usuario ya está unido a la sala.');
       saveMembership({partyId: party.id, inviteCode: party.inviteCode, userId, alias, role: 'member', backendMode: 'local', active: true, privacy, joinedAt: nowIso(), party});
+      window.APP_DRAFTS?.remove?.(partyFormDraftId('join'));
       renderGymParty();
       return;
     }
@@ -406,6 +430,7 @@
     const nextParty = {...party, members: [...(party.members || []), member], membersCount: (party.members || []).length + 1,inviteUses:Number(party.inviteUses||0)+1};
     saveSettings({localParties: {...s.localParties, [party.id]: nextParty}});
     saveMembership({partyId: party.id, inviteCode: party.inviteCode, userId, alias, role: 'member', backendMode: 'local', active: true, privacy, joinedAt: nowIso(), party: nextParty});
+    window.APP_DRAFTS?.remove?.(partyFormDraftId('join'));
     saveSettings({pendingInviteCode:''});
     syncFromLocalWorkouts({silent: true});
     renderGymParty();
@@ -1584,11 +1609,14 @@
   function partyDraftKey(date=selectedWorkoutDate(),exerciseId=partyWorkoutSelectedExerciseId(),editingSetId=settings().partyEditingSetId||''){
     return `${date}:${exerciseId||''}:${editingSetId||'new'}`;
   }
+  function partyPersistentSetDraftId(date=selectedWorkoutDate(),exerciseId=partyWorkoutSelectedExerciseId(),editingSetId=settings().partyEditingSetId||''){return `gym-party-set:${partyDraftKey(date,exerciseId,editingSetId)}`;}
   function capturePartyQuickDraft(){
     const select=document.getElementById('partyQuickExerciseSelect');if(!select)return;
-    partyQuickDrafts.set(partyDraftKey(selectedWorkoutDate(),select.value,settings().partyEditingSetId||''),{
+    const date=selectedWorkoutDate(),editingSetId=settings().partyEditingSetId||'',payload={
       reps:document.getElementById('partyQuickReps')?.value??'',weight:document.getElementById('partyQuickWeight')?.value??'',bodyweight:!!document.getElementById('partyQuickBodyweight')?.checked,rir:document.getElementById('partyQuickRir')?.value??'',rpe:document.getElementById('partyQuickRpe')?.value??'',note:document.getElementById('partyQuickNote')?.value??''
-    });
+    };
+    partyQuickDrafts.set(partyDraftKey(date,select.value,editingSetId),payload);
+    window.APP_DRAFTS?.schedule?.({id:partyPersistentSetDraftId(date,select.value,editingSetId),domain:'gym-party-set',payload:{...payload,date,exerciseId:select.value,setId:editingSetId}});
   }
   function updatePartyRestTimer(){
     const box=document.getElementById('partyRestTimer'),value=document.getElementById('partyRestTimerValue');if(!box||!value)return;
@@ -1651,13 +1679,17 @@
     const h = state.history;
     const editingSetId = settings().partyEditingSetId || '';
     const editingSet = safeArray(state.currentSets).find(set => set.id === editingSetId) || null;
-    const draft=partyQuickDrafts.get(partyDraftKey(date,selectedId,editingSetId));
-    const repsValue = editingSet ? editingSet.reps : (draft?.reps??state.suggestedReps);
-    const weightValue = editingSet ? editingSet.weight : (draft?.weight??state.suggestedWeight);
-    const bodyweightValue = editingSet ? !!editingSet.bodyweight : (draft?.bodyweight??state.bodyweight);
-    const rirValue = editingSet?.rir ?? draft?.rir ?? 2;
-    const rpeValue = editingSet?.rpe ?? draft?.rpe ?? '';
-    const noteValue = editingSet?.note ?? draft?.note ?? '';
+    const persistentDraft=window.APP_DRAFTS?.get?.(partyPersistentSetDraftId(date,selectedId,editingSetId));
+    const draft=persistentDraft?.payload||partyQuickDrafts.get(partyDraftKey(date,selectedId,editingSetId));
+    if(persistentDraft&&!partyDraftNotices.has(persistentDraft.id)){
+      partyDraftNotices.add(persistentDraft.id);setTimeout(()=>window.APP_DRAFTS?.announceRestored?.({id:persistentDraft.id,label:'Borrador de serie de Gym Party restaurado.',onDiscard:renderGymParty}),0);
+    }
+    const repsValue = draft?.reps ?? editingSet?.reps ?? state.suggestedReps;
+    const weightValue = draft?.weight ?? editingSet?.weight ?? state.suggestedWeight;
+    const bodyweightValue = draft?.bodyweight ?? (editingSet ? !!editingSet.bodyweight : state.bodyweight);
+    const rirValue = draft?.rir ?? editingSet?.rir ?? 2;
+    const rpeValue = draft?.rpe ?? editingSet?.rpe ?? '';
+    const noteValue = draft?.note ?? editingSet?.note ?? '';
     const saveText = editingSet ? 'Guardar cambios' : 'Guardar serie';
     const gymSettings=api.getGymSettings?.()||{};
     const hint = h ? `Ultima vez: ${h.name} - ${h.lastWeight||0} ${state.unit} x ${h.lastReps||0} reps.` : 'Sin historial previo. Empeza conservador y prioriza tecnica.';
@@ -1862,6 +1894,7 @@
     const html=data?.party ? dashboardHtmlSimple(data) : noRoomHtmlSimple();
     if(window.GYM_PARTY_UI?.renderRoot) window.GYM_PARTY_UI.renderRoot(root,html,bindGymPartyActionButtons);
     else{root.innerHTML=html;bindGymPartyActionButtons(root);}
+    if(data?.party)restorePartyFormDraft('privacy');else{restorePartyFormDraft('create');restorePartyFormDraft('join');}
     setTimeout(updatePartyRestTimer,0);
   }
 
@@ -1991,6 +2024,7 @@
     if(!m) return;
     const privacy = privacyFromForm('partyPrivacy');
     saveMembership({...m, privacy, updatedAt: nowIso()});
+    window.APP_DRAFTS?.remove?.(partyFormDraftId('privacy'));
     syncFromLocalWorkouts({silent: true});
     renderGymParty();
     flashMessage('Privacidad actualizada.');
@@ -2068,10 +2102,12 @@
       rpe: document.getElementById('partyQuickRpe')?.value,
       note: document.getElementById('partyQuickNote')?.value
     };
+    const savedDraftId=partyPersistentSetDraftId(selectedWorkoutDate(),partyWorkoutSelectedExerciseId(),editingSetId);
     const result = editingSetId && api.updateQuickSetPayload
       ? api.updateQuickSetPayload({...payload, setId: editingSetId})
       : api.saveQuickSetPayload(payload);
     if(!result.ok){ flashMessage(result.message || 'No se pudo guardar la serie.'); return; }
+    window.APP_DRAFTS?.remove?.(savedDraftId);
     const nextExerciseId=result.state?.currentExerciseId||result.exercise?.id||partyWorkoutSelectedExerciseId();
     partyQuickDrafts.delete(partyDraftKey(selectedWorkoutDate(),partyWorkoutSelectedExerciseId(),editingSetId));
     partyQuickDrafts.set(partyDraftKey(selectedWorkoutDate(),nextExerciseId,''),{reps:payload.reps,weight:payload.weight,bodyweight:!!payload.bodyweight,rir:payload.rir,rpe:payload.rpe,note:''});
@@ -2509,6 +2545,7 @@
     batch.set(firestoreMod.doc(db, collections.invites, inviteCode), {inviteCode,partyId,partyName:name,createdBy:uidValue,createdAt:timestamp,updatedAt:timestamp,active:true,membersCount:1,maxMembers:MAX_GYM_PARTY_MEMBERS,uses:0});
     await batch.commit();
     saveMembership({partyId, inviteCode, userId: uidValue, alias, role: 'owner', backendMode: 'firebase', active: true, privacy, joinedAt: nowIso(), party});
+    window.APP_DRAFTS?.remove?.(partyFormDraftId('create'));
     saveSettings({backendMode: 'firebase'});
     syncFromLocalWorkouts({silent: true});
     await syncFirebaseNow({silent: true});
@@ -2554,6 +2591,7 @@
     const nextMembers = upsertById(members, [member]);
     const partyWithMembers = {...party, members: nextMembers, membersCount: nextMembers.length, maxMembers: party.maxMembers || MAX_GYM_PARTY_MEMBERS};
     saveMembership({partyId: invite.partyId, inviteCode: code, userId: auth.currentUser.uid, alias, role: member.role, backendMode: 'firebase', active: true, privacy, joinedAt: nowIso(), party: partyWithMembers});
+    window.APP_DRAFTS?.remove?.(partyFormDraftId('join'));
     saveSettings({backendMode: 'firebase',pendingInviteCode:''});
     await syncFirebaseNow({silent: true});
     renderGymParty();
@@ -2759,6 +2797,16 @@
     });
     document.addEventListener('input',event=>{
       if(event.target&&['partyQuickReps','partyQuickWeight','partyQuickBodyweight','partyQuickRir','partyQuickRpe','partyQuickNote'].includes(event.target.id))capturePartyQuickDraft();
+      const id=event.target?.id||'';
+      if(['gymPartyCreateName','gymPartyCreateAlias',...partyPrivacySuffixes.map(suffix=>`create${suffix}`)].includes(id))capturePartyFormDraft('create');
+      if(['gymPartyJoinCode','gymPartyJoinAlias',...partyPrivacySuffixes.map(suffix=>`join${suffix}`)].includes(id))capturePartyFormDraft('join');
+      if(partyPrivacySuffixes.map(suffix=>`partyPrivacy${suffix}`).includes(id))capturePartyFormDraft('privacy');
+    });
+    document.addEventListener('change',event=>{
+      const id=event.target?.id||'';
+      if(partyPrivacySuffixes.some(suffix=>id===`create${suffix}`))capturePartyFormDraft('create');
+      if(partyPrivacySuffixes.some(suffix=>id===`join${suffix}`))capturePartyFormDraft('join');
+      if(partyPrivacySuffixes.some(suffix=>id===`partyPrivacy${suffix}`))capturePartyFormDraft('privacy');
     });
     if(typeof window.addEventListener === 'function'){
       window.addEventListener('online', () => {

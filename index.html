@@ -787,6 +787,8 @@
   </div>
 
 <script src="app-version.js"></script>
+<script src="app/drafts.js"></script>
+<script src="app/dates.js"></script>
 <script src="data/indexeddb.js"></script>
 <script src="data/repositories.js"></script>
 <script src="data/backup-service.js"></script>
@@ -1140,6 +1142,37 @@ function allFoods(){ return [...FOOD_CATALOG,...(window.NUTRITION_STORE?.customF
 function availableFoods(){ return allFoods().slice(1); }
 let nutritionEntryFlow=window.NUTRITION_ENTRY_FLOW.create({date:todayStr(),meal:'Almuerzo'});
 let lastNutritionEntriesSnapshot=null,nutritionEntryDialogState=null;
+const restoredDraftNotices=new Set();
+const nutritionCustomDraftFields=['customFoodName','foodCalories','foodProtein','foodCarbs','foodFat','foodFiber','foodSodium','foodPotassium','foodCalcium','foodIron','foodMagnesium','foodZinc','foodVitaminA','foodVitaminC','foodVitaminD','foodB12','foodFolate'];
+function nutritionFoodDraftId(date=document.getElementById('nutritionDate')?.value||todayStr()){return `nutrition-food:${date}`;}
+function nutritionFoodDraftPayload(){
+  const state=nutritionEntryFlow.state(),food=state.food||null;
+  return{date:document.getElementById('nutritionDate')?.value||state.date||todayStr(),state:{step:state.step,query:document.getElementById('nutritionFoodSearch')?.value||state.query||'',foodId:food?.id||'',foodName:food?.name||'',foodSnapshot:food?.__customDraft?food:null,amount:document.getElementById('foodQuantity')?.value??state.amount,unit:document.getElementById('foodUnit')?.value||state.unit,meal:document.getElementById('nutritionMeal')?.value||state.meal},custom:Object.fromEntries(nutritionCustomDraftFields.map(id=>[id,document.getElementById(id)?.value??''])),customOpen:!!document.getElementById('customFoodDetails')?.open};
+}
+function captureNutritionFoodDraft(){
+  const payload=nutritionFoodDraftPayload();
+  window.APP_DRAFTS?.schedule?.({id:nutritionFoodDraftId(payload.date),domain:'nutrition-food',payload});
+}
+function restoreNutritionFoodDraft({announce=true}={}){
+  const date=document.getElementById('nutritionDate')?.value||todayStr(),id=nutritionFoodDraftId(date),draft=window.APP_DRAFTS?.get?.(id);
+  if(!draft?.payload)return false;
+  const payload=draft.payload,state=payload.state||{},foods=allFoods();
+  const food=state.foodSnapshot||foods.find(item=>item.id===state.foodId)||foods.find(item=>normalizeFoodText(item.name)===normalizeFoodText(state.foodName))||null;
+  nutritionEntryFlow=window.NUTRITION_ENTRY_FLOW.create({date,meal:state.meal||'Almuerzo',step:state.step||'search',query:state.query||'',food,amount:state.amount||100,unit:state.unit||'g'});
+  const search=document.getElementById('nutritionFoodSearch');if(search)search.value=state.query||'';
+  const quantity=document.getElementById('foodQuantity');if(quantity)quantity.value=state.amount??100;
+  const unit=document.getElementById('foodUnit');if(unit)unit.value=state.unit||'g';
+  const meal=document.getElementById('nutritionMeal');if(meal)meal.value=state.meal||'Almuerzo';
+  if(food){const index=foods.findIndex(item=>item.id===food.id);if(index>=0)document.getElementById('nutritionFood').value=String(index);}
+  Object.entries(payload.custom||{}).forEach(([fieldId,value])=>{const element=document.getElementById(fieldId);if(element)element.value=value??'';});
+  const details=document.getElementById('customFoodDetails');if(details)details.open=!!payload.customOpen;
+  renderNutritionFoodFlow();
+  if(announce&&!restoredDraftNotices.has(id)){
+    restoredDraftNotices.add(id);
+    window.APP_DRAFTS?.announceRestored?.({id,label:'Borrador de alimento restaurado.',onDiscard:()=>resetNutritionFoodFlow({openToday:false,discard:false})});
+  }
+  return true;
+}
 function foodIndexForEntry(entry,foods=allFoods()){
   const byId=entry?.foodId&&foods.findIndex(food=>food.id===entry.foodId);if(byId>0)return byId;
   return foods.findIndex(food=>normalizeFoodText(food.name)===normalizeFoodText(entry?.name));
@@ -1172,27 +1205,28 @@ function chooseFoodForFlow(index){
   const foods=allFoods(),food=foods[Number(index)];if(!food||Number(index)===0)return;
   document.getElementById('nutritionFood').value=String(index);applySelectedFood(false);
   const amount=Math.max(1,Number(food.portionGrams)||100);document.getElementById('foodQuantity').value=String(amount);document.getElementById('foodUnit').value='g';
-  nutritionEntryFlow.set({food,amount,unit:'g',date:document.getElementById('nutritionDate').value||todayStr()}).go('amount');renderNutritionFoodFlow({focus:true});
+  nutritionEntryFlow.set({food,amount,unit:'g',date:document.getElementById('nutritionDate').value||todayStr()}).go('amount');captureNutritionFoodDraft();renderNutritionFoodFlow({focus:true});
 }
 function useCustomFoodForFlow(){
   const nameInput=document.getElementById('customFoodName'),name=nameInput.value.trim();if(!window.APP_INLINE_VALIDATION.require(nameInput,'Escribi el nombre del alimento personalizado.'))return;
   const nutrientFields={fiber:'foodFiber',sodium:'foodSodium',potassium:'foodPotassium',calcium:'foodCalcium',iron:'foodIron',magnesium:'foodMagnesium',zinc:'foodZinc',vitaminA:'foodVitaminA',vitaminC:'foodVitaminC',vitaminD:'foodVitaminD',b12:'foodB12',folate:'foodFolate'},reportedNutrients=Object.entries(nutrientFields).filter(([,id])=>document.getElementById(id).value.trim()!=='').map(([key])=>key),nutrients=Object.fromEntries(Object.entries(nutrientFields).map(([key,id])=>[key,num(id)]));
   const food={id:`draft-${Date.now()}`,name,calories:num('foodCalories'),protein:num('foodProtein'),carbs:num('foodCarbs'),fat:num('foodFat'),...nutrients,reportedNutrients,portionGrams:100,confidence:'aproximado',source:'etiqueta manual',custom:true,__customDraft:true};
-  document.getElementById('foodQuantity').value='100';document.getElementById('foodUnit').value='g';nutritionEntryFlow.set({food,amount:100,unit:'g'}).go('amount');renderNutritionFoodFlow({focus:true});
+  document.getElementById('foodQuantity').value='100';document.getElementById('foodUnit').value='g';nutritionEntryFlow.set({food,amount:100,unit:'g'}).go('amount');captureNutritionFoodDraft();renderNutritionFoodFlow({focus:true});
 }
-function resetNutritionFoodFlow({openToday=false}={}){
+function resetNutritionFoodFlow({openToday=false,discard=false}={}){
+  const id=nutritionFoodDraftId();if(discard)window.APP_DRAFTS?.remove?.(id);
   nutritionEntryFlow=window.NUTRITION_ENTRY_FLOW.create({date:document.getElementById('nutritionDate').value||todayStr(),meal:document.getElementById('nutritionMeal')?.value||'Almuerzo'});
-  document.getElementById('nutritionFoodSearch').value='';document.getElementById('nutritionFood').value='0';document.getElementById('customFoodName').value='';document.getElementById('customFoodDetails').open=false;renderNutritionFoodFlow();
+  document.getElementById('nutritionFoodSearch').value='';document.getElementById('nutritionFood').value='0';document.getElementById('customFoodName').value='';const customDetails=document.getElementById('customFoodDetails');customDetails.dataset.suppressDraft='1';customDetails.open=false;queueMicrotask(()=>delete customDetails.dataset.suppressDraft);renderNutritionFoodFlow();
   if(openToday)window.setNutritionView?.('resumen',{focus:true});
 }
 function advanceFoodAmount(){
   const input=document.getElementById('foodQuantity'),amount=Number(input.value);if(!(amount>0)){window.APP_INLINE_VALIDATION.show(input,'Indica una cantidad mayor que cero.');return;}
-  window.APP_INLINE_VALIDATION.clear(input);nutritionEntryFlow.set({amount,unit:document.getElementById('foodUnit').value}).go('meal');renderNutritionFoodFlow({focus:true});
+  window.APP_INLINE_VALIDATION.clear(input);nutritionEntryFlow.set({amount,unit:document.getElementById('foodUnit').value}).go('meal');captureNutritionFoodDraft();renderNutritionFoodFlow({focus:true});
 }
 function advanceFoodMeal(){
-  nutritionEntryFlow.set({meal:document.getElementById('nutritionMeal').value,date:document.getElementById('nutritionDate').value||todayStr()}).go('review');renderNutritionFoodFlow({focus:true});
+  nutritionEntryFlow.set({meal:document.getElementById('nutritionMeal').value,date:document.getElementById('nutritionDate').value||todayStr()}).go('review');captureNutritionFoodDraft();renderNutritionFoodFlow({focus:true});
 }
-function backNutritionFoodFlow(){nutritionEntryFlow.back();if(nutritionEntryFlow.state().step==='food')nutritionEntryFlow.go('search');renderNutritionFoodFlow({focus:true});}
+function backNutritionFoodFlow(){nutritionEntryFlow.back();if(nutritionEntryFlow.state().step==='food')nutritionEntryFlow.go('search');captureNutritionFoodDraft();renderNutritionFoodFlow({focus:true});}
 function rememberNutritionEntries(){lastNutritionEntriesSnapshot=JSON.parse(JSON.stringify(window.NUTRITION_STORE.entries()));document.getElementById('undoLastFoodBtn')?.classList.remove('hidden');}
 function undoLastFood(){if(!lastNutritionEntriesSnapshot)return;window.NUTRITION_STORE.saveEntries(lastNutritionEntriesSnapshot);lastNutritionEntriesSnapshot=null;document.getElementById('undoLastFoodBtn')?.classList.add('hidden');renderNutrition();flash('Cambio nutricional deshecho.');}
 function saveCustomFoodDefinition(food){
@@ -1225,6 +1259,7 @@ function addFood(){
   let food=review.food;if(food.__customDraft){const {__customDraft,...definition}=food;food=saveCustomFoodDefinition(definition);populateFoods();}
   const entry={...buildFoodEntry(food,review.grams,review.meal,review.date),source:food.custom?'alimento personalizado':food.source||'registro manual'};
   rememberNutritionEntries();window.NUTRITION_STORE.addEntry(entry);
+  window.APP_DRAFTS?.remove?.(nutritionFoodDraftId(review.date));
   renderNutrition();resetNutritionFoodFlow({openToday:true});flash('Alimento guardado. Podés deshacerlo desde Hoy.');
 }
 function normalizeFoodText(value){return window.NUTRITION_MODEL.normalizeText(value);}
@@ -1714,6 +1749,22 @@ function readForm(){
   };
 }
 
+function protocolDraftId(date=document.getElementById('entryDate')?.value||todayStr()){return `protocol-entry:${date}`;}
+function captureProtocolDraft(){
+  const payload={...readForm(),manualDay:document.getElementById('manualDay')?.value||''};delete payload.savedAt;
+  const saved=getEntries().find(entry=>entry.date===payload.date);
+  window.APP_DRAFTS?.schedule?.({id:protocolDraftId(payload.date),domain:'protocol-entry',payload,baseUpdatedAt:saved?.savedAt||''});
+}
+function restoreProtocolDraft(date=document.getElementById('entryDate')?.value||todayStr(),saved=getEntries().find(entry=>entry.date===date)){
+  const id=protocolDraftId(date),draft=window.APP_DRAFTS?.get?.(id,{newerThan:saved?.savedAt||''});if(!draft?.payload)return false;
+  fillForm(draft.payload);document.getElementById('manualDay').value=draft.payload.manualDay??'';updateUI();
+  if(!restoredDraftNotices.has(id)){
+    restoredDraftNotices.add(id);
+    window.APP_DRAFTS?.announceRestored?.({id,label:'Borrador del registro diario restaurado.',onDiscard:()=>fillForm(saved||null)});
+  }
+  return true;
+}
+
 function fillForm(entry){
   const defaults = {totalScreen:'', nonEssential:'', sleepHours:'', noSocialMins:'', readingMins:'', offlineMins:'', anxiety:'', note:'', day:null};
   const e = entry || defaults;
@@ -1735,13 +1786,14 @@ function saveEntry(){
   if(ix>=0) entries[ix]=entry; else entries.push(entry);
   entries.sort((a,b)=>a.date.localeCompare(b.date));
   setEntries(entries);
+  window.APP_DRAFTS?.remove?.(protocolDraftId(entry.date));
   flash('Registro guardado.');
   renderAll();
 }
 function deleteEntry(){
   const date = document.getElementById('entryDate').value || todayStr();
   let entries = getEntries().filter(e=>e.date!==date);
-  setEntries(entries); fillForm(null); flash('Registro borrado.'); renderAll();
+  setEntries(entries);window.APP_DRAFTS?.remove?.(protocolDraftId(date));fillForm(null);flash('Registro borrado.');renderAll();
 }
 function preferredMotionBehavior(){return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth';}
 function flash(msg,options){return window.APP_NOTIFICATIONS?.showSnackbar?.(msg,options)||window.APP_NOTIFICATIONS?.announce?.(msg);}
@@ -2480,6 +2532,7 @@ function loadEntryForDate(){
   const date=document.getElementById('entryDate').value||todayStr();
   const e=getEntries().find(x=>x.date===date);
   fillForm(e || null);
+  restoreProtocolDraft(date,e);
   maybeAutoShowActionModal();
 }
 
@@ -2659,12 +2712,12 @@ document.getElementById('addGymExerciseBtn').addEventListener('click', addGymExe
 document.getElementById('saveGymSessionBtn').addEventListener('click', saveGymSession);
 document.getElementById('clearGymSessionBtn').addEventListener('click', clearGymSession);
 document.getElementById('nutritionFood').addEventListener('change', ()=>applySelectedFood(true));
-document.getElementById('nutritionFoodSearch').addEventListener('input', renderFoodSearchSuggestions);
+document.getElementById('nutritionFoodSearch').addEventListener('input', ()=>{nutritionEntryFlow.set({query:document.getElementById('nutritionFoodSearch').value});captureNutritionFoodDraft();renderFoodSearchSuggestions();});
 document.getElementById('useCustomFoodBtn').addEventListener('click', useCustomFoodForFlow);
 document.getElementById('foodAmountNextBtn').addEventListener('click', advanceFoodAmount);
 document.getElementById('foodMealNextBtn').addEventListener('click', advanceFoodMeal);
 document.querySelectorAll('[data-food-flow-back]').forEach(button=>button.addEventListener('click',backNutritionFoodFlow));
-document.getElementById('cancelFoodFlowBtn').addEventListener('click',()=>resetNutritionFoodFlow({openToday:true}));
+document.getElementById('cancelFoodFlowBtn').addEventListener('click',()=>resetNutritionFoodFlow({openToday:true,discard:true}));
 document.getElementById('undoLastFoodBtn').addEventListener('click',undoLastFood);
 document.getElementById('closeNutritionEntryDialogBtn').addEventListener('click',closeNutritionEntryDialog);
 document.getElementById('cancelNutritionEntryEditBtn').addEventListener('click',closeNutritionEntryDialog);
@@ -2696,15 +2749,17 @@ document.getElementById('nutritionAssistantPreview').addEventListener('click',e=
   const create=e.target.closest('[data-assistant-create]');
   if(create) createAssistantCustomFood(create.dataset.assistantCreate,create.closest('[data-assistant-row]'));
 });
-document.getElementById('nutritionDate').addEventListener('change', ()=>{loadBodyMetricsForDate();renderNutrition();});
+document.getElementById('nutritionDate').addEventListener('change', ()=>{loadBodyMetricsForDate();renderNutrition();resetNutritionFoodFlow();restoreNutritionFoodDraft();});
+['foodQuantity','foodUnit','nutritionMeal',...nutritionCustomDraftFields].forEach(id=>document.getElementById(id)?.addEventListener('input',captureNutritionFoodDraft));
+document.getElementById('customFoodDetails')?.addEventListener('toggle',event=>{if(event.currentTarget.dataset.suppressDraft!=='1')captureNutritionFoodDraft();});
 
 document.getElementById('saveBtn').addEventListener('click', saveEntry);
 document.getElementById('deleteBtn').addEventListener('click', deleteEntry);
-document.getElementById('clearBtn').addEventListener('click', ()=>fillForm(null));
+document.getElementById('clearBtn').addEventListener('click', ()=>{window.APP_DRAFTS?.remove?.(protocolDraftId());fillForm(null);});
 document.getElementById('startDate').addEventListener('change', e=>{localStorage.setItem(START_KEY,e.target.value); renderAll();});
 document.getElementById('entryDate').addEventListener('change', loadEntryForDate);
-document.getElementById('manualDay').addEventListener('input', updateUI);
-['totalScreen','nonEssential','sleepHours','noSocialMins','readingMins','offlineMins','anxiety','measuredScreen','wakeNoSocial','stableSchedule','phoneOutBed','noPhoneBed','writingDone','readBeforeScroll','keyActionDone','phoneImported','phoneImportedAt','phoneDetectedTotal','phoneDetectedNonEssential','phoneMetricSource','note'].forEach(id=>document.getElementById(id).addEventListener('input', updateUI));
+document.getElementById('manualDay').addEventListener('input', ()=>{updateUI();captureProtocolDraft();});
+['totalScreen','nonEssential','sleepHours','noSocialMins','readingMins','offlineMins','anxiety','measuredScreen','wakeNoSocial','stableSchedule','phoneOutBed','noPhoneBed','writingDone','readBeforeScroll','keyActionDone','phoneImported','phoneImportedAt','phoneDetectedTotal','phoneDetectedNonEssential','phoneMetricSource','note'].forEach(id=>document.getElementById(id).addEventListener('input',()=>{updateUI();captureProtocolDraft();}));
 document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{
   activateTab(btn.dataset.tab);
   if(btn.dataset.tab==='guia') renderHelpGuide();
@@ -2771,6 +2826,7 @@ mountNutritionSettings();
 populateGymMuscles();
 populateFoods();
 renderNutritionFoodFlow();
+restoreNutritionFoodDraft();
 applyUiPreferences();
 maybeShowInternalReminder();
 loadNutritionTargets();
@@ -2790,6 +2846,11 @@ if(initialRouteParams.quickLog){
 }
 maybeAutoShowActionModal();
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')maybeShowInternalReminder();});
+window.addEventListener('app-time-context-changed',()=>{
+  renderAll();
+  window.renderGym?.();
+  window.renderGymParty?.();
+});
 </script>
 <script src="workout-store.js"></script>
 <script src="workout-plan.js"></script>

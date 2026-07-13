@@ -74,6 +74,8 @@
   let lastDeletedQuickSet=null;
   let editingQuickSetId='';
   const quickDrafts=new Map();
+  const workoutDraftNotices=new Set();
+  let planDraftSelectionHydrated=false;
   let restTimerInterval=null;
   let restTimerEndsAt=0;
   let importingNativeWidgetState=false;
@@ -552,6 +554,7 @@
       document.getElementById(id)?.addEventListener('change',captureQuickDraft);
     });
     document.getElementById('planEditorDay')?.addEventListener('change',event=>{currentPlanEditorDay=event.target.value;renderPlanEditor();});
+    ['planEditorName','planEditorMuscles','planEditorExercises','planCustomExerciseName','planCustomExerciseMuscle'].forEach(id=>document.getElementById(id)?.addEventListener('input',capturePlanDraft));
     document.getElementById('savePlanDayBtn')?.addEventListener('click',savePlanEditorDay);
     document.getElementById('copyPlanDayBtn')?.addEventListener('click',copyPlanDay);
     document.getElementById('addPlanLibraryExerciseBtn')?.addEventListener('click',addPlanLibraryExercise);
@@ -610,13 +613,16 @@
     return window.WORKOUT_UI?.statCard?.(k,String(v))??`<div class="quickStat"><span>${escapeHtml(k)}</span><strong>${escapeHtml(String(v))}</strong></div>`;
   }
   function quickDraftKey(exerciseId=currentQuickExerciseId,date=todayStr()){ return `${date}:${exerciseId||''}`; }
+  function quickPersistentDraftId(exerciseId=currentQuickExerciseId,date=todayStr(),setId=editingQuickSetId||'new'){return `gym-set:${date}:${exerciseId||''}:${setId||'new'}`;}
   function quickInputValue(id){ const element=document.getElementById(id); return element?.type==='checkbox'?!!element.checked:(element?.value??''); }
   function captureQuickDraft(){
     const exerciseId=document.getElementById('quickExerciseSelect')?.value||currentQuickExerciseId;
     if(!exerciseId||String(exerciseId).startsWith('library:')) return;
-    quickDrafts.set(quickDraftKey(exerciseId),{
+    const payload={
       setNumber:quickInputValue('quickSetNumber'),reps:quickInputValue('quickReps'),weight:quickInputValue('quickWeight'),rir:quickInputValue('quickRir'),rpe:quickInputValue('quickRpe'),note:quickInputValue('quickNote'),bodyweight:quickInputValue('quickBodyweight')
-    });
+    };
+    quickDrafts.set(quickDraftKey(exerciseId),payload);
+    window.APP_DRAFTS?.schedule?.({id:quickPersistentDraftId(exerciseId),domain:'gym-set',payload:{...payload,date:todayStr(),exerciseId,setId:editingQuickSetId||''}});
   }
   function applyQuickDraft(draft){
     if(!draft) return;
@@ -649,6 +655,9 @@
     const select=document.getElementById('quickExerciseSelect'); if(!select) return;
     const session=activeSession(date) || latestSessionForDate(date);
     const source=session?.exercises?.length?session.exercises:plan.exercises;
+    const pendingDraft=window.APP_DRAFTS?.list?.('gym-set')?.find(item=>item.payload?.date===date&&(source||[]).some(exercise=>(exercise.id||exercise.exerciseId)===item.payload.exerciseId));
+    if(!currentQuickExerciseId&&pendingDraft?.payload?.exerciseId)currentQuickExerciseId=pendingDraft.payload.exerciseId;
+    if(!editingQuickSetId&&pendingDraft?.payload?.setId)editingQuickSetId=pendingDraft.payload.setId;
     const query=document.getElementById('quickExerciseSearch')?.value||'';
     const ranking=rankExercisesForContext({date,currentPlan:plan,query});
     const renderExerciseOption=(exercise,escapeValue=escapeHtml)=>{
@@ -676,7 +685,13 @@
     document.getElementById('quickRpe').value=editingSet?.rpe??'';
     document.getElementById('quickNote').value=editingSet?.note??'';
     document.getElementById('quickBodyweight').checked=editingSet?!!editingSet.bodyweight:bodyweight;
-    if(!editingSet)applyQuickDraft(quickDrafts.get(quickDraftKey(currentQuickExerciseId)));
+    const persistentDraft=window.APP_DRAFTS?.get?.(quickPersistentDraftId(currentQuickExerciseId,date,editingQuickSetId||'new'));
+    if(persistentDraft?.payload)applyQuickDraft(persistentDraft.payload);
+    else if(!editingSet)applyQuickDraft(quickDrafts.get(quickDraftKey(currentQuickExerciseId)));
+    if(persistentDraft&&!workoutDraftNotices.has(persistentDraft.id)){
+      workoutDraftNotices.add(persistentDraft.id);
+      window.APP_DRAFTS?.announceRestored?.({id:persistentDraft.id,label:'Borrador de serie restaurado.',onDiscard:()=>{quickDrafts.delete(quickDraftKey(currentQuickExerciseId));renderQuickLogger();}});
+    }
     const hint=document.getElementById('quickLastHint');
     if(h) hint.textContent=`Última vez: ${h.name} — ${displayWeight(h.lastWeight)} ${settings().unit} x ${h.lastReps||0} reps. Podés repetir la carga anterior; si te sentís bien, intentá +1 rep.`;
     else hint.textContent='Última vez: sin datos todavía. Si estás fatigado, mantener carga también cuenta.';
@@ -1006,8 +1021,10 @@
     const exercise=selectedQuickExercise(session);
     if(!exercise){ flash('Elegí un ejercicio para registrar.'); return; }
     const payload={date:session.date,exerciseId:exercise.id,setNumber:document.getElementById('quickSetNumber').value,reps:document.getElementById('quickReps').value,weight:document.getElementById('quickWeight').value,bodyweight:document.getElementById('quickBodyweight').checked,rir:document.getElementById('quickRir').value,rpe:document.getElementById('quickRpe').value,note:document.getElementById('quickNote').value};
+    const savedDraftId=quickPersistentDraftId(exercise.id,session.date,editingQuickSetId||'new');
     const result=editingQuickSetId?updateQuickSetPayload({...payload,setId:editingQuickSetId}):saveQuickSetPayload(payload);
     if(!result.ok){flash(result.message||'No se pudo guardar la serie.');return;}
+    window.APP_DRAFTS?.remove?.(savedDraftId);
     const wasEditing=!!editingQuickSetId;editingQuickSetId='';
     quickDrafts.set(quickDraftKey(exercise.id),{setNumber:(result.exercise.sets?.length||0)+1,reps:payload.reps,weight:payload.weight,rir:payload.rir,rpe:payload.rpe,note:'',bodyweight:payload.bodyweight});
     renderGym();
@@ -1032,7 +1049,7 @@
     const adjust=event.target.closest('[data-quick-adjust]');
     if(adjust){const [target,delta]=adjust.dataset.quickAdjust.split(':');adjustQuickInput(target,delta);return;}
     const edit=event.target.closest('[data-quick-edit-set]');
-    if(edit){editingQuickSetId=edit.dataset.quickEditSet;quickDrafts.delete(quickDraftKey());renderQuickLogger();document.getElementById('quickReps')?.focus();return;}
+    if(edit){window.APP_DRAFTS?.remove?.(quickPersistentDraftId());editingQuickSetId=edit.dataset.quickEditSet;quickDrafts.delete(quickDraftKey());renderQuickLogger();document.getElementById('quickReps')?.focus();return;}
     const remove=event.target.closest('[data-quick-delete-set]');
     if(remove){
       const confirmed=await window.APP_CONFIRMATION.ask({title:'Eliminar serie',message:'La serie se quitará del entrenamiento. Podés deshacerla enseguida.',confirmLabel:'Eliminar',danger:true});
@@ -1099,7 +1116,25 @@
     saveSettings({widgetEnabled:document.getElementById('gymWidgetEnabled').checked,showRir:document.getElementById('gymShowRir').checked,unit:document.getElementById('gymUnit').value,mode:document.getElementById('gymMode').value,showRestDays:document.getElementById('gymShowRestDays').checked,restTimerEnabled:document.getElementById('gymRestTimerEnabled').checked,restSeconds:Math.max(15,Number(document.getElementById('gymRestSeconds').value)||90),hapticEnabled:document.getElementById('gymHapticEnabled').checked});
     renderQuickLogger();
   }
+  function planDraftId(dayKey=currentPlanEditorDay){return `gym-routine:${dayKey}`;}
+  function capturePlanDraft(){
+    const payload={dayKey:currentPlanEditorDay,name:document.getElementById('planEditorName')?.value??'',muscles:document.getElementById('planEditorMuscles')?.value??'',exercises:document.getElementById('planEditorExercises')?.value??'',customName:document.getElementById('planCustomExerciseName')?.value??'',customMuscle:document.getElementById('planCustomExerciseMuscle')?.value??''};
+    window.APP_DRAFTS?.schedule?.({id:planDraftId(),domain:'gym-routine',payload,ttlMs:30*24*60*60*1000});
+  }
+  function restorePlanDraft(){
+    const id=planDraftId(),draft=window.APP_DRAFTS?.get?.(id);if(!draft?.payload)return false;
+    const fields={planEditorName:'name',planEditorMuscles:'muscles',planEditorExercises:'exercises',planCustomExerciseName:'customName',planCustomExerciseMuscle:'customMuscle'};
+    Object.entries(fields).forEach(([elementId,key])=>{const element=document.getElementById(elementId);if(element&&draft.payload[key]!==undefined)element.value=draft.payload[key];});
+    if(!workoutDraftNotices.has(id)){
+      workoutDraftNotices.add(id);
+      window.APP_DRAFTS?.announceRestored?.({id,label:`Borrador de rutina de ${dayLabels[currentPlanEditorDay]} restaurado.`,onDiscard:renderPlanEditor});
+    }
+    return true;
+  }
   function renderPlanEditor(){
+    if(!planDraftSelectionHydrated){
+      const pending=window.APP_DRAFTS?.list?.('gym-routine')?.[0];if(pending?.payload?.dayKey)currentPlanEditorDay=pending.payload.dayKey;planDraftSelectionHydrated=true;
+    }
     const plan=weeklyPlan(),dayPlan=plan[currentPlanEditorDay]||defaultWeeklyPlan[currentPlanEditorDay];
     const daySelect=document.getElementById('planEditorDay'); if(!daySelect) return;
     daySelect.value=currentPlanEditorDay;
@@ -1108,6 +1143,7 @@
     document.getElementById('planEditorExercises').value=dayPlan.type==='rest'
       ? [dayPlan.message,...(dayPlan.suggestions||[])].join('\n')
       : (dayPlan.exercises||[]).map(exercise=>`${exercise.muscle} | ${exercise.name}${exercise.bodyweight?' | peso corporal':''}${exercise.notes?' | '+exercise.notes:''}`).join('\n');
+    restorePlanDraft();
     renderVisualPlanCards(dayPlan);
     renderPlanLibrarySelect();
     renderExerciseLibraryEditor();
@@ -1260,6 +1296,7 @@
   }
   function savePlanEditorDay(){
     savePlanHeader();
+    window.APP_DRAFTS?.remove?.(planDraftId());
     renderPlanEditor();
     flash('Nombre y músculos guardados. Los ejercicios se guardan automáticamente.');
   }
@@ -1279,6 +1316,7 @@
       plan[key]={dayKey:key,weekday:dayLabels[key],name,type:'workout',muscles:muscles.length?muscles:[...new Set(exercises.map(x=>x.muscle))],exercises};
     }
     saveWeeklyPlan(plan);
+    window.APP_DRAFTS?.remove?.(planDraftId(key));
     renderGym();
     flash('Edición avanzada aplicada sin modificar sesiones históricas.');
   }
@@ -1296,6 +1334,7 @@
     const confirmed=await window.APP_CONFIRMATION.ask({title:'Restablecer rutina',message:'Se reemplazará la rutina semanal actual por la predeterminada. Tus sesiones guardadas no se borran.',confirmLabel:'Restablecer',danger:true});
     if(!confirmed)return;
     saveWeeklyPlan(clone(defaultWeeklyPlan));
+    dayOrder.forEach(dayKey=>window.APP_DRAFTS?.remove?.(planDraftId(dayKey),{silent:true}));
     currentPlanEditorDay='monday';
     renderGym();
     flash('Rutina predeterminada restablecida.');
