@@ -17,6 +17,8 @@ $relativeFiles = @(
     'nutrition-data.js',
     'nutrition/nutrition-store.js',
     'nutrition/nutrition-model.js',
+    'nutrition/recipes.js',
+    'nutrition/portions.js',
     'nutrition/food-search.js',
     'nutrition/food-entry-flow.js',
     'nutrition/meal-history.js',

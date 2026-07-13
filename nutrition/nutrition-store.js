@@ -9,7 +9,9 @@
     aliases:'protocolo_0_100_nutrition_aliases_v1',
     profile:'protocolo_0_100_nutrition_profile_v1',
     savedMeals:'protocolo_0_100_saved_meals_v1',
-    cachedFdcFoods:'protocolo_0_100_cached_fdc_foods_v1'
+    cachedFdcFoods:'protocolo_0_100_cached_fdc_foods_v1',
+    recipes:'protocolo_0_100_recipes_v1',
+    portions:'protocolo_0_100_food_portions_v1'
   });
   const defaults=Object.freeze({calories:2200,protein:140,carbs:250,fat:70,fiber:30,water:2500});
   function clone(value){return value===undefined?undefined:JSON.parse(JSON.stringify(value));}
@@ -36,6 +38,8 @@
   function customFoods(){const value=read(keys.customFoods,[]);return Array.isArray(value)?value:[];}
   function savedMeals(){const value=read(keys.savedMeals,[]);return Array.isArray(value)?value:[];}
   function aliases(){const value=read(keys.aliases,{});return value&&typeof value==='object'?value:{};}
+  function recipes(){const value=read(keys.recipes,[]);return Array.isArray(value)?value:[];}
+  function portions(){const value=read(keys.portions,{});return value&&typeof value==='object'&&!Array.isArray(value)?value:{};}
 
-  global.NUTRITION_STORE=Object.freeze({keys,defaults,read,write,entries,saveEntries,updateEntries,addEntry,removeEntry,targets,saveTargets:value=>write(keys.targets,value),bodyMetrics,saveBodyMetrics:value=>write(keys.bodyMetrics,value),customFoods,saveCustomFoods:value=>write(keys.customFoods,value),savedMeals,saveSavedMeals:value=>write(keys.savedMeals,value),aliases,saveAliases:value=>write(keys.aliases,value)});
+  global.NUTRITION_STORE=Object.freeze({keys,defaults,read,write,entries,saveEntries,updateEntries,addEntry,removeEntry,targets,saveTargets:value=>write(keys.targets,value),bodyMetrics,saveBodyMetrics:value=>write(keys.bodyMetrics,value),customFoods,saveCustomFoods:value=>write(keys.customFoods,value),savedMeals,saveSavedMeals:value=>write(keys.savedMeals,value),aliases,saveAliases:value=>write(keys.aliases,value),recipes,saveRecipes:value=>write(keys.recipes,Array.isArray(value)?value:[]),portions,savePortions:value=>write(keys.portions,value&&typeof value==='object'?value:{})});
 })(window);

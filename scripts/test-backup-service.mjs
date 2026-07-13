@@ -27,10 +27,12 @@ assert.equal(legacy.schemaVersion,1);
 assert.equal(legacy.changes.protocolo_0_100_tracker_v1[0].note,'<img src=x onerror=alert(1)>');
 assert.ok(legacy.ignored.includes('unknownField'));
 
-const payload='{"schemaVersion":3,"entries":[],"constructor":{"polluted":true},"gymPartySettings":{"backendMode":"firebase","firebaseConfig":{"apiKey":"omit"}}}';
+const payload='{"schemaVersion":3,"entries":[],"recipes":[{"id":"recipe-1","name":"Guiso","ingredients":[]}],"foodPortions":{"rice":{"lastAmount":180,"lastUnit":"g"}},"constructor":{"polluted":true},"gymPartySettings":{"backendMode":"firebase","firebaseConfig":{"apiKey":"omit"}}}';
 const prepared=service.prepareText(payload,{fileName:'safe.json'});
 assert.ok(prepared.ignored.includes('constructor'));
 assert.equal(prepared.changes.protocolo_0_100_gym_party_settings_v1.firebaseConfig,undefined);
+assert.equal(prepared.changes.protocolo_0_100_recipes_v1[0].name,'Guiso');
+assert.equal(prepared.changes.protocolo_0_100_food_portions_v1.rice.lastAmount,180);
 const result=await service.apply(prepared);
 assert.equal(result.snapshotId,'recovery-before-import');
 assert.ok(transactions[0].options.reason.startsWith('import:'));

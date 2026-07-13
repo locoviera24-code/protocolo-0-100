@@ -8,14 +8,14 @@ PWA y APK Android para medir habitos, atencion, actividad fisica y nutricion con
 - **Gym:** rutinas, ejercicios por musculo, series, repeticiones, peso, RIR, volumen e historial.
 - **Widget Android de gimnasio:** widget nativo de pantalla de inicio con rutina del dia, progreso y registro directo incremental de series.
 - **Gym Party:** sala privada opcional para compartir entrenamientos, comparar progreso semanal/mensual y probar graficas en modo demo.
-- **Nutricion:** portada simple Hoy/Agregar/Progreso, comidas agrupadas, agua independiente, busqueda por alias, cantidades, frecuentes, alimentos propios y metas editables.
+- **Nutricion:** portada simple Hoy/Agregar/Progreso, comidas agrupadas, agua independiente, busqueda por alias, recetas, porciones habituales, alimentos propios y metas editables.
 - **USDA FoodData Central opcional:** busqueda paginada, detalle por `fdcId`, normalizacion por 100 g, cache offline e importador JSON.
 - **Progreso integral:** scores separados e integral, Focus Coins no financieros, recompensas, rankings mensuales opcionales y referidos simulados.
 - **Telefono Android:** importacion opcional de estadisticas de uso con permiso explicito.
 
 ## Navegacion y diseno
 
-La version actual `v2.7.0` (build web `64`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
+La version actual `v2.7.0` (build web `65`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
 **Gym**, **Nutricion**, **Progreso** y **Mas**. En escritorio usa una barra
 lateral compacta. Gym Party se abre desde **Gym > Grupo**, desde un acceso
 discreto en Inicio o mediante un enlace `gymPartyCode`; ya no ocupa un boton
@@ -44,6 +44,13 @@ En Nutricion, cada alimento registrado concentra sus acciones en un menu
 contextual: editar cantidad, mover de comida, duplicar, copiar a otra fecha,
 guardar como frecuente o eliminar. Los cambios sobre entradas ofrecen
 `Deshacer` y no modifican retroactivamente la definicion del alimento.
+
+La busqueda prioriza **Agregar igual que la ultima vez**, favoritos, recientes,
+frecuentes y recetas, sin duplicar el mismo alimento en varios grupos visibles.
+Cada alimento recuerda cantidad, unidad, comida habitual y las ultimas tres
+combinaciones. La comida sugerida por horario es solo un valor inicial editable.
+Las recetas calculan nutrientes desde snapshots de ingredientes y permiten
+registrar una porcion o gramos. Editarlas no cambia registros historicos.
 
 La cobertura nutricional distingue datos conocidos, estimados, desconocidos,
 no informados y ceros confirmados. Con cobertura insuficiente no calcula score;
@@ -88,6 +95,8 @@ data/repositories.js        Repositorios por dominio sobre claves compatibles
 data/backup-service.js      Validacion, preview, importacion transaccional y Deshacer
 nutrition/nutrition-store.js Repositorio compatible y claves del dominio Nutricion
 nutrition/nutrition-model.js Totales, porciones, comidas y entradas puras
+nutrition/recipes.js         Recetas, ingredientes snapshot y nutricion por porcion
+nutrition/portions.js        Porciones habituales, favoritos y accion Agregar igual
 nutrition/food-search.js    Ranking tolerante a aliases, tildes y plurales
 nutrition/food-entry-flow.js Estado del futuro flujo guiado de alta
 nutrition/meal-history.js   Recientes, frecuentes y copia de comidas
@@ -132,8 +141,9 @@ nucleo ya se divide en `nutrition/*.js`. Las lecturas y escrituras pasan por
 `NutritionRepository` cuando existe y continúan en modo shadow: IndexedDB aún
 no es la fuente primaria. La vista normal tiene solo **Hoy**, **Agregar** y
 **Progreso**. Hoy agrupa alimentos por comida y separa el agua; peso corporal,
-objetivos, alimentos propios y FDC viven en **Mas > Ajustes > Nutricion**. Las
-claves y formatos de backup no cambiaron. **Agregar** guía alimento, cantidad,
+objetivos, alimentos propios y FDC viven en **Mas > Ajustes > Nutricion**. Los
+backups schema 3 incorporan las claves opcionales `recipes` y `foodPortions`;
+archivos anteriores siguen siendo compatibles. **Agregar** guía alimento, cantidad,
 unidad, comida y revisión en cuatro pasos; muestra recientes/frecuentes,
 calcula macros antes de guardar y ofrece Deshacer.
 

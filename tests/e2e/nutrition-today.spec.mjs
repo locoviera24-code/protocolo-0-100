@@ -95,7 +95,7 @@ test('Agregar alimento guia seleccion, cantidad, comida, revision y Deshacer',as
   await expect(page.locator('#nutritionTodayCard')).toBeVisible();
   await expect(page.locator('#nutritionDayList')).toContainText('Cena');
   await page.getByRole('button',{name:'Agregar',exact:true}).click();
-  await expect(page.locator('#nutritionFoodSuggestions')).toContainText('Recientes');
+  await expect(page.locator('#nutritionFoodSuggestions')).toContainText('Agregar igual que la última vez');
   await expect(page.locator('#nutritionFoodSuggestions')).toContainText('Mandioca');
   await page.locator('#cancelFoodFlowBtn').click();
   await page.locator('#undoLastFoodBtn').click();

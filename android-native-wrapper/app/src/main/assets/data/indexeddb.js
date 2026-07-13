@@ -32,6 +32,8 @@
       'protocolo_0_100_nutrition_aliases_v1',
       'protocolo_0_100_nutrition_profile_v1',
       'protocolo_0_100_saved_meals_v1',
+      'protocolo_0_100_recipes_v1',
+      'protocolo_0_100_food_portions_v1',
       'protocolo_0_100_cached_fdc_foods_v1',
       'protocolo_0_100_fdc_search_cache_v1'
     ],

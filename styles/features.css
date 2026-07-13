@@ -697,6 +697,9 @@ body[data-module="progreso"] .grid > .panel > .bd {
   color: var(--color-text);
   border: 1px solid var(--line);
 }
+.recipeFormFields {
+  margin-top: var(--space-3);
+}
 .sectionIntro {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

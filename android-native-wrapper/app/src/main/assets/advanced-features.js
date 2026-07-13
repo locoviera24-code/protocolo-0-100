@@ -4,6 +4,8 @@
   const APP_VERSION=window.APP_VERSION_INFO?.version||'desconocida';
   const APP_STATE_KEY='protocolo_0_100_state_v2';
   const SAVED_MEALS_KEY='protocolo_0_100_saved_meals_v1';
+  const RECIPES_KEY='protocolo_0_100_recipes_v1';
+  const FOOD_PORTIONS_KEY='protocolo_0_100_food_portions_v1';
   const NUTRITION_PROFILE_KEY='protocolo_0_100_nutrition_profile_v1';
   const REFERRAL_CODES_KEY='protocolo_0_100_referral_codes_v1';
   const USER_REFERRAL_KEY='protocolo_0_100_user_referral_v1';
@@ -405,6 +407,7 @@
     const select=document.getElementById('savedMealSelect');if(!select)return;
     select.innerHTML='<option value="">Elegir comida guardada…</option>'+getLocalData(SAVED_MEALS_KEY,[]).map(x=>`<option value="${escapeHtml(x.id)}">${escapeHtml(x.name)}</option>`).join('');
   }
+  window.renderSavedMeals=renderSavedMeals;
   function ensureCustomFoodShape(food,index){
     const nutrientKeys=Object.keys(DEFINITIONS);
     const nutrients={};
@@ -579,6 +582,8 @@
       if(state.bodyMetrics)setLocalData(BODY_METRICS_KEY,state.bodyMetrics);
       if(state.uiPreferences)setLocalData('protocolo_0_100_ui_preferences_v1',state.uiPreferences);
       if(Array.isArray(state.savedMeals))setLocalData(SAVED_MEALS_KEY,state.savedMeals);
+      if(Array.isArray(state.recipes))setLocalData(RECIPES_KEY,state.recipes);
+      if(state.foodPortions&&typeof state.foodPortions==='object'&&!Array.isArray(state.foodPortions))setLocalData(FOOD_PORTIONS_KEY,state.foodPortions);
       if(typeof state.settings?.activeModule==='string')localStorage.setItem(ACTIVE_MODULE_KEY,state.settings.activeModule);
       if(state.settings?.nutritionProfile)setLocalData(NUTRITION_PROFILE_KEY,state.settings.nutritionProfile);
       if(state.settings?.ranking)setLocalData(RANKING_SETTINGS_KEY,state.settings.ranking);
@@ -610,7 +615,7 @@
       gymSettings:getLocalData(workoutKeys.gymSettings||'protocolo_0_100_gym_settings_v1',{}),
       workoutWidgetState:getLocalData(workoutKeys.workoutWidgetState||'protocolo_0_100_workout_widget_state_v1',null),
       customFoods:getLocalData(CUSTOM_FOODS_KEY,[]),cachedFdcFoods:FDC?.cachedFoods?.()||[],nutritionTargets:advancedTargets(),bodyMetrics:getLocalData(BODY_METRICS_KEY,{}),uiPreferences:getLocalData('protocolo_0_100_ui_preferences_v1',{}),
-      savedMeals:getLocalData(SAVED_MEALS_KEY,[]),referralCodes:referralCodes(),userReferral:getLocalData(USER_REFERRAL_KEY,null),
+      savedMeals:getLocalData(SAVED_MEALS_KEY,[]),recipes:getLocalData(RECIPES_KEY,[]),foodPortions:getLocalData(FOOD_PORTIONS_KEY,{}),referralCodes:referralCodes(),userReferral:getLocalData(USER_REFERRAL_KEY,null),
       coinLedger:getLocalData(COIN_LEDGER_KEY,[]),monthlyRankings:getLocalData(MONTHLY_RANKINGS_KEY,{}),rewards:getLocalData(REWARDS_KEY,{}),
       ...gymPartyState
     };

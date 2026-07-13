@@ -19,6 +19,8 @@ $html = Read-Utf8 'index.html'
 $appVersionText = Read-Utf8 'app-version.json'
 $appVersionScript = Read-Utf8 'app-version.js'
 $nutrition = Read-Utf8 'nutrition-data.js'
+$nutritionRecipes = Read-Utf8 'nutrition/recipes.js'
+$nutritionPortions = Read-Utf8 'nutrition/portions.js'
 $fdc = Read-Utf8 'fdc-client.js'
 $workoutStore = Read-Utf8 'workout-store.js'
 $workoutPlan = Read-Utf8 'workout-plan.js'
@@ -93,7 +95,7 @@ $duplicates = $staticIds | Group-Object | Where-Object Count -gt 1 | Select-Obje
 Assert-True ($duplicates.Count -eq 0) "Hay IDs HTML duplicados: $($duplicates -join ', ')"
 
 $requiredFiles = @(
-    'nutrition/nutrition-store.js', 'nutrition/nutrition-model.js', 'nutrition/food-search.js', 'nutrition/food-entry-flow.js', 'nutrition/meal-history.js', 'nutrition/nutrition-confidence.js', 'nutrition/nutrition-view.js', 'scripts/test-nutrition-modules.mjs', 'scripts/test-fdc-confidence.mjs', 'tests/e2e/nutrition-domain.spec.mjs', 'tests/e2e/nutrition-today.spec.mjs',
+    'nutrition/nutrition-store.js', 'nutrition/nutrition-model.js', 'nutrition/recipes.js', 'nutrition/portions.js', 'nutrition/food-search.js', 'nutrition/food-entry-flow.js', 'nutrition/meal-history.js', 'nutrition/nutrition-confidence.js', 'nutrition/nutrition-view.js', 'scripts/test-nutrition-modules.mjs', 'scripts/test-fdc-confidence.mjs', 'tests/e2e/nutrition-domain.spec.mjs', 'tests/e2e/nutrition-today.spec.mjs', 'tests/e2e/nutrition-recipes-portions.spec.mjs',
     'data/backup-service.js', 'scripts/test-backup-service.mjs', 'tests/e2e/backup-import.spec.mjs',
     'app-version.json', 'app-version.js', 'data/indexeddb.js', 'data/repositories.js', 'nutrition-data.js', 'fdc-client.js', 'workout-store.js', 'workout-plan.js', 'workout-metrics.js', 'workout-ranking.js', 'workout-ui.js', 'workout-features.js', 'advanced-features.js', 'ui/router.js', 'ui/navigation.js', 'ui/notifications.js', 'ui/inline-validation.js', 'ui/confirmation-dialog.js', 'ui/form-dialog.js', 'ui/error-boundary.js', 'ui/recovery-view.js', 'progress/progress-data-model.js', 'progress/gym-progress-model.js', 'progress/muscle-progress.js', 'progress/exercise-progress.js', 'progress/personal-records.js', 'progress/progress-view.js',
     'firebase-config.js', 'firebase-service.js', 'gym-party-sync.js', 'gym-party-metrics.js', 'gym-party-ui.js', 'gym-party.js',
@@ -125,9 +127,15 @@ foreach ($script in @('data/indexeddb.js', 'data/repositories.js', 'data/backup-
     Assert-True ($html.Contains("<script src=`"$script`"></script>")) "index.html no carga $script"
     Assert-True ($serviceWorker.Contains("'./$script'")) "sw.js no cachea $script"
 }
-foreach ($script in @('nutrition/nutrition-store.js', 'nutrition/nutrition-model.js', 'nutrition/food-search.js', 'nutrition/food-entry-flow.js', 'nutrition/meal-history.js', 'nutrition/nutrition-confidence.js', 'nutrition/nutrition-view.js')) {
+foreach ($script in @('nutrition/nutrition-store.js', 'nutrition/nutrition-model.js', 'nutrition/recipes.js', 'nutrition/portions.js', 'nutrition/food-search.js', 'nutrition/food-entry-flow.js', 'nutrition/meal-history.js', 'nutrition/nutrition-confidence.js', 'nutrition/nutrition-view.js')) {
     Assert-True ($html.Contains("<script src=`"$script`"></script>")) "index.html no carga $script"
     Assert-True ($serviceWorker.Contains("'./$script'")) "sw.js no cachea $script"
+}
+foreach ($contract in @('ingredients','nutritionPerServing','recipeSnapshot','duplicate')) {
+    Assert-True ($nutritionRecipes.Contains($contract)) "Falta contrato de recetas: $contract"
+}
+foreach ($contract in @('lastAmount','lastUnit','lastMeal','combinations','favorites','frequent')) {
+    Assert-True ($nutritionPortions.Contains($contract)) "Falta contrato de porciones habituales: $contract"
 }
 Assert-True ($html.IndexOf('<script src="nutrition/nutrition-store.js"></script>') -lt $html.IndexOf('<script src="fdc-client.js"></script>')) 'El dominio Nutricion debe cargar antes del cliente FDC'
 Assert-True ($html.IndexOf('<script src="data/indexeddb.js"></script>') -lt $html.IndexOf('<script src="fdc-client.js"></script>')) 'La capa IndexedDB debe cargar antes de FDC y los modulos de datos'

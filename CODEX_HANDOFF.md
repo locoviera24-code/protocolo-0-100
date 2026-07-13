@@ -1756,3 +1756,64 @@ Pendiente siguiente exacto despues de cerrar este bloque: recetas y platos
 compuestos, porciones habituales/`Agregar igual`, parser numerico localizado y
 objetivos nutricionales transparentes. No iniciar taxonomia Gym hasta cerrar
 ese bloque de Nutricion con pruebas.
+
+## 47. Recetas y porciones habituales
+
+Implementado despues de `b3bf3d1`:
+
+- `nutrition/recipes.js` agrega un modelo local separado para recetas y platos
+  compuestos. Cada receta conserva ingredientes con `foodId`, nombre, cantidad,
+  unidad, gramos y snapshot nutricional; calcula peso total, porciones,
+  nutrientes totales y nutrientes por porcion.
+- Las recetas se exponen al flujo existente como alimentos `recipe:<id>`. No se
+  creo un segundo registro diario. Cada entrada guarda `recipeId` y
+  `recipeSnapshot`, de modo que editar, archivar o eliminar una receta no cambia
+  dias anteriores.
+- La interfaz plegada **Recetas y platos compuestos** permite crear, editar,
+  duplicar, archivar, restaurar, eliminar con Deshacer, guardar como frecuente y
+  registrar una porcion o gramos. Incluye ayudas para guiso, tortilla, tarta,
+  rapidita, sandwich y licuado sin inventar sus valores nutricionales.
+- `nutrition/portions.js` recuerda por alimento la ultima cantidad, unidad,
+  comida, fecha, frecuencia, favorito y las ultimas tres combinaciones. La
+  busqueda prioriza **Agregar igual que la ultima vez**, favoritos, recientes,
+  frecuentes, recetas y comidas frecuentes, sin repetir un alimento en varios
+  grupos visibles.
+- La comida sugerida depende del horario solo como valor inicial editable. Los
+  botones de porcion rapida actualizan tanto el estado como el input visible.
+- Nuevas claves locales: `protocolo_0_100_recipes_v1` (array) y
+  `protocolo_0_100_food_portions_v1` (objeto por alimento). Ambas pasan por
+  `NutritionRepository`, se espejan en IndexedDB shadow, participan en reset
+  selectivo y se incluyen como `recipes`/`foodPortions` en backup schema 3.
+  Backups anteriores siguen siendo validos.
+- La precision interna de recetas evita redondear prematuramente los valores por
+  100 g. El redondeo final de calorias corrige errores binarios alrededor de
+  `.5`; los valores historicos existentes no se reescriben.
+- `scripts/test-nutrition-modules.mjs` cubre calculo por porcion, validacion,
+  snapshot historico, tres combinaciones, favoritos y persistencia. El test de
+  backup verifica las dos claves nuevas.
+- `tests/e2e/nutrition-recipes-portions.spec.mjs` cubre crear/registrar/editar
+  receta, snapshot, backup, `Agregar igual`, porcion rapida, favoritos y recarga.
+  Resultado dirigido: 9/9 en Android Chromium, iPhone WebKit y escritorio.
+- `nutrition/recipes.js`, `nutrition/portions.js`, `index.html`, stores, backup,
+  repositorios, service worker, estilos, validadores y sincronizador Android se
+  actualizaron juntos. Las copias Android se generan con
+  `scripts/sync-web-assets.ps1`.
+
+- La validacion estructural con assets Android y los 23 contratos ejecutables
+  pasaron: version, modulos, diseno, router, layout, Ajustes, datos, backup,
+  Nutricion, FDC, Progreso, service worker, Gym, Gym Party, seguridad/release
+  Android y accesibilidad estatica.
+- Regresion E2E completa: 192 casos, 178 aprobados, 14 omisiones intencionales
+  de matriz ya documentadas en la seccion 45 y cero fallos, en 17.5 minutos.
+- Firestore Emulator con Java 21 paso reglas, owner atomico, consultas sync,
+  limpieza legacy y seis negativas criticas denegadas. Los mensajes
+  `PERMISSION_DENIED` corresponden a esas negativas esperadas.
+- Assets Android verificados y APK debug recompilado con Java 17:
+  `:app:assembleDebug` termino correctamente y genero `app-debug.apk`.
+
+Estado publicable del bloque: version `2.7.0`, Android `33`, build/cache `65`
+(`protocolo-0-100-pwa-2.7.0-b65`).
+
+Pendiente siguiente exacto: crear `app/numbers.js` para numeros localizados y
+cerrar objetivos nutricionales transparentes. Despues iniciar taxonomia muscular
+granular; no mezclar esos cambios con este commit de recetas y porciones.

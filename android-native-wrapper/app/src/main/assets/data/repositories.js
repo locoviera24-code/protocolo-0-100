@@ -50,6 +50,8 @@
       aliases:'protocolo_0_100_nutrition_aliases_v1',
       profile:'protocolo_0_100_nutrition_profile_v1',
       savedMeals:'protocolo_0_100_saved_meals_v1',
+      recipes:'protocolo_0_100_recipes_v1',
+      portions:'protocolo_0_100_food_portions_v1',
       cachedFdcFoods:'protocolo_0_100_cached_fdc_foods_v1',
       fdcSearchCache:'protocolo_0_100_fdc_search_cache_v1'
     });}
