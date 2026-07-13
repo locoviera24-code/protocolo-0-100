@@ -121,3 +121,52 @@ test('Alimento personalizado solo se crea al completar el flujo',async({page})=>
   expect(await page.evaluate(()=>window.NUTRITION_STORE.customFoods().some(food=>food.name==='Sopa casera de prueba'))).toBe(true);
   await expect(page.locator('#nutritionDayList')).toContainText('Sopa casera de prueba');
 });
+
+test('El menu de alimento permite editar, mover, eliminar y Deshacer',async({page})=>{
+  await resetNutrition(page);
+  const date=await page.locator('#nutritionDate').inputValue();
+  await page.evaluate(date=>{window.NUTRITION_STORE.saveEntries([{id:'food-editable',foodId:'test-food',date,meal:'Almuerzo',name:'Alimento editable',grams:100,calories:120,protein:10,carbs:15,fat:2,nutrients:{fiber:3},nutrientStatus:{fiber:'known'},savedAt:new Date().toISOString()}]);window.renderNutrition();},date);
+
+  await page.locator('.nutritionFoodMenu summary').click();
+  await page.getByRole('menuitem',{name:'Editar cantidad'}).click();
+  await expect(page.locator('#nutritionEntryGrams')).toBeFocused();
+  await page.locator('#nutritionEntryGrams').fill('200');
+  await page.locator('#saveNutritionEntryEditBtn').click();
+  let stored=await page.evaluate(()=>window.NUTRITION_STORE.entries()[0]);
+  expect(stored.grams).toBe(200);expect(stored.calories).toBe(240);expect(stored.nutrients.fiber).toBe(6);
+
+  await page.locator('.nutritionFoodMenu summary').click();
+  await page.getByRole('menuitem',{name:'Mover de comida'}).click();
+  await expect(page.locator('#nutritionEntryMeal')).toBeFocused();
+  await page.locator('#nutritionEntryMeal').selectOption('Cena');
+  await page.locator('#saveNutritionEntryEditBtn').click();
+  await expect(page.locator('.nutritionMealGroup')).toContainText('Cena');
+
+  await page.locator('.nutritionFoodMenu summary').click();
+  await page.getByRole('menuitem',{name:'Eliminar'}).click();
+  await expect(page.locator('#nutritionDayList')).not.toContainText('Alimento editable');
+  await page.locator('#undoLastFoodBtn').click();
+  await expect(page.locator('#nutritionDayList')).toContainText('Alimento editable');
+  stored=await page.evaluate(()=>window.NUTRITION_STORE.entries()[0]);
+  expect(stored.meal).toBe('Cena');expect(stored.grams).toBe(200);
+});
+
+test('El menu permite duplicar, copiar a otra fecha y guardar frecuente',async({page})=>{
+  await resetNutrition(page);
+  const date=await page.locator('#nutritionDate').inputValue();
+  await page.evaluate(date=>{window.NUTRITION_STORE.saveEntries([{id:'food-source',foodId:'test-food',date,meal:'Desayuno',name:'Avena de prueba',grams:100,calories:360,protein:12,carbs:60,fat:7,nutrients:{fiber:9},savedAt:new Date().toISOString()}]);window.renderNutrition();},date);
+
+  await page.locator('.nutritionFoodMenu summary').click();
+  await page.getByRole('menuitem',{name:'Duplicar'}).click();
+  expect(await page.evaluate(()=>window.NUTRITION_STORE.entries().length)).toBe(2);
+
+  await page.locator('.nutritionFoodMenu summary').first().click();
+  await page.getByRole('menuitem',{name:'Copiar a otra fecha'}).click();
+  await page.locator('#nutritionEntryDate').fill('2026-07-01');
+  await page.locator('#saveNutritionEntryEditBtn').click();
+  expect(await page.evaluate(()=>window.NUTRITION_STORE.entries().filter(entry=>entry.date==='2026-07-01').length)).toBe(1);
+
+  await page.locator('.nutritionFoodMenu summary').first().click();
+  await page.getByRole('menuitem',{name:'Guardar como frecuente'}).click();
+  expect(await page.evaluate(()=>window.NUTRITION_STORE.savedMeals().some(meal=>meal.name==='Avena de prueba'&&meal.items.length===1))).toBe(true);
+});

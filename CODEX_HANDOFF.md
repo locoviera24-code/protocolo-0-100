@@ -1540,3 +1540,36 @@ Estado publicable de este bloque: version `2.7.0`, Android `33`, build/cache
 Pendiente siguiente: menu contextual completo de alimentos con editar,
 duplicar, mover, copiar y eliminar con Deshacer; despues cobertura nutricional
 honesta por nutriente y sistema central de mensajes.
+
+## 42. Edicion contextual de comidas
+
+Implementado despues de `755745d`:
+
+- Cada `nutritionFoodRow` muestra un unico disparador `Opciones`; las seis
+  acciones quedan dentro de un popover y no saturan la portada diaria.
+- Editar cantidad recalcula calorias, macros y nutrientes de forma
+  proporcional. Mover permite cambiar comida y fecha sin crear otra entrada.
+- Duplicar conserva el dia y la comida; copiar abre una hoja accesible para
+  elegir fecha y comida destino; guardar como frecuente crea una plantilla de
+  un alimento reutilizable.
+- Eliminar, editar, mover, duplicar y copiar toman una instantanea previa de
+  `nutritionEntries`. `Deshacer ultimo cambio` restaura exactamente ese estado
+  mediante `NutritionRepository`; no se creo una clave paralela.
+- El editor usa dialogo modal con retorno de foco, Escape, trampa de foco,
+  backdrop cerrable, campos etiquetados y accion principal visible en movil.
+- Se agregaron tokens semanticos para elevacion y capa de popover. La revision
+  visual a 390 x 844 confirmo menu superpuesto, hoja inferior sin scroll
+  horizontal y contenido principal sin compresion.
+- `tests/e2e/nutrition-today.spec.mjs` verifica por interfaz edicion con
+  recalculo, mover, eliminar/Deshacer, duplicar, copiar y frecuente. Resultado
+  dirigido: 24/24 en Android Chromium, iPhone WebKit y escritorio.
+- Regresion completa: 121 aprobadas, 14 omisiones intencionales y cero fallos.
+- Assets Android sincronizados y verificados; `:app:assembleDebug` termino con
+  `BUILD SUCCESSFUL` despues de incorporar el dialogo y los nuevos estilos.
+
+Estado publicable: version `2.7.0`, Android `33`, build/cache `60`
+(`protocolo-0-100-pwa-2.7.0-b60`).
+
+Pendiente siguiente: cobertura nutricional honesta por nutriente, distinguiendo
+conocido, estimado, desconocido, no informado y cero confirmado; luego sistema
+central de mensajes y estados.

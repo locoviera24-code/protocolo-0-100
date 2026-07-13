@@ -791,7 +791,7 @@ body .partySetCounters > div:last-child {
   margin-top: var(--space-4);
 }
 .nutritionMealGroup {
-  overflow: hidden;
+  overflow: visible;
   border: 1px solid var(--color-border-soft);
   border-radius: var(--radius-control);
   background: var(--color-surface-soft);
@@ -806,12 +806,14 @@ body .partySetCounters > div:last-child {
   font-size: var(--font-label);
 }
 .nutritionFoodRow {
+  position: relative;
   min-height: var(--control-height);
   padding: var(--space-2) var(--space-3);
 }
 .nutritionFoodRow + .nutritionFoodRow {
   border-top: 1px solid var(--color-border-soft);
 }
+.nutritionFoodRow:has(.nutritionFoodMenu[open]) { z-index: var(--z-popover); }
 .nutritionFoodRow .textButton,
 .nutritionSecondaryActions .textButton,
 .nutritionWaterActions .textButton {
@@ -820,6 +822,44 @@ body .partySetCounters > div:last-child {
   color: var(--color-primary);
   background: transparent;
 }
+.nutritionFoodMenu {
+  position: relative;
+  flex: 0 0 auto;
+}
+.nutritionFoodMenu > summary {
+  min-height: var(--control-height);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-control);
+  color: var(--color-primary);
+  cursor: pointer;
+  list-style: none;
+}
+.nutritionFoodMenu > summary::-webkit-details-marker { display: none; }
+.nutritionFoodMenuPanel {
+  position: absolute;
+  z-index: var(--z-popover);
+  top: calc(100% + var(--space-1));
+  right: 0;
+  display: grid;
+  min-width: 210px;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface-raised);
+  box-shadow: var(--shadow-popover);
+}
+.nutritionFoodMenuPanel button {
+  min-height: var(--control-height);
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-none);
+  color: var(--color-text);
+  text-align: left;
+  background: transparent;
+}
+.nutritionFoodMenuPanel button:hover,
+.nutritionFoodMenuPanel button:focus-visible { background: var(--color-surface-soft); }
+.nutritionFoodMenuPanel .dangerText { color: var(--color-danger); }
 .nutritionWaterCard {
   justify-content: space-between;
   flex-wrap: wrap;

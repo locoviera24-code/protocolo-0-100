@@ -276,7 +276,7 @@
               <div class="nutritionSecondaryActions">
                 <button type="button" class="textButton" data-open-nutrition-view="coverage">Ver cobertura estimada</button>
                 <button type="button" class="textButton" data-open-nutrition-view="tendencias">Ver tendencias</button>
-                <button type="button" class="textButton hidden" id="undoLastFoodBtn">Deshacer último alimento</button>
+                <button type="button" class="textButton hidden" id="undoLastFoodBtn">Deshacer ultimo cambio</button>
               </div>
             </div>
 
@@ -757,6 +757,20 @@
     </div>
   </div>
 
+  <div class="modalBackdrop hidden" id="nutritionEntryDialogBackdrop" role="dialog" aria-modal="true" aria-labelledby="nutritionEntryDialogTitle" aria-hidden="true">
+    <div class="actionModal nutritionEntryDialog">
+      <div class="modalHd"><div><span class="pill">Registro nutricional</span><h2 id="nutritionEntryDialogTitle">Editar alimento</h2><p class="muted small" id="nutritionEntryDialogFood"></p></div><button type="button" class="closeBtn" id="closeNutritionEntryDialogBtn" aria-label="Cerrar edicion">&times;</button></div>
+      <div class="modalBd">
+        <div class="formGrid">
+          <div class="field"><label for="nutritionEntryGrams">Cantidad (g)</label><input type="number" inputmode="decimal" id="nutritionEntryGrams" min="0.1" step="0.1"></div>
+          <div class="field"><label for="nutritionEntryMeal">Comida</label><select id="nutritionEntryMeal"><option>Desayuno</option><option>Almuerzo</option><option>Merienda</option><option>Cena</option><option>Snack</option><option>Post-entreno</option><option>Otros</option></select></div>
+          <div class="field"><label for="nutritionEntryDate">Fecha</label><input type="date" id="nutritionEntryDate"></div>
+        </div>
+        <div class="buttons"><button type="button" class="good" id="saveNutritionEntryEditBtn">Guardar cambios</button><button type="button" class="secondary" id="cancelNutritionEntryEditBtn">Cancelar</button></div>
+      </div>
+    </div>
+  </div>
+
 <script src="app-version.js"></script>
 <script src="data/indexeddb.js"></script>
 <script src="data/repositories.js"></script>
@@ -1104,7 +1118,7 @@ function loadNutritionTargets(){
 function allFoods(){ return [...FOOD_CATALOG,...(window.NUTRITION_STORE?.customFoods?.()||[]),...(window.FDC_CLIENT?.cachedFoods?.()||[])]; }
 function availableFoods(){ return allFoods().slice(1); }
 let nutritionEntryFlow=window.NUTRITION_ENTRY_FLOW.create({date:todayStr(),meal:'Almuerzo'});
-let lastAddedFoodEntry=null;
+let lastNutritionEntriesSnapshot=null,nutritionEntryDialogState=null;
 function foodIndexForEntry(entry,foods=allFoods()){
   const byId=entry?.foodId&&foods.findIndex(food=>food.id===entry.foodId);if(byId>0)return byId;
   return foods.findIndex(food=>normalizeFoodText(food.name)===normalizeFoodText(entry?.name));
@@ -1157,7 +1171,8 @@ function advanceFoodMeal(){
   nutritionEntryFlow.set({meal:document.getElementById('nutritionMeal').value,date:document.getElementById('nutritionDate').value||todayStr()}).go('review');renderNutritionFoodFlow({focus:true});
 }
 function backNutritionFoodFlow(){nutritionEntryFlow.back();if(nutritionEntryFlow.state().step==='food')nutritionEntryFlow.go('search');renderNutritionFoodFlow({focus:true});}
-function undoLastFood(){if(!lastAddedFoodEntry)return;window.NUTRITION_STORE.removeEntry(lastAddedFoodEntry.id);lastAddedFoodEntry=null;document.getElementById('undoLastFoodBtn').classList.add('hidden');renderNutrition();flash('Alimento eliminado del registro.');}
+function rememberNutritionEntries(){lastNutritionEntriesSnapshot=JSON.parse(JSON.stringify(window.NUTRITION_STORE.entries()));document.getElementById('undoLastFoodBtn')?.classList.remove('hidden');}
+function undoLastFood(){if(!lastNutritionEntriesSnapshot)return;window.NUTRITION_STORE.saveEntries(lastNutritionEntriesSnapshot);lastNutritionEntriesSnapshot=null;document.getElementById('undoLastFoodBtn')?.classList.add('hidden');renderNutrition();flash('Cambio nutricional deshecho.');}
 function saveCustomFoodDefinition(food){
   const foods=window.NUTRITION_STORE?.customFoods?.()||[];
   const key=normalizeFoodText(food.name);
@@ -1187,7 +1202,7 @@ function addFood(){
   const review=nutritionEntryFlow.review();if(!review){flash('Elegí un alimento antes de guardar.');return;}
   let food=review.food;if(food.__customDraft){const {__customDraft,...definition}=food;food=saveCustomFoodDefinition(definition);populateFoods();}
   const entry={...buildFoodEntry(food,review.grams,review.meal,review.date),source:food.custom?'alimento personalizado':food.source||'registro manual'};
-  window.NUTRITION_STORE.addEntry(entry);lastAddedFoodEntry=entry;document.getElementById('undoLastFoodBtn').classList.remove('hidden');
+  rememberNutritionEntries();window.NUTRITION_STORE.addEntry(entry);
   renderNutrition();resetNutritionFoodFlow({openToday:true});flash('Alimento guardado. Podés deshacerlo desde Hoy.');
 }
 function normalizeFoodText(value){return window.NUTRITION_MODEL.normalizeText(value);}
@@ -1400,10 +1415,36 @@ function startNutritionVoice(){
 }
 window.onAndroidSpeechResult=text=>{ document.getElementById('nutritionAssistantInput').value=text||''; analyzeNutritionText(); };
 window.onAndroidSpeechError=message=>{ document.getElementById('nutritionAssistantResult').innerHTML=`<div class="auditItem warn">${escapeHtml(message||'No pude reconocer la voz.')}</div>`; };
-function removeFood(id){
-  window.NUTRITION_STORE.removeEntry(id);
-  renderNutrition();
+function scaleNutritionEntry(entry,grams){
+  const nextGrams=Math.max(.1,Number(grams)||0),previousGrams=Math.max(.1,Number(entry.grams)||100),factor=nextGrams/previousGrams,scaled={...entry,grams:nextGrams};
+  ['calories','protein','carbs','fat'].forEach(key=>{scaled[key]=Math.round((Number(entry[key])||0)*factor*10)/10;});
+  scaled.nutrients=Object.fromEntries(Object.entries(entry.nutrients||{}).map(([key,value])=>[key,Math.round((Number(value)||0)*factor*1000)/1000]));
+  return scaled;
 }
+function openNutritionEntryDialog(id,mode='edit',focusField='grams'){
+  const entry=window.NUTRITION_STORE.entries().find(item=>item.id===id);if(!entry)return;
+  nutritionEntryDialogState={id,mode};lastFocusedBeforeOverlay=document.activeElement;
+  const backdrop=document.getElementById('nutritionEntryDialogBackdrop'),copy=mode==='copy';
+  document.getElementById('nutritionEntryDialogTitle').textContent=copy?'Copiar alimento':'Editar alimento';document.getElementById('nutritionEntryDialogFood').textContent=entry.name;
+  document.getElementById('nutritionEntryGrams').value=Number(entry.grams)||100;document.getElementById('nutritionEntryMeal').value=window.NUTRITION_MODEL.MEALS.includes(entry.meal)?entry.meal:'Otros';document.getElementById('nutritionEntryDate').value=entry.date||todayStr();
+  document.getElementById('saveNutritionEntryEditBtn').textContent=copy?'Copiar alimento':'Guardar cambios';backdrop.classList.remove('hidden');backdrop.setAttribute('aria-hidden','false');
+  requestAnimationFrame(()=>document.getElementById(focusField==='meal'?'nutritionEntryMeal':focusField==='date'?'nutritionEntryDate':'nutritionEntryGrams')?.focus());
+}
+function closeNutritionEntryDialog(){const backdrop=document.getElementById('nutritionEntryDialogBackdrop'),wasOpen=!backdrop.classList.contains('hidden');backdrop.classList.add('hidden');backdrop.setAttribute('aria-hidden','true');nutritionEntryDialogState=null;if(wasOpen&&lastFocusedBeforeOverlay?.focus)lastFocusedBeforeOverlay.focus();}
+function saveNutritionEntryEdit(){
+  if(!nutritionEntryDialogState)return;const entries=window.NUTRITION_STORE.entries(),index=entries.findIndex(item=>item.id===nutritionEntryDialogState.id);if(index<0){closeNutritionEntryDialog();return;}
+  const grams=Math.max(.1,Number(document.getElementById('nutritionEntryGrams').value)||0),meal=document.getElementById('nutritionEntryMeal').value,date=document.getElementById('nutritionEntryDate').value,isCopy=nutritionEntryDialogState.mode==='copy';
+  if(!grams||!date){flash('Revisa la cantidad y la fecha.');return;}rememberNutritionEntries();
+  const updated={...scaleNutritionEntry(entries[index],grams),meal,date,savedAt:new Date().toISOString()};
+  if(isCopy)entries.push({...updated,id:uid('food'),source:updated.source||'alimento copiado'});else entries[index]=updated;
+  window.NUTRITION_STORE.saveEntries(entries);closeNutritionEntryDialog();renderNutrition();flash(isCopy?'Alimento copiado.':'Alimento actualizado.');
+}
+function duplicateNutritionEntry(id){const entry=window.NUTRITION_STORE.entries().find(item=>item.id===id);if(!entry)return;rememberNutritionEntries();window.NUTRITION_STORE.addEntry({...entry,id:uid('food'),savedAt:new Date().toISOString(),source:entry.source||'alimento duplicado'});renderNutrition();flash('Alimento duplicado.');}
+function saveNutritionEntryAsFrequent(id){
+  const entry=window.NUTRITION_STORE.entries().find(item=>item.id===id);if(!entry)return;const saved=window.NUTRITION_STORE.savedMeals(),item={name:entry.name,grams:entry.grams,calories:entry.calories,protein:entry.protein,carbs:entry.carbs,fat:entry.fat,foodId:entry.foodId,fdcId:entry.fdcId,nutrients:entry.nutrients,nutrientStatus:entry.nutrientStatus,source:entry.source,sourceCitation:entry.sourceCitation};
+  saved.push({id:uid('savedmeal'),name:entry.name,items:[item],savedAt:new Date().toISOString()});window.NUTRITION_STORE.saveSavedMeals(saved);renderNutrition();flash('Alimento guardado como frecuente.');
+}
+function removeFood(id){rememberNutritionEntries();window.NUTRITION_STORE.removeEntry(id);renderNutrition();flash('Alimento eliminado. Podes deshacer el cambio.');}
 let previousNutritionWater=null;
 function saveNutritionWater(value=num('nutritionWater'),announce=true){
   const date=document.getElementById('nutritionDate').value||todayStr();
@@ -1465,7 +1506,7 @@ function renderNutrition(){
     const sections=window.NUTRITION_MODEL.MEALS.map(meal=>{
       const entries=model.groups[meal]||[];if(!entries.length)return'';
       const mealTotals=nutritionTotals(entries);
-      const rows=entries.map(e=>`<div class="nutritionFoodRow"><div><strong>${escapeHtml(e.name)}</strong><div class="meta">${e.grams?`${e.grams} g`:`${e.quantity||1} porción(es)`} · ${Math.round(e.calories)} kcal · P ${Math.round(e.protein)} g</div></div><button type="button" class="textButton" aria-label="Quitar ${escapeHtml(e.name)}" data-remove-food="${escapeHtml(e.id)}">Quitar</button></div>`).join('');
+      const rows=entries.map(e=>`<div class="nutritionFoodRow"><div><strong>${escapeHtml(e.name)}</strong><div class="meta">${e.grams?`${e.grams} g`:`${e.quantity||1} porcion(es)`} · ${Math.round(e.calories)} kcal · P ${Math.round(e.protein)} g</div></div><details class="nutritionFoodMenu"><summary aria-label="Opciones para ${escapeHtml(e.name)}">Opciones</summary><div class="nutritionFoodMenuPanel" role="menu"><button type="button" role="menuitem" data-nutrition-entry-action="edit" data-entry-id="${escapeHtml(e.id)}">Editar cantidad</button><button type="button" role="menuitem" data-nutrition-entry-action="move" data-entry-id="${escapeHtml(e.id)}">Mover de comida</button><button type="button" role="menuitem" data-nutrition-entry-action="duplicate" data-entry-id="${escapeHtml(e.id)}">Duplicar</button><button type="button" role="menuitem" data-nutrition-entry-action="copy" data-entry-id="${escapeHtml(e.id)}">Copiar a otra fecha</button><button type="button" role="menuitem" data-nutrition-entry-action="frequent" data-entry-id="${escapeHtml(e.id)}">Guardar como frecuente</button><button type="button" class="dangerText" role="menuitem" data-nutrition-entry-action="delete" data-entry-id="${escapeHtml(e.id)}">Eliminar</button></div></details></div>`).join('');
       return `<section class="nutritionMealGroup"><header><strong>${escapeHtml(meal)}</strong><span>${Math.round(mealTotals.calories)} kcal</span></header>${rows}</section>`;
     }).join('');
     list.innerHTML=sections||'<div class="emptyState"><strong>Tu día está listo para empezar.</strong><span>Agregá el primer alimento cuando quieras.</span><button type="button" class="good" data-open-nutrition-view="registrar">Agregar alimento</button></div>';
@@ -2608,6 +2649,10 @@ document.getElementById('foodMealNextBtn').addEventListener('click', advanceFood
 document.querySelectorAll('[data-food-flow-back]').forEach(button=>button.addEventListener('click',backNutritionFoodFlow));
 document.getElementById('cancelFoodFlowBtn').addEventListener('click',()=>resetNutritionFoodFlow({openToday:true}));
 document.getElementById('undoLastFoodBtn').addEventListener('click',undoLastFood);
+document.getElementById('closeNutritionEntryDialogBtn').addEventListener('click',closeNutritionEntryDialog);
+document.getElementById('cancelNutritionEntryEditBtn').addEventListener('click',closeNutritionEntryDialog);
+document.getElementById('saveNutritionEntryEditBtn').addEventListener('click',saveNutritionEntryEdit);
+document.getElementById('nutritionEntryDialogBackdrop').addEventListener('click',event=>{if(event.target===event.currentTarget)closeNutritionEntryDialog();});
 document.getElementById('saveNutritionTargetsBtn').addEventListener('click', saveNutritionTargets);
 document.getElementById('addFoodBtn').addEventListener('click', addFood);
 document.getElementById('saveNutritionWaterBtn').addEventListener('click', ()=>saveNutritionWater());
@@ -2665,8 +2710,9 @@ document.getElementById('importFile').addEventListener('change', e=>{ if(e.targe
 const actionBackdrop=document.getElementById('actionModalBackdrop');
 if(actionBackdrop) actionBackdrop.addEventListener('click', e=>{ if(e.target===actionBackdrop) closeActionModal(); });
 document.addEventListener('keydown', e=>{
-  if(e.key==='Escape'){if(!document.getElementById('importPreviewBackdrop')?.classList.contains('hidden'))closeImportPreview();else if(document.body.classList.contains('drawerOpen'))closeDrawer();else closeActionModal();return;}
+  if(e.key==='Escape'){if(!document.getElementById('nutritionEntryDialogBackdrop')?.classList.contains('hidden'))closeNutritionEntryDialog();else if(!document.getElementById('importPreviewBackdrop')?.classList.contains('hidden'))closeImportPreview();else if(document.body.classList.contains('drawerOpen'))closeDrawer();else closeActionModal();return;}
   if(document.body.classList.contains('drawerOpen'))trapOverlayFocus(e,document.getElementById('sideDrawer'));
+  else if(!document.getElementById('nutritionEntryDialogBackdrop')?.classList.contains('hidden'))trapOverlayFocus(e,document.getElementById('nutritionEntryDialogBackdrop'));
   else if(!document.getElementById('importPreviewBackdrop')?.classList.contains('hidden'))trapOverlayFocus(e,document.getElementById('importPreviewBackdrop'));
   else if(!document.getElementById('actionModalBackdrop')?.classList.contains('hidden'))trapOverlayFocus(e,document.getElementById('actionModalBackdrop'));
 });
@@ -2683,6 +2729,11 @@ document.addEventListener('click', e=>{
   if(deleteGym){ deleteGymSession(deleteGym.dataset.deleteGym); return; }
   const removeFoodBtn=e.target.closest('[data-remove-food]');
   if(removeFoodBtn){ removeFood(removeFoodBtn.dataset.removeFood); return; }
+  const nutritionAction=e.target.closest('[data-nutrition-entry-action]');
+  if(nutritionAction){
+    const {nutritionEntryAction:action,entryId:id}=nutritionAction.dataset;nutritionAction.closest('details')?.removeAttribute('open');
+    if(action==='edit')openNutritionEntryDialog(id,'edit','grams');else if(action==='move')openNutritionEntryDialog(id,'edit','meal');else if(action==='copy')openNutritionEntryDialog(id,'copy','date');else if(action==='duplicate')duplicateNutritionEntry(id);else if(action==='frequent')saveNutritionEntryAsFrequent(id);else if(action==='delete')removeFood(id);return;
+  }
 });
 
 // Help click delegation
