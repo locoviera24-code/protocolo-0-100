@@ -237,6 +237,10 @@ public final class WorkoutWidgetUpdateService {
         put(set, "rir", JSONObject.NULL);
         put(set, "rpe", JSONObject.NULL);
         put(set, "bodyweight", quick.optBoolean("bodyweight", exercise.optBoolean("bodyweight", false)));
+        put(set, "setType", "working");
+        put(set, "completed", true);
+        put(set, "excludeFromRecords", false);
+        put(set, "excludeFromProgression", false);
         put(set, "note", "Guardado desde widget Android");
         put(set, "savedAt", nowIso());
         put(set, "volume", Math.round(reps * weight));
@@ -360,6 +364,7 @@ public final class WorkoutWidgetUpdateService {
         put(quick, "currentExerciseId", currentId);
         put(quick, "exerciseName", exercise == null ? "Ejercicio actual" : exercise.optString("name", "Ejercicio actual"));
         put(quick, "setNumber", setNumber);
+        put(quick, "setType", "working");
         put(quick, "unit", state.optString("unit", "kg"));
         put(quick, "weightStep", WEIGHT_STEP);
         put(quick, "weightFastStep", WEIGHT_FAST_STEP);
@@ -400,6 +405,30 @@ public final class WorkoutWidgetUpdateService {
         put(target, "currentMuscleName", muscle);
     }
 
+    private static String setType(JSONObject set) {
+        if (set == null) return "working";
+        String value = set.optString("setType", "working");
+        if (value.equals("warmup") || value.equals("working") || value.equals("backoff") || value.equals("drop") || value.equals("technique") || value.equals("failure") || value.equals("assisted")) return value;
+        return "working";
+    }
+
+    private static boolean completedSet(JSONObject set) {
+        return set != null && set.optBoolean("completed", true);
+    }
+
+    private static boolean mainVolumeSet(JSONObject set) {
+        return completedSet(set) && "working".equals(setType(set));
+    }
+
+    private static boolean recordSet(JSONObject set) {
+        String type = setType(set);
+        return completedSet(set) && !set.optBoolean("excludeFromRecords", false) && ("working".equals(type) || "backoff".equals(type));
+    }
+
+    private static boolean progressionSet(JSONObject set) {
+        return mainVolumeSet(set) && !set.optBoolean("excludeFromProgression", false);
+    }
+
     private static int setCount(JSONObject exercise) {
         JSONArray sets = exercise == null ? null : exercise.optJSONArray("sets");
         return sets == null ? 0 : sets.length();
@@ -422,6 +451,10 @@ public final class WorkoutWidgetUpdateService {
         JSONArray exercises = session.optJSONArray("exercises");
         int completed = 0;
         int totalSets = 0;
+        int workingSets = 0;
+        int warmupSets = 0;
+        int supplementarySets = 0;
+        int totalReps = 0;
         double totalVolume = 0;
         JSONObject bestByExercise = new JSONObject();
         if (exercises != null) {
@@ -431,15 +464,22 @@ public final class WorkoutWidgetUpdateService {
                 JSONArray sets = exercise.optJSONArray("sets");
                 int setCount = sets == null ? 0 : sets.length();
                 if (exercise.optBoolean("completed", false) || setCount > 0) completed++;
-                totalSets += setCount;
                 JSONObject best = null;
                 double bestVolume = -1;
                 for (int j = 0; j < setCount; j++) {
                     JSONObject set = sets.optJSONObject(j);
-                    if (set == null) continue;
+                    if (!completedSet(set)) continue;
+                    totalSets++;
+                    String type = setType(set);
+                    if ("working".equals(type)) workingSets++;
+                    else if ("warmup".equals(type)) warmupSets++;
+                    else supplementarySets++;
                     double volume = Math.max(0, set.optDouble("reps", 0)) * Math.max(0, set.optDouble("weight", 0));
-                    totalVolume += volume;
-                    if (volume > bestVolume) {
+                    if (mainVolumeSet(set)) {
+                        totalReps += Math.max(0, set.optInt("reps", 0));
+                        totalVolume += volume;
+                    }
+                    if (recordSet(set) && volume > bestVolume) {
                         bestVolume = volume;
                         best = set;
                     }
@@ -460,6 +500,10 @@ public final class WorkoutWidgetUpdateService {
         put(summary, "completedExercises", completed);
         put(summary, "totalExercises", totalExercises);
         put(summary, "totalSets", totalSets);
+        put(summary, "workingSets", workingSets);
+        put(summary, "warmupSets", warmupSets);
+        put(summary, "supplementarySets", supplementarySets);
+        put(summary, "totalReps", totalReps);
         put(summary, "totalVolume", Math.round(totalVolume));
         put(summary, "bestByExercise", bestByExercise);
         put(summary, "compliance", totalExercises == 0 ? 0 : Math.round((completed * 100.0) / totalExercises));
@@ -471,20 +515,26 @@ public final class WorkoutWidgetUpdateService {
         if (exercise == null) return;
         JSONArray sets = exercise.optJSONArray("sets");
         if (sets == null || sets.length() == 0) return;
-        JSONObject last = sets.optJSONObject(sets.length() - 1);
-        JSONObject best = last;
+        JSONObject last = null;
+        JSONObject best = null;
+        int workingSets = 0;
         double bestVolume = -1;
         double volumeTotal = 0;
         for (int i = 0; i < sets.length(); i++) {
             JSONObject set = sets.optJSONObject(i);
-            if (set == null) continue;
+            if (!completedSet(set)) continue;
             double volume = Math.max(0, set.optDouble("reps", 0)) * Math.max(0, set.optDouble("weight", 0));
-            volumeTotal += volume;
-            if (volume > bestVolume) {
+            if (progressionSet(set)) {
+                last = set;
+                workingSets++;
+            }
+            if (mainVolumeSet(set)) volumeTotal += volume;
+            if (recordSet(set) && volume > bestVolume) {
                 bestVolume = volume;
                 best = set;
             }
         }
+        if (last == null) last = sets.optJSONObject(sets.length() - 1);
         JSONObject bestSet = new JSONObject();
         put(bestSet, "reps", best == null ? 0 : best.optInt("reps", 0));
         put(bestSet, "weight", best == null ? 0 : roundHalf(best.optDouble("weight", 0)));
@@ -496,7 +546,8 @@ public final class WorkoutWidgetUpdateService {
         put(row, "name", exercise.optString("name", "Ejercicio"));
         put(row, "lastWeight", last == null ? 0 : roundHalf(last.optDouble("weight", 0)));
         put(row, "lastReps", last == null ? 0 : last.optInt("reps", 0));
-        put(row, "lastSets", sets.length());
+        put(row, "lastSets", workingSets);
+        put(row, "totalLoggedSets", sets.length());
         put(row, "bestSet", bestSet);
         put(row, "previousVolume", Math.round(volumeTotal));
         put(row, "lastDate", session.optString("date", todayDate()));
@@ -520,7 +571,12 @@ public final class WorkoutWidgetUpdateService {
 
     private static JSONObject lastSet(JSONObject exercise) {
         JSONArray sets = exercise == null ? null : exercise.optJSONArray("sets");
-        return sets == null || sets.length() == 0 ? null : sets.optJSONObject(sets.length() - 1);
+        if (sets == null || sets.length() == 0) return null;
+        for (int i = sets.length() - 1; i >= 0; i--) {
+            JSONObject set = sets.optJSONObject(i);
+            if (progressionSet(set)) return set;
+        }
+        return sets.optJSONObject(sets.length() - 1);
     }
 
     private static JSONObject historyForExercise(JSONObject state, String exerciseId) {

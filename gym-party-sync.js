@@ -85,6 +85,10 @@
       rir:row.rir??null,
       rpe:row.rpe??null,
       bodyweight:!!row.isBodyweight,
+      setType:window.WORKOUT_SET_MODEL?.type?.(row.setType)||'working',
+      completed:row.completed!==false,
+      excludeFromRecords:!!row.excludeFromRecords,
+      excludeFromProgression:!!row.excludeFromProgression,
       savedAt:timestampIso(row.createdAt)||previous?.savedAt||timestampIso(row.updatedAt)||new Date().toISOString(),
       editedAt:timestampIso(row.updatedAt)||previous?.editedAt||null,
       volume:Math.round(number(row.reps)*weight)

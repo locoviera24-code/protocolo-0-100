@@ -1952,3 +1952,61 @@ de records/progresion, con migracion legacy a `working`. Debe hacerse como un
 bloque aislado que actualice modelo local, Firebase, backups, Gym Party, widget
 y pruebas. IndexedDB primario, PWA atomica, quality gate unico y hardening
 adicional de Gym Party/Android permanecen como fases posteriores.
+
+## 50. Tipos de serie y metricas efectivas
+
+Bloque iniciado despues de `ccd1d02`:
+
+- `gym/set-model.js` centraliza el schema versionado y los siete tipos:
+  `warmup`, `working`, `backoff`, `drop`, `technique`, `failure` y `assisted`.
+  Un set legacy sin `setType` se interpreta como `working` durante la lectura,
+  sin reescribir ni borrar el historial existente.
+- Las series nuevas guardan explicitamente `setType`, `completed`,
+  `excludeFromRecords` y `excludeFromProgression`. El total visible incluye
+  todos los sets completados; reps y volumen principal usan solo `working`.
+  Records aceptan `working` y `backoff` validos; progresion usa `working` no
+  excluidos. Calentamientos y tipos suplementarios se muestran por separado.
+- Gym y Gym Party ofrecen el selector dentro de opciones secundarias para no
+  agregar friccion al registro normal. Repetir ultima serie prioriza una serie
+  comparable para progresion. La edicion conserva el tipo guardado.
+- `workout-metrics.js`, Progreso por musculo/ejercicio y
+  `gym-party-metrics.js` aplican la misma semantica. Una carga alta de
+  calentamiento no crea un record ni infla volumen, e1RM o recomendacion.
+- Gym Party comparte los cuatro campos nuevos, los reconcilia a
+  `workoutSessions` y los conserva en su cola local. Las notas continúan
+  privadas. `firebase/firestore.rules` acepta solo los siete tipos conocidos y
+  mantiene compatibles los documentos anteriores donde el campo no existe.
+- El widget Android guarda `working` por defecto y recalcula resumen, historial
+  y ultima serie con las mismas reglas. No cambia el contrato de botones ni el
+  bridge existente.
+- Backups schema 3 conservan los campos nuevos dentro de `workoutSessions`; no
+  se agrego una clave local paralela ni se modifico el schema general.
+- `gym/set-model.js` se carga antes de metricas, entra en el cache PWA, Pages y
+  assets Android. La prueba E2E `tests/e2e/gym-set-types.spec.mjs` ya paso 6/6
+  casos en Android Chromium, iPhone WebKit y escritorio.
+
+- La suite de contratos completa paso: version, service worker, modulos,
+  sistema visual, router, layout, Inicio/Ajustes, repositorios/backup,
+  Nutricion, FDC, Progreso, Gym, Gym Party, accesibilidad y seguridad/release
+  Android. `scripts/validate-app.ps1 -CheckAndroidAssets` confirmo 443 IDs
+  estaticos unicos y paridad exacta entre web y wrapper Android.
+- La regresion E2E completa cubrio 213 escenarios: 199 aprobados, 14 omisiones
+  intencionales de matriz y cero fallos. Por plataforma: Android Chromium 69/71
+  con 2 skips de escritorio; iPhone WebKit 64/71 con 7 skips de capacidades;
+  escritorio Chromium 66/71 con 5 skips moviles.
+- Firestore Emulator con Java 21 paso owner atomico, consultas sync, limpieza
+  legacy y seis negativas criticas. Los `PERMISSION_DENIED` del log son las
+  denegaciones esperadas; tambien se rechazo un `setType` fuera de la lista.
+- Gradle 8.10.2 con Java 17 termino `:app:assembleDebug` y genero
+  `android-native-wrapper/app/build/outputs/apk/debug/app-debug.apk` de
+  1.609.380 bytes. El codigo Java del widget compila con el nuevo contrato.
+
+Estado publicable del bloque: version `2.7.0`, Android `33`, build/cache `68`
+(`protocolo-0-100-pwa-2.7.0-b68`).
+
+Pendiente siguiente exacto: implementar semantica de carga/equipo y modalidades
+de ejercicios (`total`, por lado, por mano, peso corporal, carga agregada,
+asistencia, tiempo y distancia) en un bloque separado. Despues construir el
+motor de progresion sobre series efectivas comparables. IndexedDB primario, PWA
+atomica, quality gate unico y hardening adicional de Gym Party/Android siguen
+como fases posteriores; no mezclarlos con el proximo cambio de modelo Gym.

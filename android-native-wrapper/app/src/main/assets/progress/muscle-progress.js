@@ -3,7 +3,7 @@
   const data=()=>global.PROGRESS_DATA_MODEL,gym=()=>global.GYM_PROGRESS_MODEL,taxonomy=()=>global.MUSCLE_TAXONOMY;
   function aggregate(rows){
     const sessions=new Set(),exercises=new Map();let sets=0,reps=0,volume=0,lastDate='';
-    rows.forEach(row=>{sessions.add(row.sessionId);lastDate=String(row.date)>lastDate?row.date:lastDate;const current=exercises.get(row.exerciseId)||{id:row.exerciseId,name:row.exerciseName,sets:0,reps:0,volume:0,sessions:new Set(),lastDate:'',bodyweight:row.bodyweight};row.sets.forEach(set=>{sets+=1;reps+=set.reps;volume+=set.volume;current.sets+=1;current.reps+=set.reps;current.volume+=set.volume;});current.sessions.add(row.sessionId);current.lastDate=String(row.date)>current.lastDate?row.date:current.lastDate;exercises.set(row.exerciseId,current);});
+    rows.forEach(row=>{const effectiveSets=row.sets.filter(set=>set.mainVolume!==false);if(!effectiveSets.length)return;sessions.add(row.sessionId);lastDate=String(row.date)>lastDate?row.date:lastDate;const current=exercises.get(row.exerciseId)||{id:row.exerciseId,name:row.exerciseName,sets:0,reps:0,volume:0,sessions:new Set(),lastDate:'',bodyweight:row.bodyweight};effectiveSets.forEach(set=>{sets+=1;reps+=set.reps;volume+=set.volume;current.sets+=1;current.reps+=set.reps;current.volume+=set.volume;});current.sessions.add(row.sessionId);current.lastDate=String(row.date)>current.lastDate?row.date:current.lastDate;exercises.set(row.exerciseId,current);});
     return{sets,reps,volume,sessions:sessions.size,lastDate,exercises:[...exercises.values()].map(item=>({...item,sessions:item.sessions.size})).sort((a,b)=>b.sets-a.sets||a.name.localeCompare(b.name,'es'))};
   }
   function stateFor(metrics){if(!metrics.sets)return'no-data';if(metrics.sessions<2)return'insufficient';if(metrics.exercises.some(item=>!item.volume&&!item.bodyweight))return'partial';return'sufficient';}
@@ -18,7 +18,7 @@
       const primaryRows=rows.filter(row=>row.muscleId===definition.id),secondaryRows=rows.filter(row=>(row.secondaryMuscles||[]).includes(definition.id)),primary=metricsForWindows(primaryRows,{period,weekStart,fourWeekStart,today}),secondary=metricsForWindows(secondaryRows,{period,weekStart,fourWeekStart,today});
       return{id:definition.id,name:definition.label,region:definition.region,current:primary.current,previous:primary.previous,thisWeek:primary.thisWeek,lastFourWeeks:primary.lastFourWeeks,weekly:primary.weekly,secondaryCurrent:secondary.current,secondaryPrevious:secondary.previous,secondaryThisWeek:secondary.thisWeek,secondaryLastFourWeeks:secondary.lastFourWeeks,secondaryWeekly:secondary.weekly,frequencyPerWeek:Math.round((primary.lastFourWeeks.sessions/4)*10)/10,setsChange:data().percentChange(primary.current.sets,primary.previous.sets),volumeChange:data().percentChange(primary.current.volume,primary.previous.volume),state:stateFor(primary.current)};
     });
-    return{period,hasData:rows.length>0,rows,muscles:result,byId:Object.fromEntries(result.map(item=>[item.id,item])),primarySets:rows.reduce((sum,row)=>sum+row.sets.length,0)};
+    return{period,hasData:rows.length>0,rows,muscles:result,byId:Object.fromEntries(result.map(item=>[item.id,item])),primarySets:rows.reduce((sum,row)=>sum+row.sets.filter(set=>set.mainVolume!==false).length,0),loggedSets:rows.reduce((sum,row)=>sum+row.sets.filter(set=>set.completed!==false).length,0)};
   }
   global.MUSCLE_PROGRESS=Object.freeze({aggregate,stateFor,build});
 })(window);

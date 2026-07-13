@@ -3,6 +3,7 @@ import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
 
 const source = await readFile(new URL('../gym-party.js', import.meta.url), 'utf8');
+const setModelSource=await readFile(new URL('../gym/set-model.js',import.meta.url),'utf8');
 const syncSource=await readFile(new URL('../gym-party-sync.js',import.meta.url),'utf8');
 const firebaseServiceSource=await readFile(new URL('../firebase-service.js',import.meta.url),'utf8');
 const metricsSource=await readFile(new URL('../gym-party-metrics.js',import.meta.url),'utf8');
@@ -54,6 +55,7 @@ function createContext() {
   };
   context.window = context;
   const vmContext=vm.createContext(context);
+  vm.runInContext(setModelSource,vmContext,{filename:'gym/set-model.js'});
   vm.runInContext(firebaseServiceSource,vmContext,{filename:'firebase-service.js'});
   vm.runInContext(syncSource,vmContext,{filename:'gym-party-sync.js'});
   vm.runInContext(metricsSource,vmContext,{filename:'gym-party-metrics.js'});
@@ -140,9 +142,11 @@ assert.equal(party.calculatePartyStats(demo5, '2026-06-24').length, 5);
 const noPrevious=party.calculatePartyStats({
   members:[{userId:'solo',aliasInParty:'Yo'}],
   sessions:[{id:'current',userId:'solo',date:'2026-06-24',totalSets:1,totalReps:8,totalVolume:160}],
-  sets:[{id:'current-set',sessionId:'current',userId:'solo',date:'2026-06-24',reps:8,weightKg:20}]
+  sets:[{id:'current-set',sessionId:'current',userId:'solo',date:'2026-06-24',reps:8,weightKg:20,setType:'working'},{id:'warmup-set',sessionId:'current',userId:'solo',date:'2026-06-24',reps:5,weightKg:100,setType:'warmup'}]
 },'2026-06-24');
 assert.equal(noPrevious[0].changeVsPreviousWeek.volumePct,null);
+assert.equal(noPrevious[0].current.totalSets,2);
+assert.equal(noPrevious[0].current.totalVolume,160);
 
 party.importState({
   gymPartySettings: {localUserId: 'user_test', firebaseConfig: {apiKey: 'should-not-export'}, portableAccessEmail: 'private@example.com',pendingInviteCode:'SECRET10'},
@@ -181,7 +185,7 @@ const localSession = {
     exerciseId: 'press-banca',
     name: 'Press de banca',
     muscle: 'Pecho',
-    sets: [{id: 'set_keep', setNumber: 1, reps: 8, weight: 20, savedAt: '2026-06-24T10:05:00.000Z'}]
+    sets: [{id: 'set_keep', setNumber: 1, reps: 8, weight: 20, setType:'working', completed:true, savedAt: '2026-06-24T10:05:00.000Z'}]
   }]
 };
 syncStore.set('protocolo_0_100_workout_sessions_v1', JSON.stringify([localSession]));
@@ -222,6 +226,9 @@ syncParty.importState({
 syncParty.syncFromLocalWorkouts({silent: true});
 const synced = syncParty.exportState();
 assert.equal(synced.sharedWorkoutSessions[0].durationMinutes,0);
+const keptSet=synced.sharedWorkoutSets.find(row=>row.id.endsWith('set_keep'));
+assert.equal(keptSet.setType,'working');
+assert.equal(keptSet.completed,true);
 const deletedSet = synced.sharedWorkoutSets.find(row => row.id.endsWith('set_deleted'));
 assert.equal(deletedSet.deleted, true);
 assert.equal(deletedSet.pendingSync, true);

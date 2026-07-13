@@ -261,7 +261,7 @@
       'id','partyId','userId','localSessionId','date','localDate','weekday','routineName','startedAt','finishedAt','durationMinutes','exercisesCompleted','totalSets','totalReps','totalVolume','externalLoadVolume','bodyweightReps','addedLoadVolume','bestWeight','bestSetVolume','maxReps','timeZone','utcOffset','revision','deletedAt','deletedReason','createdAt','updatedAt'
     ]),
     [collections.sets]:new Set([
-      'id','partyId','sessionId','userId','localExerciseId','localSetId','exerciseId','exerciseName','muscleGroup','setNumber','reps','weightKg','rir','rpe','isBodyweight','date','localDate','timeZone','utcOffset','revision','deleted','deletedAt','deletedReason','createdAt','updatedAt'
+      'id','partyId','sessionId','userId','localExerciseId','localSetId','exerciseId','exerciseName','muscleGroup','setNumber','reps','weightKg','rir','rpe','isBodyweight','setType','completed','excludeFromRecords','excludeFromProgression','date','localDate','timeZone','utcOffset','revision','deleted','deletedAt','deletedReason','createdAt','updatedAt'
     ])
   };
   function firestorePayload(value,collectionName=''){
@@ -645,6 +645,10 @@
       rir: set.rir ?? null,
       rpe: set.rpe ?? null,
       isBodyweight: !!(set.bodyweight || exercise.bodyweight),
+      setType: window.WORKOUT_SET_MODEL?.type?.(set.setType) || 'working',
+      completed: set.completed !== false,
+      excludeFromRecords: !!set.excludeFromRecords,
+      excludeFromProgression: !!set.excludeFromProgression,
       date: session.date || todayStr(),
       ...time,
       createdAt: set.savedAt || session.startedAt || nowIso(),
@@ -680,6 +684,10 @@
           weight: number(item.weight),
           rir: item.rir ?? null,
           bodyweight: !!item.bodyweight,
+          setType: 'working',
+          completed: true,
+          excludeFromRecords: false,
+          excludeFromProgression: false,
           savedAt: session.savedAt
         }))
       }))
@@ -1613,7 +1621,7 @@
   function capturePartyQuickDraft(){
     const select=document.getElementById('partyQuickExerciseSelect');if(!select)return;
     const date=selectedWorkoutDate(),editingSetId=settings().partyEditingSetId||'',payload={
-      reps:document.getElementById('partyQuickReps')?.value??'',weight:document.getElementById('partyQuickWeight')?.value??'',bodyweight:!!document.getElementById('partyQuickBodyweight')?.checked,rir:document.getElementById('partyQuickRir')?.value??'',rpe:document.getElementById('partyQuickRpe')?.value??'',note:document.getElementById('partyQuickNote')?.value??''
+      reps:document.getElementById('partyQuickReps')?.value??'',weight:document.getElementById('partyQuickWeight')?.value??'',setType:document.getElementById('partyQuickSetType')?.value||'working',bodyweight:!!document.getElementById('partyQuickBodyweight')?.checked,rir:document.getElementById('partyQuickRir')?.value??'',rpe:document.getElementById('partyQuickRpe')?.value??'',note:document.getElementById('partyQuickNote')?.value??''
     };
     partyQuickDrafts.set(partyDraftKey(date,select.value,editingSetId),payload);
     window.APP_DRAFTS?.schedule?.({id:partyPersistentSetDraftId(date,select.value,editingSetId),domain:'gym-party-set',payload:{...payload,date,exerciseId:select.value,setId:editingSetId}});
@@ -1636,7 +1644,8 @@
       <div class="partySetList compact">${sets.map(set => {
       const active = set.id === editingSetId;
       const weight = number(set.weight);
-      const meta = `${number(set.reps)} reps - ${weight ? `${round(weight,1)} ${state.unit}` : 'peso corporal'}${set.rir !== null && set.rir !== undefined ? ` - RIR ${set.rir}` : ''}`;
+      const setType=window.WORKOUT_SET_MODEL?.type?.(set.setType)||'working',typeLabel=window.WORKOUT_SET_MODEL?.label?.(setType,{short:true})||'Efectiva';
+      const meta = `${typeLabel} - ${number(set.reps)} reps - ${weight ? `${round(weight,1)} ${state.unit}` : 'peso corporal'}${set.rir !== null && set.rir !== undefined ? ` - RIR ${set.rir}` : ''}`;
       return `<div class="partySetRow ${active ? 'editing' : ''}">
         <div><strong>Serie ${set.setNumber || ''}</strong><span>${escape(meta)}</span></div>
         <div class="partySetRowActions">
@@ -1686,6 +1695,8 @@
     }
     const repsValue = draft?.reps ?? editingSet?.reps ?? state.suggestedReps;
     const weightValue = draft?.weight ?? editingSet?.weight ?? state.suggestedWeight;
+    const setTypeValue = window.WORKOUT_SET_MODEL?.type?.(draft?.setType ?? editingSet?.setType ?? 'working') || 'working';
+    const setTypeOptions = (window.WORKOUT_SET_MODEL?.definitions?.()||[{id:'working',label:'Serie efectiva'}]).map(item=>`<option value="${escape(item.id)}" ${item.id===setTypeValue?'selected':''}>${escape(item.label)}</option>`).join('');
     const bodyweightValue = draft?.bodyweight ?? (editingSet ? !!editingSet.bodyweight : state.bodyweight);
     const rirValue = draft?.rir ?? editingSet?.rir ?? 2;
     const rpeValue = draft?.rpe ?? editingSet?.rpe ?? '';
@@ -1717,6 +1728,7 @@
         ${editingSet ? '<div class="auditItem good">Editando una serie guardada. Guardar cambios no crea una serie nueva.</div>' : ''}
         <details class="partyNestedFold">
           <summary>Opcional</summary>
+          <div class="field"><label>Tipo de serie</label><select id="partyQuickSetType">${setTypeOptions}</select><div class="muted small">El volumen y las sugerencias usan solo series efectivas.</div></div>
           <div class="partyQuickInputs">
             <div class="field"><label>RIR</label><input type="text" inputmode="decimal" id="partyQuickRir" value="${escape(rirValue)}"></div>
             <div class="field"><label>RPE</label><input type="text" inputmode="decimal" id="partyQuickRpe" value="${escape(rpeValue)}"></div>
@@ -2097,6 +2109,7 @@
       exerciseId: partyWorkoutSelectedExerciseId(),
       reps: document.getElementById('partyQuickReps')?.value,
       weight: document.getElementById('partyQuickWeight')?.value,
+      setType: document.getElementById('partyQuickSetType')?.value || 'working',
       bodyweight: document.getElementById('partyQuickBodyweight')?.checked,
       rir: document.getElementById('partyQuickRir')?.value,
       rpe: document.getElementById('partyQuickRpe')?.value,
@@ -2110,7 +2123,7 @@
     window.APP_DRAFTS?.remove?.(savedDraftId);
     const nextExerciseId=result.state?.currentExerciseId||result.exercise?.id||partyWorkoutSelectedExerciseId();
     partyQuickDrafts.delete(partyDraftKey(selectedWorkoutDate(),partyWorkoutSelectedExerciseId(),editingSetId));
-    partyQuickDrafts.set(partyDraftKey(selectedWorkoutDate(),nextExerciseId,''),{reps:payload.reps,weight:payload.weight,bodyweight:!!payload.bodyweight,rir:payload.rir,rpe:payload.rpe,note:''});
+    partyQuickDrafts.set(partyDraftKey(selectedWorkoutDate(),nextExerciseId,''),{reps:payload.reps,weight:payload.weight,setType:payload.setType,bodyweight:!!payload.bodyweight,rir:payload.rir,rpe:payload.rpe,note:''});
     saveSettings({partyQuickExerciseId: nextExerciseId, partyEditingSetId: ''});
     refreshPartyWorkoutShare();
     renderGymParty();
@@ -2119,9 +2132,9 @@
   }
   function repeatPartyWorkoutSet(){
     const state=workoutApi()?.getQuickWorkoutState?.({date:selectedWorkoutDate(),exerciseId:partyWorkoutSelectedExerciseId()});
-    const last=safeArray(state?.currentSets).slice(-1)[0]||state?.history;if(!last){flashMessage('Todavia no hay una serie anterior para repetir.');return;}
-    const reps=document.getElementById('partyQuickReps'),weight=document.getElementById('partyQuickWeight'),body=document.getElementById('partyQuickBodyweight'),rir=document.getElementById('partyQuickRir');
-    if(reps)reps.value=last.reps??last.lastReps??8;if(weight)weight.value=last.weight??last.lastWeight??0;if(body)body.checked=!!last.bodyweight;if(rir&&last.rir!==null&&last.rir!==undefined)rir.value=last.rir;capturePartyQuickDraft();
+    const currentSets=safeArray(state?.currentSets),last=currentSets.slice().reverse().find(set=>window.WORKOUT_SET_MODEL?.countsForProgression?.(set)??true)||currentSets.slice(-1)[0]||state?.history;if(!last){flashMessage('Todavia no hay una serie anterior para repetir.');return;}
+    const reps=document.getElementById('partyQuickReps'),weight=document.getElementById('partyQuickWeight'),type=document.getElementById('partyQuickSetType'),body=document.getElementById('partyQuickBodyweight'),rir=document.getElementById('partyQuickRir');
+    if(reps)reps.value=last.reps??last.lastReps??8;if(weight)weight.value=last.weight??last.lastWeight??0;if(type)type.value=window.WORKOUT_SET_MODEL?.type?.(last.setType)||'working';if(body)body.checked=!!last.bodyweight;if(rir&&last.rir!==null&&last.rir!==undefined)rir.value=last.rir;capturePartyQuickDraft();
   }
   function editPartyWorkoutSet(event){
     const button = event?.target?.closest?.('[data-party-set-id]');
@@ -2791,12 +2804,13 @@
       if(event.target && event.target.id === 'partyWorkoutDateInput'){
         setPartyWorkoutDate(event.target.value || todayStr());
       }
+      if(event.target && event.target.id === 'partyQuickSetType') capturePartyQuickDraft();
       if(event.target && ['partyRestTimerEnabled','partyRestSeconds','partyHapticEnabled'].includes(event.target.id)){
         workoutApi()?.updateGymSettings?.({restTimerEnabled:!!document.getElementById('partyRestTimerEnabled')?.checked,restSeconds:Math.max(15,number(document.getElementById('partyRestSeconds')?.value)||90),hapticEnabled:!!document.getElementById('partyHapticEnabled')?.checked});
       }
     });
     document.addEventListener('input',event=>{
-      if(event.target&&['partyQuickReps','partyQuickWeight','partyQuickBodyweight','partyQuickRir','partyQuickRpe','partyQuickNote'].includes(event.target.id))capturePartyQuickDraft();
+      if(event.target&&['partyQuickReps','partyQuickWeight','partyQuickSetType','partyQuickBodyweight','partyQuickRir','partyQuickRpe','partyQuickNote'].includes(event.target.id))capturePartyQuickDraft();
       const id=event.target?.id||'';
       if(['gymPartyCreateName','gymPartyCreateAlias',...partyPrivacySuffixes.map(suffix=>`create${suffix}`)].includes(id))capturePartyFormDraft('create');
       if(['gymPartyJoinCode','gymPartyJoinAlias',...partyPrivacySuffixes.map(suffix=>`join${suffix}`)].includes(id))capturePartyFormDraft('join');

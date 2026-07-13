@@ -15,7 +15,7 @@ PWA y APK Android para medir habitos, atencion, actividad fisica y nutricion con
 
 ## Navegacion y diseno
 
-La version actual `v2.7.0` (build web `67`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
+La version actual `v2.7.0` (build web `68`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
 **Gym**, **Nutricion**, **Progreso** y **Mas**. En escritorio usa una barra
 lateral compacta. Gym Party se abre desde **Gym > Grupo**, desde un acceso
 discreto en Inicio o mediante un enlace `gymPartyCode`; ya no ocupa un boton
@@ -383,6 +383,21 @@ Android.
 Para agregarlo: instala el APK, manten presionada la pantalla de inicio, entra a **Widgets**, busca **Protocolo 0->100 · Gym** y agregalo. El widget pequeno ofrece guardado rapido minimo; el mediano muestra controles completos.
 
 Rutina predeterminada: lunes Torso A, martes Pierna A, miercoles Torso B, jueves Pierna B, viernes Torso C, sabado descanso o actividad suave y domingo descanso o revision semanal. Dentro de **Gym** se puede editar la rutina semanal, copiar un dia a otro, restablecer la rutina predeterminada exacta, cambiar kg/lb, activar RIR/RPE y actualizar manualmente el widget.
+
+### Tipos de serie
+
+Gym y Gym Party permiten marcar cada serie como **Calentamiento**, **Efectiva**,
+**Back-off**, **Drop**, **Tecnica**, **Al fallo** o **Asistida**. Los registros
+anteriores que no tienen `setType` se interpretan como `working` sin reescribir
+el historial. Las series nuevas guardan tambien `completed`,
+`excludeFromRecords` y `excludeFromProgression`.
+
+El conteo visible incluye todas las series completadas. El volumen, las
+repeticiones principales, el progreso muscular y las sugerencias usan solo
+series efectivas. Los records aceptan series efectivas y back-off validas; los
+calentamientos y tipos suplementarios permanecen visibles por separado. El
+widget Android registra series efectivas por defecto y conserva esta semantica
+al recalcular resumen e historial.
 
 ## Desarrollo y validacion
 

@@ -3,8 +3,11 @@ import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
 
 const source=await readFile(new URL('../workout-metrics.js',import.meta.url),'utf8');
+const setModelSource=await readFile(new URL('../gym/set-model.js',import.meta.url),'utf8');
 const context={window:null};context.window=context;
-vm.runInContext(source,vm.createContext(context),{filename:'workout-metrics.js'});
+const vmContext=vm.createContext(context);
+vm.runInContext(setModelSource,vmContext,{filename:'gym/set-model.js'});
+vm.runInContext(source,vmContext,{filename:'workout-metrics.js'});
 const metrics=context.WORKOUT_METRICS;
 
 const bodyweight=metrics.calculateSetsMetrics([
@@ -24,8 +27,28 @@ assert.equal(weighted.addedLoadReps,16);
 assert.equal(metrics.percentChange(100,0),null);
 assert.equal(metrics.percentChange(120,100),20);
 assert.equal(metrics.estimatedOneRepMax(60,8),76);
+const typed=metrics.calculateSetsMetrics([
+  {reps:10,weight:20,setType:'warmup'},
+  {reps:8,weight:60,setType:'working'},
+  {reps:10,weight:50,setType:'backoff'},
+  {reps:12,weight:40,setType:'drop'}
+]);
+assert.equal(typed.totalSets,4);
+assert.equal(typed.workingSets,1);
+assert.equal(typed.warmupSets,1);
+assert.equal(typed.supplementarySets,2);
+assert.equal(typed.totalReps,8);
+assert.equal(typed.allReps,40);
+assert.equal(typed.externalLoadVolume,480);
+assert.equal(typed.allExternalLoadVolume,1660);
+assert.equal(typed.bestWeight,60);
+assert.equal(typed.bestSetVolume,500);
+assert.equal(context.WORKOUT_SET_MODEL.normalize({reps:8}).setType,'working');
+assert.equal(context.WORKOUT_SET_MODEL.countsForRecords({setType:'warmup'}),false);
+assert.equal(context.WORKOUT_SET_MODEL.countsForRecords({setType:'backoff'}),true);
+assert.equal(context.WORKOUT_SET_MODEL.countsForProgression({setType:'working',excludeFromProgression:true}),false);
 const consistency=metrics.consistency({plannedSessions:5,registeredSessions:3,plannedExercises:9,completedExercises:7,scheduledRestDays:2});
 assert.equal(consistency.scheduledRestDays,2);
 assert.ok(consistency.score>0&&consistency.score<100);
 
-console.log('Metricas de gym correctas: carga externa, peso corporal, lastre, base anterior, 1RM y constancia.');
+console.log('Metricas de gym correctas: tipos de serie, volumen efectivo, records, peso corporal, 1RM y constancia.');

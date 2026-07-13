@@ -5,18 +5,25 @@
   function setWeight(set){ return Math.max(0,number(set?.weightKg??set?.weight)); }
   function setReps(set){ return Math.max(0,number(set?.reps)); }
   function isBodyweight(set,exercise){ return !!(set?.isBodyweight||set?.bodyweight||exercise?.bodyweight||exercise?.unit==='peso corporal'); }
+  function setModel(){return window.WORKOUT_SET_MODEL||null;}
+  function normalizedSet(set){return setModel()?.normalize?.(set)||{...set,setType:set?.setType||'working',completed:set?.completed!==false,excludeFromRecords:!!set?.excludeFromRecords,excludeFromProgression:!!set?.excludeFromProgression};}
   function estimatedOneRepMax(weight,reps){
     const w=Math.max(0,number(weight)),r=Math.max(0,number(reps));
     if(!w||!r||r>15) return null;
     return Math.round((w*(1+r/30))*10)/10;
   }
   function calculateSetMetrics(set={},exercise={}){
-    const reps=setReps(set),weight=setWeight(set),bodyweight=isBodyweight(set,exercise);
+    const normalized=normalizedSet(set),reps=setReps(normalized),weight=setWeight(normalized),bodyweight=isBodyweight(normalized,exercise);
     const volume=reps*weight;
     return {
       reps,
       weight,
       bodyweight,
+      setType:normalized.setType,
+      completed:normalized.completed,
+      mainVolume:setModel()?.countsMainVolume?.(normalized)??normalized.completed,
+      recordEligible:setModel()?.countsForRecords?.(normalized)??normalized.completed,
+      progressionEligible:setModel()?.countsForProgression?.(normalized)??normalized.completed,
       externalLoadVolume:Math.round(volume),
       bodyweightReps:bodyweight&&weight===0?reps:0,
       addedLoadReps:bodyweight&&weight>0?reps:0,
@@ -26,22 +33,32 @@
   }
   function calculateSetsMetrics(sets=[],exercise={}){
     const rows=(Array.isArray(sets)?sets:[]).map(set=>({...calculateSetMetrics(set,exercise),set}));
-    const bestWeight=rows.reduce((max,row)=>Math.max(max,row.weight),0);
-    const bestSetVolume=rows.reduce((max,row)=>Math.max(max,row.externalLoadVolume),0);
-    const maxReps=rows.reduce((max,row)=>Math.max(max,row.reps),0);
-    const estimated1RM=rows.map(row=>row.estimated1RM).filter(value=>value!==null).reduce((max,value)=>Math.max(max,value),0)||null;
+    const completedRows=rows.filter(row=>row.completed),mainRows=completedRows.filter(row=>row.mainVolume),recordRows=completedRows.filter(row=>row.recordEligible),progressionRows=completedRows.filter(row=>row.progressionEligible);
+    const bestWeight=recordRows.reduce((max,row)=>Math.max(max,row.weight),0);
+    const bestSetVolume=recordRows.reduce((max,row)=>Math.max(max,row.externalLoadVolume),0);
+    const maxReps=recordRows.reduce((max,row)=>Math.max(max,row.reps),0);
+    const estimated1RM=recordRows.map(row=>row.estimated1RM).filter(value=>value!==null).reduce((max,value)=>Math.max(max,value),0)||null;
     return {
-      totalSets:rows.length,
-      totalReps:rows.reduce((sum,row)=>sum+row.reps,0),
-      externalLoadVolume:rows.reduce((sum,row)=>sum+row.externalLoadVolume,0),
-      bodyweightReps:rows.reduce((sum,row)=>sum+row.bodyweightReps,0),
-      addedLoadReps:rows.reduce((sum,row)=>sum+row.addedLoadReps,0),
-      addedLoadVolume:rows.reduce((sum,row)=>sum+row.addedLoadVolume,0),
+      totalSets:completedRows.length,
+      workingSets:mainRows.length,
+      warmupSets:completedRows.filter(row=>row.setType==='warmup').length,
+      supplementarySets:completedRows.filter(row=>!['working','warmup'].includes(row.setType)).length,
+      progressionSets:progressionRows.length,
+      totalReps:mainRows.reduce((sum,row)=>sum+row.reps,0),
+      allReps:completedRows.reduce((sum,row)=>sum+row.reps,0),
+      externalLoadVolume:mainRows.reduce((sum,row)=>sum+row.externalLoadVolume,0),
+      allExternalLoadVolume:completedRows.reduce((sum,row)=>sum+row.externalLoadVolume,0),
+      bodyweightReps:mainRows.reduce((sum,row)=>sum+row.bodyweightReps,0),
+      addedLoadReps:mainRows.reduce((sum,row)=>sum+row.addedLoadReps,0),
+      addedLoadVolume:mainRows.reduce((sum,row)=>sum+row.addedLoadVolume,0),
       bestWeight,
       bestSetVolume,
       maxReps,
       estimated1RM,
-      rows
+      rows,
+      mainRows,
+      recordRows,
+      progressionRows
     };
   }
   function calculateExerciseMetrics(exercise={}){ return calculateSetsMetrics(exercise.sets||[],exercise); }
@@ -50,8 +67,13 @@
     const metrics=exercises.map(exercise=>({exercise,metrics:calculateExerciseMetrics(exercise)}));
     return {
       totalSets:metrics.reduce((sum,row)=>sum+row.metrics.totalSets,0),
+      workingSets:metrics.reduce((sum,row)=>sum+row.metrics.workingSets,0),
+      warmupSets:metrics.reduce((sum,row)=>sum+row.metrics.warmupSets,0),
+      supplementarySets:metrics.reduce((sum,row)=>sum+row.metrics.supplementarySets,0),
       totalReps:metrics.reduce((sum,row)=>sum+row.metrics.totalReps,0),
+      allReps:metrics.reduce((sum,row)=>sum+row.metrics.allReps,0),
       externalLoadVolume:metrics.reduce((sum,row)=>sum+row.metrics.externalLoadVolume,0),
+      allExternalLoadVolume:metrics.reduce((sum,row)=>sum+row.metrics.allExternalLoadVolume,0),
       bodyweightReps:metrics.reduce((sum,row)=>sum+row.metrics.bodyweightReps,0),
       addedLoadReps:metrics.reduce((sum,row)=>sum+row.metrics.addedLoadReps,0),
       addedLoadVolume:metrics.reduce((sum,row)=>sum+row.metrics.addedLoadVolume,0),

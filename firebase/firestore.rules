@@ -22,6 +22,17 @@ service cloud.firestore {
       return !data.keys().hasAny([field]) || data[field] is bool;
     }
 
+    function optionalSetType(data) {
+      return !data.keys().hasAny(["setType"])
+        || data.setType == "warmup"
+        || data.setType == "working"
+        || data.setType == "backoff"
+        || data.setType == "drop"
+        || data.setType == "technique"
+        || data.setType == "failure"
+        || data.setType == "assisted";
+    }
+
     function optionalDate(data, field) {
       return !data.keys().hasAny([field]) || data[field] == null || data[field] is timestamp || (data[field] is string && data[field].size() <= 40);
     }
@@ -203,7 +214,8 @@ service cloud.firestore {
       return data.keys().hasOnly([
           "id", "partyId", "sessionId", "userId", "localExerciseId", "localSetId",
           "exerciseId", "exerciseName", "muscleGroup", "setNumber", "reps", "weightKg",
-          "rir", "rpe", "isBodyweight", "date", "localDate", "timeZone", "utcOffset",
+          "rir", "rpe", "isBodyweight", "setType", "completed", "excludeFromRecords",
+          "excludeFromProgression", "date", "localDate", "timeZone", "utcOffset",
           "revision", "deleted", "deletedAt", "deletedReason", "createdAt", "updatedAt"
         ])
         && data.id == setId
@@ -225,6 +237,10 @@ service cloud.firestore {
         && optionalNumber(data, "rir", 0, 10)
         && optionalNumber(data, "rpe", 0, 10)
         && data.isBodyweight is bool
+        && optionalSetType(data)
+        && optionalBool(data, "completed")
+        && optionalBool(data, "excludeFromRecords")
+        && optionalBool(data, "excludeFromProgression")
         && validString(data.date, 10, 10)
         && optionalString(data, "localDate", 10)
         && optionalString(data, "timeZone", 80)

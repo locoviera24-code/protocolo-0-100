@@ -4,6 +4,8 @@ import vm from 'node:vm';
 
 const source = await readFile(new URL('../workout-features.js', import.meta.url), 'utf8');
 const taxonomySource = await readFile(new URL('../progress/muscle-taxonomy.js', import.meta.url), 'utf8');
+const setModelSource = await readFile(new URL('../gym/set-model.js', import.meta.url), 'utf8');
+const metricsSource = await readFile(new URL('../workout-metrics.js', import.meta.url), 'utf8');
 const rankingSource = await readFile(new URL('../workout-ranking.js', import.meta.url), 'utf8');
 const storeSource = await readFile(new URL('../workout-store.js', import.meta.url), 'utf8');
 const planSource = await readFile(new URL('../workout-plan.js', import.meta.url), 'utf8');
@@ -59,8 +61,10 @@ function createContext(preloaded = {}, today = '2026-06-22') {
   context.window = context;
   const vmContext=vm.createContext(context);
   vm.runInContext(taxonomySource, vmContext, {filename: 'progress/muscle-taxonomy.js'});
+  vm.runInContext(setModelSource, vmContext, {filename: 'gym/set-model.js'});
   vm.runInContext(storeSource, vmContext, {filename: 'workout-store.js'});
   vm.runInContext(planSource, vmContext, {filename: 'workout-plan.js'});
+  vm.runInContext(metricsSource, vmContext, {filename: 'workout-metrics.js'});
   vm.runInContext(uiSource, vmContext, {filename: 'workout-ui.js'});
   vm.runInContext(rankingSource, vmContext, {filename: 'workout-ranking.js'});
   vm.runInContext(source, vmContext, {filename: 'workout-features.js'});
@@ -111,6 +115,8 @@ const quickSaved = quickWorkout.saveQuickSetPayload({
 });
 assert.equal(quickSaved.ok, true);
 assert.equal(quickSaved.set.weight, 20.5);
+assert.equal(quickSaved.set.setType, 'working');
+assert.equal(quickSaved.set.completed, true);
 assert.equal(JSON.parse(quickStore.get(quickWorkout.keys.exercisePreferences)).exercises['peck-deck'].totalUses, 1);
 const quickAfterSave = quickWorkout.getQuickWorkoutState({date: '2026-06-22', exerciseId: quickState.currentExerciseId});
 assert.equal(quickAfterSave.currentExerciseSets, 1);
@@ -121,11 +127,13 @@ const quickUpdated = quickWorkout.updateQuickSetPayload({
   setId: quickSaved.set.id,
   reps: 9,
   weight: 22.5,
+  setType: 'backoff',
   bodyweight: false
 });
 assert.equal(quickUpdated.ok, true);
 assert.equal(quickUpdated.set.reps, 9);
 assert.equal(quickUpdated.set.weight, 22.5);
+assert.equal(quickUpdated.set.setType, 'backoff');
 assert.equal(quickWorkout.getQuickWorkoutState({date: '2026-06-22', exerciseId: quickState.currentExerciseId}).currentSets[0].weight, 22.5);
 const quickDeleted = quickWorkout.deleteQuickSetPayload({
   date: '2026-06-22',
@@ -182,6 +190,22 @@ const manualSaved = quickWorkout.saveQuickSetPayload({
 assert.equal(manualSaved.ok, true);
 assert.equal(manualSaved.set.weight, 12.5);
 assert.equal(JSON.parse(quickStore.get(quickWorkout.keys.workoutSessions))[0].exercises.some(exercise => exercise.manual && exercise.name === 'Face pull'), true);
+
+const {context:typeContext,store:typeStore}=createContext();
+const typeWorkout=typeContext.WORKOUT_FEATURES,typeState=typeWorkout.getQuickWorkoutState({date:'2026-06-22'});
+typeWorkout.saveQuickSetPayload({date:'2026-06-22',exerciseId:typeState.currentExerciseId,reps:10,weight:20,setType:'warmup'});
+typeWorkout.saveQuickSetPayload({date:'2026-06-22',exerciseId:typeState.currentExerciseId,reps:8,weight:60,setType:'working'});
+const typedSession=JSON.parse(typeStore.get(typeWorkout.keys.workoutSessions))[0];
+assert.equal(typedSession.summary.totalSets,2);
+assert.equal(typedSession.summary.workingSets,1);
+assert.equal(typedSession.summary.warmupSets,1);
+assert.equal(typedSession.summary.totalVolume,480);
+assert.equal(JSON.parse(typeStore.get(typeWorkout.keys.exerciseHistory))['peck-deck'].lastWeight,60);
+
+const legacySetSession={id:'legacy-set-session',date:'2026-06-22',status:'en progreso',currentExerciseIndex:0,startedAt:'2026-06-22T10:00:00.000Z',routine:{name:'Legacy'},exercises:[{id:'legacy-press',exerciseId:'press-banca',name:'Press de banca',muscle:'Pecho',sets:[{id:'legacy-set',setNumber:1,reps:8,weight:50}]}]};
+const {context:legacySetContext,store:legacySetStore}=createContext({protocolo_0_100_workout_sessions_v1:JSON.stringify([legacySetSession])});
+assert.equal(legacySetContext.WORKOUT_FEATURES.getQuickWorkoutState({date:'2026-06-22',exerciseId:'legacy-press'}).currentSets[0].setType,'working');
+assert.equal(Object.hasOwn(JSON.parse(legacySetStore.get('protocolo_0_100_workout_sessions_v1'))[0].exercises[0].sets[0],'setType'),false,'La lectura no debe reescribir series legacy');
 
 const {context: poundsContext,store:poundsStore}=createContext({
   protocolo_0_100_gym_settings_v1:JSON.stringify({unit:'lb'})

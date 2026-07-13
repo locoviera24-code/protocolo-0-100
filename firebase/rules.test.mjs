@@ -53,7 +53,7 @@ try{
   await assertFails(setDoc(doc(memberDb,'gym_party_invites','EVIL10'),inviteData('party_secure','member','EVIL10')));
   await assertFails(getDoc(doc(outsiderDb,'gym_parties','party_secure')));
 
-  const ownerSet={id:'set_owner',partyId:'party_secure',sessionId:'session_owner',userId:'owner',localExerciseId:'press-row',localSetId:'set-local',exerciseId:'press-banca',exerciseName:'Press de banca',muscleGroup:'Pecho',setNumber:1,reps:8,weightKg:60,rir:2,rpe:8,isBodyweight:false,date:'2026-07-10',createdAt:now,updatedAt:now,deleted:false};
+  const ownerSet={id:'set_owner',partyId:'party_secure',sessionId:'session_owner',userId:'owner',localExerciseId:'press-row',localSetId:'set-local',exerciseId:'press-banca',exerciseName:'Press de banca',muscleGroup:'Pecho',setNumber:1,reps:8,weightKg:60,rir:2,rpe:8,isBodyweight:false,setType:'working',completed:true,excludeFromRecords:false,excludeFromProgression:false,date:'2026-07-10',createdAt:now,updatedAt:now,deleted:false};
   const ownerSession={id:'session_owner',partyId:'party_secure',userId:'owner',localSessionId:'local_session_owner',date:'2026-07-10',localDate:'2026-07-10',weekday:'Viernes',routineName:'Torso C',startedAt:now,finishedAt:now,durationMinutes:60,exercisesCompleted:1,totalSets:1,totalReps:8,totalVolume:480,externalLoadVolume:480,bodyweightReps:0,addedLoadVolume:0,bestWeight:60,bestSetVolume:480,maxReps:8,timeZone:'America/Asuncion',utcOffset:-240,revision:1,createdAt:now,updatedAt:now};
   await assertSucceeds(setDoc(doc(ownerDb,'workout_sessions_shared','session_owner'),ownerSession));
   await assertSucceeds(setDoc(doc(ownerDb,'workout_sets_shared','set_owner'),ownerSet));
@@ -90,6 +90,7 @@ try{
 
   await assertSucceeds(setDoc(doc(ownerDb,'gym_party_invites','NEXT10'),inviteData('party_secure','owner','NEXT10')));
   await assertFails(setDoc(doc(memberDb,'workout_sets_shared','negative_set'),{...ownerSet,id:'negative_set',userId:'member',reps:-1}));
+  await assertFails(setDoc(doc(ownerDb,'workout_sets_shared','invalid_set_type'),{...ownerSet,id:'invalid_set_type',setType:'max-effort'}));
   const joined=await getDoc(doc(memberDb,'gym_party_members','party_secure_member'));
   assert.equal(joined.data().role,'member');
   await assertSucceeds(runTransaction(memberDb,async transaction=>{
