@@ -50,6 +50,7 @@ $relativeFiles = @(
     'ui/error-boundary.js',
     'ui/recovery-view.js',
     'progress/progress-data-model.js',
+    'progress/muscle-taxonomy.js',
     'progress/gym-progress-model.js',
     'progress/muscle-progress.js',
     'progress/exercise-progress.js',

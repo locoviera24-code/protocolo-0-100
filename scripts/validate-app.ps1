@@ -31,6 +31,7 @@ $workoutUi = Read-Utf8 'workout-ui.js'
 $appRouter = Read-Utf8 'ui/router.js'
 $appNavigation = Read-Utf8 'ui/navigation.js'
 $progressView = Read-Utf8 'progress/progress-view.js'
+$muscleTaxonomy = Read-Utf8 'progress/muscle-taxonomy.js'
 $progressDataModel = Read-Utf8 'progress/progress-data-model.js'
 $gymProgressModel = Read-Utf8 'progress/gym-progress-model.js'
 $muscleProgress = Read-Utf8 'progress/muscle-progress.js'
@@ -98,7 +99,7 @@ Assert-True ($duplicates.Count -eq 0) "Hay IDs HTML duplicados: $($duplicates -j
 $requiredFiles = @(
     'nutrition/nutrition-store.js', 'nutrition/nutrition-model.js', 'nutrition/recipes.js', 'nutrition/portions.js', 'nutrition/food-search.js', 'nutrition/food-entry-flow.js', 'nutrition/meal-history.js', 'nutrition/nutrition-confidence.js', 'nutrition/nutrition-view.js', 'scripts/test-nutrition-modules.mjs', 'scripts/test-fdc-confidence.mjs', 'tests/e2e/nutrition-domain.spec.mjs', 'tests/e2e/nutrition-today.spec.mjs', 'tests/e2e/nutrition-recipes-portions.spec.mjs', 'tests/e2e/nutrition-numbers-targets.spec.mjs',
     'data/backup-service.js', 'scripts/test-backup-service.mjs', 'tests/e2e/backup-import.spec.mjs',
-    'app-version.json', 'app-version.js', 'app/numbers.js', 'scripts/test-numbers.mjs', 'data/indexeddb.js', 'data/repositories.js', 'nutrition-data.js', 'fdc-client.js', 'workout-store.js', 'workout-plan.js', 'workout-metrics.js', 'workout-ranking.js', 'workout-ui.js', 'workout-features.js', 'advanced-features.js', 'ui/router.js', 'ui/navigation.js', 'ui/notifications.js', 'ui/inline-validation.js', 'ui/confirmation-dialog.js', 'ui/form-dialog.js', 'ui/error-boundary.js', 'ui/recovery-view.js', 'progress/progress-data-model.js', 'progress/gym-progress-model.js', 'progress/muscle-progress.js', 'progress/exercise-progress.js', 'progress/personal-records.js', 'progress/progress-view.js',
+    'app-version.json', 'app-version.js', 'app/numbers.js', 'scripts/test-numbers.mjs', 'data/indexeddb.js', 'data/repositories.js', 'nutrition-data.js', 'fdc-client.js', 'workout-store.js', 'workout-plan.js', 'workout-metrics.js', 'workout-ranking.js', 'workout-ui.js', 'workout-features.js', 'advanced-features.js', 'ui/router.js', 'ui/navigation.js', 'ui/notifications.js', 'ui/inline-validation.js', 'ui/confirmation-dialog.js', 'ui/form-dialog.js', 'ui/error-boundary.js', 'ui/recovery-view.js', 'progress/muscle-taxonomy.js', 'progress/progress-data-model.js', 'progress/gym-progress-model.js', 'progress/muscle-progress.js', 'progress/exercise-progress.js', 'progress/personal-records.js', 'progress/progress-view.js',
     'firebase-config.js', 'firebase-service.js', 'gym-party-sync.js', 'gym-party-metrics.js', 'gym-party-ui.js', 'gym-party.js',
     'scripts/test-android-webview-security.mjs',
     'scripts/test-android-release.mjs',
@@ -171,9 +172,12 @@ Assert-True ($html.Contains('<script src="app-version.js"></script>')) 'index.ht
 Assert-True ($serviceWorker.Contains("'./app-version.js'")) 'sw.js no cachea app-version.js'
 Assert-True ($html.Contains('<script src="progress/progress-view.js"></script>')) 'index.html no carga progress/progress-view.js'
 Assert-True ($serviceWorker.Contains("'./progress/progress-view.js'")) 'sw.js no cachea progress/progress-view.js'
-foreach ($script in @('progress/progress-data-model.js','progress/gym-progress-model.js','progress/muscle-progress.js','progress/exercise-progress.js','progress/personal-records.js')) {
+foreach ($script in @('progress/muscle-taxonomy.js','progress/progress-data-model.js','progress/gym-progress-model.js','progress/muscle-progress.js','progress/exercise-progress.js','progress/personal-records.js')) {
     Assert-True ($html.Contains("<script src=`"$script`"></script>")) "index.html no carga $script"
     Assert-True ($serviceWorker.Contains("'./$script'")) "sw.js no cachea $script"
+}
+foreach ($contract in @('chest','lats','upper-back','front-delts','side-delts','rear-delts','brachialis','lower-back','hamstrings','abductors','tibialis','resolveExercise')) {
+    Assert-True ($muscleTaxonomy.Contains($contract)) "Falta contrato de taxonomia muscular: $contract"
 }
 foreach ($contract in @('progressPeriod','progressArea','progressSummaryMetrics','progressGymSummary','progressNutritionSummary','data-progress-view','data-progress-panel')) {
     Assert-True (($html + $progressView).Contains($contract)) "Falta contrato de Progreso: $contract"

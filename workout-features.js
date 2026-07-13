@@ -13,7 +13,7 @@
   };
   const dayOrder=['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
   const dayLabels={monday:'Lunes',tuesday:'Martes',wednesday:'Miércoles',thursday:'Jueves',friday:'Viernes',saturday:'Sábado',sunday:'Domingo'};
-  const EXERCISE_LIBRARY_VERSION=2;
+  const EXERCISE_LIBRARY_VERSION=3;
   const actionOpenToday='com.protocolo.cien.ACTION_OPEN_TODAY_WORKOUT';
   const actionQuickLog='com.protocolo.cien.ACTION_QUICK_LOG_SET';
   const actionCompleteExercise='com.protocolo.cien.ACTION_COMPLETE_CURRENT_EXERCISE';
@@ -21,24 +21,24 @@
   const actionWidgetSaveSet='com.protocolo.cien.ACTION_WIDGET_SAVE_SET';
 
   const exerciseLibrary=[
-    ex('peck-deck','Apertura sentado / Peck deck',['peck deck','apertura sentado','aperturas en máquina'],'Pecho','máquina','kg',['Pecho'],['Deltoides anterior'],'Controlá el recorrido y evitá rebotar.'),
-    ex('press-banca','Press de banca',['press banca','banca'],'Pecho','peso libre','kg',['Pecho'],['Tríceps','Hombro anterior'],'Priorizar técnica antes que carga.'),
-    ex('dominadas','Dominadas',['dominada','pull up'],'Espalda','peso corporal','peso corporal',['Dorsal','Espalda'],['Bíceps'],'Registrá reps sin kilos o agregá lastre si corresponde.'),
-    ex('jalon-pecho-sentado','Jalón al pecho sentado',['jalón','jalon al pecho','polea alta'],'Espalda','polea','kg',['Dorsal','Espalda'],['Bíceps'],'Bajá con control y sin tirar con impulso.'),
-    ex('laterales-polea','Elevaciones laterales en polea',['laterales polea','elevaciones laterales'],'Hombro','polea','kg',['Deltoides lateral'],['Trapecio'],'Carga moderada y recorrido estable.'),
-    ex('press-militar-maquina','Press militar en máquina',['press militar máquina','press hombro maquina'],'Hombro','máquina','kg',['Hombro'],['Tríceps'],'Mantené espalda apoyada y rango cómodo.'),
-    ex('curl-martillo','Curl martillo',['martillo'],'Bíceps','peso libre','kg',['Bíceps','Braquial'],['Antebrazo'],'Codos quietos y muñeca neutral.'),
-    ex('curl-barra-z-sentado','Curl con barra Z sentado',['curl z sentado','barra z'],'Bíceps','peso libre','kg',['Bíceps'],['Antebrazo'],'Evitá balanceo; repetición limpia.'),
-    ex('extension-triceps-polea','Extensión de tríceps en polea',['triceps polea','extensión tríceps'],'Tríceps','polea','kg',['Tríceps'],[],'Separá hombros de orejas y extendé con control.'),
-    ex('prensa','Prensa',['prensa piernas'],'Cuádriceps / pierna','máquina','kg',['Cuádriceps','Glúteos'],['Isquiotibiales'],'No bloquees rodillas con violencia.'),
-    ex('extension-cuadriceps','Extensión de cuádriceps',['cuadriceps máquina','extensión pierna'],'Cuádriceps / pierna','máquina','kg',['Cuádriceps'],[],'Pausa arriba si no molesta la rodilla.'),
-    ex('aductores-maquina','Máquina de aductores, cerrar piernas',['aductores','cerrar piernas'],'Aductores','máquina','kg',['Aductores'],[],'Cerrar las piernas contra resistencia, sin impulso.'),
-    ex('pantorrillas-sentado','Elevación de pantorrillas sentado',['pantorrilla sentado','gemelos sentado'],'Pantorrillas','máquina','kg',['Sóleo','Pantorrillas'],[],'Recorrido completo y pausa breve arriba.'),
-    ex('tibial-anterior','Elevación de punta del pie / tibial anterior',['tibial anterior','punta del pie'],'Tibial anterior','máquina','kg',['Tibial anterior'],[],'Elevar la punta del pie para levantar la carga.'),
-    ex('remo-polea','Remo en polea',['remo sentado'],'Espalda','polea','kg',['Espalda'],['Bíceps'],'Tirón controlado hacia el torso.'),
-    ex('sentadilla','Sentadilla',['squat'],'Cuádriceps / pierna','peso libre','kg',['Cuádriceps','Glúteos'],['Core'],'Rango seguro según movilidad.'),
-    ex('peso-muerto-rumano','Peso muerto rumano',['rumano'],'Isquiotibiales','peso libre','kg',['Isquiotibiales','Glúteos'],['Espalda baja'],'Bisagra de cadera y espalda neutra.'),
-    ex('movilidad-suave','Movilidad suave',['movilidad','estiramiento'],'Movilidad','movilidad','tiempo',['Movilidad'],[],'Recuperación también cuenta.')
+    ex('peck-deck','Apertura sentado / Peck deck',['peck deck','apertura sentado','aperturas en máquina'],'Pecho','máquina','kg',['chest'],['front-delts'],'Controlá el recorrido y evitá rebotar.'),
+    ex('press-banca','Press de banca',['press banca','banca'],'Pecho','peso libre','kg',['chest'],['triceps','front-delts'],'Priorizar técnica antes que carga.'),
+    ex('dominadas','Dominadas',['dominada','pull up'],'Espalda','peso corporal','peso corporal',['lats'],['biceps','upper-back'],'Registrá reps sin kilos o agregá lastre si corresponde.'),
+    ex('jalon-pecho-sentado','Jalón al pecho sentado',['jalón','jalon al pecho','polea alta'],'Espalda','polea','kg',['lats'],['biceps'],'Bajá con control y sin tirar con impulso.'),
+    ex('laterales-polea','Elevaciones laterales en polea',['laterales polea','elevaciones laterales'],'Hombro','polea','kg',['side-delts'],['traps'],'Carga moderada y recorrido estable.'),
+    ex('press-militar-maquina','Press militar en máquina',['press militar máquina','press hombro maquina'],'Hombro','máquina','kg',['front-delts'],['triceps','side-delts'],'Mantené espalda apoyada y rango cómodo.'),
+    ex('curl-martillo','Curl martillo',['martillo'],'Bíceps','peso libre','kg',['brachialis'],['biceps','forearms'],'Codos quietos y muñeca neutral.'),
+    ex('curl-barra-z-sentado','Curl con barra Z sentado',['curl z sentado','barra z'],'Bíceps','peso libre','kg',['biceps'],['brachialis','forearms'],'Evitá balanceo; repetición limpia.'),
+    ex('extension-triceps-polea','Extensión de tríceps en polea',['triceps polea','extensión tríceps'],'Tríceps','polea','kg',['triceps'],[],'Separá hombros de orejas y extendé con control.'),
+    ex('prensa','Prensa',['prensa piernas'],'Cuádriceps / pierna','máquina','kg',['quads'],['glutes','hamstrings'],'No bloquees rodillas con violencia.'),
+    ex('extension-cuadriceps','Extensión de cuádriceps',['cuadriceps máquina','extensión pierna'],'Cuádriceps / pierna','máquina','kg',['quads'],[],'Pausa arriba si no molesta la rodilla.'),
+    ex('aductores-maquina','Máquina de aductores, cerrar piernas',['aductores','cerrar piernas'],'Aductores','máquina','kg',['adductors'],[],'Cerrar las piernas contra resistencia, sin impulso.'),
+    ex('pantorrillas-sentado','Elevación de pantorrillas sentado',['pantorrilla sentado','gemelos sentado'],'Pantorrillas','máquina','kg',['calves'],[],'Recorrido completo y pausa breve arriba.'),
+    ex('tibial-anterior','Elevación de punta del pie / tibial anterior',['tibial anterior','punta del pie'],'Tibial anterior','máquina','kg',['tibialis'],[],'Elevar la punta del pie para levantar la carga.'),
+    ex('remo-polea','Remo en polea',['remo sentado'],'Espalda','polea','kg',['upper-back'],['lats','biceps','rear-delts'],'Tirón controlado hacia el torso.'),
+    ex('sentadilla','Sentadilla',['squat'],'Cuádriceps / pierna','peso libre','kg',['quads'],['glutes','core'],'Rango seguro según movilidad.'),
+    ex('peso-muerto-rumano','Peso muerto rumano',['rumano'],'Isquiotibiales','peso libre','kg',['hamstrings'],['glutes','lower-back'],'Bisagra de cadera y espalda neutra.'),
+    ex('movilidad-suave','Movilidad suave',['movilidad','estiramiento'],'Movilidad','movilidad','tiempo',['other'],[],'Recuperación también cuenta.')
   ];
 
   const torsoExercises=[
@@ -85,7 +85,7 @@
   }
   function item(exerciseId,muscle,bodyweight=false,notes=''){
     const exercise=exerciseLibrary.find(x=>x.id===exerciseId);
-    return {id:`${exerciseId}-${muscle.toLowerCase().replace(/[^a-z0-9]+/g,'-')}`,exerciseId,name:exercise?.name||exerciseId,muscle,type:exercise?.type||'máquina',unit:exercise?.unit||'kg',bodyweight:!!bodyweight,notes};
+    return {id:`${exerciseId}-${muscle.toLowerCase().replace(/[^a-z0-9]+/g,'-')}`,exerciseId,name:exercise?.name||exerciseId,muscle,type:exercise?.type||'máquina',unit:exercise?.unit||'kg',bodyweight:!!bodyweight,primaryMuscles:[...(exercise?.primaryMuscles||[])],secondaryMuscles:[...(exercise?.secondaryMuscles||[])],muscleTaxonomyVersion:window.MUSCLE_TAXONOMY?.VERSION||1,notes};
   }
   function day(key,name,muscles,exercises){
     return {dayKey:key,weekday:dayLabels[key],name,type:'workout',muscles:[...muscles],exercises:exercises.map(x=>({...x}))};
@@ -161,7 +161,12 @@
   function weeklyPlan(){ return readStore(keys.weeklyWorkoutPlan,clone(defaultWeeklyPlan)); }
   function saveWeeklyPlan(plan){ writeStore(keys.weeklyWorkoutPlan,plan); syncWorkoutWidget(); }
   function libraryData(){ return readStore(keys.exerciseLibrary,clone(exerciseLibrary)); }
-  function saveLibraryData(value){ writeStore(keys.exerciseLibrary,value); }
+  function canonicalLibraryRecord(record={}){
+    const taxonomy=window.MUSCLE_TAXONOMY;if(!taxonomy)return record;
+    const legacyPrimary=[...(record.legacyPrimaryMuscles||[]),...(record.primaryMuscles||[]),record.muscle,record.group].filter(Boolean),legacySecondary=[...(record.legacySecondaryMuscles||[]),...(record.secondaryMuscles||[])],resolved=taxonomy.resolveExercise({exercise:record,definition:record});
+    return {...record,primaryMuscles:resolved.primaryMuscles,secondaryMuscles:resolved.secondaryMuscles,legacyPrimaryMuscles:[...new Set(taxonomy.legacyValues(legacyPrimary))],legacySecondaryMuscles:[...new Set(taxonomy.legacyValues(legacySecondary))],muscleTaxonomyVersion:taxonomy.VERSION,muscleTaxonomySource:resolved.source};
+  }
+  function saveLibraryData(value){ writeStore(keys.exerciseLibrary,(value||[]).map(canonicalLibraryRecord)); }
   function migrateExerciseLibrary(){
     const existing=readStore(keys.exerciseLibrary,[]);
     const meta=readStore(keys.exerciseLibraryMeta,null);
@@ -170,33 +175,39 @@
     existing.forEach((exercise,index)=>{
       if(!exercise?.id) return;
       const previous=byId.get(exercise.id);
-      byId.set(exercise.id,previous?mergeLibraryRecords(previous,exercise):{...exercise,aliases:[...new Set([exercise.name,...(exercise.aliases||[])].filter(Boolean))],createdAt:exercise.createdAt||null});
+      byId.set(exercise.id,canonicalLibraryRecord(previous?mergeLibraryRecords(previous,exercise):{...exercise,aliases:[...new Set([exercise.name,...(exercise.aliases||[])].filter(Boolean))],createdAt:exercise.createdAt||null}));
     });
     exerciseLibrary.forEach(official=>{
       const current=byId.get(official.id);
       if(current){
-        byId.set(official.id,{
+        byId.set(official.id,canonicalLibraryRecord({
           ...official,
           ...current,
           id:official.id,
           aliases:[...new Set([...(official.aliases||[]),...(current.aliases||[]),official.name,current.name].filter(Boolean))],
-          primaryMuscles:[...new Set([...(official.primaryMuscles||[]),...(current.primaryMuscles||[])])],
-          secondaryMuscles:[...new Set([...(official.secondaryMuscles||[]),...(current.secondaryMuscles||[])])],
+          primaryMuscles:[...(official.primaryMuscles||[])],
+          secondaryMuscles:[...(official.secondaryMuscles||[])],
+          legacyPrimaryMuscles:[...(current.legacyPrimaryMuscles||[]),...(current.primaryMuscles||[])],
+          legacySecondaryMuscles:[...(current.legacySecondaryMuscles||[]),...(current.secondaryMuscles||[])],
           official:true,
           custom:false,
           origin:'official',
           libraryVersion:EXERCISE_LIBRARY_VERSION
-        });
+        }));
         return;
       }
       const equivalent=[...byId.values()].find(item=>exerciseAliases(item).some(name=>exerciseAliases(official).includes(name)));
       if(equivalent){
         equivalent.aliases=[...new Set([...(equivalent.aliases||[]),official.name,...(official.aliases||[])].filter(Boolean))];
+        equivalent.legacyPrimaryMuscles=[...(equivalent.legacyPrimaryMuscles||[]),...(equivalent.primaryMuscles||[])];
+        equivalent.legacySecondaryMuscles=[...(equivalent.legacySecondaryMuscles||[]),...(equivalent.secondaryMuscles||[])];
+        equivalent.primaryMuscles=[...(official.primaryMuscles||[])];equivalent.secondaryMuscles=[...(official.secondaryMuscles||[])];
         equivalent.officialSourceId=official.id;
         equivalent.libraryVersion=EXERCISE_LIBRARY_VERSION;
+        Object.assign(equivalent,canonicalLibraryRecord(equivalent));
         return;
       }
-      byId.set(official.id,{...clone(official),official:true,custom:false,origin:'official',libraryVersion:EXERCISE_LIBRARY_VERSION});
+      byId.set(official.id,canonicalLibraryRecord({...clone(official),official:true,custom:false,origin:'official',libraryVersion:EXERCISE_LIBRARY_VERSION}));
     });
     const merged=[];
     [...byId.values()].forEach(record=>{
@@ -204,7 +215,7 @@
       if(!duplicate){merged.push(record);return;}
       const preferred=duplicate.official&&!record.official?duplicate:record.official&&!duplicate.official?record:duplicate;
       const secondary=preferred===duplicate?record:duplicate;
-      Object.assign(preferred,mergeLibraryRecords(preferred,secondary));
+      Object.assign(preferred,canonicalLibraryRecord(mergeLibraryRecords(preferred,secondary)));
       if(preferred!==duplicate){const index=merged.indexOf(duplicate);merged[index]=preferred;}
     });
     saveLibraryData(merged);
@@ -212,7 +223,7 @@
     return merged;
   }
   function mergeLibraryRecords(primary,secondary){
-    return {...primary,aliases:[...new Set([primary.name,secondary.name,...(primary.aliases||[]),...(secondary.aliases||[])].filter(Boolean))],primaryMuscles:[...new Set([...(primary.primaryMuscles||[]),...(secondary.primaryMuscles||[])])],secondaryMuscles:[...new Set([...(primary.secondaryMuscles||[]),...(secondary.secondaryMuscles||[])])],legacyIds:[...new Set([...(primary.legacyIds||[]),...(secondary.legacyIds||[]),secondary.id].filter(id=>id&&id!==primary.id))]};
+    return canonicalLibraryRecord({...primary,aliases:[...new Set([primary.name,secondary.name,...(primary.aliases||[]),...(secondary.aliases||[])].filter(Boolean))],primaryMuscles:[...new Set([...(primary.primaryMuscles||[]),...(secondary.primaryMuscles||[])])],secondaryMuscles:[...new Set([...(primary.secondaryMuscles||[]),...(secondary.secondaryMuscles||[])])],legacyPrimaryMuscles:[...new Set([...(primary.legacyPrimaryMuscles||[]),...(secondary.legacyPrimaryMuscles||[])])],legacySecondaryMuscles:[...new Set([...(primary.legacySecondaryMuscles||[]),...(secondary.legacySecondaryMuscles||[])])],legacyIds:[...new Set([...(primary.legacyIds||[]),...(secondary.legacyIds||[]),secondary.id].filter(id=>id&&id!==primary.id))]});
   }
   function libraryMatchFor(value,library=libraryData()){
     const probe=typeof value==='string'?{name:value}:value;
@@ -222,7 +233,7 @@
     const library=libraryData();
     const existing=libraryMatchFor(input,library);
     if(existing) return {exercise:existing,created:false,library};
-    const created={
+    const created=canonicalLibraryRecord({
       id:input.exerciseId||stableCustomExerciseId(input.name,library),
       name:input.name,
       aliases:[...new Set([input.name,...(input.aliases||[])].map(value=>String(value||'').trim()).filter(Boolean))],
@@ -238,7 +249,7 @@
       origin:'custom',
       createdAt:new Date().toISOString(),
       updatedAt:new Date().toISOString()
-    };
+    });
     library.push(created);
     saveLibraryData(library);
     return {exercise:created,created:true,library};
@@ -824,7 +835,8 @@
     let libraryRecord=officialMatch;
     if(saveToLibrary && !libraryRecord) libraryRecord=addOrReuseLibraryExercise(baseInput).exercise;
     const exerciseId=libraryRecord?.id||stableCustomExerciseId(name,storedLibrary);
-    const candidate={...baseInput,exerciseId,id:exerciseId,aliases:libraryRecord?.aliases||baseInput.aliases};
+    const classification=window.MUSCLE_TAXONOMY?.resolveExercise?.({exercise:{...baseInput,exerciseId,id:exerciseId},definition:libraryRecord})||{primaryMuscles:[baseInput.muscle],secondaryMuscles:[]};
+    const candidate={...baseInput,exerciseId,id:exerciseId,aliases:libraryRecord?.aliases||baseInput.aliases,primaryMuscles:[...classification.primaryMuscles],secondaryMuscles:[...classification.secondaryMuscles],muscleTaxonomyVersion:window.MUSCLE_TAXONOMY?.VERSION||1};
     const existingSession=(session.exercises||[]).find(exercise=>sameExercise(exercise,candidate));
     if(existingSession){
       currentQuickExerciseId=existingSession.id;
@@ -838,6 +850,9 @@
       type:baseInput.type,
       unit:baseInput.bodyweight?'peso corporal':baseInput.unit,
       bodyweight:baseInput.bodyweight,
+      primaryMuscles:[...classification.primaryMuscles],
+      secondaryMuscles:[...classification.secondaryMuscles],
+      muscleTaxonomyVersion:window.MUSCLE_TAXONOMY?.VERSION||1,
       notes:baseInput.notes,
       order:(session.exercises||[]).length+1,
       sets:[],
@@ -1224,7 +1239,7 @@
       if(exercise.official){flash('Los ejercicios oficiales no se sobrescriben. Podés ocultarlos o crear uno personalizado.');return;}
       const values=await window.APP_FORM_DIALOG.ask({title:'Editar ejercicio',message:'Esta edición no cambia sesiones históricas.',fieldList:[{name:'name',label:'Nombre',value:exercise.name,required:true},{name:'muscle',label:'Grupo muscular',value:exercise.group||'General',required:true}]});
       if(!values)return;const name=values.name.trim(),muscle=values.muscle.trim();
-      exercise.name=name; exercise.group=muscle; exercise.primaryMuscles=[muscle]; exercise.aliases=[...new Set([...(exercise.aliases||[]),name])]; exercise.updatedAt=new Date().toISOString(); saveLibraryData(library);
+      exercise.name=name; exercise.group=muscle; exercise.primaryMuscles=window.MUSCLE_TAXONOMY?.canonicalizeList?.([muscle],{fallback:true})||[muscle]; exercise.secondaryMuscles=(exercise.secondaryMuscles||[]).filter(id=>!exercise.primaryMuscles.includes(id));exercise.aliases=[...new Set([...(exercise.aliases||[]),name])]; exercise.updatedAt=new Date().toISOString(); saveLibraryData(library);
     }
     renderPlanLibrarySelect(); renderExerciseLibraryEditor();
   }
@@ -1278,7 +1293,7 @@
     const id=document.getElementById('planLibrarySelect')?.value; if(!id){flash('Elegí un ejercicio de la biblioteca.');return;}
     const source=libraryData().find(exercise=>exercise.id===id); if(!source) return;
     const plan=weeklyPlan(),dayPlan=plan[currentPlanEditorDay]; if(!dayPlan||dayPlan.type==='rest'){flash('Convertí primero el día de descanso desde la edición avanzada.');return;}
-    const candidate={id:`${source.id}-${currentPlanEditorDay}`,exerciseId:source.id,name:source.name,muscle:source.group||'General',type:source.type||'personalizado',unit:source.unit||settings().unit,bodyweight:source.bodyweight||source.unit==='peso corporal',notes:source.notes||'',targetSets:3,repsMin:8,repsMax:12,restSeconds:90};
+    const candidate={id:`${source.id}-${currentPlanEditorDay}`,exerciseId:source.id,name:source.name,muscle:source.group||'General',primaryMuscles:[...(source.primaryMuscles||[])],secondaryMuscles:[...(source.secondaryMuscles||[])],muscleTaxonomyVersion:source.muscleTaxonomyVersion||window.MUSCLE_TAXONOMY?.VERSION||1,type:source.type||'personalizado',unit:source.unit||settings().unit,bodyweight:source.bodyweight||source.unit==='peso corporal',notes:source.notes||'',targetSets:3,repsMin:8,repsMax:12,restSeconds:90};
     if(dayPlan.exercises.some(exercise=>sameExercise(exercise,candidate))){flash('Ese ejercicio ya está en este día.');return;}
     dayPlan.exercises.push(candidate); dayPlan.muscles=[...new Set([...(dayPlan.muscles||[]),candidate.muscle])]; plan[currentPlanEditorDay]=dayPlan; saveWeeklyPlan(plan); renderPlanEditor();
   }

@@ -1,6 +1,6 @@
 import fs from 'node:fs';import vm from 'node:vm';import assert from 'node:assert/strict';
 const window={};const context=vm.createContext({window,console,Date,Math,Number,String,Object,Array,Set,Map,JSON});
-for(const file of ['progress-data-model.js','gym-progress-model.js','exercise-progress.js','personal-records.js'])vm.runInContext(fs.readFileSync(`progress/${file}`,'utf8'),context);
+for(const file of ['muscle-taxonomy.js','progress-data-model.js','gym-progress-model.js','exercise-progress.js','personal-records.js'])vm.runInContext(fs.readFileSync(`progress/${file}`,'utf8'),context);
 const library=[{id:'press',name:'Press banca',group:'Pecho'},{id:'press-inclinado',name:'Press inclinado',group:'Pecho'},{id:'dominadas',name:'Dominadas',group:'Espalda',unit:'peso corporal'}];
 const ex=(id,name,sets,bodyweight=false)=>({id,exerciseId:id,name,muscle:id==='dominadas'?'Espalda':'Pecho',bodyweight,sets});
 const sessions=[{id:'a',date:'2026-07-10',exercises:[ex('press','Press banca',[{reps:8,weight:60},{reps:13,weight:60}]),ex('press-inclinado','Press inclinado',[{reps:8,weight:40}]),ex('dominadas','Dominadas',[{reps:10,weight:0,isBodyweight:true}],true)]},{id:'b',date:'2026-07-03',exercises:[ex('press','Press banca',[{reps:8,weight:60}])]}];

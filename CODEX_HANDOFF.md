@@ -1879,3 +1879,76 @@ granulares y migracion compatible de musculos primarios/secundarios. Despues,
 en un bloque separado, extender tipos de serie; no abrir ambas migraciones a la
 vez. IndexedDB primario, PWA atomica, quality gate unico y hardening adicional
 de Gym Party/Android siguen pendientes posteriores.
+
+## 49. Taxonomia muscular granular y mapa anatomico
+
+Implementado despues de `7be3a5e`:
+
+- `progress/muscle-taxonomy.js` define una taxonomia versionada con 20 IDs
+  estables: `chest`, `lats`, `upper-back`, `traps`, `front-delts`,
+  `side-delts`, `rear-delts`, `biceps`, `brachialis`, `triceps`, `forearms`,
+  `core`, `lower-back`, `glutes`, `quads`, `hamstrings`, `adductors`,
+  `abductors`, `calves` y `tibialis`. `other` queda como categoria suplementaria
+  solo para datos que no pueden clasificarse sin inventar precision.
+- La biblioteca oficial Gym sube a `EXERCISE_LIBRARY_VERSION = 3`. Cada
+  ejercicio tiene `primaryMuscles` y `secondaryMuscles` canonicos. La migracion
+  es idempotente, conserva `group`, `muscle`, aliases e IDs antiguos en campos
+  `legacyPrimaryMuscles`, `legacySecondaryMuscles` y `legacyIds`, pero esos
+  textos legacy no se suman a las metricas anatomicas.
+- Las clasificaciones oficiales conocidas prevalecen sobre etiquetas amplias
+  antiguas. Por ejemplo, Dominadas se atribuye primariamente a `lats` y Press de
+  banca a `chest`; sus secundarios se conservan en una serie separada.
+- `progress/gym-progress-model.js` resuelve sesiones historicas mediante el ID
+  canonico del ejercicio. `progress/muscle-progress.js` cuenta cada serie una
+  sola vez en su primer musculo primario. Los secundarios exponen metricas
+  separadas (`secondaryCurrent`, `secondaryWeekly`, etc.) y nunca alteran los
+  totales principales.
+- **Progreso > Gym > Musculos** muestra frente y espalda, permite abrir los 20
+  grupos incluso sin datos y conserva deep links como
+  `progressScope=muscle&muscle=chest`. URLs legacy como `muscle=pecho` se
+  normalizan sin perder la ruta.
+- El control **Mostrar secundarios por separado** revela una estimacion
+  adicional con series, grafica y ejercicios propios. La interfaz explica que
+  no equivale a una medicion fisiologica exacta ni define un volumen universal
+  optimo.
+- El mapa ofrece puntos SVG operables con teclado y una lista de botones
+  equivalente, por lo que no depende solo de color, posicion o precision tactil.
+  A 320 px mantiene frente/espalda, etiquetas y navegacion sin scroll horizontal
+  del documento.
+- `sw.js`, el validador, el sincronizador Android y las pruebas cargan la
+  taxonomia antes de cualquier consumidor. La prueba de migracion verifica que
+  una etiqueta personalizada se conserva como metadata mientras la metrica usa
+  el ID anatomico oficial.
+- No se reescriben `workoutSessions`, backups ni registros historicos. La
+  migracion afecta la representacion de la biblioteca y el calculo derivado;
+  `workoutSessions` sigue siendo la fuente canonica de Gym e IndexedDB continua
+  en modo shadow.
+
+- Las pruebas unitarias de Gym y Progreso pasan, incluidos los 20 IDs,
+  migracion legacy, no doble conteo y secundarios separados. La validacion
+  estructural confirma cache `b67`, 443 IDs estaticos unicos y assets Android
+  iguales a las fuentes web.
+- La regresion E2E completa cubre 207 escenarios: 193 aprobados, 14 omisiones
+  intencionales de matriz y cero fallos. Por plataforma: Android Chromium 67/69
+  con 2 skips de escritorio; iPhone WebKit 62/69 con 7 skips de capacidades;
+  escritorio Chromium 64/69 con 5 skips moviles.
+- La primera corrida WebKit detecto que el snackbar de guardado interceptaba el
+  boton **Editar serie**. `styles/components.css` ahora deja pasar los eventos
+  por el mensaje y mantiene interactiva solo la accion opcional; los dos casos
+  afectados pasaron dirigidos y luego dentro de la matriz WebKit completa.
+- Firestore Emulator con Java 21 paso owner atomico, consultas sync, limpieza
+  legacy y las negativas criticas esperadas. No se modificaron reglas ni datos
+  remotos en este bloque.
+- `scripts/sync-web-assets.ps1 -Check` confirma paridad web/Android. Gradle con
+  Java 17 termino `:app:assembleDebug` y genero
+  `android-native-wrapper/app/build/outputs/apk/debug/app-debug.apk`.
+
+Estado del bloque: version `2.7.0`, Android `33`, build/cache `67`
+(`protocolo-0-100-pwa-2.7.0-b67`).
+
+Pendiente siguiente exacto: extender las series con `setType` (`warmup`,
+`working`, `backoff`, `drop`, `technique`, `failure`, `assisted`) y exclusiones
+de records/progresion, con migracion legacy a `working`. Debe hacerse como un
+bloque aislado que actualice modelo local, Firebase, backups, Gym Party, widget
+y pruebas. IndexedDB primario, PWA atomica, quality gate unico y hardening
+adicional de Gym Party/Android permanecen como fases posteriores.

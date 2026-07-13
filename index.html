@@ -561,7 +561,7 @@
                 <section class="moduleCard" aria-labelledby="progressGymChartTitle"><h2 id="progressGymChartTitle">Entrenamiento por semana</h2><div id="progressGymChart"></div><p class="chartCaption" id="progressGymChartSummary"></p></section>
               </div>
               <section class="hidden" data-progress-gym-panel="muscle" aria-labelledby="progressMuscleTitle">
-                <div class="moduleCard progressMuscleIntro"><div><h2 id="progressMuscleTitle">Progreso por músculo</h2><p class="muted small">Cada serie cuenta una vez en el grupo primario registrado. Los músculos secundarios no se suman automáticamente.</p></div><div class="field"><label for="progressMuscleSelect">Músculo</label><select id="progressMuscleSelect"></select></div></div>
+                <div class="moduleCard progressMuscleIntro"><div><h2 id="progressMuscleTitle">Progreso por músculo</h2><p class="muted small">Cada serie cuenta una vez para el primer músculo primario. La participación secundaria es una estimación separada y nunca se suma al total principal.</p></div><div class="progressMuscleControls"><div class="field"><label for="progressMuscleSelect">Músculo</label><select id="progressMuscleSelect"></select></div><label class="check"><input type="checkbox" id="progressSecondaryMuscles"><span>Mostrar secundarios por separado</span></label></div></div>
                 <div class="progressMuscleLayout">
                   <section class="moduleCard progressMuscleMapCard" aria-label="Mapa muscular personal"><div id="progressMuscleMap"></div></section>
                   <div class="progressMuscleDetails">
@@ -2963,6 +2963,7 @@ window.addEventListener('app-time-context-changed',()=>{
 <script src="workout-metrics.js"></script>
 <script src="workout-ranking.js"></script>
 <script src="workout-ui.js"></script>
+<script src="progress/muscle-taxonomy.js"></script>
 <script src="workout-features.js"></script>
 <script src="firebase-config.js"></script>
 <script src="firebase-service.js"></script>

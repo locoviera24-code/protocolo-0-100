@@ -62,11 +62,12 @@
   justify-content: space-between;
   gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
+  pointer-events: none;
 }
 .appSnackbar[data-tone="success"] { border-color: var(--state-success-border); }
 .appSnackbar[data-tone="warning"] { border-color: var(--state-warning-border); }
 .appSnackbar[data-tone="error"] { border-color: var(--state-danger-border); }
-.appSnackbar .textButton { min-height: var(--touch-target); flex: 0 0 auto; }
+.appSnackbar .textButton { min-height: var(--touch-target); flex: 0 0 auto; pointer-events: auto; }
 .inlineValidation {
   display: block;
   margin-top: var(--space-1);

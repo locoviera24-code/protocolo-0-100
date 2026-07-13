@@ -14,5 +14,6 @@ for(const contract of ['progressPeriod','progressArea','renderOverview','renderG
 assert.match(progress,/WORKOUT_METRICS/);
 assert.match(progress,/protocolo_0_100_nutrition_entries_v1/);
 assert.match(serviceWorker,/progress\/progress-view\.js/);
+assert.match(serviceWorker,/progress\/muscle-taxonomy\.js/);
 assert.doesNotMatch(progress,/style\.textContent|createElement\(['"]style/);
 console.log('Progreso consolidado: períodos, áreas, hábitos, Gym, Nutrición, historial y logros.');

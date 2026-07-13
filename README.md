@@ -15,7 +15,7 @@ PWA y APK Android para medir habitos, atencion, actividad fisica y nutricion con
 
 ## Navegacion y diseno
 
-La version actual `v2.7.0` (build web `66`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
+La version actual `v2.7.0` (build web `67`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
 **Gym**, **Nutricion**, **Progreso** y **Mas**. En escritorio usa una barra
 lateral compacta. Gym Party se abre desde **Gym > Grupo**, desde un acceso
 discreto en Inicio o mediante un enlace `gymPartyCode`; ya no ocupa un boton
@@ -117,6 +117,7 @@ nutrition/nutrition-confidence.js Cobertura conocida, estimada y desconocida
 nutrition/nutrition-view.js View models del dia y progreso principal
 progress/progress-data-model.js Ventanas temporales y cambios comparables
 progress/gym-progress-model.js Sesiones y grupos musculares canonicos
+progress/muscle-taxonomy.js  IDs anatomicos estables y compatibilidad legacy
 progress/muscle-progress.js Series, volumen y frecuencia por musculo
 progress/exercise-progress.js Fuerza, historial y sugerencia por ejercicio
 progress/personal-records.js Records derivados de sesiones canonicas
@@ -392,11 +393,15 @@ logros. Sus deep links usan `?module=progress&view=overview|habits|gym|nutrition
 El selector de periodo permite comparar 7, 30, 90 dias o todo el historial;
 los graficos incluyen resumen textual y una escala comun accesible.
 
-Dentro de **Progreso > Gym > Musculos**, el mapa corporal abre cada grupo y
-muestra series de la semana, ultimas cuatro semanas, frecuencia, volumen,
-ejercicios y periodo anterior. Cada serie se atribuye una sola vez al grupo
-primario registrado; los musculos secundarios no se suman de forma oculta.
-Deep link: `?module=progress&view=gym&progressScope=muscle&muscle=pecho`.
+Dentro de **Progreso > Gym > Musculos**, el mapa corporal frente/espalda abre
+20 grupos anatomicos con IDs estables (`chest`, `lats`, `upper-back`,
+`front-delts`, `quads`, etc.) y muestra series de la semana, ultimas cuatro
+semanas, frecuencia, volumen, ejercicios y periodo anterior. Cada serie se
+atribuye una sola vez al musculo primario. Una opcion separada permite explorar
+los musculos secundarios sin sumarlos de forma oculta ni presentar el resultado
+como una medicion fisiologica exacta. Los nombres legacy se conservan durante la
+migracion. Deep link canonico:
+`?module=progress&view=gym&progressScope=muscle&muscle=chest`.
 
 **Ejercicios** mantiene variantes separadas por ID y muestra mejor carga,
 mejor serie, e1RM estimado, reps, volumen, sesiones, gráfico seleccionable y

@@ -3,6 +3,7 @@ import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
 
 const source = await readFile(new URL('../workout-features.js', import.meta.url), 'utf8');
+const taxonomySource = await readFile(new URL('../progress/muscle-taxonomy.js', import.meta.url), 'utf8');
 const rankingSource = await readFile(new URL('../workout-ranking.js', import.meta.url), 'utf8');
 const storeSource = await readFile(new URL('../workout-store.js', import.meta.url), 'utf8');
 const planSource = await readFile(new URL('../workout-plan.js', import.meta.url), 'utf8');
@@ -57,6 +58,7 @@ function createContext(preloaded = {}, today = '2026-06-22') {
   };
   context.window = context;
   const vmContext=vm.createContext(context);
+  vm.runInContext(taxonomySource, vmContext, {filename: 'progress/muscle-taxonomy.js'});
   vm.runInContext(storeSource, vmContext, {filename: 'workout-store.js'});
   vm.runInContext(planSource, vmContext, {filename: 'workout-plan.js'});
   vm.runInContext(uiSource, vmContext, {filename: 'workout-ui.js'});
@@ -245,6 +247,10 @@ const {context: migrationContext,store:migrationStore}=createContext({
 const migratedLibrary=migrationContext.WORKOUT_FEATURES.getExerciseLibrary();
 assert.equal(migratedLibrary.find(exercise=>exercise.id==='press-banca').name,'Banca editada');
 assert.ok(migratedLibrary.find(exercise=>exercise.id==='press-banca').aliases.includes('press banca'));
+assert.deepEqual(Array.from(migratedLibrary.find(exercise=>exercise.id==='press-banca').primaryMuscles),['chest']);
+assert.ok(migratedLibrary.find(exercise=>exercise.id==='press-banca').secondaryMuscles.includes('triceps'));
+assert.ok(migratedLibrary.find(exercise=>exercise.id==='press-banca').legacyPrimaryMuscles.includes('Pectoral propio'));
+assert.deepEqual(Array.from(migratedLibrary.find(exercise=>exercise.id==='dominadas').primaryMuscles),['lats']);
 assert.equal(migratedLibrary.filter(exercise=>exercise.name==='Face pull').length,1);
 assert.equal(migratedLibrary.some(exercise=>exercise.id==='tibial-anterior'),true);
 assert.equal(JSON.parse(migrationStore.get('protocolo_0_100_workout_sessions_v1'))[0].exercises[0].name,'Nombre histórico');
