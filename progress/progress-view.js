@@ -2,7 +2,6 @@
   'use strict';
 
   const NUTRITION_KEY='protocolo_0_100_nutrition_entries_v1';
-  const LEGACY_GYM_KEY='protocolo_0_100_gym_sessions_v1';
   const views=new Set(['overview','habits','gym','nutrition','history','achievements']);
   const muscleMapTargets=[
     {name:'Pecho',label:'Pecho',x:50,y:29,labelX:4,labelY:16,anchorX:27,anchorY:24},
@@ -38,8 +37,7 @@
   function protocolEntries(){return (window.getEntries?.()||[]).slice().sort((a,b)=>String(a.date).localeCompare(String(b.date)));}
   function workoutSessions(){
     const key=window.WORKOUT_FEATURES?.keys?.workoutSessions||'protocolo_0_100_workout_sessions_v1';
-    const current=read(key,[]);
-    return current.length?current:read(LEGACY_GYM_KEY,[]);
+    return read(key,[]);
   }
   function nutritionEntries(){return read(NUTRITION_KEY,[]);}
   function sessionMetrics(session){
@@ -67,6 +65,8 @@
   }
   function percentChange(current,previous){return previous?Math.round(((current-previous)/previous)*100):null;}
   function deltaLabel(current,previous){const delta=percentChange(current,previous);return delta===null?'Sin período anterior':`${delta>0?'+':''}${delta}% vs anterior`;}
+  function observedPeriodDays(){const dates=[...protocolEntries().map(item=>item.date),...workoutSessions().map(item=>item.date),...nutritionEntries().map(item=>item.date)].filter(Boolean).sort();if(!dates.length)return 1;return Math.max(1,Math.round((localDate(dates[dates.length-1])-localDate(dates[0]))/86400000)+1);}
+  function plannedGymDays(){const key=window.WORKOUT_FEATURES?.keys?.weeklyWorkoutPlan||'protocolo_0_100_weekly_workout_plan_v1',fallback=window.WORKOUT_FEATURES?.defaultWeeklyPlan||{},plan=read(key,fallback);return Math.max(1,Object.values(plan||{}).filter(day=>day?.type!=='rest'&&(day?.exercises||[]).length).length||3);}
   function kpi(label,value,detail){return `<article class="progressKpi"><span>${escape(label)}</span><strong>${escape(value)}</strong><small>${escape(detail)}</small></article>`;}
   function barRows(rows,{value,label,detail,display,max,empty='Todavía no hay datos comparables.'}){
     if(!rows.length)return `<div class="emptyState">${escape(empty)}</div>`;
@@ -78,35 +78,35 @@
   }
   function areaModels(days){
     const protocolCurrent=protocolEntries().filter(entry=>within(entry.date,days));
+    const protocolPrevious=protocolEntries().filter(entry=>previousWindow(entry.date,days));
     const gymCurrent=workoutSessions().filter(session=>within(session.date,days));
+    const gymPrevious=workoutSessions().filter(session=>previousWindow(session.date,days));
     const nutritionDates=new Set(nutritionEntries().filter(entry=>within(entry.date,days)).map(entry=>entry.date));
-    const habitScore=average(protocolCurrent.map(entry=>entry.score));
-    const expectedGym=Math.max(1,Math.round(days/7)*3);
+    const nutritionPreviousDates=new Set(nutritionEntries().filter(entry=>previousWindow(entry.date,days)).map(entry=>entry.date));
+    const windowDays=days>10000?observedPeriodDays():days,expectedGym=Math.max(1,Math.round((windowDays/7)*plannedGymDays())),habitTrend=average(protocolCurrent.map(entry=>entry.score)),habitPrevious=average(protocolPrevious.map(entry=>entry.score));
     return [
-      {id:'habits',name:'Hábitos',score:habitScore,detail:`${protocolCurrent.length} registro(s) en el período`},
-      {id:'gym',name:'Gym',score:gymCurrent.length?Math.min(100,(gymCurrent.length/expectedGym)*100):null,detail:`${gymCurrent.length} sesión(es) registradas`},
-      {id:'nutrition',name:'Nutrición',score:nutritionDates.size?Math.min(100,(nutritionDates.size/Math.max(1,days))*100):null,detail:`${nutritionDates.size} día(s) con comidas`}
+      {id:'habits',name:'Hábitos',coverage:protocolCurrent.length?Math.min(100,(protocolCurrent.length/windowDays)*100):null,samples:protocolCurrent.length,trend:habitTrend===null||habitPrevious===null?null:Math.round((habitTrend-habitPrevious)*10)/10,detail:`${protocolCurrent.length} de ${windowDays} día(s) registrados`},
+      {id:'gym',name:'Gym',coverage:gymCurrent.length?Math.min(100,(gymCurrent.length/expectedGym)*100):null,samples:gymCurrent.length,trend:percentChange(gymCurrent.length,gymPrevious.length),detail:`${gymCurrent.length} de ${expectedGym} sesión(es) planificadas`},
+      {id:'nutrition',name:'Nutrición',coverage:nutritionDates.size?Math.min(100,(nutritionDates.size/windowDays)*100):null,samples:nutritionDates.size,trend:percentChange(nutritionDates.size,nutritionPreviousDates.size),detail:`${nutritionDates.size} de ${windowDays} día(s) con comidas; cobertura nutricional no evaluada aquí`}
     ];
   }
   function renderOverview(){
-    const days=selectedDays(),entries=protocolEntries(),current=entries.filter(entry=>within(entry.date,days)),previous=entries.filter(entry=>previousWindow(entry.date,days));
-    const avgCurrent=average(current.map(entry=>entry.score)),avgPrevious=average(previous.map(entry=>entry.score));
+    const days=selectedDays(),windowDays=days>10000?observedPeriodDays():days,entries=protocolEntries(),current=entries.filter(entry=>within(entry.date,days)),previous=entries.filter(entry=>previousWindow(entry.date,days));
     const avg7=average(entries.filter(entry=>within(entry.date,7)).map(entry=>entry.score));
     const avg30=average(entries.filter(entry=>within(entry.date,30)).map(entry=>entry.score));
-    const areas=areaModels(days),measured=areas.filter(area=>area.score!==null);
-    const strongest=measured.slice().sort((a,b)=>b.score-a.score)[0],weakest=measured.slice().sort((a,b)=>a.score-b.score)[0];
+    const areas=areaModels(days),measured=areas.filter(area=>area.coverage!==null),comparable=areas.filter(area=>area.trend!==null),strongest=comparable.slice().sort((a,b)=>b.trend-a.trend)[0],least=measured.slice().sort((a,b)=>a.samples-b.samples)[0],dataCount=areas.reduce((sum,area)=>sum+area.samples,0);
     const metrics=document.getElementById('progressSummaryMetrics');
-    if(metrics)metrics.innerHTML=[kpi('Tendencia 7 días',`${round(avg7)}/100`,`${entries.filter(entry=>within(entry.date,7)).length} días medidos`),kpi('Tendencia 30 días',`${round(avg30)}/100`,`${entries.filter(entry=>within(entry.date,30)).length} días medidos`),kpi('Consistencia',`${current.length}/${Math.min(days,365)}`,deltaLabel(current.length,previous.length)),kpi('Cambio del score',avgCurrent===null?'—':`${round((avgCurrent||0)-(avgPrevious||0))} pts`,deltaLabel(avgCurrent||0,avgPrevious||0))].join('');
+    if(metrics)metrics.innerHTML=[kpi('Tendencia hábitos 7 días',`${round(avg7)}/100`,`${entries.filter(entry=>within(entry.date,7)).length} días medidos`),kpi('Tendencia hábitos 30 días',`${round(avg30)}/100`,`${entries.filter(entry=>within(entry.date,30)).length} días medidos`),kpi('Constancia de registro',`${current.length}/${windowDays}`,deltaLabel(current.length,previous.length)),kpi('Cantidad de datos',dataCount,`${areas.map(area=>`${area.name}: ${area.samples}`).join(' · ')}`)].join('');
     const strongestTitle=document.getElementById('progressStrongestArea'),strongestDetail=document.getElementById('progressStrongestDetail'),improveTitle=document.getElementById('progressImproveArea'),improveDetail=document.getElementById('progressImproveDetail'),action=document.getElementById('progressNextAction');
-    if(strongestTitle)strongestTitle.textContent=strongest?.name||'Sin datos';if(strongestDetail)strongestDetail.textContent=strongest?`${Math.round(strongest.score)}/100 según lo registrado. ${strongest.detail}`:'Registrá al menos un área.';
-    if(improveTitle)improveTitle.textContent=weakest?.name||'Sin datos';if(improveDetail)improveDetail.textContent=weakest?`${Math.round(weakest.score)}/100 según lo registrado. No implica fracaso: indica dónde falta información o constancia.`:'No hay un período comparable todavía.';
+    if(strongestTitle)strongestTitle.textContent=strongest?.name||'Sin tendencia comparable';if(strongestDetail)strongestDetail.textContent=strongest?`${strongest.trend>0?'+':''}${strongest.trend}${strongest.id==='habits'?' puntos':'%'} frente al período anterior. ${strongest.detail}`:'Hace falta un período anterior con datos del mismo tipo.';
+    if(improveTitle)improveTitle.textContent=least?.name||'Sin datos';if(improveDetail)improveDetail.textContent=least?`${least.detail}. Describe cantidad de registros, no calidad ni fracaso.`:'Todavía no hay áreas registradas.';
     const actions={habits:'Completá el próximo registro diario con datos reales.',gym:'Registrá la próxima sesión o serie sin forzar más volumen.',nutrition:'Registrá una comida habitual para construir tendencia.'};
-    if(action)action.textContent=weakest?actions[weakest.id]:'Registrá un dato comparable';
+    if(action)action.textContent=least?actions[least.id]:'Registrá un dato comparable';
     const chart=document.getElementById('progressOverviewChart'),summary=document.getElementById('progressOverviewSummary');
     const selectedArea=document.getElementById('progressArea')?.value||'all';
     const chartAreas=selectedArea==='all'?areas:areas.filter(area=>area.id===selectedArea);
-    if(chart)chart.innerHTML=barRows(chartAreas,{value:row=>row.score||0,label:row=>row.name,detail:row=>row.detail,display:row=>row.score===null?'Sin datos':`${Math.round(row.score)}/100`,max:()=>100,empty:'Esta área todavía no tiene registros.'});
-    if(summary)summary.textContent=measured.length?`Resumen textual: ${measured.map(area=>`${area.name} ${Math.round(area.score)}/100`).join('; ')}. La escala es común de 0 a 100.`:'Resumen textual: todavía no hay áreas con datos suficientes.';
+    if(chart)chart.innerHTML=barRows(chartAreas,{value:row=>row.coverage||0,label:row=>row.name,detail:row=>row.detail,display:row=>row.coverage===null?'Sin datos':`${Math.round(row.coverage)}% de cobertura`,max:()=>100,empty:'Esta área todavía no tiene registros.'});
+    if(summary)summary.textContent=measured.length?`Resumen textual de cobertura de registro: ${measured.map(area=>`${area.name} ${Math.round(area.coverage)}%`).join('; ')}. No compara resultados clínicos ni rendimiento entre áreas.`:'Resumen textual: todavía no hay áreas con datos suficientes.';
   }
   function renderGym(){
     const days=selectedDays(),all=workoutSessions(),current=all.filter(session=>within(session.date,days)),previous=all.filter(session=>previousWindow(session.date,days));

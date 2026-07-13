@@ -101,7 +101,7 @@ $requiredFiles = @(
     'scripts/test-android-release.mjs',
     'scripts/test-accessibility.mjs',
     'scripts/test-module-boundaries.mjs', 'scripts/test-design-system.mjs', 'scripts/design-token-allowlist.json', 'scripts/test-router.mjs', 'scripts/test-layout-coordinator.mjs', 'scripts/test-home-settings.mjs', 'scripts/test-progress-view.mjs', 'scripts/sync-app-version.mjs', 'scripts/test-version-alignment.mjs', 'scripts/test-settings-contract.mjs', 'scripts/test-data-layer.mjs',
-    'scripts/serve-static.mjs', 'playwright.config.mjs', 'tests/e2e/gym-flow.spec.mjs', 'tests/e2e/visual-navigation.spec.mjs', 'tests/e2e/router.spec.mjs', 'tests/e2e/layout-sticky.spec.mjs', 'tests/e2e/home-settings.spec.mjs', 'tests/e2e/progress.spec.mjs', 'tests/e2e/progress-muscle.spec.mjs', 'tests/e2e/progress-exercise.spec.mjs', 'tests/e2e/data-layer.spec.mjs', 'scripts/test-muscle-progress.mjs', 'scripts/test-exercise-progress.mjs',
+    'scripts/serve-static.mjs', 'playwright.config.mjs', 'tests/e2e/gym-flow.spec.mjs', 'tests/e2e/gym-canonical.spec.mjs', 'tests/e2e/visual-navigation.spec.mjs', 'tests/e2e/router.spec.mjs', 'tests/e2e/layout-sticky.spec.mjs', 'tests/e2e/home-settings.spec.mjs', 'tests/e2e/progress.spec.mjs', 'tests/e2e/progress-muscle.spec.mjs', 'tests/e2e/progress-exercise.spec.mjs', 'tests/e2e/data-layer.spec.mjs', 'scripts/test-muscle-progress.mjs', 'scripts/test-exercise-progress.mjs',
     'manifest.webmanifest', 'sw.js',
     'styles/tokens.css', 'styles/base.css', 'styles/components.css', 'styles/features.css', 'styles/gym.css', 'styles/gym-party.css', 'styles/modules.css', 'styles/responsive.css',
     'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetProvider.java',
@@ -531,6 +531,8 @@ foreach ($contract in @('id="nutritionTodayCard"','id="nutritionScoreSummary"','
     Assert-True ($html.Contains($contract)) "Falta jerarquia progresiva: $contract"
 }
 Assert-True ($html.Contains('function maybeAutoShowActionModal(){ renderActionCard(); }')) 'La accion diaria no debe abrir un modal automatico'
+Assert-True (-not $workout.Contains('setLocalData(GYM_SESSIONS_KEY')) 'Workout nuevo no debe escribir en gymSessions legacy'
+Assert-True (-not $progressView.Contains('protocolo_0_100_gym_sessions_v1')) 'Progreso debe leer solo workoutSessions canonico'
 
 $workoutLower = $workout.ToLowerInvariant()
 foreach ($term in @(

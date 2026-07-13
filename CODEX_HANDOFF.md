@@ -1506,3 +1506,37 @@ Estado publicable: version `2.7.0`, Android `33`, build/cache `58`
 Pendiente siguiente: corregir el resumen integral separando cobertura,
 constancia y tendencia; migrar `gymSessions` a solo legacy; luego menu completo
 de edicion en Nutricion y sistema central de mensajes.
+
+## 41. Resumen integral honesto y Gym canonico
+
+Implementado despues de `44203e1`:
+
+- `progress/progress-view.js` separa cobertura de registro, constancia y
+  tendencia. Ya no compara como resultados equivalentes el score de habitos,
+  las sesiones Gym y los dias de Nutricion.
+- Las tarjetas usan `Mejor tendencia observada` y `Area con menos registros`.
+  La segunda describe cantidad de datos y no presenta ausencia de registros
+  como bajo rendimiento.
+- El periodo `Todo` usa el primer y ultimo dato observados. La expectativa Gym
+  se deriva de los dias entrenables de `weeklyWorkoutPlan`, no de tres sesiones
+  semanales hardcodeadas.
+- Progreso solo lee `workoutSessions`. `migrateLegacyGymSessions()` migra
+  `gymSessions` de forma idempotente, conserva fecha, rutina, ejercicios,
+  series, reps, peso, RIR y notas, y no elimina la fuente legacy.
+- Las sesiones nuevas creadas desde el formulario antiguo y desde el registro
+  rapido se escriben unicamente en `workoutSessions`. `gymSessions` queda para
+  importacion y compatibilidad con backups anteriores.
+- `tests/e2e/gym-canonical.spec.mjs` verifica migracion unica y que un guardado
+  nuevo no modifica la coleccion legacy. `tests/e2e/progress.spec.mjs` verifica
+  periodo observado, plan semanal real y cobertura diferenciada.
+- Regresion completa: 115 aprobadas, 14 omisiones intencionales y cero fallos
+  en Android Chromium, iPhone WebKit y escritorio.
+- Assets Android comprobados con `validate-app.ps1 -CheckAndroidAssets` y
+  `:app:assembleDebug` finalizo con `BUILD SUCCESSFUL`.
+
+Estado publicable de este bloque: version `2.7.0`, Android `33`, build/cache
+`59` (`protocolo-0-100-pwa-2.7.0-b59`).
+
+Pendiente siguiente: menu contextual completo de alimentos con editar,
+duplicar, mover, copiar y eliminar con Deshacer; despues cobertura nutricional
+honesta por nutriente y sistema central de mensajes.

@@ -19,7 +19,11 @@ test.beforeEach(async ({page})=>{await seed(page);});
 
 test('Progreso consolida tendencias y permite deep links internos',async ({page})=>{
   await page.goto('/index.html?module=progress&view=overview');
-  await expect(page.locator('#progressSummaryMetrics')).toContainText('Tendencia 7 días');
+  await expect(page.locator('#progressSummaryMetrics')).toContainText('Tendencia hábitos 7 días');
+  await expect(page.locator('#progressSummaryMetrics')).toContainText('Cantidad de datos');
+  await expect(page.locator('#progressOverviewSummary')).toContainText('cobertura de registro');
+  await expect(page.locator('#progressOverviewSummary')).toContainText('No compara resultados');
+  await expect(page.locator('#progressStrongestArea')).not.toContainText('Área más débil');
   await expect(page.locator('#progressOverviewChart progress')).toHaveCount(3);
   await page.locator('[data-progress-view="gym"]').click();
   await expect(page).toHaveURL(/module=progress&view=gym/);
@@ -35,4 +39,12 @@ test('Progreso filtra período y expone resumen nutricional accesible',async ({p
   await expect(page.locator('#progressNutritionChart [role="img"]')).toHaveAttribute('aria-label',/Gráfico de barras/);
   await page.locator('#progressPeriod').selectOption('7');
   await expect(page.locator('#progressNutritionChartSummary')).toContainText('Resumen textual');
+});
+
+test('Todo usa intervalo observado y Gym respeta el plan semanal real',async({page})=>{
+  await page.goto('/index.html?module=progress&view=overview');
+  await page.locator('#progressPeriod').selectOption('all');
+  await expect(page.locator('#progressSummaryMetrics')).toContainText('3/9');
+  await expect(page.locator('#progressOverviewChart')).toContainText('1 de 6 sesión(es) planificadas');
+  await expect(page.locator('#progressOverviewChart')).toContainText('2 de 9 día(s) con comidas');
 });

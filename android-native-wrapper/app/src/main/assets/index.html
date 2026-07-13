@@ -492,8 +492,8 @@
               </div>
               <div class="progressKpiGrid" id="progressSummaryMetrics"></div>
               <div class="moduleGrid progressDecisionGrid">
-                <article class="moduleCard"><span class="muted small">Área más fuerte</span><h3 id="progressStrongestArea">Sin datos</h3><p id="progressStrongestDetail" class="muted small"></p></article>
-                <article class="moduleCard"><span class="muted small">Área a mejorar</span><h3 id="progressImproveArea">Sin datos</h3><p id="progressImproveDetail" class="muted small"></p></article>
+                <article class="moduleCard"><span class="muted small">Mejor tendencia observada</span><h3 id="progressStrongestArea">Sin datos comparables</h3><p id="progressStrongestDetail" class="muted small"></p></article>
+                <article class="moduleCard"><span class="muted small">Área con menos registros</span><h3 id="progressImproveArea">Sin datos</h3><p id="progressImproveDetail" class="muted small"></p></article>
                 <article class="moduleCard progressNextAction"><span class="muted small">Próxima acción</span><h3 id="progressNextAction">Registrá un dato comparable</h3><p class="muted small">Una acción concreta vale más que perseguir todas las métricas a la vez.</p></article>
               </div>
               <section class="moduleCard" aria-labelledby="progressTrendTitle"><h2 id="progressTrendTitle">Tendencia general</h2><div id="progressOverviewChart"></div><p class="chartCaption" id="progressOverviewSummary"></p></section>
@@ -1055,35 +1055,34 @@ function clearGymSession(){
   document.getElementById('gymTemplate').value='';
   renderGymDraft();
 }
+function canonicalGymSessions(){const key=window.WORKOUT_FEATURES?.keys?.workoutSessions||'protocolo_0_100_workout_sessions_v1';return getLocalData(key,[]);}
+function gymSessionDraft(session){return(session?.exercises||[]).map(exercise=>{const last=(exercise.sets||[]).at(-1)||{};return{id:exercise.id,muscle:exercise.muscle,name:exercise.name,sets:(exercise.sets||[]).length,reps:Number(last.reps)||0,weight:Number(last.weightKg??last.weight)||0,rir:Number(last.rir)||0,bodyweight:!!exercise.bodyweight};});}
 function saveGymSession(){
   if(!gymDraft.length){ flash('Añadí al menos un ejercicio antes de guardar.'); return; }
   const date=document.getElementById('gymDate').value || todayStr();
   const routine=document.getElementById('gymRoutineName').value.trim() || 'Entrenamiento';
-  const sessions=getLocalData(GYM_SESSIONS_KEY,[]);
-  const existing=sessions.findIndex(s=>s.date===date && s.routine===routine);
-  const session={id:existing>=0?sessions[existing].id:uid('session'),date,routine,items:gymDraft.map(i=>({...i})),notes:document.getElementById('gymNotes').value.trim(),volume:workoutVolume(gymDraft),savedAt:new Date().toISOString()};
-  if(existing>=0) sessions[existing]=session; else sessions.push(session);
-  sessions.sort((a,b)=>a.date.localeCompare(b.date));
-  setLocalData(GYM_SESSIONS_KEY,sessions);
+  const existing=canonicalGymSessions().find(session=>session.date===date&&(session.routine?.name||session.routineName)===routine),exercises=gymDraft.map((item,index)=>({id:item.id||uid('exercise'),exerciseId:item.exerciseId||`legacy-${normalizeFoodText(item.name).replace(/\s+/g,'-')}`,name:item.name,muscle:item.muscle,order:index+1,bodyweight:!!item.bodyweight,completed:true,sets:Array.from({length:Math.max(1,Number(item.sets)||1)},(_,setIndex)=>({id:`${item.id||index}-${setIndex}`,reps:Number(item.reps)||0,weight:Number(item.weight)||0,rir:item.rir??null,isBodyweight:!!item.bodyweight}))}));
+  const session={id:existing?.id||uid('workout'),date,routine:{name:routine,muscles:[...new Set(exercises.map(item=>item.muscle))],exercises:[]},startedAt:existing?.startedAt||new Date().toISOString(),finishedAt:new Date().toISOString(),status:'finalizado',currentExerciseIndex:Math.max(0,exercises.length-1),exercises,notes:document.getElementById('gymNotes').value.trim(),subjectiveNote:existing?.subjectiveNote||'',summary:null};
+  window.WORKOUT_FEATURES.replaceSessionPayload(session);
   renderGym();
   flash('Sesión de entrenamiento guardada.');
 }
 function loadGymSession(id){
-  const s=getLocalData(GYM_SESSIONS_KEY,[]).find(x=>x.id===id); if(!s) return;
+  const s=canonicalGymSessions().find(x=>x.id===id); if(!s) return;
   document.getElementById('gymDate').value=s.date;
-  document.getElementById('gymRoutineName').value=s.routine;
+  document.getElementById('gymRoutineName').value=s.routine?.name||s.routineName||'Entrenamiento';
   document.getElementById('gymNotes').value=s.notes||'';
-  gymDraft=(s.items||[]).map(i=>({...i}));
+  gymDraft=gymSessionDraft(s);
   renderGymDraft();
   window.scrollTo({top:0,behavior:preferredMotionBehavior()});
 }
 function deleteGymSession(id){
-  setLocalData(GYM_SESSIONS_KEY,getLocalData(GYM_SESSIONS_KEY,[]).filter(s=>s.id!==id));
+  const key=window.WORKOUT_FEATURES?.keys?.workoutSessions||'protocolo_0_100_workout_sessions_v1';setLocalData(key,canonicalGymSessions().filter(s=>s.id!==id));
   renderGym();
   flash('Sesión eliminada.');
 }
 function renderGym(){
-  const sessions=getLocalData(GYM_SESSIONS_KEY,[]).slice().sort((a,b)=>a.date.localeCompare(b.date));
+  const sessions=canonicalGymSessions().slice().sort((a,b)=>a.date.localeCompare(b.date)).map(session=>({id:session.id,date:session.date,routine:session.routine?.name||session.routineName||'Entrenamiento',items:gymSessionDraft(session),notes:session.notes||'',volume:window.WORKOUT_METRICS?.calculateSessionMetrics?.(session).externalLoadVolume||0}));
   const stats=document.getElementById('gymStats');
   if(stats){
     const totalSets=sessions.reduce((n,s)=>n+(s.items||[]).reduce((a,i)=>a+(Number(i.sets)||0),0),0);

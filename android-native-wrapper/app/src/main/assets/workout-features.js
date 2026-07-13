@@ -245,6 +245,13 @@
   function saveSessions(value){ writeStore(keys.workoutSessions,value); }
   function history(){ return readStore(keys.exerciseHistory,{}); }
   function saveHistory(value){ writeStore(keys.exerciseHistory,value); }
+  function migrateLegacyGymSessions(){
+    const migrationKey='protocolo_0_100_gym_legacy_migration_v1',legacy=getLocalData(GYM_SESSIONS_KEY,[]),current=sessions();let changed=false;
+    legacy.forEach(old=>{if(current.some(session=>session.id===old.id||session.legacyGymSessionId===old.id))return;const exercises=(old.items||[]).map((item,index)=>({id:item.id||`legacy-${index}`,exerciseId:item.exerciseId||`legacy-${slugForExercise(item.name)}`,name:item.name||`Ejercicio ${index+1}`,muscle:item.muscle||'General',bodyweight:!!item.bodyweight,completed:true,sets:Array.from({length:Math.max(0,Number(item.sets)||0)},(_,setIndex)=>({id:`${old.id||'legacy'}-${index}-${setIndex}`,reps:Number(item.reps)||0,weight:Number(item.weight)||0,rir:item.rir??null,isBodyweight:!!item.bodyweight}))}));current.push({id:old.id||uid('workout'),legacyGymSessionId:old.id||'',date:old.date||todayStr(),routine:{name:old.routine||'Entrenamiento importado',muscles:[...new Set(exercises.map(item=>item.muscle))],exercises:[]},startedAt:old.savedAt||null,finishedAt:old.savedAt||null,status:'finalizado',currentExerciseIndex:Math.max(0,exercises.length-1),exercises,notes:old.notes||'',summary:null});changed=true;});
+    if(changed){saveSessions(current);writeStore(migrationKey,{version:1,migratedAt:new Date().toISOString(),legacyCount:legacy.length,canonicalCount:current.length});}
+    else if(!readStore(migrationKey,null))writeStore(migrationKey,{version:1,migratedAt:new Date().toISOString(),legacyCount:legacy.length,canonicalCount:current.length});
+    return changed;
+  }
   function maybeImportWidgetStateFromAndroid(){
     if(importingNativeWidgetState) return false;
     if(!window.AndroidBridge || typeof window.AndroidBridge.getWorkoutWidgetData!=='function') return false;
@@ -274,7 +281,6 @@
         const index=list.findIndex(item=>item.id===session.id);
         if(index>=0) list[index]=session; else list.push(session);
         saveSessions(list);
-        syncLegacyGymSession(session);
         updateExerciseHistory(session);
         currentQuickExerciseId=state.currentExerciseId || session.exercises?.[session.currentExerciseIndex||0]?.id || currentQuickExerciseId;
       }
@@ -313,7 +319,6 @@
     const list=sessions();
     list.push(created);
     saveSessions(list);
-    syncLegacyGymSession(created);
     return created;
   }
   function replaceSession(session){
@@ -321,7 +326,6 @@
     const index=list.findIndex(s=>s.id===session.id);
     if(index>=0) list[index]=session; else list.push(session);
     saveSessions(list);
-    syncLegacyGymSession(session);
     updateExerciseHistory(session);
     syncWorkoutWidget();
   }
@@ -416,29 +420,6 @@
       };
     });
     saveHistory(map);
-  }
-  function syncLegacyGymSession(session){
-    const legacy=getLocalData(GYM_SESSIONS_KEY,[]);
-    const routineName=session.routine?.name||session.routineName||'Entrenamiento';
-    const items=(session.exercises||[]).map(exercise=>{
-      const sets=exercise.sets||[];
-      const last=sets[sets.length-1]||{};
-      return {
-        id:exercise.id,
-        muscle:exercise.muscle,
-        name:exercise.name,
-        sets:sets.length || 0,
-        reps:Number(last.reps)||0,
-        weight:Number(last.weight)||0,
-        rir:Number(last.rir)||0,
-        bodyweight:!!(exercise.bodyweight || last.bodyweight)
-      };
-    }).filter(item=>item.sets>0 || session.status==='finalizado');
-    const index=legacy.findIndex(s=>s.id===session.id || s.workoutSessionId===session.id);
-    const value={id:session.id,date:session.date,routine:routineName,items,notes:session.notes||'',volume:Math.round(sessionSummary(session).totalVolume),savedAt:new Date().toISOString(),workoutSessionId:session.id,status:session.status};
-    if(index>=0) legacy[index]=value; else legacy.push(value);
-    legacy.sort((a,b)=>a.date.localeCompare(b.date));
-    setLocalData(GYM_SESSIONS_KEY,legacy);
   }
   function injectWorkoutUi(){
     const tab=document.getElementById('tab-gym');
@@ -1420,7 +1401,7 @@
     else if(action===actionWidgetSaveSet){syncWorkoutWidget();openGymToday();}
   }
 
-  window.WORKOUT_FEATURES={keys,dayOrder,defaultWeeklyPlan:clone(defaultWeeklyPlan),exerciseLibrary:clone(exerciseLibrary),EXERCISE_LIBRARY_VERSION,getExerciseLibrary:()=>clone(libraryData()),getGymSettings:()=>clone(settings()),updateGymSettings:next=>{saveSettings(next||{});return clone(settings());},displayWeight,canonicalWeight,displayVolume,migrateExerciseLibrary,dayKeyForDate,planForDate,rankExercisesForContext,getQuickWorkoutState,addManualExercisePayload,saveQuickSetPayload,updateQuickSetPayload,deleteQuickSetPayload,undoDeleteQuickSetPayload,canUndoQuickSetDelete:()=>!!lastDeletedQuickSet,replaceSessionPayload,completeQuickExercisePayload,finishWorkoutPayload,buildWorkoutWidgetState,syncWorkoutWidget,importWidgetStateFromAndroid};
+  window.WORKOUT_FEATURES={keys,dayOrder,defaultWeeklyPlan:clone(defaultWeeklyPlan),exerciseLibrary:clone(exerciseLibrary),EXERCISE_LIBRARY_VERSION,getExerciseLibrary:()=>clone(libraryData()),getGymSettings:()=>clone(settings()),updateGymSettings:next=>{saveSettings(next||{});return clone(settings());},displayWeight,canonicalWeight,displayVolume,migrateExerciseLibrary,migrateLegacyGymSessions,dayKeyForDate,planForDate,rankExercisesForContext,getQuickWorkoutState,addManualExercisePayload,saveQuickSetPayload,updateQuickSetPayload,deleteQuickSetPayload,undoDeleteQuickSetPayload,canUndoQuickSetDelete:()=>!!lastDeletedQuickSet,replaceSessionPayload,completeQuickExercisePayload,finishWorkoutPayload,buildWorkoutWidgetState,syncWorkoutWidget,importWidgetStateFromAndroid};
   window.openGymToday=openGymToday;
   window.openQuickSetLogger=openQuickSetLogger;
   window.handleAndroidWidgetIntent=(action,payload)=>handleAndroidWidgetIntent(action,payload||{});
@@ -1430,6 +1411,7 @@
   window.renderGym=renderGym;
 
   ensureWorkoutData();
+  migrateLegacyGymSessions();
   const uiPreferences=readStore('protocolo_0_100_ui_preferences_v1',{});
   if(['kg','lb'].includes(uiPreferences.unit))saveSettings({unit:uiPreferences.unit,showRir:uiPreferences.showRir!==false});
   injectWorkoutUi();
