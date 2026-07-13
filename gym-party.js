@@ -372,7 +372,7 @@
     flashMessage('Gym Party creada. Copia el codigo para invitar.');
   }
 
-  function joinLocalParty(){
+  async function joinLocalParty(){
     const code = normalizeCode(document.getElementById('gymPartyJoinCode')?.value);
     const alias = cleanAlias(document.getElementById('gymPartyJoinAlias')?.value || 'Atleta');
     const privacy = privacyFromForm('join');
@@ -389,7 +389,7 @@
     if(!party.active||party.inviteActive===false){ flashMessage('La sala o su codigo de invitacion no estan activos.'); return; }
     if(party.inviteExpiresAt&&party.inviteExpiresAt<todayStr()){flashMessage('Ese codigo de invitacion ya vencio.');return;}
     if(party.inviteMaxUses&&Number(party.inviteUses||0)>=Number(party.inviteMaxUses)){flashMessage('Ese codigo alcanzo su limite de usos.');return;}
-    if(window.confirm&&!window.confirm(`Vas a unirte a "${party.name||'Gym Party'}". ¿Continuar?`)) return;
+    if(!(await window.APP_CONFIRMATION.ask({title:'Unirte a la sala',message:`Vas a unirte a “${party.name||'Gym Party'}” y compartir los datos de Gym aceptados.`,confirmLabel:'Unirme'})))return;
     if((party.members || []).length >= MAX_GYM_PARTY_MEMBERS){
       flashMessage('Esta sala alcanzó el límite recomendado de 10 miembros para mantener la app rápida y clara.');
       return;
@@ -1734,12 +1734,8 @@
     const stats = calculatePartyStats(data, referenceDate);
     const self = stats.find(row => row.member.userId === m?.userId) || stats[0] || {current: {}};
     const dateLabel = referenceDate === todayStr() ? 'Hoy' : referenceDate;
-    const syncCounts=syncEngine()?.stateCounts?.([...safeArray(data.sessions),...safeArray(data.sets)])||{};
-    const syncError=settings().syncLastError||'';
-    const syncText = window.GYM_PARTY_UI?.syncLabel?.({backendMode:m.backendMode,pending:syncQueue().length,conflicts:syncCounts.conflict||0})
-      ?? (m.backendMode === 'demo'
-        ? 'Demo'
-        : `${m.backendMode === 'firebase' ? 'Online' : 'Local'} - ${syncQueue().length} pendiente(s)${syncCounts.conflict?` - ${syncCounts.conflict} conflicto(s) resuelto(s)`:''}`);
+    const syncCounts=syncEngine()?.stateCounts?.([...safeArray(data.sessions),...safeArray(data.sets)])||{},currentSettings=settings();
+    const syncState=window.GYM_PARTY_UI?.syncState?.({backendMode:m.backendMode,pending:syncQueue().length,conflicts:syncCounts.conflict||0,error:currentSettings.syncLastError||'',syncing:!!currentSettings.syncInProgress,lastSyncAt:lastSyncAt(),online:navigator.onLine!==false,requiresAccess:!!currentSettings.syncRequiresAccess})||{id:'local',label:'Guardado localmente',detail:'',tone:'info',pending:syncQueue().length,last:'Todavía no se sincronizó.'};
     const inviteHint = members.length === 1
       ? `<div class="partyTip">Cuando quieras sumar a tu amigo, desplega este apartado y envia el codigo.</div>`
       : '';
@@ -1750,14 +1746,14 @@
       <div class="moduleCard partyDashboardTop partyDashboardSimple">
         <div class="actionFocusTop">
           <div>
-            <span class="partyStepPill">Gym Party - ${escape(syncText)}</span>
+            <span class="partyStepPill">Gym Party</span>
             <h2>Entrenamiento compartido</h2>
             <div class="muted small">${escape(party.name || 'Gym Party')} - ${members.length}/${MAX_GYM_PARTY_MEMBERS} miembro(s)</div>
           </div>
           <span class="statusChip good">${escape(dateLabel)}</span>
         </div>
         ${m.backendMode === 'demo' ? '<div class="partyTip">Demo: datos ficticios.</div>' : ''}
-        ${syncError?`<div class="auditItem warn">Ultimo error de sincronizacion: ${escape(syncError)}. Tus datos siguen guardados localmente.</div>`:''}
+        <div class="partySyncState" data-sync-state="${escape(syncState.id)}" data-tone="${escape(syncState.tone)}" role="status"><div><strong>${escape(syncState.label)}</strong><span>${escape(syncState.detail)}</span></div><small>${escape(syncState.last)} · ${syncState.pending} cambio(s) pendiente(s)</small>${syncState.id==='error'?'<button type="button" class="secondary" data-gym-party-action="sync">Reintentar</button>':''}</div>
         ${maxWarning}
       </div>
 
@@ -2100,7 +2096,7 @@
     saveSettings({partyWorkoutDate: date, partyEditingSetId: setId, partyQuickExerciseId: exerciseId});
     renderGymParty();
   }
-  function deletePartyWorkoutSet(event){
+  async function deletePartyWorkoutSet(event){
     const api = workoutApi();
     if(!api?.deleteQuickSetPayload){ flashMessage('Eliminar serie no esta disponible todavia.'); return; }
     const button = event?.target?.closest?.('[data-party-set-id]');
@@ -2108,8 +2104,7 @@
     if(!setId) return;
     const date = button?.dataset?.partyDate || selectedWorkoutDate();
     const exerciseId = button?.dataset?.partyExerciseId || partyWorkoutSelectedExerciseId();
-    const ok = window.confirm ? window.confirm('Eliminar esta serie? No se borra el resto del entrenamiento.') : true;
-    if(!ok) return;
+    if(!(await window.APP_CONFIRMATION.ask({title:'Eliminar serie',message:'No se borrará el resto del entrenamiento y podrás deshacer este cambio.',confirmLabel:'Eliminar',danger:true})))return;
     const result = api.deleteQuickSetPayload({date, exerciseId, setId});
     if(!result.ok){ flashMessage(result.message || 'No se pudo eliminar la serie.'); return; }
     const nextEditing = settings().partyEditingSetId === setId ? '' : settings().partyEditingSetId;
@@ -2126,10 +2121,10 @@
     saveSettings({partyEditingSetId: ''});
     renderGymParty();
   }
-  function finishPartyWorkout(){
+  async function finishPartyWorkout(){
     const api = workoutApi();
     if(!api?.finishWorkoutPayload){ flashMessage('Registro de gym no disponible todavia.'); return; }
-    if(window.confirm&&!window.confirm('Finalizar este entrenamiento? Las series seguiran disponibles para consultar y editar.'))return;
+    if(!(await window.APP_CONFIRMATION.ask({title:'Finalizar entrenamiento',message:'Las series seguirán disponibles para consultar y editar.',confirmLabel:'Finalizar'})))return;
     const result = api.finishWorkoutPayload({date: selectedWorkoutDate()});
     if(!result.ok){ flashMessage(result.message || 'No se pudo finalizar.'); return; }
     refreshPartyWorkoutShare();
@@ -2139,25 +2134,25 @@
   async function syncNow({full=false,force=true}={}){
     const m = activeMembership();
     if(!m){ flashMessage('Primero crea o unite a una Gym Party.'); return; }
+    saveSettings({syncInProgress:true});renderGymParty();
     syncFromLocalWorkouts({silent: true});
-    if(m.backendMode === 'firebase'){
-      if(typeof navigator !== 'undefined' && navigator.onLine === false){
-        flashMessage('Entrenamiento guardado localmente. Se sincronizará con la Gym Party cuando vuelva la conexión.');
-        renderGymParty();
-        return;
+    try{
+      if(m.backendMode === 'firebase'){
+        if(typeof navigator !== 'undefined' && navigator.onLine === false){saveSettings({syncInProgress:false});flashMessage('Entrenamiento guardado localmente. Se sincronizará con la Gym Party cuando vuelva la conexión.');return;}
+        await syncFirebaseNow({full,force});saveSettings({syncInProgress:false,syncRequiresAccess:false});
+      }else{
+        setLastSync();saveSettings({syncInProgress:false});flashMessage(m.backendMode === 'demo' ? 'Demo refrescado.' : 'Sala local/mock actualizada.');
       }
-      await syncFirebaseNow({full,force});
-    }else{
-      setLastSync();
-      flashMessage(m.backendMode === 'demo' ? 'Demo refrescado.' : 'Sala local/mock actualizada.');
+    }catch(error){
+      const requiresAccess=/perdio la sesion|auth\/(?:invalid|user|credential)|requiere acceso/i.test(`${error?.message||''} ${error?.code||''}`);saveSettings({syncInProgress:false,syncRequiresAccess:requiresAccess});throw error;
+    }finally{
+      renderGymParty();
     }
-    renderGymParty();
   }
-  function exportCsv(){
+  async function exportCsv(){
     const data = partyData();
     if(!data?.party) return;
-    const ok = window.confirm ? window.confirm('Se exportará el resumen compartido de la sala. No incluye nutrición, sueño, ansiedad, pantalla ni notas privadas. Continuar?') : true;
-    if(!ok) return;
+    if(!(await window.APP_CONFIRMATION.ask({title:'Exportar resumen compartido',message:'Incluye datos de Gym de la sala. No incluye nutrición, sueño, ansiedad, pantalla ni notas privadas.',confirmLabel:'Exportar'})))return;
     const stats = calculatePartyStats(data);
     const rows = [['partyId','memberAlias','weekStart','sessions','sets','reps','volume','consistency','changeVolumePct']];
     stats.forEach(row => rows.push([data.party.id, memberDisplayName(row.member, data), row.current.weekStart, row.current.sessionsCount, row.current.totalSets, row.current.totalReps, row.current.totalVolume, row.current.consistencyScore, row.changeVsPreviousWeek.volumePct]));
@@ -2170,10 +2165,10 @@
     const ownSets = sharedSets().filter(row => row.partyId === m.partyId && row.userId === m.userId);
     download(JSON.stringify({schemaVersion: 1, exportedAt: nowIso(), membership: m, sharedWorkoutSessions: ownSessions, sharedWorkoutSets: ownSets}, null, 2), 'gym_party_mis_datos_compartidos.json', 'application/json');
   }
-  function showHelp(id){
+  async function showHelp(id){
     const item = help[id];
     if(!item) return;
-    alert(`${item.title}\n\n${item.text}`);
+    await window.APP_CONFIRMATION.inform({title:item.title,message:item.text});
   }
   function saveFirebaseConfig(){
     const raw = document.getElementById('gymPartyFirebaseConfig')?.value.trim();
@@ -2195,9 +2190,8 @@
     renderGymParty();
     flashMessage('Configuración Firebase quitada.');
   }
-  function leavePartyDevice(){
-    const ok = window.confirm ? window.confirm('Vas a salir solo en este dispositivo. Tus entrenamientos locales y los datos ya compartidos en Firestore no se borran.') : true;
-    if(!ok) return;
+  async function leavePartyDevice(){
+    if(!(await window.APP_CONFIRMATION.ask({title:'Salir de este dispositivo',message:'Tus entrenamientos locales y los datos ya compartidos en Firestore no se borrarán.',confirmLabel:'Salir'})))return;
     clearMembership();
     flashMessage('Saliste de la Gym Party solo en este dispositivo.');
   }
@@ -2208,7 +2202,7 @@
   }
   async function regenerateInvite(){
     const m=activeMembership(); if(!m||m.role!=='owner') throw new Error('Solo el owner puede regenerar invitaciones.');
-    if(window.confirm&&!window.confirm('El codigo anterior dejara de funcionar. ¿Regenerar ahora?')) return;
+    if(!(await window.APP_CONFIRMATION.ask({title:'Regenerar código',message:'El código anterior dejará de funcionar.',confirmLabel:'Regenerar'})))return;
     const options=inviteOptionsFromUi();
     if(m.backendMode==='demo') throw new Error('El modo demo no administra invitaciones reales.');
     if(m.backendMode==='local'){
@@ -2238,7 +2232,7 @@
   }
   async function revokeInvite(){
     const m=activeMembership(); if(!m||m.role!=='owner') throw new Error('Solo el owner puede revocar invitaciones.');
-    if(window.confirm&&!window.confirm('Nadie podra unirse con el codigo actual. ¿Revocarlo?')) return;
+    if(!(await window.APP_CONFIRMATION.ask({title:'Revocar código',message:'Nadie podrá unirse con el código actual hasta que generes otro.',confirmLabel:'Revocar',danger:true})))return;
     if(m.backendMode==='demo') throw new Error('El modo demo no administra invitaciones reales.');
     if(m.backendMode==='local'){
       const s=settings(),party=currentParty(),nextParty={...party,inviteActive:false}; saveSettings({localParties:{...s.localParties,[party.id]:nextParty}}); saveMembership({...m,party:nextParty,updatedAt:nowIso()}); renderGymParty(); flashMessage('Codigo revocado.'); return;
@@ -2251,7 +2245,7 @@
   async function deactivateFirebaseMembership({skipConfirm=false}={}){
     const m=activeMembership(); if(!m||m.backendMode!=='firebase') throw new Error('No hay membresia Firebase activa.');
     const owner=m.role==='owner';
-    if(!skipConfirm&&window.confirm&&!window.confirm(owner?'Al ser owner, se desactivara toda la sala y el codigo. Tus entrenamientos locales permanecen. ¿Continuar?':'Se desactivara tu membresia remota. Tus entrenamientos locales permanecen. ¿Continuar?')) return;
+    if(!skipConfirm&&!(await window.APP_CONFIRMATION.ask({title:owner?'Desactivar sala':'Desactivar membresía',message:owner?'Se desactivarán la sala y su código. Tus entrenamientos locales permanecen.':'Se desactivará tu membresía remota. Tus entrenamientos locales permanecen.',confirmLabel:'Desactivar',danger:true})))return;
     const runtime=await loadFirebaseRuntime(); const {db,auth,firestoreMod}=runtime; assertFirebaseSessionMatchesMembership(auth,m);
     const memberRef=firestoreMod.doc(db,collections.members,memberIdForLocalParty(m.partyId,m.userId)),partyRef=firestoreMod.doc(db,collections.parties,m.partyId);
     const partyBefore=await firestoreMod.getDoc(partyRef),code=partyBefore.data()?.inviteCode||currentParty()?.inviteCode||m.inviteCode,inviteRef=code?firestoreMod.doc(db,collections.invites,code):null;
@@ -2281,15 +2275,14 @@
   }
   async function deleteSharedDataAndLeave(){
     const m=activeMembership(); if(!m||m.backendMode!=='firebase') throw new Error('No hay membresia Firebase activa.');
-    if(window.confirm&&!window.confirm('Se ocultaran y marcaran como eliminadas tus sesiones y series compartidas. Tus entrenamientos locales NO se borran. ¿Continuar?')) return;
+    if(!(await window.APP_CONFIRMATION.ask({title:'Eliminar datos compartidos',message:'Tus sesiones y series compartidas se marcarán como eliminadas. Tus entrenamientos locales no se borran.',confirmLabel:'Eliminar y salir',danger:true})))return;
     const runtime=await loadFirebaseRuntime();
     await tombstoneOwnSharedCollection(runtime,collections.sets,{deleted:true,deletedReason:'privacy-removal'});
     await tombstoneOwnSharedCollection(runtime,collections.sessions,{deletedReason:'privacy-removal'});
     await deactivateFirebaseMembership({skipConfirm:true});
   }
-  function newRoomFlow(){
-    const ok = window.confirm ? window.confirm('Vas a salir de la sala actual en este dispositivo para crear una sala nueva. Tus entrenamientos locales no se borran.') : true;
-    if(!ok) return;
+  async function newRoomFlow(){
+    if(!(await window.APP_CONFIRMATION.ask({title:'Crear otra sala',message:'Saldrás de la sala actual solo en este dispositivo. Tus entrenamientos locales no se borran.',confirmLabel:'Crear sala nueva'})))return;
     clearMembership();
     flashMessage('Listo. Ahora podés crear una sala nueva y generar un código.');
   }
@@ -2528,7 +2521,7 @@
     const inviteRef = firestoreMod.doc(db, collections.invites, code);
     const preflight=await firestoreMod.getDoc(inviteRef);
     if(!preflight.exists()||preflight.data().active===false) throw new Error('PARTY_NOT_FOUND');
-    if(window.confirm&&!window.confirm(`Vas a unirte a "${preflight.data().partyName||'Gym Party'}". ¿Continuar?`)) return;
+    if(!(await window.APP_CONFIRMATION.ask({title:'Unirte a la sala',message:`Vas a unirte a “${preflight.data().partyName||'Gym Party'}” y compartir los datos de Gym aceptados.`,confirmLabel:'Unirme'})))return;
     let invite=null;
     let member=null;
     await firestoreMod.runTransaction(db,async transaction=>{

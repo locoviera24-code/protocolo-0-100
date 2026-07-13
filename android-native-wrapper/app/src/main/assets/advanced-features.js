@@ -337,11 +337,12 @@
   function clearFdcApiKey(){
     if(!FDC)return;FDC.saveConfig({...FDC.config(),apiKey:''});loadFdcConfigFields();flash('API key local eliminada.');
   }
-  function editCachedFdcFood(id){
+  function nutrientDialogFields(food,fields){return[{name:'name',label:'Nombre',value:food.name,required:true},...Object.entries(fields).map(([name,label])=>({name,label,value:food[name]??food.nutrients?.[name]??0,type:'number',inputmode:'decimal',min:0,step:'any',validate:value=>Number.isFinite(Number(value))&&Number(value)>=0?'':'Ingresá un número igual o mayor que cero.'}))];}
+  async function editCachedFdcFood(id){
     if(!FDC)return;const food=FDC.cachedFoods().find(item=>item.id===id);if(!food)return;
-    const name=(window.prompt('Nombre editable:',food.name)||food.name).trim(),updated={name,aliases:[name,food.description,food.brandOwner].filter(Boolean)};
     const fields={calories:'Calorías/100 g',protein:'Proteína/100 g',carbs:'Carbohidratos/100 g',fat:'Grasas/100 g',fiber:'Fibra/100 g',sodium:'Sodio mg/100 g',potassium:'Potasio mg/100 g',calcium:'Calcio mg/100 g',iron:'Hierro mg/100 g',vitaminC:'Vitamina C mg/100 g'};
-    Object.entries(fields).forEach(([key,label])=>{const value=window.prompt(label,String(food[key]??food.nutrients?.[key]??0));if(value!==null)updated[key]=Math.max(0,Number(value)||0)});
+    const values=await window.APP_FORM_DIALOG.ask({title:'Editar alimento USDA',message:'Los cambios quedan solo en la caché de este dispositivo.',fieldList:nutrientDialogFields(food,fields)});if(!values)return;
+    const name=values.name.trim(),updated={name,aliases:[name,food.description,food.brandOwner].filter(Boolean)};Object.keys(fields).forEach(key=>{updated[key]=Math.max(0,Number(values[key])||0);});
     FDC.updateCachedFood(id,updated);populateFoods();renderFdcCachedFoods();renderAdvancedNutrition();syncVersionedState();flash('Alimento USDA editado localmente.');
   }
   function renderFdcCachedFoods(){
@@ -360,10 +361,10 @@
   function currentMealEntries(date=document.getElementById('nutritionDate')?.value||todayStr(),meal=document.getElementById('nutritionMeal')?.value||'Desayuno'){
     return entriesForDate(date).filter(e=>e.meal===meal);
   }
-  function saveFrequentMeal(){
+  async function saveFrequentMeal(){
     const items=currentMealEntries(); if(!items.length){flash('Registrá al menos un alimento en esta comida.');return;}
     const suggested=`${document.getElementById('nutritionMeal').value} frecuente`;
-    const name=(window.prompt('Nombre de la comida frecuente:',suggested)||'').trim(); if(!name)return;
+    const values=await window.APP_FORM_DIALOG.ask({title:'Guardar comida frecuente',fieldList:[{name:'name',label:'Nombre',value:suggested,required:true}]});if(!values)return;const name=values.name.trim();
     const saved=getLocalData(SAVED_MEALS_KEY,[]);
     saved.push({id:uid('savedmeal'),name,items:items.map(({name,grams,calories,protein,carbs,fat,foodId,fdcId,nutrients,source,sourceCitation})=>({name,grams,calories,protein,carbs,fat,foodId,fdcId,nutrients,source,sourceCitation})),savedAt:new Date().toISOString()});
     setLocalData(SAVED_MEALS_KEY,saved); renderSavedMeals();syncVersionedState();flash('Comida frecuente guardada.');
@@ -384,11 +385,10 @@
     setLocalData(SAVED_MEALS_KEY,getLocalData(SAVED_MEALS_KEY,[]).filter(x=>x.id!==id));
     renderSavedMeals();syncVersionedState();flash('Comida frecuente eliminada.');
   }
-  function copyCurrentMeal(){
+  async function copyCurrentMeal(){
     const items=currentMealEntries();
     if(!items.length){flash('No hay alimentos en esta comida para copiar.');return;}
-    const target=(window.prompt('Fecha destino (AAAA-MM-DD):',todayStr())||'').trim();
-    if(!/^\d{4}-\d{2}-\d{2}$/.test(target)||Number.isNaN(parseDate(target).getTime())){flash('Escribí una fecha válida en formato AAAA-MM-DD.');return;}
+    const values=await window.APP_FORM_DIALOG.ask({title:'Copiar comida',fieldList:[{name:'date',label:'Fecha destino',type:'date',value:todayStr(),required:true,validate:value=>/^\d{4}-\d{2}-\d{2}$/.test(value)&&!Number.isNaN(parseDate(value).getTime())?'':'Elegí una fecha válida.'}]});if(!values)return;const target=values.date;
     addMealItems(items,target,document.getElementById('nutritionMeal').value);flash(`Comida copiada a ${target}.`);
   }
   function repeatYesterdayMeal(){
@@ -416,13 +416,12 @@
     const foods=getLocalData(CUSTOM_FOODS_KEY,[]).map(ensureCustomFoodShape);
     setLocalData(CUSTOM_FOODS_KEY,foods);
   }
-  function editCustomFood(id){
+  async function editCustomFood(id){
     const foods=getLocalData(CUSTOM_FOODS_KEY,[]),index=foods.findIndex(f=>f.id===id);if(index<0)return;
-    const food=foods[index],ask=(label,key)=>window.prompt(label,String(food[key]??food.nutrients?.[key]??0));
-    const name=(window.prompt('Nombre:',food.name)||food.name).trim();
+    const food=foods[index];
     const fields={calories:'Calorías/100 g',protein:'Proteína/100 g',carbs:'Carbohidratos/100 g',fat:'Grasas/100 g',fiber:'Fibra/100 g',sodium:'Sodio mg/100 g',calcium:'Calcio mg/100 g',iron:'Hierro mg/100 g',vitaminC:'Vitamina C mg/100 g'};
-    const updated={...food,name},reported=new Set(food.reportedNutrients||[]);
-    Object.entries(fields).forEach(([key,label])=>{const value=ask(label,key);if(value!==null){updated[key]=Math.max(0,Number(value)||0);if(!['calories','protein','carbs','fat'].includes(key))reported.add(key);}});updated.reportedNutrients=[...reported];
+    const values=await window.APP_FORM_DIALOG.ask({title:'Editar alimento personalizado',message:'Las entradas históricas conservan su valor registrado.',fieldList:nutrientDialogFields(food,fields)});if(!values)return;
+    const updated={...food,name:values.name.trim()},reported=new Set(food.reportedNutrients||[]);Object.keys(fields).forEach(key=>{updated[key]=Math.max(0,Number(values[key])||0);if(!['calories','protein','carbs','fat'].includes(key))reported.add(key);});updated.reportedNutrients=[...reported];
     foods[index]=ensureCustomFoodShape(updated,index);setLocalData(CUSTOM_FOODS_KEY,foods);populateFoods();renderCustomFoods();renderAdvancedNutrition();syncVersionedState();
   }
   function renderCustomFoods(){

@@ -778,6 +778,10 @@
     <div class="actionModal confirmationDialog"><div class="modalHd"><div><span class="pill">Confirmacion</span><h2 id="appConfirmationTitle">Confirmar accion</h2></div><button type="button" class="closeBtn" id="appConfirmationClose" aria-label="Cerrar confirmacion">&times;</button></div><div class="modalBd"><p id="appConfirmationMessage"></p><div class="buttons"><button type="button" class="secondary" id="appConfirmationCancel">Cancelar</button><button type="button" class="good" id="appConfirmationConfirm">Continuar</button></div></div></div>
   </div>
 
+  <div class="modalBackdrop hidden" id="appFormDialogBackdrop" role="dialog" aria-modal="true" aria-labelledby="appFormDialogTitle" aria-describedby="appFormDialogMessage" aria-hidden="true">
+    <form class="actionModal formDialog" id="appFormDialogForm" novalidate><div class="modalHd"><div><span class="pill">Edicion</span><h2 id="appFormDialogTitle">Editar</h2><p class="muted small hidden" id="appFormDialogMessage"></p></div><button type="button" class="closeBtn" id="appFormDialogClose" aria-label="Cerrar edicion">&times;</button></div><div class="modalBd"><div class="formGrid" id="appFormDialogFields"></div><div class="buttons"><button type="button" class="secondary" id="appFormDialogCancel">Cancelar</button><button type="submit" class="good" id="appFormDialogSubmit">Guardar</button></div></div></form>
+  </div>
+
   <div class="modalBackdrop hidden" id="appRecoveryBackdrop" role="alertdialog" aria-modal="true" aria-labelledby="appRecoveryTitle" aria-describedby="appRecoveryMessage" aria-hidden="true">
     <div class="actionModal recoveryDialog"><div class="modalHd"><div><span class="pill">Recuperacion local</span><h2 id="appRecoveryTitle">La interfaz encontro un problema</h2></div></div><div class="modalBd"><p id="appRecoveryMessage">Tus registros permanecen guardados.</p><div class="buttons"><button type="button" class="good" id="appRecoveryRetry">Reintentar</button><button type="button" class="secondary" id="appRecoveryRestart">Reiniciar interfaz</button><button type="button" class="secondary" id="appRecoverySafeMode">Usar modo seguro</button><button type="button" class="secondary" id="appRecoveryExport">Exportar diagnostico</button></div><p class="muted small">El diagnostico excluye credenciales, correos, notas personales y datos completos de salud.</p></div></div>
   </div>
@@ -800,6 +804,7 @@
 <script src="ui/notifications.js"></script>
 <script src="ui/inline-validation.js"></script>
 <script src="ui/confirmation-dialog.js"></script>
+<script src="ui/form-dialog.js"></script>
 <script src="ui/error-boundary.js"></script>
 <script src="ui/recovery-view.js"></script>
 <script>
@@ -2532,7 +2537,7 @@ function updatePhonePanel(){
 }
 async function installPwa(){
   if(!deferredInstallPrompt){
-    alert('Para instalar: abrí esta app desde una URL HTTPS en Chrome/Edge y usá “Instalar app” o “Agregar a pantalla principal”. Si abriste el HTML como archivo, el navegador no puede instalarla como PWA completa.');
+    window.APP_NOTIFICATIONS?.showSnackbar?.('Abrí la app por HTTPS y usá “Instalar” o “Agregar a pantalla principal”.',{tone:'info',duration:6500});
     return;
   }
   deferredInstallPrompt.prompt();
@@ -2545,7 +2550,7 @@ function requestUsageAccess(){
     try{ window.AndroidUsageBridge.requestUsageAccess(); phoneMessage('warn','Se abrió la pantalla de permisos. Activá “Uso de apps” para Protocolo 0→100 y volvé a la app.'); }
     catch(e){ phoneMessage('warn','No pude abrir el permiso desde esta versión. Abrilo manualmente en Ajustes > Acceso especial > Acceso a datos de uso.'); }
   }else{
-    alert('La versión PWA del navegador no puede pedir ese permiso. Usá la versión Android nativa incluida en el ZIP para sincronización automática.');
+    window.APP_NOTIFICATIONS?.showSnackbar?.('La PWA no puede pedir acceso al uso de apps. Esa función requiere el APK Android.',{tone:'warning',duration:6500});
   }
 }
 function renderNativeAppList(apps){

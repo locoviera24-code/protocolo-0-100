@@ -15,7 +15,7 @@ PWA y APK Android para medir habitos, atencion, actividad fisica y nutricion con
 
 ## Navegacion y diseno
 
-La version actual `v2.7.0` (build web `62`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
+La version actual `v2.7.0` (build web `63`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
 **Gym**, **Nutricion**, **Progreso** y **Mas**. En escritorio usa una barra
 lateral compacta. Gym Party se abre desde **Gym > Grupo**, desde un acceso
 discreto en Inicio o mediante un enlace `gymPartyCode`; ya no ocupa un boton
@@ -52,8 +52,9 @@ la muestra alcanza confianza media o alta. Los valores desconocidos nunca se
 tratan como cero.
 
 Los mensajes usan una capa central: snackbar para resultados breves, validacion
-junto al campo, banner unico para offline/actualizaciones y dialogo interno para
-decisiones destructivas. Un boundary local conserva un registro circular
+junto al campo, banner unico para offline/actualizaciones, dialogo interno para
+decisiones destructivas y formulario modal accesible para ediciones breves.
+Gym, Gym Party y FDC ya no usan `alert`, `confirm` ni `prompt` nativos. Un boundary local conserva un registro circular
 sanitizado y ofrece reintentar, reiniciar interfaz, modo seguro o exportar un
 diagnostico sin datos personales ni credenciales.
 
@@ -311,6 +312,9 @@ aplica backoff y los datos locales siguen disponibles.
 Al subir una fila propia se reemplaza el documento remoto con el payload
 sanitizado. Esto elimina campos tecnicos que versiones anteriores pudieron
 guardar por error (`source`, `pendingSync`) sin borrar la sesion ni la serie.
+La interfaz distingue **Guardado localmente**, **Pendiente de sincronizacion**,
+**Sincronizando**, **Sincronizado**, **Conflicto resuelto**, **Error recuperable**
+y **Requiere acceso**, además de mostrar última sincronización y cambios pendientes.
 
 Gym Party permite exportar CSV comparativo de la sala y JSON con mis datos
 compartidos. El CSV no incluye datos privados de nutricion, sueno, ansiedad,

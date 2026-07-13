@@ -66,6 +66,12 @@ const {context} = createContext();
 const party = context.GYM_PARTY_FEATURES;
 
 assert.equal(party.MAX_GYM_PARTY_MEMBERS, 10);
+assert.equal(context.GYM_PARTY_UI.syncState({backendMode:'local'}).id,'local');
+assert.equal(context.GYM_PARTY_UI.syncState({backendMode:'firebase',pending:2,online:false}).id,'pending');
+assert.equal(context.GYM_PARTY_UI.syncState({backendMode:'firebase',syncing:true,pending:2}).id,'syncing');
+assert.equal(context.GYM_PARTY_UI.syncState({backendMode:'firebase',error:'network'}).id,'error');
+assert.equal(context.GYM_PARTY_UI.syncState({backendMode:'firebase',requiresAccess:true}).id,'requires-access');
+assert.equal(context.GYM_PARTY_UI.syncState({backendMode:'firebase',lastSyncAt:'2026-07-12T10:00:00.000Z'}).id,'synced');
 assert.equal(party.hasFirebaseConfig({}), false);
 assert.equal(party.hasFirebaseConfig({
   apiKey: 'api',

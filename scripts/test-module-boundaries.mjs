@@ -59,7 +59,8 @@ assert.equal(aggregate.addedLoadVolume,60);
 assert.equal(metrics.changes({sessionsCount:3,totalVolume:1200,totalSets:10},{sessionsCount:2,totalVolume:1000,totalSets:8}).volumePct,20);
 
 const partyUi=context.GYM_PARTY_UI;
-assert.equal(partyUi.syncLabel({backendMode:'firebase',pending:2,conflicts:1}),'Online - 2 pendiente(s) - 1 conflicto(s) resuelto(s)');
+assert.equal(partyUi.syncLabel({backendMode:'firebase',pending:2,conflicts:1}),'Conflicto resuelto');
+assert.equal(partyUi.syncState({backendMode:'firebase',pending:2,conflicts:1}).pending,2);
 assert.match(partyUi.helpButton('volume'),/aria-label="Ayuda sobre volume"/);
 
 const workoutSource=await readFile(new URL('../workout-features.js',import.meta.url),'utf8');

@@ -41,6 +41,7 @@ $relativeFiles = @(
     'ui/notifications.js',
     'ui/inline-validation.js',
     'ui/confirmation-dialog.js',
+    'ui/form-dialog.js',
     'ui/error-boundary.js',
     'ui/recovery-view.js',
     'progress/progress-data-model.js',

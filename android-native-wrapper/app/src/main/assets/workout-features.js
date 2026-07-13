@@ -1028,14 +1028,15 @@
     const id=target==='reps'?'quickReps':'quickWeight',input=document.getElementById(id);if(!input)return;
     const value=Math.max(0,(Number(input.value)||0)+Number(delta||0));input.value=target==='reps'?Math.round(value):Math.round(value*2)/2;captureQuickDraft();input.focus();
   }
-  function handleQuickLoggerAction(event){
+  async function handleQuickLoggerAction(event){
     const adjust=event.target.closest('[data-quick-adjust]');
     if(adjust){const [target,delta]=adjust.dataset.quickAdjust.split(':');adjustQuickInput(target,delta);return;}
     const edit=event.target.closest('[data-quick-edit-set]');
     if(edit){editingQuickSetId=edit.dataset.quickEditSet;quickDrafts.delete(quickDraftKey());renderQuickLogger();document.getElementById('quickReps')?.focus();return;}
     const remove=event.target.closest('[data-quick-delete-set]');
     if(remove){
-      if(window.confirm&&!window.confirm('Eliminar esta serie? Podrás deshacerla enseguida.'))return;
+      const confirmed=await window.APP_CONFIRMATION.ask({title:'Eliminar serie',message:'La serie se quitará del entrenamiento. Podés deshacerla enseguida.',confirmLabel:'Eliminar',danger:true});
+      if(!confirmed)return;
       const result=deleteQuickSetPayload({date:todayStr(),exerciseId:currentQuickExerciseId,setId:remove.dataset.quickDeleteSet});
       if(result.ok){if(editingQuickSetId===remove.dataset.quickDeleteSet)editingQuickSetId='';renderGym();flash('Serie eliminada. Podés deshacerla.');}
     }
@@ -1072,9 +1073,10 @@
     renderGym();
     flash('Ejercicio completado. Técnica antes que carga.');
   }
-  function finishWorkout(){
+  async function finishWorkout(){
     const session=selectedSessionForQuick(); if(!session) return;
-    if(window.confirm&&!window.confirm('Finalizar el entrenamiento de hoy? Podrás seguir consultándolo y editar sus series.'))return;
+    const confirmed=await window.APP_CONFIRMATION.ask({title:'Finalizar entrenamiento',message:'Las series seguirán disponibles para consultar y editar.',confirmLabel:'Finalizar'});
+    if(!confirmed)return;
     session.status='finalizado';
     session.finishedAt=new Date().toISOString();
     session.summary=sessionSummary(session);
@@ -1174,7 +1176,7 @@
       </div>`;
     }).join(''):'<div class="emptyState">No hay ejercicios que coincidan con la búsqueda.</div>';
   }
-  function handleExerciseLibraryAction(event){
+  async function handleExerciseLibraryAction(event){
     const button=event.target.closest('[data-library-action]'); if(!button) return;
     const row=button.closest('[data-library-exercise-id]'); const id=row?.dataset?.libraryExerciseId; if(!id) return;
     const action=button.dataset.libraryAction,library=libraryData(),exercise=library.find(item=>item.id===id); if(!exercise) return;
@@ -1183,8 +1185,8 @@
     else if(action==='hidden') window.WORKOUT_RANKING?.setExercisePreference?.(id,{hidden:!pref.hidden});
     else if(action==='edit'){
       if(exercise.official){flash('Los ejercicios oficiales no se sobrescriben. Podés ocultarlos o crear uno personalizado.');return;}
-      const name=(window.prompt('Nombre del ejercicio:',exercise.name)||'').trim(); if(!name) return;
-      const muscle=(window.prompt('Grupo muscular:',exercise.group||'General')||exercise.group||'General').trim();
+      const values=await window.APP_FORM_DIALOG.ask({title:'Editar ejercicio',message:'Esta edición no cambia sesiones históricas.',fieldList:[{name:'name',label:'Nombre',value:exercise.name,required:true},{name:'muscle',label:'Grupo muscular',value:exercise.group||'General',required:true}]});
+      if(!values)return;const name=values.name.trim(),muscle=values.muscle.trim();
       exercise.name=name; exercise.group=muscle; exercise.primaryMuscles=[muscle]; exercise.aliases=[...new Set([...(exercise.aliases||[]),name])]; exercise.updatedAt=new Date().toISOString(); saveLibraryData(library);
     }
     renderPlanLibrarySelect(); renderExerciseLibraryEditor();
@@ -1290,8 +1292,9 @@
     renderGym();
     flash('Día copiado. Podés editarlo de forma independiente.');
   }
-  function resetDefaultPlan(){
-    if(!window.confirm('Esto reemplaza la rutina semanal actual por la rutina predeterminada exacta. Tus sesiones guardadas no se borran.')) return;
+  async function resetDefaultPlan(){
+    const confirmed=await window.APP_CONFIRMATION.ask({title:'Restablecer rutina',message:'Se reemplazará la rutina semanal actual por la predeterminada. Tus sesiones guardadas no se borran.',confirmLabel:'Restablecer',danger:true});
+    if(!confirmed)return;
     saveWeeklyPlan(clone(defaultWeeklyPlan));
     currentPlanEditorDay='monday';
     renderGym();

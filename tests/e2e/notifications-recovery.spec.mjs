@@ -75,3 +75,16 @@ test('Error boundary oculta credenciales y recupera sin borrar registros',async(
   await expect(page.locator('#appRecoveryBackdrop')).toBeHidden();
   expect(await page.evaluate(()=>localStorage.getItem('protocolo_0_100_nutrition_entries_v1'))).not.toBeNull();
 });
+
+test('Formulario interno valida campos sin dialogos nativos',async({page})=>{
+  await page.goto('/index.html');
+  await page.evaluate(()=>{window.__formDialogResult='pending';window.APP_FORM_DIALOG.ask({title:'Editar prueba',fieldList:[{name:'name',label:'Nombre',required:true}]}).then(value=>{window.__formDialogResult=value;});});
+  const input=page.locator('#appFormField-name');
+  await expect(input).toBeFocused();
+  await page.locator('#appFormDialogSubmit').click();
+  await expect(input).toHaveAttribute('aria-invalid','true');
+  await input.fill('Registro seguro');
+  await page.locator('#appFormDialogSubmit').click();
+  await expect(page.locator('#appFormDialogBackdrop')).toBeHidden();
+  await expect.poll(()=>page.evaluate(()=>window.__formDialogResult?.name)).toBe('Registro seguro');
+});

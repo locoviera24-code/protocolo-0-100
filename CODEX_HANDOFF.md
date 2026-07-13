@@ -1652,3 +1652,51 @@ Estado publicable: version `2.7.0`, Android `33`, build/cache `62`
 Pendiente real: migrar progresivamente los `confirm`, `prompt` y `alert`
 restantes de Gym/Gym Party/FDC; agregar estados de sync mas detallados; luego
 borradores y ciclo temporal. La infraestructura central ya esta operativa.
+
+## 45. Dialogos internos y estados reales de sincronizacion
+
+Implementado despues de `86ae508`:
+
+- La linea base confirmada fue `main` limpio en `86ae508`, version `2.7.0`,
+  Android `33` y build/cache `62`. IndexedDB seguia en modo shadow.
+- `ui/form-dialog.js` agrega un formulario modal reutilizable con campos creados
+  mediante DOM seguro, validacion inline, Escape, trampa de foco, retorno de
+  foco y una unica accion primaria.
+- `APP_CONFIRMATION.inform()` reutiliza el dialogo central para ayuda extensa.
+  Gym, Gym Party, FDC, rutinas e instalacion ya no usan `window.alert`,
+  `window.confirm` ni `window.prompt`. El unico `.prompt()` restante es el
+  metodo estandar `BeforeInstallPrompt.prompt()` de la instalacion PWA.
+- Las ediciones breves de alimento FDC, alimento personalizado, comida
+  frecuente, copia de comida y ejercicio usan `APP_FORM_DIALOG`. Los borrados,
+  finalizacion, exportacion, salida de sala e invitaciones usan
+  `APP_CONFIRMATION`.
+- `gym-party-ui.js` expone `syncState()`. La sala diferencia: guardado local,
+  pendiente, sincronizando, sincronizado, conflicto resuelto, error recuperable
+  y acceso requerido. Muestra ultima sincronizacion y cantidad pendiente.
+- `syncNow()` guarda el estado transitorio, conserva la cola offline, permite
+  reintentar errores y marca perdida de acceso sin borrar datos locales.
+- El fixture E2E de Progreso muscular dejo de depender del dia anterior; usa
+  hoy y siete dias atras, por lo que no se rompe al pasar de domingo a lunes.
+- Linea base externa: Firestore Emulator con Java 21 paso reglas y seis
+  negativas criticas; Android `:app:assembleDebug` paso con Java 17.
+- Las 14 omisiones conocidas son intencionales por matriz, no funciones sin
+  probar: Service Worker en iPhone WebKit (1); Inicio movil solo Pixel (2);
+  dos pruebas sticky moviles solo Pixel (4); sticky escritorio solo desktop
+  (2); navegacion inferior movil no desktop (1); anchos 320-430 solo Pixel
+  (2); sidebar escritorio solo desktop (2). Total: 14.
+- Pruebas dirigidas del bloque: 38 aprobadas, una omision intencional y cero
+  fallos en Android Chromium, iPhone WebKit y escritorio. Incluyen dialogo de
+  formulario, flujo Gym Party, offline y Progreso en cambio de semana.
+- Regresion completa build 63: 151 aprobadas, 14 omisiones intencionales y
+  cero fallos en 12.8 minutos. Pasaron ademas version, modulos, diseno, router,
+  layout, Ajustes, datos, Nutricion, FDC, Progreso, service worker, Gym,
+  Gym Party, seguridad Android, release Android y accesibilidad estatica.
+- Assets Android verificados y APK debug recompilado despues de los cambios:
+  `:app:assembleDebug` termino con `BUILD SUCCESSFUL`.
+
+Estado publicable del bloque: version `2.7.0`, Android `33`, build/cache `63`
+(`protocolo-0-100-pwa-2.7.0-b63`).
+
+Pendiente siguiente exacto: crear el dominio versionado de borradores con
+debounce, expiracion, descarte, restauracion segura y coordinacion temporal
+mediante `visibilitychange`, `pagehide`, `BroadcastChannel` y `storage`.

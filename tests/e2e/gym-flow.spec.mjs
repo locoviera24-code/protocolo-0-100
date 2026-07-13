@@ -7,6 +7,7 @@ async function createLocalParty(page,{alias='Yo',name='Sala E2E'}={}){
   await page.locator('#gymPartyCreateName').fill(name);
   await page.locator('[data-gym-party-action="create"]').click();
   await expect(page.getByRole('heading',{name:'Entrenamiento compartido',level:2,exact:true})).toBeVisible();
+  await expect(page.locator('.partySyncState')).toContainText('Guardado localmente');
 }
 
 async function setWorkoutDate(page,date){
@@ -59,8 +60,8 @@ test('rutina semanal, registro, edicion, borrado, deshacer y offline',async ({pa
   await page.getByRole('button',{name:'Guardar cambios',exact:true}).click();
   await expect(page.locator('.partyLoggedSets .partySetRow')).toContainText('22.5 kg');
 
-  page.once('dialog',dialog=>dialog.accept());
   await page.getByRole('button',{name:'Eliminar serie 1 de Face pull',exact:true}).click();
+  await page.locator('#appConfirmationConfirm').click();
   await expect(page.locator('.partyLoggedSets .partySetRow')).toHaveCount(0);
   const undo=page.locator('[data-gym-party-action="party-undo-delete-set"]');
   await expect(undo).toBeEnabled();
@@ -97,8 +98,8 @@ test('codigo de invitacion se limpia y permite unir otro miembro',async ({page})
   await page.locator('details').filter({hasText:'Entrar desde otro dispositivo'}).locator('summary').click();
   await expect(page.locator('#gymPartyJoinCode')).toHaveValue(inviteCode);
   await page.locator('#gymPartyJoinAlias').fill('Amigo');
-  page.once('dialog',dialog=>dialog.accept());
   await page.locator('[data-gym-party-action="join"]').click();
+  await page.locator('#appConfirmationConfirm').click();
   await expect(page.getByText(/2\/10 miembro/)).toBeVisible();
   const memberCount=await page.evaluate(()=>JSON.parse(localStorage.getItem('protocolo_0_100_gym_party_membership_v1')).party.members.length);
   expect(memberCount).toBe(2);

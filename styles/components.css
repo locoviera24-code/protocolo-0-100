@@ -75,7 +75,9 @@
 }
 [aria-invalid="true"] { border-color: var(--state-danger-border); }
 .confirmationDialog,
+.formDialog,
 .recoveryDialog { max-width: var(--dialog-narrow-width); }
+.formDialog .formGrid { max-height: min(56vh, 520px); overflow-y: auto; padding: var(--space-1); }
 html[data-safe-mode="true"] #fdcSearchCard,
 html[data-safe-mode="true"] [data-experimental] { display: none !important; }
 
