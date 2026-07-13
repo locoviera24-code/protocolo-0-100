@@ -236,19 +236,21 @@
   }
 
   function loadAdvancedTargetFields(){
-    const targets=advancedTargets(),profile=nutritionProfile();
-    Object.entries(TARGET_DOM).forEach(([key,id])=>{const el=document.getElementById(id);if(el) el.value=targets[key]??'';});
-    [['nutritionAge',profile.age],['nutritionSex',profile.sex],['nutritionHeight',profile.height],['nutritionGoal',profile.goal]].forEach(([id,value])=>{const el=document.getElementById(id);if(el) el.value=value??'';});
+    const targets=advancedTargets();
+    Object.entries(TARGET_DOM).forEach(([key,id])=>{const el=document.getElementById(id);if(el)el.value=window.APP_NUMBERS?.format?.(targets[key],{maximumFractionDigits:3})??String(targets[key]??'');});
+    const metadata=Object.values(targets._meta||{}).filter(item=>item?.updatedAt).sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt)))[0],root=document.getElementById('nutritionTargetsMeta');
+    if(root)root.textContent=metadata?`Origen: valores manuales. Última actualización: ${new Date(metadata.updatedAt).toLocaleString('es-PY')}.`:'Origen: valores manuales. Todavía no se guardaron cambios.';
   }
   function saveAdvancedTargets(){
-    const targets=advancedTargets();
-    Object.entries(TARGET_DOM).forEach(([key,id])=>{const el=document.getElementById(id);if(el) targets[key]=Math.max(0,Number(el.value)||0);});
-    setLocalData(NUTRITION_TARGETS_KEY,targets);
-    setLocalData(NUTRITION_PROFILE_KEY,{
-      age:document.getElementById('nutritionAge')?.value||'',sex:document.getElementById('nutritionSex')?.value||'',
-      height:document.getElementById('nutritionHeight')?.value||'',goal:document.getElementById('nutritionGoal')?.value||'health'
-    });
-    renderAdvancedNutrition(); syncVersionedState();flash('Metas nutricionales orientativas guardadas.');
+    const targets=advancedTargets(),next={...targets},metadata={...(targets._meta||{})},updatedAt=new Date().toISOString();
+    for(const [key,id] of Object.entries(TARGET_DOM)){
+      const input=document.getElementById(id);if(!input)continue;const value=window.APP_NUMBERS?.parse?.(input.value);
+      window.APP_INLINE_VALIDATION?.clear?.(input);
+      if(value===null||value<0){window.APP_INLINE_VALIDATION?.show?.(input,'Ingresá un número válido mayor o igual a cero.');return;}
+      next[key]=value;metadata[key]={value,source:'manual',updatedAt,calculationVersion:'manual-v1'};
+    }
+    next._meta=metadata;window.NUTRITION_STORE?.saveTargets?.(next)??setLocalData(NUTRITION_TARGETS_KEY,next);
+    loadAdvancedTargetFields();renderAdvancedNutrition();syncVersionedState();flash('Objetivos manuales guardados.');
   }
   function filterFoodSelect(){
     const query=normalizeFoodText(document.getElementById('nutritionFoodSearch')?.value||'');
@@ -339,12 +341,12 @@
   function clearFdcApiKey(){
     if(!FDC)return;FDC.saveConfig({...FDC.config(),apiKey:''});loadFdcConfigFields();flash('API key local eliminada.');
   }
-  function nutrientDialogFields(food,fields){return[{name:'name',label:'Nombre',value:food.name,required:true},...Object.entries(fields).map(([name,label])=>({name,label,value:food[name]??food.nutrients?.[name]??0,type:'number',inputmode:'decimal',min:0,step:'any',validate:value=>Number.isFinite(Number(value))&&Number(value)>=0?'':'Ingresá un número igual o mayor que cero.'}))];}
+  function nutrientDialogFields(food,fields){return[{name:'name',label:'Nombre',value:food.name,required:true},...Object.entries(fields).map(([name,label])=>({name,label,value:window.APP_NUMBERS?.format?.(food[name]??food.nutrients?.[name]??0,{maximumFractionDigits:3})??String(food[name]??food.nutrients?.[name]??0),type:'text',inputmode:'decimal',validate:value=>{const parsed=window.APP_NUMBERS?.parse?.(value);return parsed!==null&&parsed>=0?'':'Ingresá un número igual o mayor que cero.';}}))];}
   async function editCachedFdcFood(id){
     if(!FDC)return;const food=FDC.cachedFoods().find(item=>item.id===id);if(!food)return;
     const fields={calories:'Calorías/100 g',protein:'Proteína/100 g',carbs:'Carbohidratos/100 g',fat:'Grasas/100 g',fiber:'Fibra/100 g',sodium:'Sodio mg/100 g',potassium:'Potasio mg/100 g',calcium:'Calcio mg/100 g',iron:'Hierro mg/100 g',vitaminC:'Vitamina C mg/100 g'};
     const values=await window.APP_FORM_DIALOG.ask({title:'Editar alimento USDA',message:'Los cambios quedan solo en la caché de este dispositivo.',fieldList:nutrientDialogFields(food,fields)});if(!values)return;
-    const name=values.name.trim(),updated={name,aliases:[name,food.description,food.brandOwner].filter(Boolean)};Object.keys(fields).forEach(key=>{updated[key]=Math.max(0,Number(values[key])||0);});
+    const name=values.name.trim(),updated={name,aliases:[name,food.description,food.brandOwner].filter(Boolean)};Object.keys(fields).forEach(key=>{updated[key]=Math.max(0,window.APP_NUMBERS.parseOr(values[key],0));});
     FDC.updateCachedFood(id,updated);populateFoods();renderFdcCachedFoods();renderAdvancedNutrition();syncVersionedState();flash('Alimento USDA editado localmente.');
   }
   function renderFdcCachedFoods(){
@@ -411,9 +413,9 @@
   function ensureCustomFoodShape(food,index){
     const nutrientKeys=Object.keys(DEFINITIONS);
     const nutrients={};
-    nutrientKeys.forEach(key=>{if(!['calories','protein','carbs','fat','water'].includes(key))nutrients[key]=Number(food[key]??food.nutrients?.[key]??0)||0;});
+    nutrientKeys.forEach(key=>{if(!['calories','protein','carbs','fat','water'].includes(key))nutrients[key]=window.APP_NUMBERS?.parseOr?.(food[key]??food.nutrients?.[key],0)??0;});
     const reportedNutrients=Array.isArray(food.reportedNutrients)?food.reportedNutrients.filter(key=>key in nutrients):Object.keys(nutrients).filter(key=>Number(nutrients[key])!==0);
-    return {...food,id:food.id||`custom-${normalizeFoodText(food.name).replace(/\s+/g,'-')||index}`,category:food.category||'personalizados',portionGrams:Number(food.portionGrams)||100,confidence:food.confidence||'aproximado',source:food.source||'etiqueta manual',nutrients,reportedNutrients,...nutrients,custom:true};
+    return {...food,id:food.id||`custom-${normalizeFoodText(food.name).replace(/\s+/g,'-')||index}`,aliases:[...new Set([String(food.name||'').trim(),...(food.aliases||[]).map(alias=>String(alias).trim()).filter(Boolean)])],category:food.category||'personalizados',portionGrams:Math.max(.1,window.APP_NUMBERS?.parseOr?.(food.portionGrams,100)??100),confidence:food.confidence||'aproximado',source:food.source||'etiqueta manual',archived:!!food.archived,nutrients,reportedNutrients,...nutrients,custom:true};
   }
   function normalizeCustomFoods(){
     const foods=getLocalData(CUSTOM_FOODS_KEY,[]).map(ensureCustomFoodShape);
@@ -423,14 +425,31 @@
     const foods=getLocalData(CUSTOM_FOODS_KEY,[]),index=foods.findIndex(f=>f.id===id);if(index<0)return;
     const food=foods[index];
     const fields={calories:'Calorías/100 g',protein:'Proteína/100 g',carbs:'Carbohidratos/100 g',fat:'Grasas/100 g',fiber:'Fibra/100 g',sodium:'Sodio mg/100 g',calcium:'Calcio mg/100 g',iron:'Hierro mg/100 g',vitaminC:'Vitamina C mg/100 g'};
-    const values=await window.APP_FORM_DIALOG.ask({title:'Editar alimento personalizado',message:'Las entradas históricas conservan su valor registrado.',fieldList:nutrientDialogFields(food,fields)});if(!values)return;
-    const updated={...food,name:values.name.trim()},reported=new Set(food.reportedNutrients||[]);Object.keys(fields).forEach(key=>{updated[key]=Math.max(0,Number(values[key])||0);if(!['calories','protein','carbs','fat'].includes(key))reported.add(key);});updated.reportedNutrients=[...reported];
+    const fieldList=[...nutrientDialogFields(food,fields),{name:'portionGrams',label:'Porción base (g)',value:window.APP_NUMBERS.format(food.portionGrams||100),inputmode:'decimal',validate:value=>window.APP_NUMBERS.parse(value)>0?'':'Ingresá una porción mayor que cero.'},{name:'source',label:'Fuente o etiqueta',value:food.source||''},{name:'confidence',label:'Confianza',value:food.confidence||'aproximado',options:[{value:'alto',label:'Alta'},{value:'medio',label:'Media'},{value:'aproximado',label:'Aproximada'},{value:'desconocido',label:'Desconocida'}]},{name:'aliases',label:'Aliases separados por coma',value:(food.aliases||[]).filter(alias=>normalizeFoodText(alias)!==normalizeFoodText(food.name)).join(', ')}];
+    const values=await window.APP_FORM_DIALOG.ask({title:'Editar alimento personalizado',message:'Las entradas históricas conservan su valor registrado.',fieldList});if(!values)return;
+    const nameKey=normalizeFoodText(values.name),duplicate=foods.find(item=>item.id!==id&&(normalizeFoodText(item.name)===nameKey||(item.aliases||[]).some(alias=>normalizeFoodText(alias)===nameKey)));if(duplicate){flash(`Ya existe ${duplicate.name}. Usá Fusionar si representan el mismo alimento.`,{tone:'warning'});return;}
+    const updated={...food,name:values.name.trim(),portionGrams:window.APP_NUMBERS.parseOr(values.portionGrams,100),source:values.source.trim()||'etiqueta manual',confidence:values.confidence,aliases:[values.name.trim(),...values.aliases.split(',').map(alias=>alias.trim()).filter(Boolean)]},reported=new Set(food.reportedNutrients||[]);Object.keys(fields).forEach(key=>{updated[key]=Math.max(0,window.APP_NUMBERS.parseOr(values[key],0));if(!['calories','protein','carbs','fat'].includes(key)&&String(values[key]).trim())reported.add(key);});updated.reportedNutrients=[...reported];
     foods[index]=ensureCustomFoodShape(updated,index);setLocalData(CUSTOM_FOODS_KEY,foods);populateFoods();renderCustomFoods();renderAdvancedNutrition();syncVersionedState();
+  }
+  function refreshCustomFoods(foods){setLocalData(CUSTOM_FOODS_KEY,foods);populateFoods();renderCustomFoods();renderAdvancedNutrition();syncVersionedState();}
+  async function mergeCustomFood(id){
+    const foods=getLocalData(CUSTOM_FOODS_KEY,[]),source=foods.find(food=>food.id===id),targets=foods.filter(food=>food.id!==id);if(!source||!targets.length){flash('Necesitás otro alimento personalizado para fusionar.',{tone:'warning'});return;}
+    const values=await window.APP_FORM_DIALOG.ask({title:'Fusionar alimento',message:'Elegí el alimento canónico. Los valores históricos no se recalculan.',submitLabel:'Revisar fusión',fieldList:[{name:'targetId',label:'Conservar como canónico',options:targets.map(food=>({value:food.id,label:food.name}))}]});if(!values)return;
+    const target=foods.find(food=>food.id===values.targetId);if(!target)return;const confirmed=await window.APP_CONFIRMATION.ask({title:'Confirmar fusión',message:`${source.name} se convertirá en alias de ${target.name}. Las entradas previas conservarán calorías y nutrientes.`,confirmLabel:'Fusionar'});if(!confirmed)return;
+    const previousFoods=structuredClone(foods),previousEntries=structuredClone(getLocalData(NUTRITION_ENTRIES_KEY,[])),merged=ensureCustomFoodShape({...target,aliases:[...(target.aliases||[]),source.name,...(source.aliases||[])],legacyIds:[...(target.legacyIds||[]),source.id]},foods.indexOf(target)),nextFoods=foods.filter(food=>food.id!==source.id).map(food=>food.id===target.id?merged:food),nextEntries=previousEntries.map(entry=>entry.foodId===source.id?{...entry,foodId:target.id}:entry);
+    setLocalData(NUTRITION_ENTRIES_KEY,nextEntries);refreshCustomFoods(nextFoods);flash('Alimentos fusionados.',{actionLabel:'Deshacer',duration:8000,onAction:()=>{setLocalData(NUTRITION_ENTRIES_KEY,previousEntries);refreshCustomFoods(previousFoods);}});
+  }
+  async function handleCustomFoodAction(button){
+    const id=button.dataset.customFoodId,action=button.dataset.customFoodAction,foods=getLocalData(CUSTOM_FOODS_KEY,[]),index=foods.findIndex(food=>food.id===id);if(index<0)return;const food=foods[index];
+    if(action==='edit'){editCustomFood(id);return;}if(action==='merge'){mergeCustomFood(id);return;}
+    if(action==='duplicate'){const copy=ensureCustomFoodShape({...food,id:`custom-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,name:`${food.name} (copia)`,aliases:[],archived:false},foods.length);refreshCustomFoods([...foods,copy]);flash('Alimento duplicado como plantilla.');return;}
+    if(action==='archive'||action==='restore'){foods[index]={...food,archived:action==='archive'};refreshCustomFoods(foods);flash(action==='archive'?'Alimento archivado.':'Alimento restaurado.');return;}
+    if(action==='delete'){const confirmed=await window.APP_CONFIRMATION.ask({title:'Eliminar alimento personalizado',message:'Los registros históricos conservarán sus valores. Esta definición dejará de estar disponible.',confirmLabel:'Eliminar',danger:true});if(!confirmed)return;const snapshot=structuredClone(foods);refreshCustomFoods(foods.filter(item=>item.id!==id));flash('Alimento personalizado eliminado.',{actionLabel:'Deshacer',duration:7000,onAction:()=>refreshCustomFoods(snapshot)});}
   }
   function renderCustomFoods(){
     const box=document.getElementById('customFoodsList');if(!box)return;
     const foods=getLocalData(CUSTOM_FOODS_KEY,[]);
-    box.innerHTML=foods.length?foods.map(food=>`<div class="entryRow"><div><strong>${escapeHtml(food.name)}</strong><div class="meta">${food.calories||0} kcal · P ${food.protein||0} · C ${food.carbs||0} · G ${food.fat||0} · ${escapeHtml(food.source||'etiqueta manual')}</div></div><div class="buttons" style="margin:0"><button type="button" class="secondary" data-edit-custom-food="${escapeHtml(food.id)}">Editar</button><button type="button" class="danger" data-delete-custom-food="${escapeHtml(food.id)}">Eliminar</button></div></div>`).join(''):'<div class="emptyState">Todavía no creaste alimentos personalizados.</div>';
+    box.innerHTML=foods.length?foods.map(food=>`<div class="entryRow ${food.archived?'muted':''}"><div><strong>${escapeHtml(food.name)}</strong><div class="meta">${food.calories||0} kcal · P ${food.protein||0} · C ${food.carbs||0} · G ${food.fat||0} · ${escapeHtml(food.source||'etiqueta manual')}${food.archived?' · archivado':''}</div></div><details class="nutritionFoodMenu"><summary aria-label="Opciones para ${escapeHtml(food.name)}">Opciones</summary><div class="nutritionFoodMenuPanel" role="menu"><button type="button" role="menuitem" data-custom-food-action="edit" data-custom-food-id="${escapeHtml(food.id)}">Editar</button><button type="button" role="menuitem" data-custom-food-action="duplicate" data-custom-food-id="${escapeHtml(food.id)}">Duplicar / usar como plantilla</button><button type="button" role="menuitem" data-custom-food-action="merge" data-custom-food-id="${escapeHtml(food.id)}">Fusionar duplicado</button><button type="button" role="menuitem" data-custom-food-action="${food.archived?'restore':'archive'}" data-custom-food-id="${escapeHtml(food.id)}">${food.archived?'Restaurar':'Archivar'}</button><button type="button" class="dangerText" role="menuitem" data-custom-food-action="delete" data-custom-food-id="${escapeHtml(food.id)}">Eliminar</button></div></details></div>`).join(''):'<div class="emptyState">Todavía no creaste alimentos personalizados.</div>';
   }
 
   function rebuildCoinLedger(){
@@ -691,8 +710,7 @@
     document.getElementById('exportAffiliateCsvBtn')?.addEventListener('click',exportAffiliateCsv);
     document.getElementById('nutritionMeal')?.addEventListener('change',renderNutrition);
     document.addEventListener('click',event=>{
-      const edit=event.target.closest('[data-edit-custom-food]');if(edit){editCustomFood(edit.dataset.editCustomFood);return;}
-      const remove=event.target.closest('[data-delete-custom-food]');if(remove){setLocalData(CUSTOM_FOODS_KEY,getLocalData(CUSTOM_FOODS_KEY,[]).filter(f=>f.id!==remove.dataset.deleteCustomFood));populateFoods();renderCustomFoods();syncVersionedState();}
+      const customAction=event.target.closest('[data-custom-food-action]');if(customAction){customAction.closest('details.nutritionFoodMenu')?.removeAttribute('open');handleCustomFoodAction(customAction);return;}
       const importFdc=event.target.closest('[data-import-fdc]');if(importFdc){importFdcFood(importFdc.dataset.importFdc);return;}
       const editFdc=event.target.closest('[data-edit-fdc]');if(editFdc){editCachedFdcFood(editFdc.dataset.editFdc);return;}
       const deleteFdc=event.target.closest('[data-delete-fdc]');if(deleteFdc&&FDC){FDC.removeCachedFood(deleteFdc.dataset.deleteFdc);populateFoods();renderFdcCachedFoods();syncVersionedState();flash('Alimento USDA quitado de la caché.');}

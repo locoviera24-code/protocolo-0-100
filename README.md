@@ -15,7 +15,7 @@ PWA y APK Android para medir habitos, atencion, actividad fisica y nutricion con
 
 ## Navegacion y diseno
 
-La version actual `v2.7.0` (build web `65`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
+La version actual `v2.7.0` (build web `66`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
 **Gym**, **Nutricion**, **Progreso** y **Mas**. En escritorio usa una barra
 lateral compacta. Gym Party se abre desde **Gym > Grupo**, desde un acceso
 discreto en Inicio o mediante un enlace `gymPartyCode`; ya no ocupa un boton
@@ -51,6 +51,19 @@ Cada alimento recuerda cantidad, unidad, comida habitual y las ultimas tres
 combinaciones. La comida sugerida por horario es solo un valor inicial editable.
 Las recetas calculan nutrientes desde snapshots de ingredientes y permiten
 registrar una porcion o gramos. Editarlas no cambia registros historicos.
+
+Los campos numericos de registro aceptan coma o punto decimal y separadores de
+miles (`7,5`, `7.5`, `1.000,5` o `1,000.5`). La app guarda numeros neutrales y
+los presenta con formato `es-PY`; los pesos siguen almacenandose en kg
+canonicos. Los objetivos nutricionales son manuales y conservan valor, origen,
+fecha de actualizacion y version de calculo. La app no simula una calculadora a
+partir de edad, sexo o altura.
+
+El formulario de alimento personalizado muestra primero solo nombre, porcion,
+calorias y macros. Fibra, sodio, micronutrientes, fuente, confianza y aliases
+quedan en una seccion opcional. En Ajustes se pueden editar, duplicar como
+plantilla, archivar, restaurar, fusionar o eliminar definiciones; las entradas
+historicas conservan sus snapshots y las eliminaciones ofrecen Deshacer.
 
 La cobertura nutricional distingue datos conocidos, estimados, desconocidos,
 no informados y ceros confirmados. Con cobertura insuficiente no calcula score;

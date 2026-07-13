@@ -10,7 +10,7 @@
   function record(profiles={},input={}){
     const key=String(input.key||keyFor(input.food||input));if(!key)return profiles;
     const current=profiles[key]||{key,foodId:input.foodId||input.food?.id||'',name:input.name||input.food?.name||'',count:0,favorite:false,combinations:[]};
-    const combination={amount:Math.max(0.01,Number(input.amount)||100),unit:String(input.unit||'g'),meal:String(input.meal||suggestedMeal()),date:String(input.date||''),usedAt:input.usedAt||new Date().toISOString()};
+    const amount=global.APP_NUMBERS?.parseOr?.(input.amount,100)??(Number(input.amount)||100),combination={amount:Math.max(0.01,amount),unit:String(input.unit||'g'),meal:String(input.meal||suggestedMeal()),date:String(input.date||''),usedAt:input.usedAt||new Date().toISOString()};
     const signature=`${combination.amount}|${combination.unit}|${combination.meal}`,combinations=[combination,...(current.combinations||[]).filter(item=>`${item.amount}|${item.unit}|${item.meal}`!==signature)].slice(0,3);
     return{...profiles,[key]:{...current,foodId:input.foodId||current.foodId,name:input.name||current.name,count:Number(current.count||0)+1,lastAmount:combination.amount,lastUnit:combination.unit,lastMeal:combination.meal,lastDate:combination.date,lastUsedAt:combination.usedAt,combinations}};
   }

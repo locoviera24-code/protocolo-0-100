@@ -66,7 +66,7 @@ test('Peso corporal usa kg canonicos al mostrar y guardar libras',async({page})=
   await page.locator('#settingsUnit').selectOption('lb');
   await page.locator('#saveUiSettingsBtn').click();
   await expect(page.locator('#nutritionWeightUnit')).toHaveText('lb');
-  await expect(page.locator('#nutritionWeight')).toHaveValue('154.3');
+  await expect(page.locator('#nutritionWeight')).toHaveValue('154,3');
   await page.locator('#nutritionWeight').fill('160');
   await page.locator('#saveNutritionWeightBtn').click();
   const stored=await page.evaluate(date=>window.NUTRITION_STORE.bodyMetrics()[date].weight,date);
@@ -105,7 +105,7 @@ test('Agregar alimento guia seleccion, cantidad, comida, revision y Deshacer',as
 test('Alimento personalizado solo se crea al completar el flujo',async({page})=>{
   await resetNutrition(page);
   await page.getByRole('button',{name:'Agregar',exact:true}).click();
-  await page.locator('#customFoodDetails summary').click();
+  await page.locator('#customFoodDetails > summary').click();
   await page.locator('#customFoodName').fill('Sopa casera de prueba');
   await page.locator('#foodCalories').fill('80');
   await page.locator('#foodProtein').fill('4');

@@ -2,7 +2,7 @@
   'use strict';
   const MEALS=Object.freeze(['Desayuno','Almuerzo','Merienda','Cena','Snack','Post-entreno','Otros']);
   const GENERIC_UNITS=Object.freeze({unidad:100,taza:240,cucharada:15,cucharadita:5,scoop:30,rebanada:30,vaso:250,porcion:100,lata:120,botella:500});
-  function number(value){const parsed=Number(value);return Number.isFinite(parsed)?parsed:0;}
+  function number(value){const localized=global.APP_NUMBERS?.parse?.(value);if(localized!==undefined)return localized??0;const parsed=Number(value);return Number.isFinite(parsed)?parsed:0;}
   function round(value,digits=1){const factor=10**digits;return Math.round(number(value)*factor)/factor;}
   function normalizeText(value){return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^\p{L}\p{N}\s]/gu,' ').replace(/\s+/g,' ').trim();}
   function cleanQuery(value){return normalizeText(value).replace(/\b(?:aproximadamente|aprox|unos|unas|el|la|los|las|de|del)\b/g,' ').replace(/\b(?:a la plancha|al horno|hervido|hervida|frito|frita)\b/g,' ').replace(/\s+/g,' ').trim();}

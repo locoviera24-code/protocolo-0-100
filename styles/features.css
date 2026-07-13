@@ -700,6 +700,9 @@ body[data-module="progreso"] .grid > .panel > .bd {
 .recipeFormFields {
   margin-top: var(--space-3);
 }
+.customFoodBasicFields {
+  margin-top: var(--space-3);
+}
 .sectionIntro {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

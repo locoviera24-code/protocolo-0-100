@@ -94,6 +94,7 @@
     return {dayKey:key,weekday:dayLabels[key],name,type:'rest',muscles:['Recuperación'],message,suggestions:[...suggestions],exercises:[]};
   }
   function clone(value){ return window.WORKOUT_STORE?.clone?.(value)??JSON.parse(JSON.stringify(value)); }
+  function numeric(value,fallback=0){const parsed=window.APP_NUMBERS?.parse?.(value);if(parsed!==undefined)return parsed??fallback;const number=Number(value);return Number.isFinite(number)?number:fallback;}
   function readStore(key,fallback){return window.WORKOUT_STORE?.read?.(key,fallback)??getLocalData(key,fallback);}
   function writeStore(key,value){return window.WORKOUT_STORE?.write?.(key,value)??setLocalData(key,value);}
   function normalizeText(value){ return window.WORKOUT_PLAN?.normalizeText?.(value)??String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim(); }
@@ -130,11 +131,11 @@
   }
   const LB_PER_KG=2.2046226218;
   function displayWeight(weightKg,unit=settings().unit){
-    const value=Math.max(0,Number(weightKg)||0)*(unit==='lb'?LB_PER_KG:1);
+    const value=Math.max(0,numeric(weightKg,0))*(unit==='lb'?LB_PER_KG:1);
     return Math.round(value*2)/2;
   }
   function canonicalWeight(value,unit=settings().unit){
-    const kg=Math.max(0,Number(value)||0)/(unit==='lb'?LB_PER_KG:1);
+    const kg=Math.max(0,numeric(value,0))/(unit==='lb'?LB_PER_KG:1);
     return Math.round(kg*100)/100;
   }
   function displayVolume(volumeKg,unit=settings().unit){return Math.round(Math.max(0,Number(volumeKg)||0)*(unit==='lb'?LB_PER_KG:1));}
@@ -456,9 +457,9 @@
             <div class="field"><label>Ejercicio actual</label><select id="quickExerciseSelect"></select></div>
           </div>
           <div class="quickPrimaryInputs">
-            <div class="field quickSetNumberField"><label>Serie</label><input type="number" id="quickSetNumber" min="1" value="1"></div>
-            <div class="field"><label>Repeticiones</label><input type="number" id="quickReps" min="0" max="200" inputmode="numeric" value="8"><div class="quickAdjustRow"><button type="button" class="secondary" data-quick-adjust="reps:-1">-1</button><button type="button" class="secondary" data-quick-adjust="reps:1">+1</button></div></div>
-            <div class="field"><label>Kilos / lastre</label><input type="number" id="quickWeight" min="0" step="0.5" inputmode="decimal" value="0"><div class="quickAdjustRow"><button type="button" class="secondary" data-quick-adjust="weight:-0.5">-0.5</button><button type="button" class="secondary" data-quick-adjust="weight:0.5">+0.5</button><button type="button" class="secondary" data-quick-adjust="weight:-2.5">-2.5</button><button type="button" class="secondary" data-quick-adjust="weight:2.5">+2.5</button><button type="button" class="secondary" data-quick-adjust="weight:-5">-5</button><button type="button" class="secondary" data-quick-adjust="weight:5">+5</button></div></div>
+            <div class="field quickSetNumberField"><label>Serie</label><input type="text" inputmode="decimal" id="quickSetNumber" value="1"></div>
+            <div class="field"><label>Repeticiones</label><input type="text" inputmode="decimal" id="quickReps" value="8"><div class="quickAdjustRow"><button type="button" class="secondary" data-quick-adjust="reps:-1">-1</button><button type="button" class="secondary" data-quick-adjust="reps:1">+1</button></div></div>
+            <div class="field"><label>Kilos / lastre</label><input type="text" inputmode="decimal" id="quickWeight" value="0"><div class="quickAdjustRow"><button type="button" class="secondary" data-quick-adjust="weight:-0.5">-0.5</button><button type="button" class="secondary" data-quick-adjust="weight:0.5">+0.5</button><button type="button" class="secondary" data-quick-adjust="weight:-2.5">-2.5</button><button type="button" class="secondary" data-quick-adjust="weight:2.5">+2.5</button><button type="button" class="secondary" data-quick-adjust="weight:-5">-5</button><button type="button" class="secondary" data-quick-adjust="weight:5">+5</button></div></div>
           </div>
           <div class="quickStickyActions">
             <button type="button" class="good" id="saveQuickSetBtn">Guardar serie</button>
@@ -472,7 +473,7 @@
           <details class="quickSecondaryDetails">
             <summary>Opcional y finalizar</summary>
             <label class="check" style="margin-top:10px"><input type="checkbox" id="quickBodyweight"><span>Peso corporal: reps sin kilos o kilos como lastre.</span></label>
-            <div class="formGrid" style="margin-top:10px"><div class="field"><label>RIR opcional</label><input type="number" id="quickRir" min="0" max="10" value="2"></div><div class="field"><label>RPE opcional</label><input type="number" id="quickRpe" min="0" max="10" step="0.5" placeholder="Ej. 8"></div></div>
+            <div class="formGrid" style="margin-top:10px"><div class="field"><label>RIR opcional</label><input type="text" inputmode="decimal" id="quickRir" value="2"></div><div class="field"><label>RPE opcional</label><input type="text" inputmode="decimal" id="quickRpe" placeholder="Ej. 8"></div></div>
             <div class="field" style="margin-top:10px"><label>Nota opcional</label><textarea id="quickNote" placeholder="Técnica, molestia, energía, ajuste para próxima serie…"></textarea></div>
             <div class="buttons"><button type="button" class="warn" id="finishWorkoutBtn">Finalizar entrenamiento</button></div>
           </details>
@@ -488,7 +489,7 @@
           <div class="field"><label>Modo</label><select id="gymMode"><option value="simple">Simple</option><option value="advanced">Avanzado</option></select></div>
           <label class="check"><input type="checkbox" id="gymShowRestDays"><span>Mostrar descanso/actividad suave sábado y domingo.</span></label>
           <label class="check"><input type="checkbox" id="gymRestTimerEnabled"><span>Iniciar cronómetro de descanso al guardar.</span></label>
-          <div class="field"><label>Descanso (segundos)</label><input type="number" id="gymRestSeconds" min="15" max="600" step="15" value="90"></div>
+          <div class="field"><label>Descanso (segundos)</label><input type="text" inputmode="decimal" id="gymRestSeconds" value="90"></div>
           <label class="check"><input type="checkbox" id="gymHapticEnabled"><span>Vibración breve al guardar (si el dispositivo permite).</span></label>
           <div class="field"><label>Día a editar</label><select id="planEditorDay"></select></div>
           <div class="field"><label>Nombre de rutina</label><input type="text" id="planEditorName"></div>
@@ -914,12 +915,12 @@
     let exercise=session.exercises.find(x=>x.id===currentQuickExerciseId || x.exerciseId===currentQuickExerciseId);
     if(!exercise) exercise=currentExercise(session);
     if(!exercise) return {ok:false,reason:'missing-exercise',message:'Elegí un ejercicio para registrar.'};
-    const setNumber=Math.max(1,Number(payload.setNumber)||((exercise.sets||[]).length+1));
-    const reps=Math.max(0,Number(payload.reps)||0);
-    const weight=payload.weightCanonical?Math.max(0,Number(payload.weight)||0):canonicalWeight(payload.weight,payload.unit||settings().unit);
+    const setNumber=Math.max(1,numeric(payload.setNumber,(exercise.sets||[]).length+1));
+    const reps=Math.max(0,numeric(payload.reps,0));
+    const weight=payload.weightCanonical?Math.max(0,numeric(payload.weight,0)):canonicalWeight(payload.weight,payload.unit||settings().unit);
     const bodyweight=!!payload.bodyweight;
-    const rir=payload.rir===''||payload.rir===undefined?null:Math.max(0,Number(payload.rir)||0);
-    const rpe=payload.rpe===''||payload.rpe===undefined?null:Math.max(0,Number(payload.rpe)||0);
+    const rir=payload.rir===''||payload.rir===undefined?null:Math.max(0,numeric(payload.rir,0));
+    const rpe=payload.rpe===''||payload.rpe===undefined?null:Math.max(0,numeric(payload.rpe,0));
     const note=String(payload.note||'').trim();
     const set={id:uid('set'),setNumber,reps,weight,rir,rpe,bodyweight,note,savedAt:new Date().toISOString(),volume:Math.round(reps*weight)};
     exercise.sets=exercise.sets||[];
@@ -1043,7 +1044,7 @@
   }
   function adjustQuickInput(target,delta){
     const id=target==='reps'?'quickReps':'quickWeight',input=document.getElementById(id);if(!input)return;
-    const value=Math.max(0,(Number(input.value)||0)+Number(delta||0));input.value=target==='reps'?Math.round(value):Math.round(value*2)/2;captureQuickDraft();input.focus();
+    const value=Math.max(0,numeric(input.value,0)+numeric(delta,0));input.value=target==='reps'?Math.round(value):Math.round(value*2)/2;captureQuickDraft();input.focus();
   }
   async function handleQuickLoggerAction(event){
     const adjust=event.target.closest('[data-quick-adjust]');
@@ -1113,7 +1114,7 @@
     if(timer)timer.checked=!!s.restTimerEnabled;if(seconds)seconds.value=Math.max(15,Number(s.restSeconds)||90);if(haptic)haptic.checked=!!s.hapticEnabled;
   }
   function saveSettingsFromUi(){
-    saveSettings({widgetEnabled:document.getElementById('gymWidgetEnabled').checked,showRir:document.getElementById('gymShowRir').checked,unit:document.getElementById('gymUnit').value,mode:document.getElementById('gymMode').value,showRestDays:document.getElementById('gymShowRestDays').checked,restTimerEnabled:document.getElementById('gymRestTimerEnabled').checked,restSeconds:Math.max(15,Number(document.getElementById('gymRestSeconds').value)||90),hapticEnabled:document.getElementById('gymHapticEnabled').checked});
+    saveSettings({widgetEnabled:document.getElementById('gymWidgetEnabled').checked,showRir:document.getElementById('gymShowRir').checked,unit:document.getElementById('gymUnit').value,mode:document.getElementById('gymMode').value,showRestDays:document.getElementById('gymShowRestDays').checked,restTimerEnabled:document.getElementById('gymRestTimerEnabled').checked,restSeconds:Math.max(15,numeric(document.getElementById('gymRestSeconds').value,90)),hapticEnabled:document.getElementById('gymHapticEnabled').checked});
     renderQuickLogger();
   }
   function planDraftId(dayKey=currentPlanEditorDay){return `gym-routine:${dayKey}`;}
@@ -1176,10 +1177,10 @@
         <div class="field"><label>Tipo</label><select data-plan-field="type">${['máquina','peso libre','polea','peso corporal','movilidad','personalizado'].map(value=>`<option value="${value}" ${exercise.type===value?'selected':''}>${value}</option>`).join('')}</select></div>
         <div class="field"><label>Unidad</label><select data-plan-field="unit"><option value="kg" ${exercise.unit==='kg'?'selected':''}>kg</option><option value="peso corporal" ${exercise.unit==='peso corporal'?'selected':''}>peso corporal</option><option value="tiempo" ${exercise.unit==='tiempo'?'selected':''}>tiempo</option></select></div>
         <label class="check"><input type="checkbox" data-plan-field="bodyweight" ${exercise.bodyweight?'checked':''}><span>Peso corporal</span></label>
-        <div class="field"><label>Series objetivo</label><input type="number" min="1" max="20" data-plan-field="targetSets" value="${exercise.targetSets}"></div>
-        <div class="field"><label>Reps mín.</label><input type="number" min="0" max="200" data-plan-field="repsMin" value="${exercise.repsMin}"></div>
-        <div class="field"><label>Reps máx.</label><input type="number" min="0" max="200" data-plan-field="repsMax" value="${exercise.repsMax}"></div>
-        <div class="field"><label>Descanso (s)</label><input type="number" min="0" max="900" step="15" data-plan-field="restSeconds" value="${exercise.restSeconds}"></div>
+        <div class="field"><label>Series objetivo</label><input type="text" inputmode="decimal" data-plan-field="targetSets" value="${exercise.targetSets}"></div>
+        <div class="field"><label>Reps mín.</label><input type="text" inputmode="decimal" data-plan-field="repsMin" value="${exercise.repsMin}"></div>
+        <div class="field"><label>Reps máx.</label><input type="text" inputmode="decimal" data-plan-field="repsMax" value="${exercise.repsMax}"></div>
+        <div class="field"><label>Descanso (s)</label><input type="text" inputmode="decimal" data-plan-field="restSeconds" value="${exercise.restSeconds}"></div>
         <div class="field wide"><label>Notas</label><input data-plan-field="notes" value="${escapeHtml(exercise.notes)}" placeholder="Técnica o ajuste"></div>
       </div>
     </article>`).join(''):'<div class="emptyState">Este día no tiene ejercicios. Agregá uno desde la biblioteca o creá uno personalizado.</div>';
@@ -1243,7 +1244,7 @@
     card.querySelectorAll('[data-plan-field]').forEach(input=>{
       const field=input.dataset.planField;
       if(field==='bodyweight') exercise[field]=input.checked;
-      else if(['targetSets','repsMin','repsMax','restSeconds'].includes(field)) exercise[field]=Math.max(0,Number(input.value)||0);
+      else if(['targetSets','repsMin','repsMax','restSeconds'].includes(field))exercise[field]=Math.max(0,numeric(input.value,0));
       else exercise[field]=String(input.value||'').trim();
     });
     if(exercise.bodyweight) exercise.unit='peso corporal';

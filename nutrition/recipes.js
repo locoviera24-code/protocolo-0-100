@@ -12,7 +12,7 @@
   ]);
   const CORE_KEYS=Object.freeze(['calories','protein','carbs','fat']);
 
-  function number(value){const parsed=Number(value);return Number.isFinite(parsed)?parsed:0;}
+  function number(value){const localized=global.APP_NUMBERS?.parse?.(value);if(localized!==undefined)return localized??0;const parsed=Number(value);return Number.isFinite(parsed)?parsed:0;}
   function round(value,digits=3){const factor=10**digits;return Math.round(number(value)*factor)/factor;}
   function uid(){return`recipe_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;}
   function normalizeConfidence(value){const key=String(value||'').toLowerCase();return Object.prototype.hasOwnProperty.call(CONFIDENCE_ORDER,key)?key:'desconocido';}

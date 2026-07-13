@@ -146,7 +146,7 @@
   function cleanEmail(value){ return String(value || '').trim().toLowerCase().slice(0,120); }
   function nowIso(){ return new Date().toISOString(); }
   function syncEngine(){ return window.GYM_PARTY_SYNC||null; }
-  function number(value){ return Number.isFinite(Number(value)) ? Number(value) : 0; }
+  function number(value){const localized=window.APP_NUMBERS?.parse?.(value);if(localized!==undefined)return localized??0;return Number.isFinite(Number(value))?Number(value):0;}
   function displayUnit(){return workoutApi()?.getGymSettings?.().unit||'kg';}
   function displayLoad(value){return workoutApi()?.displayWeight?.(value,displayUnit())??number(value);}
   function displayLoadVolume(value){return workoutApi()?.displayVolume?.(value,displayUnit())??Math.round(number(value));}
@@ -1707,8 +1707,8 @@
         <div class="field"><label>Buscar ejercicio</label><input type="search" id="partyExerciseSearch" value="${escape(exerciseSearch)}" autocomplete="off" placeholder="Nombre o alias"></div>
         <div class="field"><label>Ejercicio</label><select id="partyQuickExerciseSelect">${options}</select></div>
         <div class="partyQuickInputs">
-          <div class="field"><label>Reps</label><input type="number" id="partyQuickReps" min="0" max="200" inputmode="numeric" value="${escape(repsValue)}"><div class="partyQuickAdjust"><button type="button" class="secondary" data-party-adjust="reps:-1">-1</button><button type="button" class="secondary" data-party-adjust="reps:1">+1</button></div></div>
-          <div class="field"><label>Kilos</label><input type="number" id="partyQuickWeight" min="0" step="0.5" inputmode="decimal" value="${escape(weightValue)}"><div class="partyQuickAdjust"><button type="button" class="secondary" data-party-adjust="weight:-0.5">-0.5</button><button type="button" class="secondary" data-party-adjust="weight:0.5">+0.5</button><button type="button" class="secondary" data-party-adjust="weight:-2.5">-2.5</button><button type="button" class="secondary" data-party-adjust="weight:2.5">+2.5</button><button type="button" class="secondary" data-party-adjust="weight:-5">-5</button><button type="button" class="secondary" data-party-adjust="weight:5">+5</button></div></div>
+          <div class="field"><label>Reps</label><input type="text" id="partyQuickReps" inputmode="decimal" value="${escape(repsValue)}"><div class="partyQuickAdjust"><button type="button" class="secondary" data-party-adjust="reps:-1">-1</button><button type="button" class="secondary" data-party-adjust="reps:1">+1</button></div></div>
+          <div class="field"><label>Kilos</label><input type="text" id="partyQuickWeight" inputmode="decimal" value="${escape(weightValue)}"><div class="partyQuickAdjust"><button type="button" class="secondary" data-party-adjust="weight:-0.5">-0.5</button><button type="button" class="secondary" data-party-adjust="weight:0.5">+0.5</button><button type="button" class="secondary" data-party-adjust="weight:-2.5">-2.5</button><button type="button" class="secondary" data-party-adjust="weight:2.5">+2.5</button><button type="button" class="secondary" data-party-adjust="weight:-5">-5</button><button type="button" class="secondary" data-party-adjust="weight:5">+5</button></div></div>
         </div>
         <details class="partyNestedFold compact"><summary>Pesos frecuentes</summary><div class="partyWeightChips">
           ${[0,5,10,20,40,60,80].map(value => displayLoad(value)).map(value => `<button type="button" class="secondary" data-gym-party-weight="${value}">${value} ${displayUnit()}</button>`).join('')}
@@ -1718,12 +1718,12 @@
         <details class="partyNestedFold">
           <summary>Opcional</summary>
           <div class="partyQuickInputs">
-            <div class="field"><label>RIR</label><input type="number" id="partyQuickRir" min="0" max="10" value="${escape(rirValue)}"></div>
-            <div class="field"><label>RPE</label><input type="number" id="partyQuickRpe" min="0" max="10" step="0.5" value="${escape(rpeValue)}"></div>
+            <div class="field"><label>RIR</label><input type="text" inputmode="decimal" id="partyQuickRir" value="${escape(rirValue)}"></div>
+            <div class="field"><label>RPE</label><input type="text" inputmode="decimal" id="partyQuickRpe" value="${escape(rpeValue)}"></div>
           </div>
           <div class="field"><label>Nota</label><textarea id="partyQuickNote" placeholder="Tecnica, energia, ajuste...">${escape(noteValue)}</textarea></div>
           <label class="check"><input type="checkbox" id="partyRestTimerEnabled" ${gymSettings.restTimerEnabled?'checked':''}><span>Cronometro de descanso al guardar.</span></label>
-          <div class="field"><label>Descanso (segundos)</label><input type="number" id="partyRestSeconds" min="15" max="600" step="15" value="${Math.max(15,number(gymSettings.restSeconds)||90)}"></div>
+          <div class="field"><label>Descanso (segundos)</label><input type="text" inputmode="decimal" id="partyRestSeconds" value="${Math.max(15,number(gymSettings.restSeconds)||90)}"></div>
           <label class="check"><input type="checkbox" id="partyHapticEnabled" ${gymSettings.hapticEnabled!==false?'checked':''}><span>Vibracion breve si el dispositivo permite.</span></label>
         </details>
         <div class="auditItem">${escape(hint)}</div>
@@ -1843,7 +1843,7 @@
           <summary>Gestionar codigo de invitacion</summary>
           <div class="partyQuickInputs">
             <div class="field"><label>Expiracion</label><select id="gymPartyInviteExpiry"><option value="">Sin expiracion</option><option value="7">7 dias</option><option value="30">30 dias</option><option value="90">90 dias</option></select></div>
-            <div class="field"><label>Limite de usos</label><input type="number" id="gymPartyInviteMaxUses" min="1" max="100" placeholder="Sin limite"></div>
+            <div class="field"><label>Limite de usos</label><input type="text" inputmode="numeric" id="gymPartyInviteMaxUses" placeholder="Sin limite"></div>
           </div>
           <div class="buttons partySecondaryActions"><button type="button" class="secondary" data-gym-party-action="regenerate-invite">Regenerar codigo</button><button type="button" class="danger" data-gym-party-action="revoke-invite">Revocar codigo actual</button></div>
           <div class="muted small">Regenerar invalida el codigo anterior. Solo el owner puede hacerlo.</div>
@@ -2232,8 +2232,8 @@
     flashMessage('Saliste de la Gym Party solo en este dispositivo.');
   }
   function inviteOptionsFromUi(){
-    const days=Math.max(0,Number(document.getElementById('gymPartyInviteExpiry')?.value)||0);
-    const maxUses=Math.max(0,Math.min(100,Number(document.getElementById('gymPartyInviteMaxUses')?.value)||0));
+    const days=Math.max(0,number(document.getElementById('gymPartyInviteExpiry')?.value)||0);
+    const maxUses=Math.max(0,Math.min(100,number(document.getElementById('gymPartyInviteMaxUses')?.value)||0));
     return {days,maxUses};
   }
   async function regenerateInvite(){

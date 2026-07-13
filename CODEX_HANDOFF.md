@@ -1817,3 +1817,65 @@ Estado publicable del bloque: version `2.7.0`, Android `33`, build/cache `65`
 Pendiente siguiente exacto: crear `app/numbers.js` para numeros localizados y
 cerrar objetivos nutricionales transparentes. Despues iniciar taxonomia muscular
 granular; no mezclar esos cambios con este commit de recetas y porciones.
+
+## 48. Numeros localizados, objetivos transparentes y alimentos propios
+
+Implementado despues de `b73b258`:
+
+- `app/numbers.js` es el servicio numerico comun. Acepta coma o punto decimal y
+  separadores de miles (`7,5`, `7.5`, `1.000,5`, `1,000.5`), devuelve numeros
+  neutrales y presenta valores con `Intl.NumberFormat("es-PY")`.
+- El parser se usa en el registro diario, alimentos, recetas, agua, peso,
+  objetivos, edicion FDC, registro rapido Gym, rutinas y Gym Party. Los pesos
+  siguen guardandose en kg canonicos; cambiar la unidad visible no reescribe el
+  historial.
+- Los objetivos nutricionales ahora son explicitamente manuales. Se retiraron
+  edad, sexo, altura y objetivo porque no participaban en ningun calculo. Cada
+  meta guarda `value`, `source: "manual"`, `updatedAt` y
+  `calculationVersion: "manual-v1"` dentro de `nutritionTargets._meta`. El
+  perfil legacy se conserva para backups antiguos, pero no se presenta como
+  personalizacion efectiva.
+- Crear un alimento personalizado muestra solo nombre, porcion, calorias,
+  proteina, carbohidratos y grasa. Fibra, sodio, micronutrientes, fuente,
+  confianza y aliases quedan dentro de **Datos opcionales**.
+- La creacion detecta nombres y aliases duplicados. En Ajustes, cada alimento
+  propio tiene un unico menu para editar, duplicar como plantilla, archivar,
+  restaurar, fusionar o eliminar. Fusionar migra el `foodId` al canonico pero
+  conserva nombres, calorias y nutrientes ya registrados; fusion y borrado
+  ofrecen Deshacer.
+- `app/numbers.js` se carga antes de los dominios que lo usan, entra en el cache
+  PWA, se sincroniza al wrapper Android y tiene prueba unitaria propia.
+- `tests/e2e/nutrition-numbers-targets.spec.mjs` valida coma decimal, campos
+  basicos/opcionales, duplicados, procedencia de metas, ciclo de alimentos
+  propios y peso localizado en Gym Party. La regresion dirigida de Nutricion
+  paso 45/45 escenarios: 15 escritorio, 15 Android Chromium y 15 iPhone
+  WebKit, sin fallos.
+- La regresion E2E completa de build 66 paso 204 casos: 190 aprobados, 14
+  omisiones intencionales de matriz y cero fallos. Por plataforma: Android
+  Chromium 66/68 con 2 skips de escritorio; iPhone WebKit 61/68 con 7 skips de
+  capacidades/matriz; escritorio Chromium 63/68 con 5 skips moviles.
+- Firestore Emulator con Java 21 paso owner atomico, consultas de sync,
+  limpieza legacy y seis negativas criticas denegadas. Los mensajes
+  `PERMISSION_DENIED` del log pertenecen a esas pruebas negativas esperadas.
+- `scripts/validate-app.ps1` paso con version/cache alineados y 442 IDs
+  estaticos unicos. `scripts/sync-web-assets.ps1 -Check` confirmo igualdad web
+  y Android. Gradle con Java 17 termino `:app:assembleDebug` correctamente y
+  genero `android-native-wrapper/app/build/outputs/apk/debug/app-debug.apk`.
+- IndexedDB continua en modo shadow. No se cambiaron schemas de backup, claves
+  locales, reglas Firebase ni datos historicos.
+
+Archivos web principales del bloque: `app/numbers.js`, `index.html`,
+`advanced-features.js`, `workout-features.js`, `gym-party.js`,
+`nutrition/nutrition-model.js`, `nutrition/recipes.js`,
+`nutrition/portions.js`, `styles/features.css`, `sw.js`, pruebas, README y
+sincronizador Android. Sus copias bajo
+`android-native-wrapper/app/src/main/assets/` se generan desde esas fuentes.
+
+Estado publicable del bloque: version `2.7.0`, Android `33`, build/cache `66`
+(`protocolo-0-100-pwa-2.7.0-b66`).
+
+Pendiente siguiente exacto: implementar `progress/muscle-taxonomy.js` con IDs
+granulares y migracion compatible de musculos primarios/secundarios. Despues,
+en un bloque separado, extender tipos de serie; no abrir ambas migraciones a la
+vez. IndexedDB primario, PWA atomica, quality gate unico y hardening adicional
+de Gym Party/Android siguen pendientes posteriores.

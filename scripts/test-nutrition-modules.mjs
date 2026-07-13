@@ -5,7 +5,8 @@ import assert from 'node:assert/strict';
 const memory=new Map(),writes=[];
 const nutritionRepository={get:(key,fallback)=>memory.has(key)?structuredClone(memory.get(key)):structuredClone(fallback),set:(key,value)=>{writes.push(key);memory.set(key,structuredClone(value));return value;}};
 const window={APP_REPOSITORIES:{nutrition:nutritionRepository},NUTRIENT_DEFINITIONS:{fiber:{label:'Fibra'},iron:{label:'Hierro'},sodium:{label:'Sodio'}}};
-const context=vm.createContext({window,console,localStorage:{getItem:()=>null,setItem:()=>{}},structuredClone,Date,Math,JSON,Object,Array,Set,Map,String,Number,RegExp});
+const context=vm.createContext({window,console,localStorage:{getItem:()=>null,setItem:()=>{}},structuredClone,Date,Math,JSON,Object,Array,Set,Map,String,Number,RegExp,Intl});
+vm.runInContext(fs.readFileSync('app/numbers.js','utf8'),context);
 for(const file of ['nutrition-store.js','nutrition-model.js','recipes.js','portions.js','food-search.js','food-entry-flow.js','meal-history.js','nutrition-confidence.js','nutrition-view.js'])vm.runInContext(fs.readFileSync(`nutrition/${file}`,'utf8'),context);
 
 const {NUTRITION_STORE:store,NUTRITION_MODEL:model,NUTRITION_RECIPES:recipes,NUTRITION_PORTIONS:portions,NUTRITION_FOOD_SEARCH:search,NUTRITION_ENTRY_FLOW:flow,NUTRITION_MEAL_HISTORY:history,NUTRITION_CONFIDENCE:confidence,NUTRITION_VIEW:view}=window;
@@ -18,6 +19,7 @@ const food={id:'mandioca',name:'Mandioca hervida',aliases:['mandiócas'],calorie
 const entry=model.buildEntry(food,200,'Almuerzo','2026-07-12',{id:'entry',now:'2026-07-12T12:00:00.000Z',definitions:window.NUTRIENT_DEFINITIONS});
 assert.equal(entry.calories,250);assert.equal(entry.nutrients.fiber,3.6);assert.equal(entry.nutrientStatus.iron,'unknown');assert.equal(entry.nutrientStatus.sodium,'known');
 assert.equal(model.amountToGrams(1,'taza',food).grams,200);
+assert.equal(model.amountToGrams('1,5','taza',food).grams,300);
 assert.equal(search.findBest([food],'mandiocas',{}).food.id,'mandioca');
 
 const controller=flow.create({date:'2026-07-12'});controller.set({food,amount:1,unit:'taza',meal:'Almuerzo'}).go('review');
