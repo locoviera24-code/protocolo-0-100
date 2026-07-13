@@ -29,6 +29,56 @@
   background: var(--color-surface-raised);
 }
 
+.appBanner,
+.appSnackbar {
+  position: fixed;
+  right: var(--space-3);
+  left: var(--space-3);
+  z-index: var(--z-popover);
+  width: min(calc(100% - var(--space-6)), var(--message-width));
+  margin-inline: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface-raised);
+  box-shadow: var(--shadow-popover);
+}
+.appBanner {
+  bottom: calc(var(--safe-bottom) + var(--space-3));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3);
+}
+.appBanner > div { display: grid; gap: var(--space-1); }
+.appBanner > div span { color: var(--color-text-secondary); font-size: var(--font-small); }
+.appBanner[data-tone="warning"] { border-color: var(--state-warning-border); }
+.appBanner[data-tone="error"] { border-color: var(--state-danger-border); }
+.appBanner[data-tone="success"] { border-color: var(--state-success-border); }
+.appSnackbar {
+  bottom: calc(var(--layout-bottom-nav-height) + var(--layout-action-height) + var(--layout-banner-height) + var(--layout-keyboard-inset) + var(--space-3));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+}
+.appSnackbar[data-tone="success"] { border-color: var(--state-success-border); }
+.appSnackbar[data-tone="warning"] { border-color: var(--state-warning-border); }
+.appSnackbar[data-tone="error"] { border-color: var(--state-danger-border); }
+.appSnackbar .textButton { min-height: var(--touch-target); flex: 0 0 auto; }
+.inlineValidation {
+  display: block;
+  margin-top: var(--space-1);
+  color: var(--state-danger-text);
+  font-size: var(--font-small);
+}
+[aria-invalid="true"] { border-color: var(--state-danger-border); }
+.confirmationDialog,
+.recoveryDialog { max-width: var(--dialog-narrow-width); }
+html[data-safe-mode="true"] #fdcSearchCard,
+html[data-safe-mode="true"] [data-experimental] { display: none !important; }
+
 button,
 .btn-primary,
 .btn-secondary,

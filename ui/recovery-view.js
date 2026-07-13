@@ -1,0 +1,12 @@
+(function(global){
+  'use strict';
+  const SAFE_MODE_KEY='protocolo_0_100_safe_mode_v1';
+  let previousFocus=null;
+  function nodes(){return{backdrop:document.getElementById('appRecoveryBackdrop'),message:document.getElementById('appRecoveryMessage'),retry:document.getElementById('appRecoveryRetry'),restart:document.getElementById('appRecoveryRestart'),safe:document.getElementById('appRecoverySafeMode'),exportButton:document.getElementById('appRecoveryExport')};}
+  function show(error){const n=nodes();if(!n.backdrop)return;previousFocus=document.activeElement;n.message.textContent=error?.message||'La interfaz encontro un problema recuperable. Tus registros permanecen guardados.';n.backdrop.classList.remove('hidden');n.backdrop.setAttribute('aria-hidden','false');requestAnimationFrame(()=>n.retry.focus());}
+  function hide(){const {backdrop}=nodes();backdrop?.classList.add('hidden');backdrop?.setAttribute('aria-hidden','true');previousFocus?.focus?.();previousFocus=null;}
+  function exportDiagnostic(){const payload={exportedAt:new Date().toISOString(),version:global.APP_VERSION_INFO?.version||'unknown',build:global.APP_VERSION_INFO?.build||0,safeMode:localStorage.getItem(SAFE_MODE_KEY)==='1',errors:global.APP_ERROR_BOUNDARY?.logs?.()||[]},blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download='protocolo-diagnostico.json';link.rel='noopener';link.click();setTimeout(()=>URL.revokeObjectURL(url),0);}
+  document.addEventListener('DOMContentLoaded',()=>{const n=nodes();n.retry?.addEventListener('click',()=>location.reload());n.restart?.addEventListener('click',()=>{hide();try{global.renderAll?.();global.APP_ROUTER?.navigate?.({module:'home',view:'register'},{replace:true});}catch(error){global.APP_ERROR_BOUNDARY?.record?.(error,{area:'recovery-restart'});}});n.safe?.addEventListener('click',()=>{localStorage.setItem(SAFE_MODE_KEY,'1');document.documentElement.dataset.safeMode='true';hide();global.APP_NOTIFICATIONS?.showSnackbar?.('Modo seguro activado. Los modulos opcionales se cargaran de forma limitada.',{tone:'warning'});});n.exportButton?.addEventListener('click',exportDiagnostic);},{once:true});
+  if(localStorage.getItem(SAFE_MODE_KEY)==='1')document.documentElement.dataset.safeMode='true';
+  global.APP_RECOVERY=Object.freeze({show,hide,exportDiagnostic,isSafeMode:()=>localStorage.getItem(SAFE_MODE_KEY)==='1'});
+})(window);

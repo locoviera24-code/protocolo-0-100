@@ -1611,3 +1611,44 @@ Estado publicable: version `2.7.0`, Android `33`, build/cache `61`
 
 Pendiente siguiente: sistema central de mensajes/estados y migracion gradual
 de `flash`, errores inline, offline, sincronizacion y acciones Deshacer.
+
+## 44. Mensajes y recuperacion central
+
+Implementado despues de `7a15e02`:
+
+- Nuevos modulos: `ui/notifications.js`, `ui/inline-validation.js`,
+  `ui/confirmation-dialog.js`, `ui/error-boundary.js` y
+  `ui/recovery-view.js`.
+- `flash()` permanece como API compatible, pero delega en un unico snackbar
+  tokenizado. Puede mostrar tono, duracion y una accion `Deshacer`; reemplaza
+  el toast anterior con colores y posicion hardcodeados.
+- El banner central mantiene prioridades: offline desplaza temporalmente una
+  actualizacion PWA pendiente y esta reaparece al recuperar conexion. Solo hay
+  un banner visual activo y el coordinador sticky reserva su altura.
+- La actualizacion del service worker usa `APP_NOTIFICATIONS.showBanner()` y
+  deja de crear HTML/CSS independiente. En modo seguro no fuerza updates.
+- Nutricion usa errores inline para nombre, cantidad y fecha. Cada input recibe
+  `aria-invalid` y `aria-errormessage`; el error se retira al corregirlo.
+- Restablecimiento selectivo y borrado total usan el dialogo interno con foco,
+  Escape, cancelacion y confirmacion. Ya no dependen de `window.confirm`.
+- `APP_ERROR_BOUNDARY` conserva hasta 20 metadatos de error, elimina correos y
+  patrones de credenciales, captura `error`/`unhandledrejection` y protege los
+  renders globales. No envia telemetria.
+- La vista de recuperacion permite reintentar, reiniciar solo la interfaz,
+  activar modo seguro o exportar diagnostico. No borra registros; el modo
+  seguro omite FDC avanzado y actualizacion PWA automatica.
+- Los cinco modulos se precachean y se incluyen en el APK.
+- `tests/e2e/notifications-recovery.spec.mjs` cubre reemplazo de snackbar,
+  Deshacer, validacion ARIA, prioridad offline, confirmacion, sanitizacion y
+  recuperacion sin perdida. El archivo pasa 18/18 en las tres plataformas,
+  incluido layout movil y retorno de foco especifico para iOS/WebKit.
+- Regresion completa: 148 aprobadas, 14 omisiones intencionales y cero fallos.
+- Assets Android sincronizados y verificados; `:app:assembleDebug` termino con
+  `BUILD SUCCESSFUL`.
+
+Estado publicable: version `2.7.0`, Android `33`, build/cache `62`
+(`protocolo-0-100-pwa-2.7.0-b62`).
+
+Pendiente real: migrar progresivamente los `confirm`, `prompt` y `alert`
+restantes de Gym/Gym Party/FDC; agregar estados de sync mas detallados; luego
+borradores y ciclo temporal. La infraestructura central ya esta operativa.

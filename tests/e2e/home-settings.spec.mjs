@@ -67,7 +67,7 @@ test('Recordatorio habilitado funciona solo al abrir la app',async ({page})=>{
     localStorage.setItem('protocolo_0_100_ui_preferences_v1',JSON.stringify({notifications:true}));
   });
   await page.reload();
-  await expect(page.locator('#toast')).toContainText('Recordatorio interno');
+  await expect(page.locator('#appSnackbar')).toContainText('Recordatorio interno');
 });
 
 test('lb se muestra sin alterar el peso canónico guardado en kg',async ({page})=>{
@@ -105,9 +105,12 @@ test('Datos muestra almacenamiento y restablece solo un área',async ({page})=>{
   await page.reload();
   await expect(page.locator('#localStorageEstimate')).not.toHaveText('0 KB');
   await expect(page.locator('#dataSchemaVersion')).toHaveText('3');
-  page.once('dialog',dialog=>dialog.accept());
   await page.locator('[data-reset-scope="protocol"]').click();
-  await page.waitForLoadState('domcontentloaded');
+  await expect(page.locator('#appConfirmationBackdrop')).toBeVisible();
+  await expect(page.locator('#appConfirmationCancel')).toBeFocused();
+  await page.locator('#appConfirmationConfirm').click();
+  await expect(page.locator('#appConfirmationBackdrop')).toBeHidden();
+  await expect(page.locator('#appSnackbar')).toContainText('eliminados');
   const values=await page.evaluate(()=>({protocol:localStorage.getItem('protocolo_0_100_tracker_v1'),nutrition:localStorage.getItem('protocolo_0_100_nutrition_entries_v1')}));
   expect(values.protocol).toBeNull();
   expect(values.nutrition).not.toBeNull();

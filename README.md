@@ -15,7 +15,7 @@ PWA y APK Android para medir habitos, atencion, actividad fisica y nutricion con
 
 ## Navegacion y diseno
 
-La version actual `v2.7.0` (build web `61`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
+La version actual `v2.7.0` (build web `62`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
 **Gym**, **Nutricion**, **Progreso** y **Mas**. En escritorio usa una barra
 lateral compacta. Gym Party se abre desde **Gym > Grupo**, desde un acceso
 discreto en Inicio o mediante un enlace `gymPartyCode`; ya no ocupa un boton
@@ -51,6 +51,12 @@ con cobertura baja muestra un rango; solo muestra una cifra orientativa cuando
 la muestra alcanza confianza media o alta. Los valores desconocidos nunca se
 tratan como cero.
 
+Los mensajes usan una capa central: snackbar para resultados breves, validacion
+junto al campo, banner unico para offline/actualizaciones y dialogo interno para
+decisiones destructivas. Un boundary local conserva un registro circular
+sanitizado y ofrece reintentar, reiniciar interfaz, modo seguro o exportar un
+diagnostico sin datos personales ni credenciales.
+
 En móvil, Inicio muestra primero un estado compacto con score, racha, datos
 pendientes y una acción. **Más > Ajustes** guarda apariencia, densidad, modo
 guiado/compacto, unidad y preferencias de módulos. **Datos y copias** muestra
@@ -69,6 +75,11 @@ index.html                  Interfaz, protocolo, gym y nutricion
 styles/*.css                Tokens, base, componentes y estilos por modulo
 ui/router.js                Router module/view, historial, deep links y Atrás
 ui/navigation.js            Coordinador de sticky, banners, teclado y safe areas
+ui/notifications.js         Snackbar y banner unico con prioridades y Deshacer
+ui/inline-validation.js     Errores asociados al campo mediante ARIA
+ui/confirmation-dialog.js   Confirmaciones accesibles sin dialogo nativo
+ui/error-boundary.js        Log circular sanitizado y captura de fallos
+ui/recovery-view.js         Reintento, reinicio, modo seguro y diagnostico local
 data/indexeddb.js           Espejo transaccional, migraciones y recuperacion local
 data/repositories.js        Repositorios por dominio sobre claves compatibles
 data/backup-service.js      Validacion, preview, importacion transaccional y Deshacer

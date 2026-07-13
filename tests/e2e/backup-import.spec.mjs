@@ -33,7 +33,7 @@ test('rechaza JSON futuro sin modificar datos',async ({page})=>{
   await clean(page);
   await page.evaluate(()=>localStorage.setItem('protocolo_0_100_tracker_v1',JSON.stringify([{date:'2026-07-12',score:77}])));
   await page.locator('#importFile').setInputFiles({name:'future.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify({schemaVersion:99,entries:[]}))});
-  await expect(page.locator('#toast')).toContainText('posterior');
+  await expect(page.locator('#appSnackbar')).toContainText('posterior');
   await expect(page.locator('#importPreviewBackdrop')).toBeHidden();
   expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('protocolo_0_100_tracker_v1'))[0].score)).toBe(77);
 });

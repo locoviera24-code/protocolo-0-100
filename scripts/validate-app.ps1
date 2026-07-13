@@ -95,13 +95,13 @@ Assert-True ($duplicates.Count -eq 0) "Hay IDs HTML duplicados: $($duplicates -j
 $requiredFiles = @(
     'nutrition/nutrition-store.js', 'nutrition/nutrition-model.js', 'nutrition/food-search.js', 'nutrition/food-entry-flow.js', 'nutrition/meal-history.js', 'nutrition/nutrition-confidence.js', 'nutrition/nutrition-view.js', 'scripts/test-nutrition-modules.mjs', 'scripts/test-fdc-confidence.mjs', 'tests/e2e/nutrition-domain.spec.mjs', 'tests/e2e/nutrition-today.spec.mjs',
     'data/backup-service.js', 'scripts/test-backup-service.mjs', 'tests/e2e/backup-import.spec.mjs',
-    'app-version.json', 'app-version.js', 'data/indexeddb.js', 'data/repositories.js', 'nutrition-data.js', 'fdc-client.js', 'workout-store.js', 'workout-plan.js', 'workout-metrics.js', 'workout-ranking.js', 'workout-ui.js', 'workout-features.js', 'advanced-features.js', 'ui/router.js', 'ui/navigation.js', 'progress/progress-data-model.js', 'progress/gym-progress-model.js', 'progress/muscle-progress.js', 'progress/exercise-progress.js', 'progress/personal-records.js', 'progress/progress-view.js',
+    'app-version.json', 'app-version.js', 'data/indexeddb.js', 'data/repositories.js', 'nutrition-data.js', 'fdc-client.js', 'workout-store.js', 'workout-plan.js', 'workout-metrics.js', 'workout-ranking.js', 'workout-ui.js', 'workout-features.js', 'advanced-features.js', 'ui/router.js', 'ui/navigation.js', 'ui/notifications.js', 'ui/inline-validation.js', 'ui/confirmation-dialog.js', 'ui/error-boundary.js', 'ui/recovery-view.js', 'progress/progress-data-model.js', 'progress/gym-progress-model.js', 'progress/muscle-progress.js', 'progress/exercise-progress.js', 'progress/personal-records.js', 'progress/progress-view.js',
     'firebase-config.js', 'firebase-service.js', 'gym-party-sync.js', 'gym-party-metrics.js', 'gym-party-ui.js', 'gym-party.js',
     'scripts/test-android-webview-security.mjs',
     'scripts/test-android-release.mjs',
     'scripts/test-accessibility.mjs',
     'scripts/test-module-boundaries.mjs', 'scripts/test-design-system.mjs', 'scripts/design-token-allowlist.json', 'scripts/test-router.mjs', 'scripts/test-layout-coordinator.mjs', 'scripts/test-home-settings.mjs', 'scripts/test-progress-view.mjs', 'scripts/sync-app-version.mjs', 'scripts/test-version-alignment.mjs', 'scripts/test-settings-contract.mjs', 'scripts/test-data-layer.mjs',
-    'scripts/serve-static.mjs', 'playwright.config.mjs', 'tests/e2e/gym-flow.spec.mjs', 'tests/e2e/gym-canonical.spec.mjs', 'tests/e2e/visual-navigation.spec.mjs', 'tests/e2e/router.spec.mjs', 'tests/e2e/layout-sticky.spec.mjs', 'tests/e2e/home-settings.spec.mjs', 'tests/e2e/progress.spec.mjs', 'tests/e2e/progress-muscle.spec.mjs', 'tests/e2e/progress-exercise.spec.mjs', 'tests/e2e/data-layer.spec.mjs', 'scripts/test-muscle-progress.mjs', 'scripts/test-exercise-progress.mjs',
+    'scripts/serve-static.mjs', 'playwright.config.mjs', 'tests/e2e/gym-flow.spec.mjs', 'tests/e2e/gym-canonical.spec.mjs', 'tests/e2e/visual-navigation.spec.mjs', 'tests/e2e/router.spec.mjs', 'tests/e2e/layout-sticky.spec.mjs', 'tests/e2e/home-settings.spec.mjs', 'tests/e2e/notifications-recovery.spec.mjs', 'tests/e2e/progress.spec.mjs', 'tests/e2e/progress-muscle.spec.mjs', 'tests/e2e/progress-exercise.spec.mjs', 'tests/e2e/data-layer.spec.mjs', 'scripts/test-muscle-progress.mjs', 'scripts/test-exercise-progress.mjs',
     'manifest.webmanifest', 'sw.js',
     'styles/tokens.css', 'styles/base.css', 'styles/components.css', 'styles/features.css', 'styles/gym.css', 'styles/gym-party.css', 'styles/modules.css', 'styles/responsive.css',
     'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetProvider.java',
@@ -144,6 +144,10 @@ Assert-True ($html.Contains('<script src="ui/router.js"></script>')) 'index.html
 Assert-True ($serviceWorker.Contains("'./ui/router.js'")) 'sw.js no cachea ui/router.js'
 Assert-True ($html.Contains('<script src="ui/navigation.js"></script>')) 'index.html no carga ui/navigation.js'
 Assert-True ($serviceWorker.Contains("'./ui/navigation.js'")) 'sw.js no cachea ui/navigation.js'
+foreach ($uiModule in @('notifications', 'inline-validation', 'confirmation-dialog', 'error-boundary', 'recovery-view')) {
+    Assert-True ($html.Contains('<script src="ui/' + $uiModule + '.js"></script>')) "index.html no carga ui/$uiModule.js"
+    Assert-True ($serviceWorker.Contains("'./ui/$uiModule.js'")) "sw.js no cachea ui/$uiModule.js"
+}
 Assert-True ($html.Contains('<script src="app-version.js"></script>')) 'index.html no carga app-version.js'
 Assert-True ($serviceWorker.Contains("'./app-version.js'")) 'sw.js no cachea app-version.js'
 Assert-True ($html.Contains('<script src="progress/progress-view.js"></script>')) 'index.html no carga progress/progress-view.js'

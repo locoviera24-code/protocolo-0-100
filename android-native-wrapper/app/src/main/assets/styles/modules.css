@@ -527,8 +527,7 @@ body[data-experience-mode="compact"] .partyStartCard > p {
   top: calc(var(--layout-topbar-height) + var(--space-1)) !important;
 }
 .updateBanner.layoutActive,
-.appBanner.layoutActive,
-#toast {
+.appBanner.layoutActive {
   bottom: calc(
     var(--layout-bottom-nav-height) + var(--layout-action-height) +
       var(--layout-keyboard-inset) + var(--space-3)

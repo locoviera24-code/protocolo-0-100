@@ -82,6 +82,8 @@
   --control-height: 46px;
   --touch-target: 44px;
   --content-width: 1120px;
+  --message-width: 680px;
+  --dialog-narrow-width: 520px;
   --nav-height: 66px;
   --topbar-height: 60px;
   --topbar-compact-height: 52px;

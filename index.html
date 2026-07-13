@@ -23,6 +23,8 @@
 <body>
   <a class="skipLink" href="#mainContent">Saltar al contenido principal</a>
   <div class="srOnly" id="globalLiveRegion" role="status" aria-live="polite" aria-atomic="true"></div>
+  <div class="appBanner hidden" id="appBanner" role="status" aria-live="polite" aria-atomic="true"><div><strong id="appBannerTitle"></strong><span id="appBannerMessage"></span></div><button type="button" class="secondary hidden" id="appBannerAction"></button></div>
+  <div class="appSnackbar hidden" id="appSnackbar" role="status" aria-live="polite" aria-atomic="true"><span id="appSnackbarMessage"></span><button type="button" class="textButton hidden" id="appSnackbarAction"></button></div>
   <div class="moduleTopbar">
     <button type="button" class="menuBtn" id="openDrawerBtn" aria-label="Abrir menú" aria-controls="sideDrawer" aria-expanded="false"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
     <button type="button" class="routeBackBtn hidden" id="routeBackBtn" aria-label="Volver a la pantalla anterior"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button>
@@ -772,6 +774,14 @@
     </div>
   </div>
 
+  <div class="modalBackdrop hidden" id="appConfirmationBackdrop" role="alertdialog" aria-modal="true" aria-labelledby="appConfirmationTitle" aria-describedby="appConfirmationMessage" aria-hidden="true">
+    <div class="actionModal confirmationDialog"><div class="modalHd"><div><span class="pill">Confirmacion</span><h2 id="appConfirmationTitle">Confirmar accion</h2></div><button type="button" class="closeBtn" id="appConfirmationClose" aria-label="Cerrar confirmacion">&times;</button></div><div class="modalBd"><p id="appConfirmationMessage"></p><div class="buttons"><button type="button" class="secondary" id="appConfirmationCancel">Cancelar</button><button type="button" class="good" id="appConfirmationConfirm">Continuar</button></div></div></div>
+  </div>
+
+  <div class="modalBackdrop hidden" id="appRecoveryBackdrop" role="alertdialog" aria-modal="true" aria-labelledby="appRecoveryTitle" aria-describedby="appRecoveryMessage" aria-hidden="true">
+    <div class="actionModal recoveryDialog"><div class="modalHd"><div><span class="pill">Recuperacion local</span><h2 id="appRecoveryTitle">La interfaz encontro un problema</h2></div></div><div class="modalBd"><p id="appRecoveryMessage">Tus registros permanecen guardados.</p><div class="buttons"><button type="button" class="good" id="appRecoveryRetry">Reintentar</button><button type="button" class="secondary" id="appRecoveryRestart">Reiniciar interfaz</button><button type="button" class="secondary" id="appRecoverySafeMode">Usar modo seguro</button><button type="button" class="secondary" id="appRecoveryExport">Exportar diagnostico</button></div><p class="muted small">El diagnostico excluye credenciales, correos, notas personales y datos completos de salud.</p></div></div>
+  </div>
+
 <script src="app-version.js"></script>
 <script src="data/indexeddb.js"></script>
 <script src="data/repositories.js"></script>
@@ -787,6 +797,11 @@
 <script src="fdc-client.js"></script>
 <script src="ui/router.js"></script>
 <script src="ui/navigation.js"></script>
+<script src="ui/notifications.js"></script>
+<script src="ui/inline-validation.js"></script>
+<script src="ui/confirmation-dialog.js"></script>
+<script src="ui/error-boundary.js"></script>
+<script src="ui/recovery-view.js"></script>
 <script>
 const STORAGE_KEY = 'protocolo_0_100_tracker_v1';
 const START_KEY = 'protocolo_0_100_start_date_v1';
@@ -1003,7 +1018,7 @@ function resetKeysForScope(scope){
 }
 async function resetDataScope(scope){
   const labels={protocol:'el protocolo diario',gym:'los datos locales de Gym',nutrition:'Nutrición',ui:'las preferencias visuales'};
-  if(!labels[scope]||!confirm('¿Borrar '+labels[scope]+'? Las demás áreas permanecerán intactas.'))return;
+  if(!labels[scope]||!await window.APP_CONFIRMATION.ask({title:'Restablecer datos',message:'Se borraran '+labels[scope]+'. Las demas areas permaneceran intactas.',confirmLabel:'Borrar esta area',danger:true}))return;
   const keys=resetKeysForScope(scope);
   if(window.APP_DATA)await window.APP_DATA.purgeKeys(keys);
   else keys.forEach(key=>localStorage.removeItem(key));
@@ -1023,7 +1038,7 @@ async function resetDataScope(scope){
   renderAll();renderSettingsData();flash('Datos de '+labels[scope]+' eliminados en este dispositivo.');
 }
 async function resetAllAppData(){
-  if(!confirm('¿Borrar todos los datos locales de Protocolo 0→100? Esta acción no se puede deshacer sin una copia.'))return;
+  if(!await window.APP_CONFIRMATION.ask({title:'Borrar todos los datos locales',message:'Esta accion no se puede deshacer sin una copia exportada.',confirmLabel:'Borrar todo',danger:true}))return;
   const keys=[];for(let index=0;index<localStorage.length;index++)keys.push(localStorage.key(index));
   if(window.APP_DATA)await window.APP_DATA.clearAllData();
   else keys.filter(key=>key?.startsWith('protocolo_0_100_')).forEach(key=>localStorage.removeItem(key));
@@ -1155,7 +1170,7 @@ function chooseFoodForFlow(index){
   nutritionEntryFlow.set({food,amount,unit:'g',date:document.getElementById('nutritionDate').value||todayStr()}).go('amount');renderNutritionFoodFlow({focus:true});
 }
 function useCustomFoodForFlow(){
-  const name=document.getElementById('customFoodName').value.trim();if(!name){flash('Escribí el nombre del alimento personalizado.');return;}
+  const nameInput=document.getElementById('customFoodName'),name=nameInput.value.trim();if(!window.APP_INLINE_VALIDATION.require(nameInput,'Escribi el nombre del alimento personalizado.'))return;
   const nutrientFields={fiber:'foodFiber',sodium:'foodSodium',potassium:'foodPotassium',calcium:'foodCalcium',iron:'foodIron',magnesium:'foodMagnesium',zinc:'foodZinc',vitaminA:'foodVitaminA',vitaminC:'foodVitaminC',vitaminD:'foodVitaminD',b12:'foodB12',folate:'foodFolate'},reportedNutrients=Object.entries(nutrientFields).filter(([,id])=>document.getElementById(id).value.trim()!=='').map(([key])=>key),nutrients=Object.fromEntries(Object.entries(nutrientFields).map(([key,id])=>[key,num(id)]));
   const food={id:`draft-${Date.now()}`,name,calories:num('foodCalories'),protein:num('foodProtein'),carbs:num('foodCarbs'),fat:num('foodFat'),...nutrients,reportedNutrients,portionGrams:100,confidence:'aproximado',source:'etiqueta manual',custom:true,__customDraft:true};
   document.getElementById('foodQuantity').value='100';document.getElementById('foodUnit').value='g';nutritionEntryFlow.set({food,amount:100,unit:'g'}).go('amount');renderNutritionFoodFlow({focus:true});
@@ -1166,8 +1181,8 @@ function resetNutritionFoodFlow({openToday=false}={}){
   if(openToday)window.setNutritionView?.('resumen',{focus:true});
 }
 function advanceFoodAmount(){
-  const amount=Math.max(.1,Number(document.getElementById('foodQuantity').value)||0);if(!amount){flash('Indicá una cantidad válida.');return;}
-  nutritionEntryFlow.set({amount,unit:document.getElementById('foodUnit').value}).go('meal');renderNutritionFoodFlow({focus:true});
+  const input=document.getElementById('foodQuantity'),amount=Number(input.value);if(!(amount>0)){window.APP_INLINE_VALIDATION.show(input,'Indica una cantidad mayor que cero.');return;}
+  window.APP_INLINE_VALIDATION.clear(input);nutritionEntryFlow.set({amount,unit:document.getElementById('foodUnit').value}).go('meal');renderNutritionFoodFlow({focus:true});
 }
 function advanceFoodMeal(){
   nutritionEntryFlow.set({meal:document.getElementById('nutritionMeal').value,date:document.getElementById('nutritionDate').value||todayStr()}).go('review');renderNutritionFoodFlow({focus:true});
@@ -1435,8 +1450,8 @@ function openNutritionEntryDialog(id,mode='edit',focusField='grams'){
 function closeNutritionEntryDialog(){const backdrop=document.getElementById('nutritionEntryDialogBackdrop'),wasOpen=!backdrop.classList.contains('hidden');backdrop.classList.add('hidden');backdrop.setAttribute('aria-hidden','true');nutritionEntryDialogState=null;if(wasOpen&&lastFocusedBeforeOverlay?.focus)lastFocusedBeforeOverlay.focus();}
 function saveNutritionEntryEdit(){
   if(!nutritionEntryDialogState)return;const entries=window.NUTRITION_STORE.entries(),index=entries.findIndex(item=>item.id===nutritionEntryDialogState.id);if(index<0){closeNutritionEntryDialog();return;}
-  const grams=Math.max(.1,Number(document.getElementById('nutritionEntryGrams').value)||0),meal=document.getElementById('nutritionEntryMeal').value,date=document.getElementById('nutritionEntryDate').value,isCopy=nutritionEntryDialogState.mode==='copy';
-  if(!grams||!date){flash('Revisa la cantidad y la fecha.');return;}rememberNutritionEntries();
+  const grams=Number(document.getElementById('nutritionEntryGrams').value),meal=document.getElementById('nutritionEntryMeal').value,date=document.getElementById('nutritionEntryDate').value,isCopy=nutritionEntryDialogState.mode==='copy';
+  if(!(grams>0)){window.APP_INLINE_VALIDATION.show(document.getElementById('nutritionEntryGrams'),'Indica una cantidad mayor que cero.');return;}if(!date){window.APP_INLINE_VALIDATION.show(document.getElementById('nutritionEntryDate'),'Elegi una fecha valida.');return;}rememberNutritionEntries();
   const updated={...scaleNutritionEntry(entries[index],grams),meal,date,savedAt:new Date().toISOString()};
   if(isCopy)entries.push({...updated,id:uid('food'),source:updated.source||'alimento copiado'});else entries[index]=updated;
   window.NUTRITION_STORE.saveEntries(entries);closeNutritionEntryDialog();renderNutrition();flash(isCopy?'Alimento copiado.':'Alimento actualizado.');
@@ -1724,12 +1739,7 @@ function deleteEntry(){
   setEntries(entries); fillForm(null); flash('Registro borrado.'); renderAll();
 }
 function preferredMotionBehavior(){return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth';}
-function flash(msg){
-  const old = document.getElementById('toast'); if(old) old.remove();
-  const live=document.getElementById('globalLiveRegion');if(live){live.textContent='';requestAnimationFrame(()=>{live.textContent=String(msg||'');});}
-  const div=document.createElement('div'); div.id='toast'; div.textContent=msg;div.setAttribute('aria-hidden','true'); div.style.cssText='position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#e7fff3;color:#071a12;padding:12px 16px;border-radius:999px;font-weight:800;box-shadow:0 10px 30px rgba(0,0,0,.35);z-index:99';
-  document.body.appendChild(div); setTimeout(()=>div.remove(),1800);
-}
+function flash(msg,options){return window.APP_NOTIFICATIONS?.showSnackbar?.(msg,options)||window.APP_NOTIFICATIONS?.announce?.(msg);}
 
 function updatePlanUI(){
   const day = calcDay(); const plan = planForDay(day);
