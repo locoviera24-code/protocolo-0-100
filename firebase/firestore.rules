@@ -75,28 +75,163 @@ service cloud.firestore {
         && getAfter(ownMemberPath(partyId)).data.role == "owner";
     }
 
-    function joiningSelf(partyId) {
-      return signedIn()
-        && !exists(ownMemberPath(partyId))
-        && existsAfter(ownMemberPath(partyId))
-        && getAfter(ownMemberPath(partyId)).data.active == true
-        && getAfter(ownMemberPath(partyId)).data.role == "member";
+    function partyRevision(data) {
+      return data.keys().hasAny(["membershipRevision"]) ? data.membershipRevision : 0;
     }
 
-    function leavingSelf(partyId) {
+    function memberReactivationCount(data) {
+      return data.keys().hasAny(["reactivationCount"]) ? data.reactivationCount : 0;
+    }
+
+    function inviteRevision(data) {
+      return data.keys().hasAny(["membershipRevision"]) ? data.membershipRevision : 0;
+    }
+
+    function validMembershipMutation(data) {
+      return (
+          !data.keys().hasAny(["membershipRevision", "lastMembershipMutation"])
+        ) || (
+          data.keys().hasAll(["membershipRevision", "lastMembershipMutation"])
+          && data.membershipRevision is int
+          && data.membershipRevision >= 1
+          && data.lastMembershipMutation is map
+          && data.lastMembershipMutation.keys().hasOnly([
+            "userId", "actorId", "operation", "inviteCode", "at"
+          ])
+          && validString(data.lastMembershipMutation.userId, 1, 128)
+          && validString(data.lastMembershipMutation.actorId, 1, 128)
+          && validString(data.lastMembershipMutation.inviteCode, 4, 10)
+          && (
+            data.lastMembershipMutation.operation == "join"
+            || data.lastMembershipMutation.operation == "reactivate"
+            || data.lastMembershipMutation.operation == "leave"
+            || data.lastMembershipMutation.operation == "remove"
+          )
+          && optionalDate(data.lastMembershipMutation, "at")
+        );
+    }
+
+    function joiningMember(partyId, userId) {
       return signedIn()
-        && exists(ownMemberPath(partyId))
-        && get(ownMemberPath(partyId)).data.active == true
-        && get(ownMemberPath(partyId)).data.role == "member"
-        && existsAfter(ownMemberPath(partyId))
-        && getAfter(ownMemberPath(partyId)).data.active == false
-        && getAfter(ownMemberPath(partyId)).data.role == "member";
+        && userId == request.auth.uid
+        && !exists(memberPathFor(partyId, userId))
+        && existsAfter(memberPathFor(partyId, userId))
+        && getAfter(memberPathFor(partyId, userId)).data.active == true
+        && getAfter(memberPathFor(partyId, userId)).data.role == "member";
+    }
+
+    function reactivatingMember(partyId, userId) {
+      return signedIn()
+        && userId == request.auth.uid
+        && exists(memberPathFor(partyId, userId))
+        && get(memberPathFor(partyId, userId)).data.active == false
+        && get(memberPathFor(partyId, userId)).data.deactivationReason == "left"
+        && existsAfter(memberPathFor(partyId, userId))
+        && getAfter(memberPathFor(partyId, userId)).data.active == true
+        && getAfter(memberPathFor(partyId, userId)).data.role == "member";
+    }
+
+    function leavingMember(partyId, userId) {
+      return signedIn()
+        && userId == request.auth.uid
+        && exists(memberPathFor(partyId, userId))
+        && get(memberPathFor(partyId, userId)).data.active == true
+        && get(memberPathFor(partyId, userId)).data.role == "member"
+        && existsAfter(memberPathFor(partyId, userId))
+        && getAfter(memberPathFor(partyId, userId)).data.active == false
+        && getAfter(memberPathFor(partyId, userId)).data.deactivationReason == "left"
+        && getAfter(memberPathFor(partyId, userId)).data.deactivatedBy == request.auth.uid;
+    }
+
+    function removingMember(partyId, userId) {
+      return signedIn()
+        && userId != request.auth.uid
+        && isOwner(partyId)
+        && exists(memberPathFor(partyId, userId))
+        && get(memberPathFor(partyId, userId)).data.active == true
+        && get(memberPathFor(partyId, userId)).data.role == "member"
+        && existsAfter(memberPathFor(partyId, userId))
+        && getAfter(memberPathFor(partyId, userId)).data.active == false
+        && getAfter(memberPathFor(partyId, userId)).data.deactivationReason == "removed"
+        && getAfter(memberPathFor(partyId, userId)).data.deactivatedBy == request.auth.uid;
+    }
+
+    function partyMutationAfterIs(partyId, userId, operation) {
+      let mutation = getAfter(partyPath(partyId)).data.lastMembershipMutation;
+      return mutation.userId == userId
+        && mutation.actorId == request.auth.uid
+        && mutation.operation == operation;
+    }
+
+    function validPartyCounterMutation(partyId) {
+      let mutation = request.resource.data.lastMembershipMutation;
+      let beforeInvite = get(invitePath(mutation.inviteCode)).data;
+      let afterInvite = getAfter(invitePath(mutation.inviteCode)).data;
+      return signedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "membersCount", "membershipRevision", "lastMembershipMutation", "updatedAt"
+        ])
+        && request.resource.data.membershipRevision == partyRevision(resource.data) + 1
+        && mutation.actorId == request.auth.uid
+        && mutation.inviteCode == resource.data.inviteCode
+        && exists(invitePath(mutation.inviteCode))
+        && existsAfter(invitePath(mutation.inviteCode))
+        && beforeInvite.partyId == partyId
+        && afterInvite.partyId == partyId
+        && inviteRevision(beforeInvite) == partyRevision(resource.data)
+        && afterInvite.membershipRevision == request.resource.data.membershipRevision
+        && afterInvite.membersCount == request.resource.data.membersCount
+        && (
+          (mutation.operation == "join"
+            && request.resource.data.membersCount == resource.data.membersCount + 1
+            && afterInvite.uses == beforeInvite.uses + 1
+            && joiningMember(partyId, mutation.userId))
+          || (mutation.operation == "reactivate"
+            && request.resource.data.membersCount == resource.data.membersCount + 1
+            && afterInvite.uses == beforeInvite.uses + 1
+            && reactivatingMember(partyId, mutation.userId))
+          || (mutation.operation == "leave"
+            && request.resource.data.membersCount == resource.data.membersCount - 1
+            && afterInvite.uses == beforeInvite.uses
+            && leavingMember(partyId, mutation.userId))
+          || (mutation.operation == "remove"
+            && request.resource.data.membersCount == resource.data.membersCount - 1
+            && afterInvite.uses == beforeInvite.uses
+            && removingMember(partyId, mutation.userId))
+        );
+    }
+
+    function validInviteCounterMutation(partyId, inviteCode) {
+      let beforeParty = get(partyPath(partyId)).data;
+      let afterParty = getAfter(partyPath(partyId)).data;
+      let mutation = afterParty.lastMembershipMutation;
+      return mutation.inviteCode == inviteCode
+        && mutation.actorId == request.auth.uid
+        && afterParty.membershipRevision == partyRevision(beforeParty) + 1
+        && request.resource.data.membershipRevision == afterParty.membershipRevision
+        && inviteRevision(resource.data) == partyRevision(beforeParty)
+        && request.resource.data.membersCount == afterParty.membersCount
+        && (
+          ((mutation.operation == "join" || mutation.operation == "reactivate")
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              "membersCount", "uses", "membershipRevision", "updatedAt"
+            ])
+            && request.resource.data.membersCount == resource.data.membersCount + 1
+            && request.resource.data.uses == resource.data.uses + 1)
+          || ((mutation.operation == "leave" || mutation.operation == "remove")
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              "membersCount", "membershipRevision", "updatedAt"
+            ])
+            && request.resource.data.membersCount == resource.data.membersCount - 1
+            && request.resource.data.uses == resource.data.uses)
+        );
     }
 
     function validParty(data, partyId) {
       return data.keys().hasOnly([
           "id", "name", "inviteCode", "createdBy", "createdAt", "updatedAt",
-          "active", "privacyMode", "membersCount", "maxMembers"
+          "active", "privacyMode", "membersCount", "maxMembers",
+          "membershipRevision", "lastMembershipMutation"
         ])
         && data.id == partyId
         && validString(data.name, 1, 80)
@@ -110,6 +245,7 @@ service cloud.firestore {
         && data.maxMembers is int
         && data.maxMembers >= 1
         && data.maxMembers <= 10
+        && validMembershipMutation(data)
         && optionalDate(data, "createdAt")
         && optionalDate(data, "updatedAt");
     }
@@ -118,7 +254,9 @@ service cloud.firestore {
       return data.keys().hasOnly([
           "id", "partyId", "inviteCode", "userId", "aliasInParty", "role",
           "joinedAt", "updatedAt", "active", "shareGymData", "shareAggregateOnly",
-          "shareSetDetails", "hideAbsoluteWeights", "anonymousAlias", "shareGeneralScore"
+          "shareSetDetails", "hideAbsoluteWeights", "anonymousAlias", "shareGeneralScore",
+          "deactivationReason", "deactivatedBy", "deactivatedAt", "reactivatedAt",
+          "reactivationCount"
         ])
         && data.id == docId
         && docId == memberId(data.partyId, data.userId)
@@ -134,6 +272,12 @@ service cloud.firestore {
         && data.hideAbsoluteWeights is bool
         && data.anonymousAlias is bool
         && data.shareGeneralScore is bool
+        && optionalString(data, "deactivationReason", 20)
+        && optionalString(data, "deactivatedBy", 128)
+        && optionalDate(data, "deactivatedAt")
+        && optionalDate(data, "reactivatedAt")
+        && (!data.keys().hasAny(["reactivationCount"])
+          || (data.reactivationCount is int && data.reactivationCount >= 0))
         && optionalDate(data, "joinedAt")
         && optionalDate(data, "updatedAt");
     }
@@ -142,6 +286,9 @@ service cloud.firestore {
       return data.active == true
         && exists(partyPath(data.partyId))
         && get(partyPath(data.partyId)).data.active == true
+        && get(partyPath(data.partyId)).data.inviteCode == data.inviteCode
+        && get(partyPath(data.partyId)).data.membersCount == data.membersCount
+        && get(partyPath(data.partyId)).data.maxMembers == data.maxMembers
         && (!data.keys().hasAny(["expiresAt"]) || data.expiresAt == null || (data.expiresAt is timestamp && data.expiresAt > request.time))
         && (!data.keys().hasAny(["maxUses"]) || data.maxUses == null || data.uses < data.maxUses)
         && data.membersCount < data.maxMembers;
@@ -150,7 +297,8 @@ service cloud.firestore {
     function validInvite(data, code) {
       return data.keys().hasOnly([
           "inviteCode", "partyId", "partyName", "createdBy", "createdAt", "updatedAt",
-          "active", "membersCount", "maxMembers", "uses", "maxUses", "expiresAt"
+          "active", "membersCount", "maxMembers", "uses", "maxUses", "expiresAt",
+          "membershipRevision"
         ])
         && data.inviteCode == code
         && validString(data.inviteCode, 4, 10)
@@ -166,6 +314,8 @@ service cloud.firestore {
         && data.maxMembers <= 10
         && data.uses is int
         && data.uses >= 0
+        && (!data.keys().hasAny(["membershipRevision"])
+          || (data.membershipRevision is int && data.membershipRevision >= 0))
         && optionalNumber(data, "maxUses", 1, 100)
         && optionalDate(data, "expiresAt")
         && optionalDate(data, "createdAt")
@@ -323,16 +473,10 @@ service cloud.firestore {
         && (
           (isOwner(partyId)
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-              "name", "inviteCode", "active", "privacyMode", "membersCount", "maxMembers", "updatedAt"
+              "name", "inviteCode", "active", "privacyMode", "updatedAt"
             ]))
           ||
-          (joiningSelf(partyId)
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["membersCount", "updatedAt"])
-            && request.resource.data.membersCount == resource.data.membersCount + 1)
-          ||
-          (leavingSelf(partyId)
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["membersCount", "updatedAt"])
-            && request.resource.data.membersCount == resource.data.membersCount - 1)
+          validPartyCounterMutation(partyId)
         );
       allow delete: if false;
     }
@@ -346,7 +490,11 @@ service cloud.firestore {
         && request.resource.data.active == true
         && request.resource.data.uses == 0
         && isOwnerAfter(request.resource.data.partyId)
-        && getAfter(partyPath(request.resource.data.partyId)).data.createdBy == request.auth.uid;
+        && getAfter(partyPath(request.resource.data.partyId)).data.createdBy == request.auth.uid
+        && getAfter(partyPath(request.resource.data.partyId)).data.inviteCode == inviteCode
+        && request.resource.data.membersCount == getAfter(partyPath(request.resource.data.partyId)).data.membersCount
+        && request.resource.data.maxMembers == getAfter(partyPath(request.resource.data.partyId)).data.maxMembers
+        && inviteRevision(request.resource.data) == partyRevision(getAfter(partyPath(request.resource.data.partyId)).data);
       allow update: if validInvite(request.resource.data, inviteCode)
         && request.resource.data.inviteCode == resource.data.inviteCode
         && request.resource.data.partyId == resource.data.partyId
@@ -354,24 +502,23 @@ service cloud.firestore {
         && (
           (isOwner(resource.data.partyId)
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-              "partyName", "active", "membersCount", "maxMembers", "uses", "maxUses", "expiresAt", "updatedAt"
+              "partyName", "active", "maxUses", "expiresAt", "updatedAt"
             ]))
           ||
-          (joiningSelf(resource.data.partyId)
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["membersCount", "uses", "updatedAt"])
-            && request.resource.data.membersCount == resource.data.membersCount + 1
-            && request.resource.data.uses == resource.data.uses + 1)
-          ||
-          (leavingSelf(resource.data.partyId)
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["membersCount", "updatedAt"])
-            && request.resource.data.membersCount == resource.data.membersCount - 1
-            && request.resource.data.uses == resource.data.uses)
+          validInviteCounterMutation(resource.data.partyId, inviteCode)
         );
       allow delete: if false;
     }
 
     match /gym_party_members/{docId} {
-      allow get, list: if signedIn()
+      allow get: if signedIn()
+        && (
+          (!exists(/databases/$(database)/documents/gym_party_members/$(docId))
+            && docId.matches('^.+_' + request.auth.uid + '$'))
+          || (exists(/databases/$(database)/documents/gym_party_members/$(docId))
+            && (resource.data.userId == request.auth.uid || isMember(resource.data.partyId)))
+        );
+      allow list: if signedIn()
         && (resource.data.userId == request.auth.uid || isMember(resource.data.partyId));
       allow create: if signedIn()
         && validMember(request.resource.data, docId)
@@ -388,8 +535,7 @@ service cloud.firestore {
             && exists(invitePath(request.resource.data.inviteCode))
             && inviteCanBeUsed(get(invitePath(request.resource.data.inviteCode)).data)
             && get(invitePath(request.resource.data.inviteCode)).data.partyId == request.resource.data.partyId
-            && getAfter(partyPath(request.resource.data.partyId)).data.membersCount == get(partyPath(request.resource.data.partyId)).data.membersCount + 1
-            && getAfter(invitePath(request.resource.data.inviteCode)).data.uses == get(invitePath(request.resource.data.inviteCode)).data.uses + 1)
+            && partyMutationAfterIs(request.resource.data.partyId, request.auth.uid, "join"))
         );
       allow update: if signedIn()
         && validMember(request.resource.data, docId)
@@ -400,13 +546,59 @@ service cloud.firestore {
         && request.resource.data.inviteCode == resource.data.inviteCode
         && (
           (resource.data.userId == request.auth.uid
+            && resource.data.active == true
+            && request.resource.data.active == true
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-              "aliasInParty", "active", "shareGymData", "shareAggregateOnly", "shareSetDetails",
+              "aliasInParty", "shareGymData", "shareAggregateOnly", "shareSetDetails",
               "hideAbsoluteWeights", "anonymousAlias", "shareGeneralScore", "updatedAt"
             ]))
           ||
+          (resource.data.userId == request.auth.uid
+            && resource.data.role == "member"
+            && resource.data.active == true
+            && request.resource.data.active == false
+            && request.resource.data.deactivationReason == "left"
+            && request.resource.data.deactivatedBy == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              "active", "deactivationReason", "deactivatedBy", "deactivatedAt", "updatedAt"
+            ])
+            && partyMutationAfterIs(resource.data.partyId, request.auth.uid, "leave"))
+          ||
+          (resource.data.userId == request.auth.uid
+            && resource.data.role == "member"
+            && resource.data.active == false
+            && resource.data.deactivationReason == "left"
+            && request.resource.data.active == true
+            && request.resource.data.reactivationCount == memberReactivationCount(resource.data) + 1
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              "active", "aliasInParty", "shareGymData", "shareAggregateOnly", "shareSetDetails",
+              "hideAbsoluteWeights", "anonymousAlias", "shareGeneralScore", "reactivatedAt",
+              "reactivationCount", "updatedAt"
+            ])
+            && inviteCanBeUsed(get(invitePath(resource.data.inviteCode)).data)
+            && partyMutationAfterIs(resource.data.partyId, request.auth.uid, "reactivate"))
+          ||
           (isOwner(resource.data.partyId)
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["active", "updatedAt"]))
+            && resource.data.role == "member"
+            && resource.data.active == true
+            && request.resource.data.active == false
+            && request.resource.data.deactivationReason == "removed"
+            && request.resource.data.deactivatedBy == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              "active", "deactivationReason", "deactivatedBy", "deactivatedAt", "updatedAt"
+            ])
+            && partyMutationAfterIs(resource.data.partyId, resource.data.userId, "remove"))
+          ||
+          (resource.data.userId == request.auth.uid
+            && resource.data.role == "owner"
+            && resource.data.active == true
+            && request.resource.data.active == false
+            && request.resource.data.deactivationReason == "archived"
+            && request.resource.data.deactivatedBy == request.auth.uid
+            && getAfter(partyPath(resource.data.partyId)).data.active == false
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              "active", "deactivationReason", "deactivatedBy", "deactivatedAt", "updatedAt"
+            ]))
         );
       allow delete: if false;
     }

@@ -69,8 +69,9 @@ npm run test:rules
 ```
 
 `firebase/rules.test.mjs` cubre accesos validos y negativos: lectura fuera de
-sala, escalado de rol, IDs incorrectos, escritura por otro usuario, limites de
-miembros y valores invalidos de series/peso.
+sala, escalado de rol, campos inmutables, salida repetida, reactivacion
+controlada, miembro expulsado, invitacion agotada, ultimo cupo concurrente y
+valores invalidos de series/peso.
 
 ## Seguridad
 
@@ -88,6 +89,10 @@ Las reglas incluidas buscan que:
 - las invitaciones apunten a una sala activa.
 - los updates usen solo campos permitidos y no cambien `partyId`, `userId`, rol
   o IDs inmutables;
+- `membersCount`, `uses` y `membershipRevision` cambien atomicamente junto con
+  el documento de miembro afectado;
+- una salida voluntaria pueda reactivarse solo con su invitacion vigente, sin
+  permitir que un expulsado o documento legacy inactivo se reactive solo;
 - reps, peso, fechas, revisiones y tombstones tengan tipos/rangos validos.
 
 Probar reglas en Firebase Emulator antes de usar datos reales. Las reglas no

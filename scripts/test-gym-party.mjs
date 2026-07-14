@@ -23,6 +23,13 @@ assert.match(source, /revokeInvite/);
 assert.match(source, /deactivateFirebaseMembership/);
 assert.match(source, /deleteSharedDataAndLeave/);
 assert.match(source, /tombstoneOwnSharedCollection/);
+assert.match(source,/membershipRevision:Number\(party\.membershipRevision\|\|0\)/);
+assert.match(source,/lastMembershipMutation:mutation/);
+assert.match(source,/deactivationReason:'left'/);
+assert.match(source,/deactivationReason:'archived'/);
+assert.match(source,/MEMBERSHIP_REACTIVATION_DENIED/);
+assert.match(source,/operation==='reactivate'/);
+assert.match(source,/transaction\.update\(inviteRef,\{membersCount:membersCount\+1,uses:uses\+1,membershipRevision:revision/);
 assert.match(source,/batch\.set\(firestoreMod\.doc\(db,op\.collection,op\.payload\.id\),\{\.\.\.firestorePayload\(op\.payload,op\.collection\),updatedAt:timestamp\}\)/);
 assert.doesNotMatch(source,/firestorePayload\(op\.payload,op\.collection\),updatedAt:timestamp\},\{merge:true\}/);
 

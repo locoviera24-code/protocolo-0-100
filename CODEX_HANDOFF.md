@@ -2072,3 +2072,63 @@ ilegal `gym_party_members.active: false -> true`, proteger `membersCount` y
 usos de invitacion, y agregar negativas para miembro expulsado/inactivo,
 abandono repetido y capacidad concurrente. Tipos de serie ya esta terminado en
 el bloque 50; no volver a implementarlo.
+
+## 52. Membresias Gym Party atomicas y reactivacion controlada
+
+Bloque iniciado despues de `c2a1848`:
+
+- `firebase/firestore.rules` ya no permite que un miembro cambie libremente
+  `active`. Una salida voluntaria escribe `deactivationReason: left`; una
+  expulsion escribe `removed`; el cierre del owner escribe `archived`.
+- Cada alta, salida, reactivacion o expulsion cambia en la misma transaccion
+  `gym_parties.membersCount`, `gym_party_invites.membersCount`, `uses` cuando
+  corresponde y `membershipRevision`. `lastMembershipMutation` identifica
+  `userId`, actor, operacion, invitacion y fecha para que Rules pueda validar el
+  miembro exacto.
+- `id`, `partyId`, `userId`, `role` e `inviteCode` siguen inmutables. El owner
+  tampoco puede editar arbitrariamente `membersCount` o `uses`.
+- Solo una membresia que salio voluntariamente puede reactivarse con su misma
+  invitacion todavia vigente. Un expulsado y un documento legacy inactivo sin
+  motivo no pueden auto-reactivarse. Un miembro inactivo tampoco puede leer
+  sesiones ni series de la sala.
+- `gym-party.js` usa la invitacion como documento de acceso para el alta, sin
+  exponer el documento privado de la sala al usuario que aun no es miembro.
+  La revision se espeja en la invitacion; las reglas comparan internamente la
+  sala, invitacion y membresia. El cliente detecta contadores incompatibles y
+  conserva todos los entrenamientos locales ante el error.
+- `firebase/rules.test.mjs` separa escenarios y cubre reingreso voluntario,
+  salida repetida, expulsion, lectura inactiva, documento legacy, invitacion de
+  un uso, reutilizacion, campos prohibidos y dos altas concurrentes en el ultimo
+  cupo. Tambien conserva las pruebas de sesiones, sets y payloads legacy.
+- `firebase/schema.md`, `firebase/README.md`, `README.md`, el validador y las
+  pruebas Gym Party documentan el contrato nuevo. Los assets web y Android
+  contienen el mismo `gym-party.js`.
+
+Pruebas finales del bloque:
+
+- Suite de contratos completa correcta: version, service worker, modulos,
+  diseno, router, layout, Ajustes, datos, Progreso, Nutricion, Gym, Gym Party,
+  accesibilidad y seguridad Android. Paridad web/Android confirmada.
+- Artifact web build 70: 61 recursos con hash y siete rutas profundas; la
+  prueba Chromium paso 1/1 sin 404, errores de pagina o consola.
+- E2E completa ejecutada por plataforma para evitar el timeout del comando
+  agregado: Android Chromium 69/71 con 2 skips, iPhone WebKit 64/71 con 7
+  skips y escritorio Chromium 66/71 con 5 skips. Total: 199 aprobadas, 14
+  omisiones intencionales y cero fallos.
+- El workflow remoto previo de `c2a1848` habia tenido un unico fallo transitorio
+  en `progress.spec.mjs` sobre iPhone WebKit (198 aprobadas). En el estado
+  actual esa plataforma paso completa y el archivo de Progreso paso ademas
+  cinco repeticiones seguidas: 15/15.
+- Firestore Emulator con Java 21 correcto. Las denegaciones
+  `PERMISSION_DENIED` del log corresponden a las negativas deliberadas.
+- Gradle 8.10.2 con Java 17 termino `:app:assembleDebug`; el APK debug mide
+  1.662.763 bytes y contiene el mismo `gym-party.js` del build web.
+
+Estado publicable del bloque: version `2.7.0`, Android `33`, build/cache `70`
+(`protocolo-0-100-pwa-2.7.0-b70`).
+
+Pendiente siguiente exacto: implementar semantica de carga y equipo
+(`total`, por mano, por lado, peso corporal, lastre y asistencia) junto con las
+modalidades por repeticiones, tiempo y distancia. No volver a abrir tipos de
+serie, artifact Pages ni este contrato de membresias salvo que una regresion
+demuestre un fallo real.

@@ -352,7 +352,10 @@ foreach ($contract in @(
 foreach ($contract in @(
     'affectedKeys().hasOnly',
     'isOwnerAfter',
-    'joiningSelf',
+    'validPartyCounterMutation',
+    'partyMutationAfterIs',
+    'membershipRevision',
+    'deactivationReason',
     'docId == memberId(data.partyId, data.userId)',
     'request.resource.data.role == resource.data.role',
     'request.resource.data.userId == resource.data.userId',
@@ -364,7 +367,7 @@ foreach ($contract in @(
 )) {
     Assert-True ($firestoreRules.Contains($contract)) "Falta contrato critico de Firestore Rules: $contract"
 }
-foreach ($contract in @('assertFails','role:''owner''','EVIL10','wrong_document_id','negative_set','getDoc(doc(outsiderDb')) {
+foreach ($contract in @('assertFails','role:''owner''','EVIL10','wrong_document_id','negative_set','getDoc(doc(outsiderDb','deactivationReason:''removed''','operation:''remove''','Promise.allSettled')) {
     Assert-True ($firestoreRulesTest.Contains($contract)) "Falta prueba negativa de Firestore Rules: $contract"
 }
 Assert-True ($validationWorkflow.Contains('npm run test:rules')) 'El workflow de validacion debe ejecutar Firebase Emulator'

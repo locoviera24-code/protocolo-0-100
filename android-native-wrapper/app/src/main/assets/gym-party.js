@@ -2268,7 +2268,7 @@
       const candidate=makeInviteCode(); const existing=await firestoreMod.getDoc(firestoreMod.doc(db,collections.invites,candidate)); if(!existing.exists()) code=candidate;
     }
     if(!code) throw new Error('No pude generar un codigo unico. Intenta otra vez.');
-    const party=partySnap.data(),timestamp=firestoreMod.serverTimestamp(),invite={inviteCode:code,partyId:m.partyId,partyName:party.name||'Gym Party',createdBy:m.userId,createdAt:timestamp,updatedAt:timestamp,active:true,membersCount:Number(party.membersCount)||1,maxMembers:Number(party.maxMembers)||MAX_GYM_PARTY_MEMBERS,uses:0};
+    const party=partySnap.data(),timestamp=firestoreMod.serverTimestamp(),invite={inviteCode:code,partyId:m.partyId,partyName:party.name||'Gym Party',createdBy:m.userId,createdAt:timestamp,updatedAt:timestamp,active:true,membersCount:Number(party.membersCount)||1,maxMembers:Number(party.maxMembers)||MAX_GYM_PARTY_MEMBERS,uses:0,membershipRevision:Number(party.membershipRevision||0)};
     if(options.maxUses) invite.maxUses=options.maxUses;
     if(options.days) invite.expiresAt=firestoreMod.Timestamp.fromDate(new Date(Date.now()+options.days*86400000));
     const batch=firestoreMod.writeBatch(db);
@@ -2300,13 +2300,21 @@
     const partyBefore=await firestoreMod.getDoc(partyRef),code=partyBefore.data()?.inviteCode||currentParty()?.inviteCode||m.inviteCode,inviteRef=code?firestoreMod.doc(db,collections.invites,code):null;
     if(owner){
       const batch=firestoreMod.writeBatch(db),timestamp=firestoreMod.serverTimestamp();
-      batch.update(memberRef,{active:false,updatedAt:timestamp}); batch.update(partyRef,{active:false,updatedAt:timestamp}); if(inviteRef) batch.update(inviteRef,{active:false,updatedAt:timestamp}); await batch.commit();
+      batch.update(memberRef,{active:false,deactivationReason:'archived',deactivatedBy:m.userId,deactivatedAt:timestamp,updatedAt:timestamp}); batch.update(partyRef,{active:false,updatedAt:timestamp}); if(inviteRef) batch.update(inviteRef,{active:false,updatedAt:timestamp}); await batch.commit();
     }else{
       await firestoreMod.runTransaction(db,async transaction=>{
-        const memberSnap=await transaction.get(memberRef),partySnap=await transaction.get(partyRef),inviteSnap=inviteRef?await transaction.get(inviteRef):null;
+        const memberSnap=await transaction.get(memberRef),partySnap=await transaction.get(partyRef);
         if(!memberSnap.exists()||memberSnap.data().active===false) return;
-        const timestamp=firestoreMod.serverTimestamp(),nextCount=Math.max(0,Number(partySnap.data()?.membersCount||1)-1);
-        transaction.update(memberRef,{active:false,updatedAt:timestamp}); transaction.update(partyRef,{membersCount:nextCount,updatedAt:timestamp}); if(inviteSnap?.exists()) transaction.update(inviteRef,{membersCount:nextCount,updatedAt:timestamp});
+        if(!partySnap.exists()) throw new Error('PARTY_COUNTER_CONFLICT');
+        const party=partySnap.data(),activeInviteRef=firestoreMod.doc(db,collections.invites,party.inviteCode),inviteSnap=await transaction.get(activeInviteRef);
+        if(!inviteSnap.exists()) throw new Error('PARTY_COUNTER_CONFLICT');
+        const invite=inviteSnap.data(),currentCount=Number(party.membersCount||0);
+        if(currentCount<1||Number(invite.membersCount)!==currentCount) throw new Error('PARTY_COUNTER_CONFLICT');
+        const timestamp=firestoreMod.serverTimestamp(),nextCount=currentCount-1,revision=Number(party.membershipRevision||0)+1;
+        const mutation={userId:m.userId,actorId:m.userId,operation:'leave',inviteCode:party.inviteCode,at:timestamp};
+        transaction.update(memberRef,{active:false,deactivationReason:'left',deactivatedBy:m.userId,deactivatedAt:timestamp,updatedAt:timestamp});
+        transaction.update(partyRef,{membersCount:nextCount,membershipRevision:revision,lastMembershipMutation:mutation,updatedAt:timestamp});
+        transaction.update(activeInviteRef,{membersCount:nextCount,membershipRevision:revision,updatedAt:timestamp});
       });
     }
     saveSharedSessions(sharedSessions().filter(row=>row.partyId!==m.partyId)); saveSharedSets(sharedSets().filter(row=>row.partyId!==m.partyId)); localStorage.removeItem(keys.membership); renderGymParty(); flashMessage(owner?'Sala desactivada. Tus entrenamientos locales permanecen.':'Membresia Firebase desactivada. Tus entrenamientos locales permanecen.');
@@ -2424,6 +2432,8 @@
     if(error?.message === 'FIREBASE_NOT_CONFIGURED') return 'Configurá Firebase antes de crear o unirte a una sala real.';
     if(error?.message === 'PARTY_NOT_FOUND') return 'No encontré una sala activa con ese código.';
     if(error?.message === 'PARTY_FULL') return 'Esta sala alcanzó el límite recomendado de 10 miembros para mantener la app rápida y clara.';
+    if(error?.message === 'PARTY_COUNTER_CONFLICT') return 'La sala necesita actualizar sus contadores antes de continuar. Sincronizá y probá otra vez.';
+    if(error?.message === 'MEMBERSHIP_REACTIVATION_DENIED') return 'Esta membresía no puede reactivarse con ese código. Pedile al propietario una invitación vigente.';
     return `No pude completar la acción Firebase: ${error?.message || error}`;
   }
   async function testFirebaseLogin(){
@@ -2555,7 +2565,7 @@
     batch.set(firestoreMod.doc(db, collections.publicProfiles, uidValue), {uid: uidValue, alias, avatar: '', createdAt: timestamp, updatedAt: timestamp}, {merge: true});
     batch.set(firestoreMod.doc(db, collections.parties, partyId), {...partyDoc,createdAt:timestamp,updatedAt:timestamp});
     batch.set(firestoreMod.doc(db, collections.members, member.id), {...member,joinedAt:timestamp,updatedAt:timestamp});
-    batch.set(firestoreMod.doc(db, collections.invites, inviteCode), {inviteCode,partyId,partyName:name,createdBy:uidValue,createdAt:timestamp,updatedAt:timestamp,active:true,membersCount:1,maxMembers:MAX_GYM_PARTY_MEMBERS,uses:0});
+    batch.set(firestoreMod.doc(db, collections.invites, inviteCode), {inviteCode,partyId,partyName:name,createdBy:uidValue,createdAt:timestamp,updatedAt:timestamp,active:true,membersCount:1,maxMembers:MAX_GYM_PARTY_MEMBERS,uses:0,membershipRevision:0});
     await batch.commit();
     saveMembership({partyId, inviteCode, userId: uidValue, alias, role: 'owner', backendMode: 'firebase', active: true, privacy, joinedAt: nowIso(), party});
     window.APP_DRAFTS?.remove?.(partyFormDraftId('create'));
@@ -2586,11 +2596,18 @@
       const uses=Number(invite.uses||0);
       if(membersCount>=Number(invite.maxMembers||MAX_GYM_PARTY_MEMBERS)) throw new Error('PARTY_FULL');
       if(invite.maxUses!==null&&invite.maxUses!==undefined&&uses>=Number(invite.maxUses)) throw new Error('PARTY_NOT_FOUND');
-      member={id:memberIdForLocalParty(invite.partyId,auth.currentUser.uid),partyId:invite.partyId,inviteCode:code,userId:auth.currentUser.uid,aliasInParty:alias,role:'member',joinedAt:nowIso(),active:true,...privacy};
       const timestamp=firestoreMod.serverTimestamp();
-      transaction.set(memberRef,{...member,joinedAt:timestamp,updatedAt:timestamp});
-      transaction.update(partyRef,{membersCount:membersCount+1,updatedAt:timestamp});
-      transaction.update(inviteRef,{membersCount:membersCount+1,uses:uses+1,updatedAt:timestamp});
+      const operation=memberSnap.exists()?'reactivate':'join';
+      if(memberSnap.exists()&&(memberSnap.data().deactivationReason!=='left'||memberSnap.data().inviteCode!==code)) throw new Error('MEMBERSHIP_REACTIVATION_DENIED');
+      member=memberSnap.exists()
+        ? {...memberSnap.data(),aliasInParty:alias,active:true,...privacy,reactivationCount:Number(memberSnap.data().reactivationCount||0)+1}
+        : {id:memberIdForLocalParty(invite.partyId,auth.currentUser.uid),partyId:invite.partyId,inviteCode:code,userId:auth.currentUser.uid,aliasInParty:alias,role:'member',joinedAt:nowIso(),active:true,...privacy};
+      const mutation={userId:auth.currentUser.uid,actorId:auth.currentUser.uid,operation,inviteCode:code,at:timestamp};
+      if(operation==='reactivate') transaction.update(memberRef,{active:true,aliasInParty:alias,...privacy,reactivatedAt:timestamp,reactivationCount:member.reactivationCount,updatedAt:timestamp});
+      else transaction.set(memberRef,{...member,joinedAt:timestamp,updatedAt:timestamp});
+      const revision=Number(invite.membershipRevision||0)+1;
+      transaction.update(partyRef,{membersCount:membersCount+1,membershipRevision:revision,lastMembershipMutation:mutation,updatedAt:timestamp});
+      transaction.update(inviteRef,{membersCount:membersCount+1,uses:uses+1,membershipRevision:revision,updatedAt:timestamp});
       transaction.set(firestoreMod.doc(db,collections.publicProfiles,auth.currentUser.uid),{uid:auth.currentUser.uid,alias,avatar:'',createdAt:timestamp,updatedAt:timestamp},{merge:true});
     });
     if(!invite||!member) throw new Error('PARTY_NOT_FOUND');

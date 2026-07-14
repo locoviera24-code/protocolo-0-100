@@ -27,6 +27,9 @@ Documento: `gym_parties/{partyId}`
 - `privacyMode`
 - `membersCount`
 - `maxMembers`
+- `membershipRevision`: revision monotona de cambios de membresia
+- `lastMembershipMutation`: `userId`, `actorId`, `operation`, `inviteCode` y
+  `at`; permite que Rules vincule el contador con el miembro exacto
 
 ## gym_party_members
 
@@ -34,6 +37,7 @@ Documento: `gym_party_members/{partyId}_{userId}`
 
 - `id`
 - `partyId`
+- `inviteCode` inmutable usado al crear la membresia
 - `userId`
 - `aliasInParty`
 - `role`: `owner` o `member`
@@ -45,6 +49,11 @@ Documento: `gym_party_members/{partyId}_{userId}`
 - `hideAbsoluteWeights`
 - `anonymousAlias`
 - `shareGeneralScore`
+- `deactivationReason`: `left`, `removed` o `archived`
+- `deactivatedBy`
+- `deactivatedAt`
+- `reactivatedAt`
+- `reactivationCount`
 
 ## workout_sessions_shared
 
@@ -117,6 +126,10 @@ Documento: `gym_party_invites/{inviteCode}`
 - `active`
 - `membersCount`
 - `maxMembers`
+- `uses`
+- `maxUses`: opcional
+- `expiresAt`: opcional
+- `membershipRevision`: espejo de la revision de la sala
 
 ## weekly_member_stats
 
@@ -144,6 +157,13 @@ a futuro para reducir lecturas.
 - `members[]` no se guarda dentro de `gym_parties`; los miembros viven en
   `gym_party_members` para evitar duplicacion y escrituras conflictivas.
 - El limite recomendado/validado es 10 miembros.
+- `membersCount`, `uses` y `membershipRevision` solo cambian junto con la sala,
+  la invitacion vigente y el miembro afectado en una misma transaccion.
+- Un miembro activo puede salir voluntariamente (`left`). Solo esa salida se
+  puede reactivar con la misma invitacion todavia vigente. Una expulsion
+  (`removed`) y un documento inactivo legacy no permiten auto-reactivacion.
+- `id`, `partyId`, `userId`, `role` e `inviteCode` de una membresia son
+  inmutables.
 - La fecha de calendario (`date`/`localDate`) se conserva separada del timestamp
   UTC para que las semanas no cambien por zona horaria.
 - `dirty`, `syncState`, `attempts`, `lastError` y el backoff viven solo en

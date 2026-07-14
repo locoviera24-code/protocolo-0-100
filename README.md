@@ -15,7 +15,7 @@ PWA y APK Android para medir habitos, atencion, actividad fisica y nutricion con
 
 ## Navegacion y diseno
 
-La version actual `v2.7.0` (build web `69`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
+La version actual `v2.7.0` (build web `70`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
 **Gym**, **Nutricion**, **Progreso** y **Mas**. En escritorio usa una barra
 lateral compacta. Gym Party se abre desde **Gym > Grupo**, desde un acceso
 discreto en Inicio o mediante un enlace `gymPartyCode`; ya no ocupa un boton
@@ -325,6 +325,13 @@ Archivos de soporte:
 No se incluyen credenciales reales. La API key web de Firebase es publica; la
 seguridad depende de Firestore Rules. No usar service accounts ni claves
 privadas en frontend.
+
+Las altas, salidas y reactivaciones usan una transaccion unica que vincula el
+miembro con `membersCount`, usos de invitacion y una revision monotona. Salir
+voluntariamente permite reingresar solo si la misma invitacion sigue vigente;
+una membresia expulsada o un documento inactivo antiguo no se puede reactivar
+por cuenta propia. Publicar siempre las reglas actuales antes de probar esta
+version con salas reales.
 
 ### Offline y exportacion
 
