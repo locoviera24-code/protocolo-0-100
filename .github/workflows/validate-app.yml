@@ -46,6 +46,12 @@ jobs:
         shell: pwsh
         run: ./scripts/validate-app.ps1 -CheckAndroidAssets
 
+      - name: Construir y verificar artifact web
+        run: npm run build:web && npm run test:web-dist
+
+      - name: Abrir artifact web sin 404 ni errores de consola
+        run: npm run test:web-dist:e2e
+
       - name: Probar estrategia del service worker
         run: node ./scripts/test-service-worker.mjs
 

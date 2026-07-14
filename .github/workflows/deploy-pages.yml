@@ -10,6 +10,7 @@ on:
       - index.html
       - app-version.json
       - app-version.js
+      - app/**
       - data/**
       - nutrition-data.js
       - nutrition/**
@@ -36,6 +37,13 @@ on:
       - icons/**
       - firebase/**
       - scripts/write-firebase-config.ps1
+      - scripts/build-web-dist.mjs
+      - scripts/test-web-dist.mjs
+      - scripts/serve-static.mjs
+      - playwright.web-dist.config.mjs
+      - tests/web-dist/**
+      - package.json
+      - package-lock.json
       - .github/workflows/deploy-pages.yml
 
 permissions:
@@ -58,6 +66,18 @@ jobs:
     steps:
       - name: Descargar repositorio
         uses: actions/checkout@v4
+
+      - name: Configurar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Instalar dependencias de validacion
+        run: npm ci
+
+      - name: Instalar Chromium para validar el artifact
+        run: npx playwright install --with-deps chromium
 
       - name: Validar contratos web
         shell: pwsh
@@ -117,19 +137,16 @@ jobs:
       - name: Probar accesibilidad web y movil
         run: node ./scripts/test-accessibility.mjs
 
-      - name: Preparar archivos publicos
-        run: |
-          mkdir -p dist-pages/icons dist-pages/styles dist-pages/ui dist-pages/progress dist-pages/data dist-pages/nutrition dist-pages/gym
-          cp index.html app-version.json app-version.js nutrition-data.js fdc-client.js workout-store.js workout-plan.js workout-metrics.js workout-ranking.js workout-ui.js workout-features.js firebase-config.js firebase-service.js gym-party-sync.js gym-party-metrics.js gym-party-ui.js gym-party.js advanced-features.js manifest.webmanifest sw.js dist-pages/
-          cp icons/icon-192.png icons/icon-512.png dist-pages/icons/
-          cp styles/*.css dist-pages/styles/
-          cp ui/*.js dist-pages/ui/
-          cp progress/*.js dist-pages/progress/
-          cp data/*.js dist-pages/data/
-          cp nutrition/*.js dist-pages/nutrition/
-          cp gym/*.js dist-pages/gym/
+      - name: Construir artifact web desde dependencias
+        run: npm run build:web
 
-      - name: Generar configuracion Firebase opcional
+      - name: Verificar inventario, hashes y recursos HTTP
+        run: npm run test:web-dist
+
+      - name: Abrir rutas publicables sin 404 ni errores de consola
+        run: npm run test:web-dist:e2e
+
+      - name: Generar configuracion Firebase opcional temporal
         shell: pwsh
         env:
           FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
@@ -138,7 +155,12 @@ jobs:
           FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
           FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
           FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
-        run: ./scripts/write-firebase-config.ps1 -OutputPath dist-pages/firebase-config.js
+        run: ./scripts/write-firebase-config.ps1 -OutputPath "${{ runner.temp }}/firebase-config.js"
+
+      - name: Construir artifact final con configuracion publica
+        env:
+          WEB_FIREBASE_CONFIG_PATH: ${{ runner.temp }}/firebase-config.js
+        run: npm run build:web && npm run test:web-dist
 
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5

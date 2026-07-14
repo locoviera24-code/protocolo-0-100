@@ -82,6 +82,9 @@ $accessibilityTest = Read-Utf8 'scripts/test-accessibility.mjs'
 $moduleBoundaryTest = Read-Utf8 'scripts/test-module-boundaries.mjs'
 $designSystemTest = Read-Utf8 'scripts/test-design-system.mjs'
 $playwrightConfig = Read-Utf8 'playwright.config.mjs'
+$webDistBuilder = Read-Utf8 'scripts/build-web-dist.mjs'
+$webDistTest = Read-Utf8 'scripts/test-web-dist.mjs'
+$webDistPlaywright = Read-Utf8 'tests/web-dist/web-dist.spec.mjs'
 $playwrightGymTest = Read-Utf8 'tests/e2e/gym-flow.spec.mjs'
 $playwrightVisualTest = Read-Utf8 'tests/e2e/visual-navigation.spec.mjs'
 $readme = Read-Utf8 'README.md'
@@ -107,7 +110,7 @@ $requiredFiles = @(
     'scripts/test-android-release.mjs',
     'scripts/test-accessibility.mjs',
     'scripts/test-module-boundaries.mjs', 'scripts/test-design-system.mjs', 'scripts/design-token-allowlist.json', 'scripts/test-router.mjs', 'scripts/test-layout-coordinator.mjs', 'scripts/test-home-settings.mjs', 'scripts/test-progress-view.mjs', 'scripts/sync-app-version.mjs', 'scripts/test-version-alignment.mjs', 'scripts/test-settings-contract.mjs', 'scripts/test-data-layer.mjs',
-    'scripts/serve-static.mjs', 'playwright.config.mjs', 'tests/e2e/gym-flow.spec.mjs', 'tests/e2e/gym-canonical.spec.mjs', 'tests/e2e/gym-set-types.spec.mjs', 'tests/e2e/visual-navigation.spec.mjs', 'tests/e2e/router.spec.mjs', 'tests/e2e/layout-sticky.spec.mjs', 'tests/e2e/home-settings.spec.mjs', 'tests/e2e/notifications-recovery.spec.mjs', 'tests/e2e/progress.spec.mjs', 'tests/e2e/progress-muscle.spec.mjs', 'tests/e2e/progress-exercise.spec.mjs', 'tests/e2e/data-layer.spec.mjs', 'scripts/test-muscle-progress.mjs', 'scripts/test-exercise-progress.mjs',
+    'scripts/serve-static.mjs', 'scripts/build-web-dist.mjs', 'scripts/test-web-dist.mjs', 'playwright.config.mjs', 'playwright.web-dist.config.mjs', 'tests/web-dist/web-dist.spec.mjs', 'tests/e2e/gym-flow.spec.mjs', 'tests/e2e/gym-canonical.spec.mjs', 'tests/e2e/gym-set-types.spec.mjs', 'tests/e2e/visual-navigation.spec.mjs', 'tests/e2e/router.spec.mjs', 'tests/e2e/layout-sticky.spec.mjs', 'tests/e2e/home-settings.spec.mjs', 'tests/e2e/notifications-recovery.spec.mjs', 'tests/e2e/progress.spec.mjs', 'tests/e2e/progress-muscle.spec.mjs', 'tests/e2e/progress-exercise.spec.mjs', 'tests/e2e/data-layer.spec.mjs', 'scripts/test-muscle-progress.mjs', 'scripts/test-exercise-progress.mjs',
     'manifest.webmanifest', 'sw.js',
     'styles/tokens.css', 'styles/base.css', 'styles/components.css', 'styles/features.css', 'styles/gym.css', 'styles/gym-party.css', 'styles/modules.css', 'styles/responsive.css',
     'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetProvider.java',
@@ -687,12 +690,28 @@ Assert-True ($deployWorkflow.Contains('gym-party.js')) 'El despliegue Pages debe
 Assert-True ($deployWorkflow.Contains('firebase-config.js')) 'El despliegue Pages debe publicar firebase-config.js'
 Assert-True ($deployWorkflow.Contains('write-firebase-config.ps1')) 'El despliegue Pages debe generar firebase-config.js desde secrets si existen'
 Assert-True ($deployWorkflow.Contains('workout-features.js')) 'El despliegue Pages debe publicar workout-features.js'
+Assert-True ($deployWorkflow.Contains('- app/**')) 'Cambios dentro de app/ deben disparar el despliegue Pages'
+Assert-True ($deployWorkflow.Contains('npm run build:web')) 'Pages debe construir un artifact unico'
+Assert-True ($deployWorkflow.Contains('npm run test:web-dist')) 'Pages debe validar recursos y hashes del artifact'
+Assert-True ($deployWorkflow.Contains('npm run test:web-dist:e2e')) 'Pages debe abrir el artifact en Chromium antes de publicar'
+Assert-True (-not $deployWorkflow.Contains('cp index.html')) 'Pages no debe mantener una lista manual paralela de archivos'
+foreach ($contract in @('discoverWebAssets','asset-manifest.json','sha256','WEB_FIREBASE_CONFIG_PATH','app-version.json')) {
+    Assert-True ($webDistBuilder.Contains($contract)) "Falta contrato del constructor web: $contract"
+}
+foreach ($contract in @('app/numbers.js','app/drafts.js','app/dates.js','asset-ausente.js','debe responder 200')) {
+    Assert-True ($webDistTest.Contains($contract)) "Falta cobertura HTTP del artifact: $contract"
+}
+foreach ($contract in @('requestfailed','pageerror','serviceWorker.ready','module=nutrition','module=progress','module=more')) {
+    Assert-True ($webDistPlaywright.Contains($contract)) "Falta cobertura navegador del artifact: $contract"
+}
 foreach ($module in @('workout-store.js','workout-plan.js','workout-ui.js','firebase-service.js','gym-party-metrics.js','gym-party-ui.js')) {
     Assert-True ($deployWorkflow.Contains($module)) "El despliegue Pages debe publicar $module"
 }
 Assert-True ($apkWorkflow.Contains('write-firebase-config.ps1')) 'El build APK debe generar firebase-config.js desde secrets si existen'
 Assert-True ($apkWorkflow.Contains('./scripts/validate-app.ps1 -CheckAndroidAssets')) 'El build APK debe validar los assets sincronizados'
 Assert-True ($validationWorkflow.Contains('./scripts/validate-app.ps1 -CheckAndroidAssets')) 'Falta validacion automatica de web y Android'
+Assert-True ($validationWorkflow.Contains('npm run test:web-dist')) 'El workflow general debe validar el artifact web'
+Assert-True ($validationWorkflow.Contains('npm run test:web-dist:e2e')) 'El workflow general debe abrir el artifact web en Chromium'
 foreach ($workflow in @($deployWorkflow, $apkWorkflow, $validationWorkflow)) {
     Assert-True ($workflow.Contains('node ./scripts/test-service-worker.mjs')) 'Cada workflow debe probar la estrategia del service worker'
 }
@@ -708,7 +727,7 @@ foreach ($contract in @('warmup','working','backoff','drop','technique','failure
 }
 Assert-True ($html.Contains('gym/set-model.js')) 'La app debe cargar el modelo de tipos de serie antes de las metricas'
 Assert-True ($serviceWorker.Contains('./gym/set-model.js')) 'El service worker debe cachear el modelo de tipos de serie'
-Assert-True ($deployWorkflow.Contains('cp gym/*.js dist-pages/gym/')) 'GitHub Pages debe publicar los modulos Gym'
+Assert-True ($deployWorkflow.Contains('- gym/**')) 'Cambios en modulos Gym deben disparar Pages'
 foreach ($workflow in @($deployWorkflow, $apkWorkflow, $validationWorkflow)) {
     Assert-True ($workflow.Contains('node ./scripts/test-workout-features.mjs')) 'Cada workflow debe probar rutina semanal y estado widget'
     Assert-True ($workflow.Contains('node ./scripts/test-workout-metrics.mjs')) 'Cada workflow debe probar metricas de gimnasio'

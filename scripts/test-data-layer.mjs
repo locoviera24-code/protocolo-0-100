@@ -21,6 +21,6 @@ assert.ok(html.includes('APP_REPOSITORIES?.protocol.get'),'El protocolo no usa e
 for(const asset of ['data/indexeddb.js','data/repositories.js','data/backup-service.js']){
   assert.ok(sw.includes(`'./${asset}'`),`Service worker no incluye ${asset}`);
   assert.ok(sync.includes(`'${asset}'`),`Android no sincroniza ${asset}`);
-  assert.ok(deploy.includes('data/*.js'),`Pages no publica ${asset}`);
+  assert.ok(deploy.includes('npm run build:web'),`Pages no construye el artifact que contiene ${asset}`);
 }
 console.log('Capa de datos correcta: repositorios por dominio, espejo IndexedDB, recuperacion y coordinacion entre pestanas.');

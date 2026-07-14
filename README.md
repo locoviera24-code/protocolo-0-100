@@ -15,7 +15,7 @@ PWA y APK Android para medir habitos, atencion, actividad fisica y nutricion con
 
 ## Navegacion y diseno
 
-La version actual `v2.7.0` (build web `68`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
+La version actual `v2.7.0` (build web `69`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
 **Gym**, **Nutricion**, **Progreso** y **Mas**. En escritorio usa una barra
 lateral compacta. Gym Party se abre desde **Gym > Grupo**, desde un acceso
 discreto en Inicio o mediante un enlace `gymPartyCode`; ya no ocupa un boton
@@ -440,6 +440,9 @@ npm run test:design
 npm run test:router
 npm run test:layout
 npm run test:home-settings
+npm run build:web
+npm run test:web-dist
+npm run test:web-dist:e2e
 npm run test:rules
 npm run test:e2e
 ```
@@ -466,7 +469,11 @@ keystore codificado en `ANDROID_KEYSTORE_BASE64` y nunca lo guarda en el repo.
 
 ## Publicacion
 
-- **PWA:** el workflow `Publicar PWA en GitHub Pages` publica los archivos raiz.
+- **PWA:** `scripts/build-web-dist.mjs` descubre las dependencias declaradas en
+  HTML, manifest, service worker y CSS, conserva su estructura en `dist-pages`
+  y genera `asset-manifest.json` con SHA-256. El workflow `Publicar PWA en
+  GitHub Pages` prueba por HTTP y Chromium todas las rutas principales antes de
+  subir el artifact; un recurso ausente o un error de consola impide publicar.
 - **APK debug:** el workflow `Construir APK Android` publica un artifact temporal para pruebas.
 - **APK release:** el workflow `Publicar APK Android release` compila `v2.7.0` con firma privada desde GitHub Secrets, publica el APK versionado y adjunta su checksum SHA-256.
 

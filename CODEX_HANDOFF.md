@@ -2010,3 +2010,65 @@ asistencia, tiempo y distancia) en un bloque separado. Despues construir el
 motor de progresion sobre series efectivas comparables. IndexedDB primario, PWA
 atomica, quality gate unico y hardening adicional de Gym Party/Android siguen
 como fases posteriores; no mezclarlos con el proximo cambio de modelo Gym.
+
+## 51. Artifact unico y verificable para GitHub Pages
+
+Bloque iniciado despues de `0098966`:
+
+- La inspeccion del sitio publicado reprodujo el fallo real del pipeline
+  anterior: `https://locoviera24-code.github.io/protocolo-0-100/app/numbers.js`
+  devolvia 404. Como consecuencia `APP_NUMBERS`, `APP_DRAFTS` y
+  `WORKOUT_SET_MODEL` quedaban indefinidos y la portada registraba un error en
+  `calcDay`. El codigo fuente local no era la causa; `deploy-pages.yml` no
+  copiaba el directorio `app/`.
+- `scripts/build-web-dist.mjs` reemplaza las listas manuales de `mkdir/cp`.
+  Parte de `index.html`, `manifest.webmanifest`, `sw.js` y
+  `app-version.json`, descubre scripts, estilos, iconos, shortcuts y recursos
+  cacheados, conserva directorios y falla si una referencia requerida no existe.
+- El constructor limpia solo `dist-pages`, copia el cierre de dependencias y
+  genera `asset-manifest.json` con ruta, bytes y SHA-256 de cada recurso. El
+  artifact actual contiene 61 recursos e incluye `app/numbers.js`,
+  `app/drafts.js`, `app/dates.js`, todos los modulos Gym/Progreso/Nutricion y
+  el stub seguro de Firebase.
+- `WEB_FIREBASE_CONFIG_PATH` permite que Actions sustituya exclusivamente
+  `firebase-config.js` desde un archivo temporal generado con Secrets. El
+  archivo final tambien queda dentro del inventario hash; no se escribe ningun
+  secret en el repositorio.
+- `scripts/test-web-dist.mjs` reconstruye el artifact, compara descubrimiento e
+  inventario, verifica hashes, simula una dependencia ausente, sirve los 61
+  recursos y siete rutas profundas por HTTP y exige respuesta 200.
+- `playwright.web-dist.config.mjs` y
+  `tests/web-dist/web-dist.spec.mjs` abren Inicio, Gym, Nutricion, Progreso,
+  Gym Party, Mas y Datos/copias desde `dist-pages`. Comprueban modulos globales,
+  manifest, iconos, service worker, solicitudes fallidas, respuestas 4xx/5xx,
+  errores de pagina y consola.
+- Pages observa ahora `app/**` y los archivos del constructor/pruebas. El
+  workflow general de validacion ejecuta el mismo chequeo. El workflow Pages
+  instala Chromium, prueba primero el artifact con stub, genera la configuracion
+  publica Firebase en un temporal y reconstruye el artifact final antes de
+  subirlo.
+- `scripts/serve-static.mjs` acepta una raiz explicita para probar exactamente
+  `dist-pages`, no el repositorio fuente. Los validadores antiguos ya no exigen
+  comandos `cp` que recreaban una segunda lista divergente.
+
+- El test HTTP paso con el stub y con una configuracion Firebase temporal
+  inyectada mediante `WEB_FIREBASE_CONFIG_PATH`. La prueba Chromium del artifact
+  paso 1/1: siete rutas, 61 assets, manifest, iconos y service worker sin 404,
+  solicitudes fallidas, errores de pagina ni errores de consola.
+- La suite de contratos completa paso con build 69. La regresion E2E general
+  cubrio 213 escenarios: 199 aprobados, 14 omisiones intencionales de matriz y
+  cero fallos. Por plataforma conserva 69/71 Android Chromium, 64/71 iPhone
+  WebKit y 66/71 escritorio Chromium.
+- Firestore Emulator con Java 21 paso las reglas y negativas existentes. Gradle
+  8.10.2 con Java 17 termino `:app:assembleDebug`; el APK debug resultante mide
+  1.609.380 bytes. `scripts/sync-web-assets.ps1 -Check` y
+  `validate-app.ps1 -CheckAndroidAssets` confirman paridad web/Android.
+
+Estado publicable del bloque: version `2.7.0`, Android `33`, build/cache `69`
+(`protocolo-0-100-pwa-2.7.0-b69`).
+
+Pendiente siguiente exacto: cerrar en reglas y servicio Firebase la transicion
+ilegal `gym_party_members.active: false -> true`, proteger `membersCount` y
+usos de invitacion, y agregar negativas para miembro expulsado/inactivo,
+abandono repetido y capacidad concurrente. Tipos de serie ya esta terminado en
+el bloque 50; no volver a implementarlo.

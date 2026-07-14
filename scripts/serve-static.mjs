@@ -2,7 +2,7 @@ import http from 'node:http';
 import {readFile,stat} from 'node:fs/promises';
 import {extname,join,normalize,resolve,sep} from 'node:path';
 
-const root=resolve(process.cwd());
+const root=resolve(process.env.STATIC_ROOT||process.argv[3]||process.cwd());
 const port=Number(process.env.PORT||process.argv[2]||4173);
 const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.json':'application/json; charset=utf-8','.webmanifest':'application/manifest+json; charset=utf-8','.css':'text/css; charset=utf-8','.png':'image/png','.svg':'image/svg+xml'};
 
