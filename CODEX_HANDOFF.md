@@ -495,8 +495,8 @@ No borrar ni renombrar datos sin migracion.
 
 ## 14. Que queda pendiente
 
-- Probar Firebase real de produccion con dos cuentas/dispositivos despues de
-  desplegar las reglas e indices actuales.
+- Probar Firebase real de produccion con dos cuentas/dispositivos usando las
+  reglas ya publicadas el 13 de julio de 2026.
 - Probar iPhone/Safari/PWA con codigo de invitacion.
 - Probar APK con Firebase desde WebView.
 - Verificar el widget en launchers Android reales; RemoteViews varia por fabricante.
@@ -507,17 +507,14 @@ No borrar ni renombrar datos sin migracion.
 ## 15. Proximos pasos recomendados
 
 1. Ejecutar validaciones.
-2. Configurar Firebase Spark.
-3. Agregar GitHub Secrets `FIREBASE_*` o pegar JSON en la app.
-4. Publicar reglas.
-5. Crear sala desde Android/web.
-6. Unirse desde iPhone/Safari.
-7. Registrar entrenamiento local.
-8. Sincronizar.
-9. Revisar dashboard Gym Party.
-10. Exportar backup JSON y CSV comparativo.
-11. Para APK final ejecutar `Publicar APK Android release` con Secrets de firma
-    y conservar la misma clave para futuras actualizaciones `v2.6.0`.
+2. Crear una sala de prueba desde Android/web en Firebase real.
+3. Unirse desde iPhone/Safari con una segunda cuenta.
+4. Registrar entrenamiento local.
+5. Sincronizar y comprobar salida, reingreso voluntario y expulsion.
+6. Revisar dashboard Gym Party.
+7. Exportar backup JSON y CSV comparativo.
+8. Para APK final ejecutar `Publicar APK Android release` con Secrets de firma
+   y conservar la misma clave para futuras actualizaciones `v2.7.0`.
 
 ## 16. Como probar la app
 
@@ -787,15 +784,19 @@ Persistencia y compatibilidad:
 Firebase produccion:
 
 - Habilitar Anonymous y, para cambio de dispositivo, Email/Password.
-- Desplegar `firebase/firestore.rules` y `firebase/firestore.indexes.json`.
+- `firebase/firestore.rules` del build 70 se publico en `a-100-9d80a` el 13 de
+  julio de 2026. La revision activa contiene `membershipRevision`,
+  `lastMembershipMutation` y las restricciones de reactivacion del bloque 52.
+- Los indices no cambiaron en este bloque. Mantener
+  `firebase/firestore.indexes.json` sincronizado cuando se agreguen consultas.
 - La config publica llega por Secrets `FIREBASE_*`; no agregar service accounts.
 - Cada miembro vincula su propio email/clave si necesita recuperar el mismo UID
   en otro dispositivo. El owner no guarda credenciales del amigo.
 
 APK release:
 
-- Version: `versionCode 31`, `versionName 2.6.0`.
-- Cache web: `protocolo-0-100-pwa-v35`.
+- Version: `versionCode 33`, `versionName 2.7.0`.
+- Cache web: `protocolo-0-100-pwa-2.7.0-b70`.
 - Debug: `.github/workflows/build-debug-apk.yml`.
 - Release firmado: `.github/workflows/build-release-apk.yml` con Secrets
   `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`,
@@ -2121,6 +2122,10 @@ Pruebas finales del bloque:
   cinco repeticiones seguidas: 15/15.
 - Firestore Emulator con Java 21 correcto. Las denegaciones
   `PERMISSION_DENIED` del log corresponden a las negativas deliberadas.
+- Las mismas reglas se publicaron en Firebase produccion `a-100-9d80a` el 13
+  de julio de 2026. La consola mostro la nueva revision activa y ningun cambio
+  sin publicar. No se creo una sala artificial en produccion para no dejar
+  datos de prueba; la prueba final con dos dispositivos reales sigue pendiente.
 - Gradle 8.10.2 con Java 17 termino `:app:assembleDebug`; el APK debug mide
   1.662.763 bytes y contiene el mismo `gym-party.js` del build web.
 
