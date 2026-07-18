@@ -575,7 +575,7 @@
                 <div class="moduleCard progressExerciseFilters"><div><h2 id="progressExerciseTitle">Progreso por ejercicio</h2><p class="muted small">Las variantes se mantienen separadas por su ID canónico.</p></div><div class="field"><label for="progressExerciseSearch">Buscar</label><input type="search" id="progressExerciseSearch" placeholder="Ej. press de banca"></div><div class="field"><label for="progressExerciseSelect">Ejercicio</label><select id="progressExerciseSelect"></select></div><div class="field"><label for="progressExerciseMetric">Métrica</label><select id="progressExerciseMetric"><option value="bestWeight">Peso máximo</option><option value="e1rm">e1RM estimado</option><option value="maxReps">Repeticiones</option><option value="volume">Volumen</option><option value="sets">Series</option></select></div></div>
                 <details class="moduleCard advancedDetails"><summary>Cómo se estima el 1RM</summary><p>Se usa Epley: peso × (1 + repeticiones / 30), solo con series de 1 a 12 repeticiones y carga externa mayor que cero. Es una estimación, no un 1RM real.</p></details>
                 <div class="progressKpiGrid" id="progressExerciseSummary"></div>
-                <section class="moduleCard progressRecommendation" aria-labelledby="progressRecommendationTitle"><h3 id="progressRecommendationTitle">Sugerencia conservadora</h3><strong id="progressRecommendationText"></strong><p class="muted small" id="progressRecommendationReason"></p></section>
+                <section class="moduleCard progressRecommendation" aria-labelledby="progressRecommendationTitle"><h3 id="progressRecommendationTitle">Sugerencia conservadora</h3><strong id="progressRecommendationText"></strong><p class="muted small" id="progressRecommendationReason"></p><p class="muted small" id="progressRecommendationMeta"></p></section>
                 <section class="moduleCard" aria-labelledby="progressExerciseChartTitle"><h3 id="progressExerciseChartTitle">Evolución</h3><div id="progressExerciseChart"></div><p class="chartCaption" id="progressExerciseChartSummary"></p></section>
                 <section class="moduleCard" aria-labelledby="progressExerciseHistoryTitle"><h3 id="progressExerciseHistoryTitle">Sesiones recientes</h3><div class="entryList" id="progressExerciseHistory"></div></section>
               </section>
@@ -2963,6 +2963,7 @@ window.addEventListener('app-time-context-changed',()=>{
 <script src="gym/equipment.js"></script>
 <script src="gym/set-model.js"></script>
 <script src="workout-metrics.js"></script>
+<script src="gym/progression-engine.js"></script>
 <script src="workout-ranking.js"></script>
 <script src="workout-ui.js"></script>
 <script src="progress/muscle-taxonomy.js"></script>

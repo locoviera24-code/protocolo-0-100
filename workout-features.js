@@ -91,9 +91,17 @@
   function ex(id,name,aliases,muscle,type,unit,primary,secondary,notes,options={}){
     return {id,name,aliases,group:muscle,type,unit,primaryMuscles:primary,secondaryMuscles:secondary,notes,...options};
   }
+  function defaultProgressionMode(measurementMode,loadMode){
+    if(measurementMode==='time')return'timeProgression';
+    if(measurementMode==='distance')return'distanceProgression';
+    if(measurementMode==='assistance'||loadMode==='assistance')return'assistanceReduction';
+    if(loadMode==='bodyweight')return'repProgression';
+    return'doubleProgression';
+  }
   function item(exerciseId,muscle,bodyweight=false,notes=''){
     const exercise=exerciseLibrary.find(x=>x.id===exerciseId);
-    return {id:`${exerciseId}-${muscle.toLowerCase().replace(/[^a-z0-9]+/g,'-')}`,exerciseId,name:exercise?.name||exerciseId,muscle,type:exercise?.type||'máquina',unit:exercise?.unit||'kg',bodyweight:!!bodyweight||!!exercise?.bodyweight,measurementMode:exercise?.measurementMode||'reps',defaultLoadMode:exercise?.defaultLoadMode||(bodyweight?'bodyweight':'total'),equipmentId:exercise?.equipmentId||'',primaryMuscles:[...(exercise?.primaryMuscles||[])],secondaryMuscles:[...(exercise?.secondaryMuscles||[])],muscleTaxonomyVersion:window.MUSCLE_TAXONOMY?.VERSION||1,notes};
+    const measurementMode=exercise?.measurementMode||'reps',defaultLoadMode=exercise?.defaultLoadMode||(bodyweight?'bodyweight':'total');
+    return {id:`${exerciseId}-${muscle.toLowerCase().replace(/[^a-z0-9]+/g,'-')}`,exerciseId,name:exercise?.name||exerciseId,muscle,type:exercise?.type||'máquina',unit:exercise?.unit||'kg',bodyweight:!!bodyweight||!!exercise?.bodyweight,measurementMode,defaultLoadMode,equipmentId:exercise?.equipmentId||'',primaryMuscles:[...(exercise?.primaryMuscles||[])],secondaryMuscles:[...(exercise?.secondaryMuscles||[])],muscleTaxonomyVersion:window.MUSCLE_TAXONOMY?.VERSION||1,notes,targetSets:3,repsMin:8,repsMax:12,targetRirMin:1,targetRirMax:3,progressionMode:defaultProgressionMode(measurementMode,defaultLoadMode),incrementKg:.5};
   }
   function day(key,name,muscles,exercises){
     return {dayKey:key,weekday:dayLabels[key],name,type:'workout',muscles:[...muscles],exercises:exercises.map(x=>({...x}))};
@@ -1364,7 +1372,8 @@
     if(undo) undo.disabled=!lastDeletedPlanExercise||lastDeletedPlanExercise.dayKey!==currentPlanEditorDay;
   }
   function planExerciseDefaults(exercise,index=0){
-    return {...exercise,order:index+1,targetSets:Math.max(1,Number(exercise.targetSets)||3),repsMin:Math.max(0,Number(exercise.repsMin)||8),repsMax:Math.max(0,Number(exercise.repsMax)||12),restSeconds:Math.max(0,Number(exercise.restSeconds)||90),notes:String(exercise.notes||'')};
+    const unit=String(exercise.unit||''),measurementMode=exercise.measurementMode||(unit.includes('tiempo')?'time':unit.includes('distancia')?'distance':'reps'),loadMode=exercise.defaultLoadMode||exercise.loadMode||(exercise.bodyweight?'bodyweight':'total');
+    return {...exercise,order:index+1,targetSets:Math.max(1,numeric(exercise.targetSets,3)),repsMin:Math.max(0,numeric(exercise.repsMin,8)),repsMax:Math.max(0,numeric(exercise.repsMax,12)),targetRirMin:Math.max(0,numeric(exercise.targetRirMin,1)),targetRirMax:Math.max(0,numeric(exercise.targetRirMax,3)),progressionMode:exercise.progressionMode||defaultProgressionMode(measurementMode,loadMode),incrementKg:Math.max(.5,numeric(exercise.incrementKg,.5)),restSeconds:Math.max(0,numeric(exercise.restSeconds,90)),notes:String(exercise.notes||'')};
   }
   function renderVisualPlanCards(dayPlan){
     const root=document.getElementById('planEditorCards'); if(!root) return;
@@ -1393,6 +1402,12 @@
         <div class="field"><label>Reps mín.</label><input type="text" inputmode="decimal" data-plan-field="repsMin" value="${exercise.repsMin}"></div>
         <div class="field"><label>Reps máx.</label><input type="text" inputmode="decimal" data-plan-field="repsMax" value="${exercise.repsMax}"></div>
         <div class="field"><label>Descanso (s)</label><input type="text" inputmode="decimal" data-plan-field="restSeconds" value="${exercise.restSeconds}"></div>
+        <details class="advancedDetails wide"><summary>Progresión</summary><div class="planExerciseFields">
+          <div class="field"><label>Método</label><select data-plan-field="progressionMode">${[['doubleProgression','Doble progresión'],['loadProgression','Progresión de carga'],['repProgression','Progresión de reps'],['timeProgression','Progresión de tiempo'],['distanceProgression','Progresión de distancia'],['assistanceReduction','Reducir asistencia'],['maintainTechnique','Mantener técnica']].map(([value,label])=>`<option value="${value}" ${exercise.progressionMode===value?'selected':''}>${label}</option>`).join('')}</select></div>
+          <div class="field"><label>RIR mín.</label><input type="text" inputmode="decimal" data-plan-field="targetRirMin" value="${exercise.targetRirMin}"></div>
+          <div class="field"><label>RIR máx.</label><input type="text" inputmode="decimal" data-plan-field="targetRirMax" value="${exercise.targetRirMax}"></div>
+          <div class="field"><label>Incremento kg</label><input type="text" inputmode="decimal" data-plan-field="incrementKg" value="${exercise.incrementKg}"></div>
+        </div></details>
         <div class="field wide"><label>Notas</label><input data-plan-field="notes" value="${escapeHtml(exercise.notes)}" placeholder="Técnica o ajuste"></div>
       </div>
     </article>`).join(''):'<div class="emptyState">Este día no tiene ejercicios. Agregá uno desde la biblioteca o creá uno personalizado.</div>';
@@ -1456,9 +1471,14 @@
     card.querySelectorAll('[data-plan-field]').forEach(input=>{
       const field=input.dataset.planField;
       if(field==='bodyweight') exercise[field]=input.checked;
-      else if(['targetSets','repsMin','repsMax','restSeconds'].includes(field))exercise[field]=Math.max(0,numeric(input.value,0));
+      else if(['targetSets','repsMin','repsMax','targetRirMin','targetRirMax','incrementKg','restSeconds'].includes(field))exercise[field]=Math.max(0,numeric(input.value,0));
       else exercise[field]=String(input.value||'').trim();
     });
+    exercise.targetSets=Math.max(1,Math.round(exercise.targetSets||1));
+    exercise.repsMin=Math.max(0,Math.round(exercise.repsMin||0));
+    exercise.repsMax=Math.max(exercise.repsMin||0,exercise.repsMax||0);
+    exercise.targetRirMax=Math.max(exercise.targetRirMin||0,exercise.targetRirMax||0);
+    exercise.incrementKg=Math.max(.5,exercise.incrementKg||.5);
     if(exercise.bodyweight) exercise.unit='peso corporal';
     dayPlan.muscles=[...new Set(dayPlan.exercises.map(item=>item.muscle).filter(Boolean))];
     plan[currentPlanEditorDay]=dayPlan;
@@ -1490,7 +1510,8 @@
     const id=document.getElementById('planLibrarySelect')?.value; if(!id){flash('Elegí un ejercicio de la biblioteca.');return;}
     const source=libraryData().find(exercise=>exercise.id===id); if(!source) return;
     const plan=weeklyPlan(),dayPlan=plan[currentPlanEditorDay]; if(!dayPlan||dayPlan.type==='rest'){flash('Convertí primero el día de descanso desde la edición avanzada.');return;}
-    const candidate={id:`${source.id}-${currentPlanEditorDay}`,exerciseId:source.id,name:source.name,muscle:source.group||'General',primaryMuscles:[...(source.primaryMuscles||[])],secondaryMuscles:[...(source.secondaryMuscles||[])],muscleTaxonomyVersion:source.muscleTaxonomyVersion||window.MUSCLE_TAXONOMY?.VERSION||1,type:source.type||'personalizado',unit:source.unit||settings().unit,bodyweight:source.bodyweight||source.unit==='peso corporal',notes:source.notes||'',targetSets:3,repsMin:8,repsMax:12,restSeconds:90};
+    const measurementMode=source.measurementMode||'reps',defaultLoadMode=source.defaultLoadMode||(source.bodyweight||source.unit==='peso corporal'?'bodyweight':'total');
+    const candidate={id:`${source.id}-${currentPlanEditorDay}`,exerciseId:source.id,name:source.name,muscle:source.group||'General',primaryMuscles:[...(source.primaryMuscles||[])],secondaryMuscles:[...(source.secondaryMuscles||[])],muscleTaxonomyVersion:source.muscleTaxonomyVersion||window.MUSCLE_TAXONOMY?.VERSION||1,type:source.type||'personalizado',unit:source.unit||settings().unit,bodyweight:source.bodyweight||source.unit==='peso corporal',measurementMode,defaultLoadMode,notes:source.notes||'',targetSets:3,repsMin:8,repsMax:12,targetRirMin:1,targetRirMax:3,progressionMode:defaultProgressionMode(measurementMode,defaultLoadMode),incrementKg:source.incrementKg||.5,restSeconds:90};
     if(dayPlan.exercises.some(exercise=>sameExercise(exercise,candidate))){flash('Ese ejercicio ya está en este día.');return;}
     dayPlan.exercises.push(candidate); dayPlan.muscles=[...new Set([...(dayPlan.muscles||[]),candidate.muscle])]; plan[currentPlanEditorDay]=dayPlan; saveWeeklyPlan(plan); renderPlanEditor();
   }
@@ -1667,7 +1688,7 @@
     else if(action===actionWidgetSaveSet){syncWorkoutWidget();openGymToday();}
   }
 
-  window.WORKOUT_FEATURES={keys,dayOrder,defaultWeeklyPlan:clone(defaultWeeklyPlan),exerciseLibrary:clone(exerciseLibrary),EXERCISE_LIBRARY_VERSION,getExerciseLibrary:()=>clone(libraryData()),getEquipmentProfiles:()=>clone(equipmentProfiles()),getGymSettings:()=>clone(settings()),updateGymSettings:next=>{saveSettings(next||{});return clone(settings());},displayWeight,canonicalWeight,displayVolume,migrateExerciseLibrary,migrateLegacyGymSessions,dayKeyForDate,planForDate,rankExercisesForContext,getQuickWorkoutState,addManualExercisePayload,saveQuickSetPayload,updateQuickSetPayload,deleteQuickSetPayload,undoDeleteQuickSetPayload,canUndoQuickSetDelete:()=>!!lastDeletedQuickSet,replaceSessionPayload,completeQuickExercisePayload,finishWorkoutPayload,buildWorkoutWidgetState,syncWorkoutWidget,importWidgetStateFromAndroid};
+  window.WORKOUT_FEATURES={keys,dayOrder,defaultWeeklyPlan:clone(defaultWeeklyPlan),exerciseLibrary:clone(exerciseLibrary),EXERCISE_LIBRARY_VERSION,getExerciseLibrary:()=>clone(libraryData()),getWeeklyWorkoutPlan:()=>clone(weeklyPlan()),getEquipmentProfiles:()=>clone(equipmentProfiles()),getGymSettings:()=>clone(settings()),updateGymSettings:next=>{saveSettings(next||{});return clone(settings());},displayWeight,canonicalWeight,displayVolume,migrateExerciseLibrary,migrateLegacyGymSessions,dayKeyForDate,planForDate,rankExercisesForContext,getQuickWorkoutState,addManualExercisePayload,saveQuickSetPayload,updateQuickSetPayload,deleteQuickSetPayload,undoDeleteQuickSetPayload,canUndoQuickSetDelete:()=>!!lastDeletedQuickSet,replaceSessionPayload,completeQuickExercisePayload,finishWorkoutPayload,buildWorkoutWidgetState,syncWorkoutWidget,importWidgetStateFromAndroid};
   window.openGymToday=openGymToday;
   window.openQuickSetLogger=openQuickSetLogger;
   window.handleAndroidWidgetIntent=(action,payload)=>handleAndroidWidgetIntent(action,payload||{});

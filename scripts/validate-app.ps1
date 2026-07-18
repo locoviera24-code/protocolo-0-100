@@ -26,6 +26,7 @@ $fdc = Read-Utf8 'fdc-client.js'
 $workoutStore = Read-Utf8 'workout-store.js'
 $workoutPlan = Read-Utf8 'workout-plan.js'
 $workoutEquipment = Read-Utf8 'gym/equipment.js'
+$progressionEngine = Read-Utf8 'gym/progression-engine.js'
 $workoutMetrics = Read-Utf8 'workout-metrics.js'
 $workoutRanking = Read-Utf8 'workout-ranking.js'
 $workoutUi = Read-Utf8 'workout-ui.js'
@@ -74,6 +75,7 @@ $workoutTest = Read-Utf8 'scripts/test-workout-features.mjs'
 $gymPartyTest = Read-Utf8 'scripts/test-gym-party.mjs'
 $workoutMetricsTest = Read-Utf8 'scripts/test-workout-metrics.mjs'
 $workoutEquipmentTest = Read-Utf8 'scripts/test-workout-equipment.mjs'
+$progressionEngineTest = Read-Utf8 'scripts/test-progression-engine.mjs'
 $setModel = Read-Utf8 'gym/set-model.js'
 $firestoreRules = Read-Utf8 'firebase/firestore.rules'
 $firestoreRulesTest = Read-Utf8 'firebase/rules.test.mjs'
@@ -106,12 +108,12 @@ $requiredFiles = @(
     'nutrition/nutrition-store.js', 'nutrition/nutrition-model.js', 'nutrition/recipes.js', 'nutrition/portions.js', 'nutrition/food-search.js', 'nutrition/food-entry-flow.js', 'nutrition/meal-history.js', 'nutrition/nutrition-confidence.js', 'nutrition/nutrition-view.js', 'scripts/test-nutrition-modules.mjs', 'scripts/test-fdc-confidence.mjs', 'tests/e2e/nutrition-domain.spec.mjs', 'tests/e2e/nutrition-today.spec.mjs', 'tests/e2e/nutrition-recipes-portions.spec.mjs', 'tests/e2e/nutrition-numbers-targets.spec.mjs',
     'data/backup-service.js', 'scripts/test-backup-service.mjs', 'tests/e2e/backup-import.spec.mjs',
     'ui/confirmation-dialog.js',
-    'app-version.json', 'app-version.js', 'app/numbers.js', 'scripts/test-numbers.mjs', 'data/indexeddb.js', 'data/repositories.js', 'nutrition-data.js', 'fdc-client.js', 'workout-store.js', 'workout-plan.js', 'gym/equipment.js', 'gym/set-model.js', 'workout-metrics.js', 'workout-ranking.js', 'workout-ui.js', 'workout-features.js', 'advanced-features.js', 'ui/router.js', 'ui/navigation.js', 'ui/notifications.js', 'ui/inline-validation.js', 'ui/form-dialog.js', 'ui/error-boundary.js', 'ui/recovery-view.js', 'progress/muscle-taxonomy.js', 'progress/progress-data-model.js', 'progress/gym-progress-model.js', 'progress/muscle-progress.js', 'progress/exercise-progress.js', 'progress/personal-records.js', 'progress/progress-view.js',
+    'app-version.json', 'app-version.js', 'app/numbers.js', 'scripts/test-numbers.mjs', 'data/indexeddb.js', 'data/repositories.js', 'nutrition-data.js', 'fdc-client.js', 'workout-store.js', 'workout-plan.js', 'gym/equipment.js', 'gym/set-model.js', 'gym/progression-engine.js', 'workout-metrics.js', 'workout-ranking.js', 'workout-ui.js', 'workout-features.js', 'advanced-features.js', 'ui/router.js', 'ui/navigation.js', 'ui/notifications.js', 'ui/form-dialog.js', 'ui/error-boundary.js', 'ui/recovery-view.js', 'progress/muscle-taxonomy.js', 'progress/progress-data-model.js', 'progress/gym-progress-model.js', 'progress/muscle-progress.js', 'progress/exercise-progress.js', 'progress/personal-records.js', 'progress/progress-view.js',
     'firebase-config.js', 'firebase-service.js', 'gym-party-sync.js', 'gym-party-metrics.js', 'gym-party-ui.js', 'gym-party.js',
     'scripts/test-android-webview-security.mjs',
     'scripts/test-android-release.mjs',
     'scripts/test-accessibility.mjs',
-    'scripts/test-module-boundaries.mjs', 'scripts/test-design-system.mjs', 'scripts/design-token-allowlist.json', 'scripts/test-router.mjs', 'scripts/test-layout-coordinator.mjs', 'scripts/test-home-settings.mjs', 'scripts/test-progress-view.mjs', 'scripts/test-workout-equipment.mjs', 'scripts/sync-app-version.mjs', 'scripts/test-version-alignment.mjs', 'scripts/test-settings-contract.mjs', 'scripts/test-data-layer.mjs',
+    'scripts/test-module-boundaries.mjs', 'scripts/test-design-system.mjs', 'scripts/design-token-allowlist.json', 'scripts/test-router.mjs', 'scripts/test-layout-coordinator.mjs', 'scripts/test-home-settings.mjs', 'scripts/test-progress-view.mjs', 'scripts/test-workout-equipment.mjs', 'scripts/test-progression-engine.mjs', 'scripts/sync-app-version.mjs', 'scripts/test-version-alignment.mjs', 'scripts/test-settings-contract.mjs', 'scripts/test-data-layer.mjs',
     'scripts/serve-static.mjs', 'scripts/build-web-dist.mjs', 'scripts/test-web-dist.mjs', 'playwright.config.mjs', 'playwright.web-dist.config.mjs', 'tests/web-dist/web-dist.spec.mjs', 'tests/e2e/gym-flow.spec.mjs', 'tests/e2e/gym-canonical.spec.mjs', 'tests/e2e/gym-set-types.spec.mjs', 'tests/e2e/visual-navigation.spec.mjs', 'tests/e2e/router.spec.mjs', 'tests/e2e/layout-sticky.spec.mjs', 'tests/e2e/home-settings.spec.mjs', 'tests/e2e/notifications-recovery.spec.mjs', 'tests/e2e/progress.spec.mjs', 'tests/e2e/progress-muscle.spec.mjs', 'tests/e2e/progress-exercise.spec.mjs', 'tests/e2e/data-layer.spec.mjs', 'scripts/test-muscle-progress.mjs', 'scripts/test-exercise-progress.mjs',
     'manifest.webmanifest', 'sw.js',
     'styles/tokens.css', 'styles/base.css', 'styles/components.css', 'styles/features.css', 'styles/gym.css', 'styles/gym-party.css', 'styles/modules.css', 'styles/responsive.css',
@@ -618,6 +620,10 @@ foreach ($contract in @(
     'data-plan-field="targetSets"',
     'data-plan-field="repsMin"',
     'data-plan-field="repsMax"',
+    'data-plan-field="targetRirMin"',
+    'data-plan-field="targetRirMax"',
+    'data-plan-field="progressionMode"',
+    'data-plan-field="incrementKg"',
     'data-plan-field="restSeconds"',
     'undoPlanExerciseDelete',
     'addPlanLibraryExercise',
@@ -732,18 +738,26 @@ foreach ($contract in @('warmup','working','backoff','drop','technique','failure
 }
 Assert-True ($html.Contains('gym/set-model.js')) 'La app debe cargar el modelo de tipos de serie antes de las metricas'
 Assert-True ($html.Contains('gym/equipment.js')) 'La app debe cargar el modelo de equipo antes de tipos de serie'
+Assert-True ($html.Contains('gym/progression-engine.js')) 'La app debe cargar el motor de progresion'
 Assert-True ($html.IndexOf('gym/equipment.js') -lt $html.IndexOf('gym/set-model.js')) 'El modelo de equipo debe cargar antes del modelo de serie'
+Assert-True ($html.IndexOf('workout-metrics.js') -lt $html.IndexOf('gym/progression-engine.js')) 'Las metricas deben cargar antes del motor de progresion'
 Assert-True ($serviceWorker.Contains('./gym/set-model.js')) 'El service worker debe cachear el modelo de tipos de serie'
 Assert-True ($serviceWorker.Contains('./gym/equipment.js')) 'El service worker debe cachear el modelo de equipo'
+Assert-True ($serviceWorker.Contains('./gym/progression-engine.js')) 'El service worker debe cachear el motor de progresion'
 foreach ($term in @('perHand','perSide','addedLoad','assistance','durationSeconds','distanceMeters','normalizedTotalKg')) {
     Assert-True ($workoutEquipment.Contains($term)) "Falta semantica de equipo/modalidad: $term"
     Assert-True ($workoutEquipmentTest.Contains($term)) "Falta prueba de equipo/modalidad: $term"
+}
+foreach ($term in @('doubleProgression','loadProgression','repProgression','timeProgression','distanceProgression','assistanceReduction','maintainTechnique','targetRirMin','sessionsCompared','confidence')) {
+    Assert-True ($progressionEngine.Contains($term)) "Falta contrato del motor de progresion: $term"
+    Assert-True ($progressionEngineTest.Contains($term)) "Falta prueba del motor de progresion: $term"
 }
 Assert-True ($deployWorkflow.Contains('- gym/**')) 'Cambios en modulos Gym deben disparar Pages'
 foreach ($workflow in @($deployWorkflow, $apkWorkflow, $validationWorkflow)) {
     Assert-True ($workflow.Contains('node ./scripts/test-workout-features.mjs')) 'Cada workflow debe probar rutina semanal y estado widget'
     Assert-True ($workflow.Contains('node ./scripts/test-workout-metrics.mjs')) 'Cada workflow debe probar metricas de gimnasio'
     Assert-True ($workflow.Contains('node ./scripts/test-workout-equipment.mjs')) 'Cada workflow debe probar equipo y modalidades'
+    Assert-True ($workflow.Contains('node ./scripts/test-progression-engine.mjs')) 'Cada workflow debe probar el motor de progresion'
     Assert-True ($workflow.Contains('node ./scripts/test-gym-party.mjs')) 'Cada workflow debe probar Gym Party'
     Assert-True ($workflow.Contains('node ./scripts/test-gym-party-sync.mjs')) 'Cada workflow debe probar sync incremental'
     Assert-True ($workflow.Contains('node ./scripts/test-android-webview-security.mjs')) 'Cada workflow debe probar seguridad WebView Android'
@@ -753,6 +767,7 @@ foreach ($workflow in @($deployWorkflow, $apkWorkflow, $validationWorkflow)) {
     Assert-True ($workflow.Contains('npm run test:version')) 'Cada workflow debe verificar la fuente unica de version'
 }
 Assert-True ($releaseWorkflow.Contains('npm run test:modules')) 'El release Android debe probar limites modulares'
+Assert-True ($releaseWorkflow.Contains('node ./scripts/test-progression-engine.mjs')) 'El release Android debe probar el motor de progresion'
 foreach ($contract in @('WORKOUT_STORE','WORKOUT_PLAN','WORKOUT_UI','FIREBASE_SERVICE','GYM_PARTY_METRICS','GYM_PARTY_UI','aggregate.bodyweightReps','aggregate.addedLoadVolume')) {
     Assert-True ($moduleBoundaryTest.Contains($contract)) "Falta cobertura modular: $contract"
 }

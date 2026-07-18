@@ -68,6 +68,9 @@ jobs:
       - name: Probar equipo y modalidades de gimnasio
         run: node ./scripts/test-workout-equipment.mjs
 
+      - name: Probar motor de progresion
+        run: node ./scripts/test-progression-engine.mjs
+
       - name: Probar limites modulares
         run: npm run test:modules
 

@@ -64,6 +64,9 @@ jobs:
       - name: Probar equipo y modalidades de gimnasio
         run: node ./scripts/test-workout-equipment.mjs
 
+      - name: Probar motor de progresion
+        run: node ./scripts/test-progression-engine.mjs
+
       - name: Probar Gym Party
         run: node ./scripts/test-gym-party.mjs
 

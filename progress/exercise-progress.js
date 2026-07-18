@@ -48,7 +48,7 @@
     });
     return [...groups.values()].map(item=>({sessionId:item.sessionId,date:item.date,rows:item.rows,...aggregate(item.rows,comparisonKey)})).sort((a,b)=>String(b.date).localeCompare(String(a.date))||String(b.sessionId).localeCompare(String(a.sessionId)));
   }
-  function recommendation(history){
+  function legacyRecommendation(history){
     if(history.length<2)return{kind:'insufficient',text:'No hay datos suficientes para sugerir un cambio.',reason:'Se necesitan al menos dos sesiones con el mismo equipo y modo de carga.'};
     const [latest,previous]=history,sets=(latest.rows?.flatMap(row=>row.sets)||[]).filter(set=>set.progressionEligible!==false),latestWeight=latest.progressionBestWeight??latest.bestWeight,previousWeight=previous.progressionBestWeight??previous.bestWeight,latestReps=latest.progressionMaxReps??latest.maxReps,previousReps=previous.progressionMaxReps??previous.maxReps;
     if(!sets.length)return{kind:'insufficient',text:'No hay series efectivas comparables para sugerir un cambio.',reason:'Calentamientos y series excluidas no alimentan la progresión.'};
@@ -62,13 +62,17 @@
     if(latestWeight===previousWeight&&latestReps>=previousReps)return{kind:'rep',text:'Si la técnica se mantiene, podés intentar una repetición adicional.',reason:`Dos sesiones con el mismo equipo y ${latestWeight||'la misma'} carga.`};
     return{kind:'repeat',text:'Podés repetir la carga anterior y consolidar todas las series.',reason:'La progresión observada todavía es corta o variable.'};
   }
-  function build({sessions=[],library=[],days=30,today=data().format(new Date())}={}){
+  function recommendation(history,prescription={},context={}){
+    return global.WORKOUT_PROGRESSION?.recommend?.({history,prescription,context})||legacyRecommendation(history);
+  }
+  function build({sessions=[],library=[],plan={},days=30,today=data().format(new Date())}={}){
     const rows=gym().flatten(sessions,library),period=data().windows(rows.map(row=>row.date),{days,today}),ids=[...new Set(rows.map(row=>row.exerciseId))];
     const exercises=ids.map(id=>{
       const own=rows.filter(row=>row.exerciseId===id),all=aggregate(own),comparisonKey=all.comparisonKey;
       const currentRows=own.filter(row=>data().inRange(row.date,period.currentStart,period.currentEnd)),previousRows=period.all?[]:own.filter(row=>data().inRange(row.date,period.previousStart,period.previousEnd));
       const history=sessionRows(own,comparisonKey),current=aggregate(currentRows,comparisonKey),previous=aggregate(previousRows,comparisonKey);
-      return{id,name:own[0].exerciseName,muscle:own[0].muscle,bodyweight:all.bodyweight,current,previous,all,history,recommendation:recommendation(history),change:{weight:data().percentChange(current.bestWeight,previous.bestWeight),volume:data().percentChange(current.volume,previous.volume)}};
+      const prescription=global.WORKOUT_PROGRESSION?.resolvePrescription?.({exerciseId:id,library,plan,context:{...all,incrementKg:all.bestSet?.incrementKg}})||{};
+      return{id,name:own[0].exerciseName,muscle:own[0].muscle,bodyweight:all.bodyweight,current,previous,all,history,prescription,recommendation:recommendation(history,prescription,all),change:{weight:data().percentChange(current.bestWeight,previous.bestWeight),volume:data().percentChange(current.volume,previous.volume)}};
     }).sort((a,b)=>String(b.history[0]?.date||'').localeCompare(String(a.history[0]?.date||''))||a.name.localeCompare(b.name,'es'));
     return{period,exercises,byId:Object.fromEntries(exercises.map(item=>[item.id,item]))};
   }

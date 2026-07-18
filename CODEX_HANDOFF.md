@@ -2213,3 +2213,61 @@ efectivas comparables y prescripciones por ejercicio. Luego continuar con
 anomalias/records, clasificacion muscular ambigua, IndexedDB primario, PWA
 atomica y quality gate unico. No volver a implementar tipos de serie, artifact
 Pages, membresias atomicas ni este modelo de equipo.
+
+## 54. Motor de progresion explicable por ejercicio
+
+Bloque iniciado sobre `914e58d` y preparado como build 72:
+
+- `gym/progression-engine.js` concentra una API pura y versionada para
+  `doubleProgression`, `loadProgression`, `repProgression`,
+  `timeProgression`, `distanceProgression`, `assistanceReduction` y
+  `maintainTechnique`. Ordena el historial, exige al menos dos sesiones y
+  devuelve recomendacion, motivo, confianza, sesiones comparadas, datos usados,
+  sugerencia concreta y bloqueos.
+- Las comparaciones usan el mismo `exerciseId`, modalidad, semantica de carga,
+  equipo, gimnasio y lateralidad. Solo cuentan series elegibles para progresion;
+  calentamientos, series excluidas o incompletas no alimentan la recomendacion.
+  Dolor/molestia, anomalias, caida marcada de RIR/RPE, bajada de rendimiento o
+  cambio de contexto bloquean un aumento de carga.
+- La doble progresion solo propone el incremento minimo cuando dos sesiones
+  comparables completaron todas las series en el limite superior y dentro del
+  RIR objetivo. Tiempo, distancia y asistencia usan magnitudes propias y nunca
+  pasan por e1RM.
+- La rutina semanal permite definir por ejercicio series, rango de reps, RIR,
+  metodo e incremento minimo dentro de un bloque secundario `Progresion`. Los
+  dias predeterminados incluyen valores conservadores, pero las rutinas ya
+  guardadas se respetan y reciben valores de lectura por defecto sin una
+  reescritura masiva.
+- `progress/exercise-progress.js` delega en el motor y mantiene el heuristico
+  anterior solo como fallback compatible. `progress/progress-view.js` muestra
+  confianza, fechas comparadas, prescripcion y carga/reps/tiempo/distancia
+  orientativos. Las sugerencias siguen identificadas como orientativas.
+- `index.html`, `sw.js`, workflows, validador y sincronizacion Android incluyen
+  el nuevo modulo. `scripts/test-progression-engine.mjs` cubre orden temporal,
+  RIR ausente, dolor, cambio de equipo, series de calentamiento y todos los
+  metodos de progresion principales.
+
+Pruebas ejecutadas hasta este punto:
+
+- motor de progresion, metricas de Gym, Workout Features y Progreso completo:
+  correctos;
+- `validate-app.ps1 -CheckAndroidAssets`: correcto, con paridad exacta entre
+  web y Android, cache build 72 y 444 IDs estaticos unicos;
+- fuente unica de version: `2.7.0`, Android 33 y build/cache 72 alineados;
+- artifact web build 72: 63 recursos con hash; validacion estatica y prueba
+  Chromium servida pasaron sin 404, errores de pagina o consola;
+- E2E afectada de Gym y Progreso: 20 aprobadas en Android Chromium, iPhone
+  WebKit y escritorio Chromium. La unica omision es la prueba de service worker
+  en WebKit, no soportada por ese proyecto de Playwright;
+- Gradle 8.10.2 con Java 21 termino `:app:assembleDebug`. El APK debug mide
+  1.618.064 bytes, y el contrato de release/checksum tambien paso.
+
+Estado publicable del bloque: `2.7.0`, Android `33`, build/cache `72`
+(`protocolo-0-100-pwa-2.7.0-b72`). No se modificaron reglas Firestore ni schema
+de backups en este bloque; Firebase, Gym Party, widget y datos legacy conservan
+sus contratos existentes.
+
+Pendiente siguiente exacto despues de cerrar estas pruebas: deteccion y
+confirmacion de registros anomalos sin borrar datos, seguida por clasificacion
+muscular ambigua de ejercicios personalizados. IndexedDB primario, PWA atomica
+y quality gate unico continúan pendientes posteriores.

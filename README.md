@@ -15,7 +15,7 @@ PWA y APK Android para medir habitos, atencion, actividad fisica y nutricion con
 
 ## Navegacion y diseno
 
-La version actual `v2.7.0` (build web `71`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
+La version actual `v2.7.0` (build web `72`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
 **Gym**, **Nutricion**, **Progreso** y **Mas**. En escritorio usa una barra
 lateral compacta. Gym Party se abre desde **Gym > Grupo**, desde un acceso
 discreto en Inicio o mediante un enlace `gymPartyCode`; ya no ocupa un boton
@@ -121,6 +121,7 @@ progress/muscle-taxonomy.js  IDs anatomicos estables y compatibilidad legacy
 progress/muscle-progress.js Series, volumen y frecuencia por musculo
 progress/exercise-progress.js Fuerza, historial y sugerencia por ejercicio
 progress/personal-records.js Records derivados de sesiones canonicas
+gym/progression-engine.js   Prescripciones y sugerencias conservadoras comparables
 workout-store.js            Acceso conservador y versionado al repositorio Gym
 workout-plan.js             Normalizacion, deduplicacion e insercion en rutinas
 workout-ui.js               Renderizadores pequenos y anuncios accesibles de Gym
@@ -226,6 +227,15 @@ de carga. Cambiar de barra a Smith o de carga total a carga por mano inicia un
 contexto comparable distinto; el volumen general continúa sumándose con la
 carga total normalizada. Los documentos compartidos de Gym Party transmiten
 solo los datos mínimos y derivan volumen, carga total y ritmo en cada cliente.
+
+Cada ejercicio de la rutina puede definir series objetivo, rango de
+repeticiones, RIR, incremento minimo y metodo de progresion. El motor exige al
+menos dos sesiones comparables y usa unicamente series validas para progresion;
+un calentamiento, una exclusion, un cambio de equipo, una molestia o un dato
+marcado para revision no provocan una sugerencia de subir carga. La vista de
+Progreso explica las sesiones y objetivos usados, el nivel de confianza y el
+incremento orientativo. Las recomendaciones son conservadoras y no sustituyen
+criterio tecnico ni profesional.
 
 La vista principal se mantiene deliberadamente limpia: foco en registrar el
 entrenamiento y revisar el resumen semanal. El codigo para invitar, sincronizar,
@@ -451,6 +461,7 @@ powershell -ExecutionPolicy Bypass -File ./scripts/validate-app.ps1
 node ./scripts/test-service-worker.mjs
 node ./scripts/test-workout-features.mjs
 node ./scripts/test-workout-metrics.mjs
+node ./scripts/test-progression-engine.mjs
 node ./scripts/test-gym-party.mjs
 node ./scripts/test-gym-party-sync.mjs
 node ./scripts/test-module-boundaries.mjs
