@@ -97,6 +97,15 @@ Documento: `workout_sets_shared/{partyId}_{userId}_{localSessionId}_{exerciseId}
 - `setNumber`
 - `reps`
 - `weightKg`
+- `measurementMode`: `reps`, `time`, `distance` o `assistance`
+- `loadMode`: `total`, `perHand`, `perSide`, `bodyweight`, `addedLoad` o `assistance`
+- `barWeightKg`: barra usada cuando la carga se registra por lado
+- `assistanceKg`: asistencia positiva; nunca se representa como peso negativo
+- `equipmentId`
+- `equipmentName`
+- `laterality`: `bilateral`, `left`, `right` o `alternating`
+- `durationSeconds`
+- `distanceMeters`
 - `rir`
 - `rpe`
 - `isBodyweight`
@@ -112,6 +121,12 @@ Documento: `workout_sets_shared/{partyId}_{userId}_{localSessionId}_{exerciseId}
 - `localDate`
 - `timeZone`
 - `utcOffset`
+
+Gym Party comparte solo los datos de entrada necesarios. `normalizedTotalKg`,
+`recordLoadKg`, volumen y ritmo se derivan con `gym/equipment.js` y
+`workout-metrics.js`; no se duplican en Firestore. Esto mantiene documentos
+pequeños, evita inconsistencias y permite que backups/sesiones antiguas sigan
+interpretándose como `reps + total`.
 
 ## gym_party_invites
 

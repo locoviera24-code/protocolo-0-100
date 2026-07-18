@@ -87,7 +87,7 @@ assert.ok(workout.planForDate('2026-06-23').exercises.some(exercise => exercise.
 
 const widgetState = workout.buildWorkoutWidgetState('2026-06-22');
 assert.equal(widgetState.title, 'Lunes — Torso A');
-assert.equal(widgetState.schemaVersion, 2);
+assert.equal(widgetState.schemaVersion, 3);
 assert.equal(widgetState.currentExerciseName, 'Apertura sentado / Peck deck');
 assert.equal(widgetState.quickLog.reps, 8);
 assert.equal(widgetState.quickLog.unit, 'kg');

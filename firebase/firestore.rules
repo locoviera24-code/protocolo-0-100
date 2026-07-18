@@ -33,6 +33,32 @@ service cloud.firestore {
         || data.setType == "assisted";
     }
 
+    function optionalMeasurementMode(data) {
+      return !data.keys().hasAny(["measurementMode"])
+        || data.measurementMode == "reps"
+        || data.measurementMode == "time"
+        || data.measurementMode == "distance"
+        || data.measurementMode == "assistance";
+    }
+
+    function optionalLoadMode(data) {
+      return !data.keys().hasAny(["loadMode"])
+        || data.loadMode == "total"
+        || data.loadMode == "perHand"
+        || data.loadMode == "perSide"
+        || data.loadMode == "bodyweight"
+        || data.loadMode == "addedLoad"
+        || data.loadMode == "assistance";
+    }
+
+    function optionalLaterality(data) {
+      return !data.keys().hasAny(["laterality"])
+        || data.laterality == "bilateral"
+        || data.laterality == "left"
+        || data.laterality == "right"
+        || data.laterality == "alternating";
+    }
+
     function optionalDate(data, field) {
       return !data.keys().hasAny([field]) || data[field] == null || data[field] is timestamp || (data[field] is string && data[field].size() <= 40);
     }
@@ -364,6 +390,8 @@ service cloud.firestore {
       return data.keys().hasOnly([
           "id", "partyId", "sessionId", "userId", "localExerciseId", "localSetId",
           "exerciseId", "exerciseName", "muscleGroup", "setNumber", "reps", "weightKg",
+          "assistanceKg", "barWeightKg", "measurementMode", "loadMode",
+          "equipmentId", "equipmentName", "laterality", "durationSeconds", "distanceMeters",
           "rir", "rpe", "isBodyweight", "setType", "completed", "excludeFromRecords",
           "excludeFromProgression", "date", "localDate", "timeZone", "utcOffset",
           "revision", "deleted", "deletedAt", "deletedReason", "createdAt", "updatedAt"
@@ -384,6 +412,9 @@ service cloud.firestore {
         && data.reps >= 0
         && data.reps <= 10000
         && optionalNumber(data, "weightKg", 0, 5000)
+        && optionalMeasurementMode(data)
+        && optionalLoadMode(data)
+        && optionalLaterality(data)
         && optionalNumber(data, "rir", 0, 10)
         && optionalNumber(data, "rpe", 0, 10)
         && data.isBodyweight is bool

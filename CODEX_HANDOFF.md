@@ -2137,3 +2137,79 @@ Pendiente siguiente exacto: implementar semantica de carga y equipo
 modalidades por repeticiones, tiempo y distancia. No volver a abrir tipos de
 serie, artifact Pages ni este contrato de membresias salvo que una regresion
 demuestre un fallo real.
+
+## 53. Carga, equipo y modalidades canonicas de Gym
+
+Bloque iniciado despues de `e0695b9` y cerrado sobre build 71:
+
+- `gym/equipment.js` es el modelo canonico versionado para carga `total`,
+  `perHand`, `perSide`, `bodyweight`, `addedLoad` y `assistance`; modalidades
+  `reps`, `time`, `distance` y `assistance`; y lateralidad bilateral,
+  izquierda, derecha o alternada. Los datos legacy sin estos campos se leen
+  como repeticiones con carga total y no se reescriben masivamente.
+- Las sesiones guardan kg canonicos y conservan valor/unidad originales,
+  carga total normalizada, barra, asistencia positiva, equipo, gimnasio,
+  incremento, lateralidad, duracion, distancia y ritmo derivado. La asistencia
+  nunca usa peso negativo. `equipmentProfiles` se incluye en repositorios y
+  backups schema 3 sin eliminar claves anteriores.
+- El registro rapido de Gym y el registro directo de Gym Party permiten elegir
+  modalidad, modo de carga, equipo, barra y lateralidad dentro de opciones
+  secundarias. Plancha, caminata, bicicleta y estiramiento suave amplian la
+  biblioteca v4 sin sobrescribir bibliotecas personalizadas.
+- `workout-metrics.js` deriva volumen externo con `normalizedTotalKg`, separa
+  lastre, peso corporal y asistencia, y suma tiempo/distancia con metricas
+  propias. No calcula e1RM para tiempo, distancia, asistencia ni peso corporal
+  sin una carga comparable.
+- Progreso por ejercicio solo compara el contexto activo con igual
+  `exerciseId`, modalidad, modo de carga, equipo, gimnasio y lateralidad. Barra,
+  Smith, maquina y carga por mano no se mezclan. La vista y los records se
+  adaptan a duracion, distancia y menor asistencia.
+- Gym Party comparte en Firestore solo los datos de entrada minimos:
+  `weightKg`, `barWeightKg`, `assistanceKg`, modalidad, modo de carga, equipo,
+  lateralidad, duracion y distancia. Carga total, volumen y ritmo se derivan en
+  cada cliente para evitar redundancia. Reconciliacion, tombstones y privacidad
+  siguen funcionando; ocultar pesos tambien oculta barra y asistencia.
+- `firebase/firestore.rules` limita los enums nuevos y mantiene documentos
+  legacy validos. El primer intento de validar demasiados campos derivados
+  supero el presupuesto de expresiones de Rules; el contrato se redujo al
+  payload minimo y Firestore Emulator paso despues todas las pruebas positivas
+  y negativas.
+- `sw.js`, Pages, workflows, validador y `scripts/sync-web-assets.ps1` incluyen
+  `gym/equipment.js`. Los assets Android contienen el mismo archivo y contrato.
+
+Pruebas finales del bloque:
+
+- contratos de equipo, metricas, Workout Features, musculos, ejercicios,
+  Gym Party, sync incremental, limites modulares, version y datos: correctos;
+- `validate-app.ps1 -CheckAndroidAssets`: correcto, cache build 71, 443 IDs
+  estaticos unicos y paridad exacta entre web y Android;
+- artifact Pages: 62 recursos con hash; `test-web-dist` y la prueba Chromium
+  servida pasaron sin 404, solicitudes fallidas, errores de pagina o consola;
+- Firestore Emulator con Java 21: correcto, incluidas modalidades validas,
+  rechazo de enums desconocidos y todas las negativas de membresias. Los
+  `PERMISSION_DENIED` del log pertenecen a negativas deliberadas;
+- matriz E2E afectada en Android Chromium, iPhone WebKit y escritorio Chromium:
+  53 aprobadas y una omision esperada del service worker en WebKit. Cubre
+  borradores, Gym, tipos de serie, Gym Party, numeros nutricionales y Progreso;
+- la primera matriz Android completa del bloque tuvo tres fallos dependientes
+  de ejecutar en sabado de descanso. Se hicieron deterministas las fechas de
+  prueba y los tres escenarios pasaron al reejecutarse. No se presenta como
+  aprobada una suite iPhone completa: el intento anterior excedio el tiempo;
+- Gradle 8.10.2 con Java 21 termino `:app:assembleDebug`. El APK debug actual
+  mide 1.617.131 bytes, `versionCode 33`, `versionName 2.7.0-debug` y contiene
+  los mismos assets del build web.
+
+Las reglas nuevas se publicaron en Firebase produccion `a-100-9d80a` el 18 de
+julio de 2026 despues de pasar Emulator. El CLI local no tenia sesion, por lo
+que se uso la consola autenticada: la revision activa muestra `Hoy - 8:07 p.m.`
+y no quedan cambios sin publicar. Produccion ya acepta modalidad, equipo,
+barra, asistencia, duracion y distancia sin debilitar el contrato anterior.
+
+Estado publicable del codigo: version `2.7.0`, Android `33`, build/cache `71`
+(`protocolo-0-100-pwa-2.7.0-b71`), con reglas Firestore compatibles activas.
+
+Pendiente siguiente exacto: construir el motor de progresion sobre series
+efectivas comparables y prescripciones por ejercicio. Luego continuar con
+anomalias/records, clasificacion muscular ambigua, IndexedDB primario, PWA
+atomica y quality gate unico. No volver a implementar tipos de serie, artifact
+Pages, membresias atomicas ni este modelo de equipo.

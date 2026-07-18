@@ -76,12 +76,30 @@
 
   function workoutSetFromShared(row,previous){
     const weight=row.weightKg===null||row.weightKg===undefined?number(previous?.weight):number(row.weightKg);
-    return {
+    const next={
       ...(previous||{}),
       id:row.localSetId||previous?.id||row.id,
       setNumber:Math.max(1,number(row.setNumber)||number(previous?.setNumber)||1),
       reps:number(row.reps),
       weight,
+      weightKg:weight,
+      originalWeight:row.originalWeight??previous?.originalWeight??weight,
+      originalUnit:row.originalUnit||previous?.originalUnit||'kg',
+      normalizedTotalKg:row.normalizedTotalKg??previous?.normalizedTotalKg??weight,
+      recordLoadKg:row.recordLoadKg??previous?.recordLoadKg??weight,
+      addedLoadKg:number(row.addedLoadKg??previous?.addedLoadKg),
+      assistanceKg:number(row.assistanceKg??previous?.assistanceKg),
+      barWeightKg:number(row.barWeightKg??previous?.barWeightKg),
+      measurementMode:row.measurementMode||previous?.measurementMode||'reps',
+      loadMode:row.loadMode||previous?.loadMode||(row.isBodyweight?'bodyweight':'total'),
+      equipmentId:row.equipmentId||previous?.equipmentId||'',
+      equipmentName:row.equipmentName||previous?.equipmentName||'',
+      incrementKg:number(row.incrementKg??previous?.incrementKg??.5),
+      laterality:row.laterality||previous?.laterality||'bilateral',
+      repsMode:row.repsMode||previous?.repsMode||'total',
+      durationSeconds:number(row.durationSeconds),
+      distanceMeters:number(row.distanceMeters),
+      paceSecondsPerKm:number(row.paceSecondsPerKm),
       rir:row.rir??null,
       rpe:row.rpe??null,
       bodyweight:!!row.isBodyweight,
@@ -91,8 +109,11 @@
       excludeFromProgression:!!row.excludeFromProgression,
       savedAt:timestampIso(row.createdAt)||previous?.savedAt||timestampIso(row.updatedAt)||new Date().toISOString(),
       editedAt:timestampIso(row.updatedAt)||previous?.editedAt||null,
-      volume:Math.round(number(row.reps)*weight)
+      volume:0
     };
+    const normalized=window.WORKOUT_EQUIPMENT?.normalizeSet?.(next)||next;
+    normalized.volume=window.WORKOUT_METRICS?.calculateSetMetrics?.(normalized).externalLoadVolume??Math.round(number(row.reps)*number(normalized.normalizedTotalKg??weight));
+    return normalized;
   }
   function reconcileWorkoutSessions(localSessions,sharedSessions,sharedSets){
     const remoteSessions=new Map((sharedSessions||[]).filter(row=>!row.deletedAt&&row.localSessionId).map(row=>[row.localSessionId,row]));

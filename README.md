@@ -15,7 +15,7 @@ PWA y APK Android para medir habitos, atencion, actividad fisica y nutricion con
 
 ## Navegacion y diseno
 
-La version actual `v2.7.0` (build web `70`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
+La version actual `v2.7.0` (build web `71`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
 **Gym**, **Nutricion**, **Progreso** y **Mas**. En escritorio usa una barra
 lateral compacta. Gym Party se abre desde **Gym > Grupo**, desde un acceso
 discreto en Inicio o mediante un enlace `gymPartyCode`; ya no ocupa un boton
@@ -212,6 +212,20 @@ modulo Gym: elegir ejercicio de la rutina del dia, cargar reps/kilos y tocar
 **Guardar serie**. Esa rutina diaria usa la misma fuente que el widget Android:
 Lunes Torso A, Martes Pierna A, Miercoles Torso B, Jueves Pierna B, Viernes
 Torso C, Sabado descanso suave y Domingo revision/descanso.
+
+El registro de Gym y Gym Party admite seis interpretaciones de carga: total,
+por mano, por lado con barra, peso corporal, lastre y asistencia. El valor se
+guarda siempre en kg canónicos, pero conserva la forma en que fue ingresado.
+También admite ejercicios por repeticiones, tiempo y distancia. Plancha,
+caminata, bicicleta y estiramiento suave están disponibles como ejemplos sin
+forzar un cálculo de e1RM donde no corresponde.
+
+Los pesos y recomendaciones de **Progreso > Gym > Ejercicios** solo comparan
+series con el mismo ejercicio, equipo, gimnasio, lateralidad, modalidad y modo
+de carga. Cambiar de barra a Smith o de carga total a carga por mano inicia un
+contexto comparable distinto; el volumen general continúa sumándose con la
+carga total normalizada. Los documentos compartidos de Gym Party transmiten
+solo los datos mínimos y derivan volumen, carga total y ritmo en cada cliente.
 
 La vista principal se mantiene deliberadamente limpia: foco en registrar el
 entrenamiento y revisar el resumen semanal. El codigo para invitar, sincronizar,

@@ -3,10 +3,14 @@ import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
 
 const source=await readFile(new URL('../gym-party-sync.js',import.meta.url),'utf8');
+const equipmentSource=await readFile(new URL('../gym/equipment.js',import.meta.url),'utf8');
 const setModelSource=await readFile(new URL('../gym/set-model.js',import.meta.url),'utf8');
+const metricsSource=await readFile(new URL('../workout-metrics.js',import.meta.url),'utf8');
 const context={window:null,Intl,Date};context.window=context;
 const vmContext=vm.createContext(context);
+vm.runInContext(equipmentSource,vmContext,{filename:'gym/equipment.js'});
 vm.runInContext(setModelSource,vmContext,{filename:'gym/set-model.js'});
+vm.runInContext(metricsSource,vmContext,{filename:'workout-metrics.js'});
 vm.runInContext(source,vmContext,{filename:'gym-party-sync.js'});
 const sync=context.GYM_PARTY_SYNC;
 
@@ -51,6 +55,10 @@ assert.equal(reconciled.sessions[0].exercises[0].sets[0].weight,22.5);
 assert.equal(reconciled.sessions[0].exercises[0].sets[0].reps,10);
 assert.equal(reconciled.sessions[0].exercises[0].sets[0].setType,'backoff');
 assert.equal(reconciled.sessions[0].exercises[0].sets[0].excludeFromProgression,true);
+const equipmentReconciled=sync.reconcileWorkoutSessions([localWorkout],[sharedSession],[{...remoteNewer,id:'equipment-set',sessionId:sharedSession.id,localExerciseId:'bench',localSetId:'set-local',exerciseId:'bench',exerciseName:'Press banca',muscleGroup:'Pecho',setNumber:1,reps:8,weightKg:30,loadMode:'perSide',measurementMode:'reps',barWeightKg:20,equipmentId:'barbell-20',laterality:'bilateral',isBodyweight:false,createdAt:'2026-07-10T10:05:00.000Z'}]);
+assert.equal(equipmentReconciled.sessions[0].exercises[0].sets[0].normalizedTotalKg,80);
+assert.equal(equipmentReconciled.sessions[0].exercises[0].sets[0].loadMode,'perSide');
+assert.equal(equipmentReconciled.sessions[0].exercises[0].sets[0].volume,640);
 const deleted=sync.reconcileWorkoutSessions(reconciled.sessions,[sharedSession],[{id:'remote-set',sessionId:sharedSession.id,localExerciseId:'bench',localSetId:'set-local',exerciseId:'bench',deleted:true,deletedReason:'set-deleted',deletedAt:'2026-07-10T12:00:00.000Z'}]);
 assert.equal(deleted.sessions[0].exercises[0].sets.length,0);
 const privacyRemoval=sync.reconcileWorkoutSessions([localWorkout],[sharedSession],[{id:'remote-set',sessionId:sharedSession.id,localExerciseId:'bench',localSetId:'set-local',exerciseId:'bench',deleted:true,deletedReason:'privacy-removal',deletedAt:'2026-07-10T12:00:00.000Z'}]);

@@ -41,11 +41,13 @@ test('alimento sin guardar conserva paso, porcion y comida',async({page})=>{
 test('serie Gym y formulario de Gym Party sobreviven una recarga',async({page})=>{
   await reset(page,'/index.html?module=gym&view=train');
   await expect(page.locator('#quickExerciseSelect')).toBeVisible();
+  await page.evaluate(()=>{const result=window.WORKOUT_FEATURES.addManualExercisePayload({date:todayStr(),name:'Ejercicio borrador',muscle:'General',persistScope:'session'});window.openQuickSetLogger(result.exercise.id);});
   await page.locator('#quickReps').fill('11');
   await page.locator('#quickWeight').fill('42.5');
   await page.locator('.quickSecondaryDetails summary').click();
   await page.locator('#quickNote').fill('Mantener tecnica');
   await page.evaluate(()=>window.APP_DRAFTS.flushAll());
+  expect(await page.evaluate(()=>window.APP_DRAFTS.list('gym-set')[0]?.payload)).toMatchObject({reps:'11',weight:'42.5',note:'Mantener tecnica'});
   await page.reload();
   await expect(page.locator('#quickReps')).toHaveValue('11');
   await expect(page.locator('#quickWeight')).toHaveValue('42.5');
@@ -67,6 +69,8 @@ test('serie Gym y formulario de Gym Party sobreviven una recarga',async({page})=
   await expect(page.locator('#gymPartyCreateAlias')).toHaveValue('Nico');
   await expect(page.locator('#gymPartyCreateName')).toHaveValue('Sala pendiente');
   await page.locator('[data-gym-party-action="create"]').click();
+  await page.locator('#partyWorkoutDateInput').fill('2026-07-13');
+  await page.locator('#partyWorkoutDateInput').dispatchEvent('change');
   await page.locator('#partyQuickReps').fill('9');
   await page.locator('#partyQuickWeight').fill('30');
   await page.locator('[data-gym-party-action="party-save-set"]').click();

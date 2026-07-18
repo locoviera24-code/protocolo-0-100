@@ -94,6 +94,10 @@ async function testCoreAccessAndWorkoutRules(){
   await assertSucceeds(updateDoc(doc(ownerDb,'workout_sets_shared','set_owner'),{reps:9,updatedAt:now}));
   await assertFails(setDoc(doc(memberDb,'workout_sets_shared','negative_set'),{...ownerSet,id:'negative_set',userId:'member',reps:-1}));
   await assertFails(setDoc(doc(ownerDb,'workout_sets_shared','invalid_set_type'),{...ownerSet,id:'invalid_set_type',setType:'max-effort'}));
+  await assertSucceeds(setDoc(doc(ownerDb,'workout_sets_shared','equipment_set'),{...ownerSet,id:'equipment_set',weightKg:30,barWeightKg:20,assistanceKg:0,measurementMode:'reps',loadMode:'perSide',equipmentId:'barbell-20',equipmentName:'Barra olimpica 20 kg',laterality:'bilateral',durationSeconds:0,distanceMeters:0}));
+  await assertSucceeds(setDoc(doc(ownerDb,'workout_sets_shared','timed_set'),{...ownerSet,id:'timed_set',reps:0,weightKg:0,measurementMode:'time',loadMode:'bodyweight',durationSeconds:60,distanceMeters:0}));
+  await assertFails(setDoc(doc(ownerDb,'workout_sets_shared','invalid_load_mode'),{...ownerSet,id:'invalid_load_mode',loadMode:'negative-assistance'}));
+  await assertFails(setDoc(doc(ownerDb,'workout_sets_shared','invalid_measurement_mode'),{...ownerSet,id:'invalid_measurement_mode',measurementMode:'watts'}));
 
   await env.withSecurityRulesDisabled(async context=>{
     await setDoc(doc(context.firestore(),'workout_sets_shared','set_legacy'),{...ownerSet,id:'set_legacy',source:'local',pendingSync:false});

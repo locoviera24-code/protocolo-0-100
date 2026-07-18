@@ -28,6 +28,7 @@ $relativeFiles = @(
     'fdc-client.js',
     'workout-store.js',
     'workout-plan.js',
+    'gym/equipment.js',
     'gym/set-model.js',
     'workout-metrics.js',
     'workout-ranking.js',

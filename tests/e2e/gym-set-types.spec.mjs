@@ -57,6 +57,8 @@ test('Gym Party conserva y comparte el tipo de serie',async({page})=>{
   await page.locator('#gymPartyCreateAlias').fill('Yo');
   await page.locator('#gymPartyCreateName').fill('Tipos de serie');
   await page.locator('[data-gym-party-action="create"]').click();
+  await page.locator('#partyWorkoutDateInput').fill('2026-07-13');
+  await page.locator('#partyWorkoutDateInput').dispatchEvent('change');
 
   const optional=page.locator('.partyWorkoutLogger details').filter({has:page.locator('summary',{hasText:'Opcional'})}).first();
   await optional.locator('summary').click();

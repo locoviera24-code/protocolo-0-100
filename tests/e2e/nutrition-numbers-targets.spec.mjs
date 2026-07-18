@@ -104,6 +104,8 @@ test('Gym Party guarda pesos con coma como kg canonicos',async({page})=>{
   await page.locator('#gymPartyCreateAlias').fill('Yo');
   await page.locator('#gymPartyCreateName').fill('Sala decimal');
   await page.locator('[data-gym-party-action="create"]').click();
+  await page.locator('#partyWorkoutDateInput').fill('2026-07-13');
+  await page.locator('#partyWorkoutDateInput').dispatchEvent('change');
   await page.locator('#partyQuickReps').fill('8');
   await page.locator('#partyQuickWeight').fill('20,5');
   await page.locator('[data-gym-party-action="party-save-set"]').click();

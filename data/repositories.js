@@ -36,6 +36,7 @@
       exerciseHistory:'protocolo_0_100_exercise_history_v1',
       exerciseLibrary:'protocolo_0_100_exercise_library_v1',
       exerciseLibraryMeta:'protocolo_0_100_exercise_library_meta_v1',
+      equipmentProfiles:'protocolo_0_100_equipment_profiles_v1',
       exercisePreferences:'protocolo_0_100_exercise_preferences_v1',
       settings:'protocolo_0_100_gym_settings_v1',
       widgetState:'protocolo_0_100_workout_widget_state_v1'

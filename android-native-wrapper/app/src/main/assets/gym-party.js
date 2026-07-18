@@ -261,7 +261,7 @@
       'id','partyId','userId','localSessionId','date','localDate','weekday','routineName','startedAt','finishedAt','durationMinutes','exercisesCompleted','totalSets','totalReps','totalVolume','externalLoadVolume','bodyweightReps','addedLoadVolume','bestWeight','bestSetVolume','maxReps','timeZone','utcOffset','revision','deletedAt','deletedReason','createdAt','updatedAt'
     ]),
     [collections.sets]:new Set([
-      'id','partyId','sessionId','userId','localExerciseId','localSetId','exerciseId','exerciseName','muscleGroup','setNumber','reps','weightKg','rir','rpe','isBodyweight','setType','completed','excludeFromRecords','excludeFromProgression','date','localDate','timeZone','utcOffset','revision','deleted','deletedAt','deletedReason','createdAt','updatedAt'
+      'id','partyId','sessionId','userId','localExerciseId','localSetId','exerciseId','exerciseName','muscleGroup','setNumber','reps','weightKg','assistanceKg','barWeightKg','measurementMode','loadMode','equipmentId','equipmentName','laterality','durationSeconds','distanceMeters','rir','rpe','isBodyweight','setType','completed','excludeFromRecords','excludeFromProgression','date','localDate','timeZone','utcOffset','revision','deleted','deletedAt','deletedReason','createdAt','updatedAt'
     ])
   };
   function firestorePayload(value,collectionName=''){
@@ -629,7 +629,9 @@
     if(privacy.shareAggregateOnly || !privacy.shareSetDetails) return [];
     const hide = !!privacy.hideAbsoluteWeights;
     const time=syncEngine()?.timeContext?.(session.date||todayStr())||{localDate:session.date||todayStr(),timeZone:'UTC',utcOffset:0};
-    return safeArray(session.exercises).flatMap(exercise => safeArray(exercise.sets).map((set, index) => ({
+    return safeArray(session.exercises).flatMap(exercise => safeArray(exercise.sets).map((rawSet, index) => {
+      const set=window.WORKOUT_EQUIPMENT?.normalizeSet?.(rawSet,exercise)||rawSet;
+      return ({
       id: `${member.partyId}_${member.userId}_${session.id}_${exercise.id || exercise.exerciseId}_${set.id || index + 1}`,
       partyId: member.partyId,
       sessionId: `${member.partyId}_${member.userId}_${session.id}`,
@@ -641,10 +643,19 @@
       muscleGroup: exercise.muscle || exercise.group || 'General',
       setNumber: number(set.setNumber) || index + 1,
       reps: number(set.reps),
-      weightKg: hide ? null : number(set.weight),
+      weightKg: hide ? null : number(set.weightKg??set.weight),
+      assistanceKg: hide ? null : number(set.assistanceKg),
+      barWeightKg: hide ? null : number(set.barWeightKg),
+      measurementMode: set.measurementMode || 'reps',
+      loadMode: set.loadMode || (set.bodyweight || exercise.bodyweight ? 'bodyweight' : 'total'),
+      equipmentId: String(set.equipmentId || exercise.equipmentId || '').slice(0,80),
+      equipmentName: String(set.equipmentName || exercise.equipmentName || '').slice(0,120),
+      laterality: set.laterality || 'bilateral',
+      durationSeconds: number(set.durationSeconds),
+      distanceMeters: number(set.distanceMeters),
       rir: set.rir ?? null,
       rpe: set.rpe ?? null,
-      isBodyweight: !!(set.bodyweight || exercise.bodyweight),
+      isBodyweight: !!(set.bodyweight || set.isBodyweight || exercise.bodyweight),
       setType: window.WORKOUT_SET_MODEL?.type?.(set.setType) || 'working',
       completed: set.completed !== false,
       excludeFromRecords: !!set.excludeFromRecords,
@@ -655,7 +666,7 @@
       deleted: false,
       source: 'local',
       pendingSync: member.backendMode === 'firebase'
-    })));
+    });}));
   }
   function legacySessionToWorkout(session){
     return {
@@ -726,8 +737,8 @@
       const sets = bySession[session.id] || [];
       const exercises = new Set(sets.map(set => set.exerciseId || set.exerciseName).filter(Boolean));
       const totalReps = sets.reduce((sum,set) => sum + number(set.reps), 0);
-      const totalVolume = sets.reduce((sum,set) => sum + number(set.reps) * number(set.weightKg), 0);
-      const metric=window.WORKOUT_METRICS?.calculateSetsMetrics?.(sets.map(set=>({reps:set.reps,weightKg:set.weightKg,isBodyweight:set.isBodyweight})))||{};
+      const metric=window.WORKOUT_METRICS?.calculateSetsMetrics?.(sets)||window.GYM_PARTY_METRICS?.aggregateSets?.(sets)||{};
+      const totalVolume = number(metric.externalLoadVolume??metric.totalVolume??sets.reduce((sum,set) => sum + number(set.reps) * number(set.weightKg), 0));
       return {
         ...session,
         totalSets: sets.length,
@@ -1160,7 +1171,8 @@
     if(text.includes('movilidad') || text.includes('recuperacion')) return 'Movilidad';
     return String(value || 'General').trim() || 'General';
   }
-  function setVolume(set){ return number(set.reps) * number(set.weightKg); }
+  function setMetric(set){return window.WORKOUT_METRICS?.calculateSetMetrics?.(set)||{reps:number(set.reps),weight:number(set.weightKg),externalLoadVolume:number(set.reps)*number(set.weightKg),bodyweight:!!set.isBodyweight,loadMode:set.loadMode||'total',measurementMode:set.measurementMode||'reps',durationSeconds:number(set.durationSeconds),distanceMeters:number(set.distanceMeters),assistanceKg:number(set.assistanceKg)};}
+  function setVolume(set){ return number(setMetric(set).externalLoadVolume); }
   function emptyMuscleTotals(key){
     return {key, sets:0, reps:0, volume:0, externalLoadVolume:0, bodyweightReps:0, addedLoadVolume:0, exercises:new Set(), best:null};
   }
@@ -1169,8 +1181,9 @@
     total.reps += number(set.reps);
     total.volume += setVolume(set);
     total.externalLoadVolume += setVolume(set);
-    if(set.isBodyweight&&!number(set.weightKg)) total.bodyweightReps += number(set.reps);
-    if(set.isBodyweight&&number(set.weightKg)>0) total.addedLoadVolume += setVolume(set);
+    const metric=setMetric(set);
+    if(metric.loadMode==='bodyweight') total.bodyweightReps += number(metric.reps);
+    if(metric.loadMode==='addedLoad') total.addedLoadVolume += setVolume(set);
     if(set.exerciseName || set.exerciseId) total.exercises.add(set.exerciseName || set.exerciseId);
     const score = setVolume(set) || number(set.reps);
     if(!total.best || score > total.best.score) total.best = {...set, score};
@@ -1190,19 +1203,24 @@
     return finalizeMuscleTotals(safeArray(rows).reduce((total,set) => addSetToMuscleTotals(total,set), emptyMuscleTotals(key)));
   }
   function bestWeightFromSets(rows){
-    const values = safeArray(rows).map(set => number(set.weightKg)).filter(value => value > 0);
+    const values = safeArray(rows).map(set => setMetric(set)).filter(metric=>metric.measurementMode==='reps'&&metric.loadMode!=='assistance').map(metric=>number(metric.weight)).filter(value => value > 0);
     return values.length ? Math.max(...values) : 0;
   }
   function bestStrengthSet(rows){
     return safeArray(rows).slice().sort((a,b) => {
-      const weightDiff = number(b.weightKg) - number(a.weightKg);
+      const metricA=setMetric(a),metricB=setMetric(b);
+      if(metricA.measurementMode!==metricB.measurementMode||metricA.loadMode!==metricB.loadMode)return 0;
+      const weightDiff = number(metricB.weight) - number(metricA.weight);
       if(weightDiff) return weightDiff;
       return number(b.reps) - number(a.reps);
     })[0] || null;
   }
   function strengthSetText(set){
     if(!set) return 'Sin dato';
-    const weight = number(set.weightKg);
+    const metric=setMetric(set),weight=number(metric.weight);
+    if(metric.measurementMode==='time')return`${number(metric.durationSeconds)} s`;
+    if(metric.measurementMode==='distance')return`${number(metric.distanceMeters)} m`;
+    if(metric.loadMode==='assistance')return`${weight} ${displayUnit()} asistencia x ${number(set.reps)} reps`;
     return weight ? `${displayLoad(weight)} ${displayUnit()} x ${number(set.reps)} reps` : `${number(set.reps)} reps peso corporal`;
   }
   function weekLabel(start, currentStart){
@@ -1621,7 +1639,7 @@
   function capturePartyQuickDraft(){
     const select=document.getElementById('partyQuickExerciseSelect');if(!select)return;
     const date=selectedWorkoutDate(),editingSetId=settings().partyEditingSetId||'',payload={
-      reps:document.getElementById('partyQuickReps')?.value??'',weight:document.getElementById('partyQuickWeight')?.value??'',setType:document.getElementById('partyQuickSetType')?.value||'working',bodyweight:!!document.getElementById('partyQuickBodyweight')?.checked,rir:document.getElementById('partyQuickRir')?.value??'',rpe:document.getElementById('partyQuickRpe')?.value??'',note:document.getElementById('partyQuickNote')?.value??''
+      reps:document.getElementById('partyQuickReps')?.value??'',weight:document.getElementById('partyQuickWeight')?.value??'',durationSeconds:document.getElementById('partyQuickDurationSeconds')?.value??'',distanceMeters:document.getElementById('partyQuickDistanceMeters')?.value??'',measurementMode:document.getElementById('partyQuickMeasurementMode')?.value||'reps',loadMode:document.getElementById('partyQuickLoadMode')?.value||'total',equipmentId:document.getElementById('partyQuickEquipmentId')?.value||'',equipmentName:document.getElementById('partyQuickEquipmentName')?.value||'',barWeight:document.getElementById('partyQuickBarWeight')?.value??'',laterality:document.getElementById('partyQuickLaterality')?.value||'bilateral',setType:document.getElementById('partyQuickSetType')?.value||'working',bodyweight:!!document.getElementById('partyQuickBodyweight')?.checked,rir:document.getElementById('partyQuickRir')?.value??'',rpe:document.getElementById('partyQuickRpe')?.value??'',note:document.getElementById('partyQuickNote')?.value??''
     };
     partyQuickDrafts.set(partyDraftKey(date,select.value,editingSetId),payload);
     window.APP_DRAFTS?.schedule?.({id:partyPersistentSetDraftId(date,select.value,editingSetId),domain:'gym-party-set',payload:{...payload,date,exerciseId:select.value,setId:editingSetId}});
@@ -1643,9 +1661,10 @@
       <div class="partyLoggedSetsHeader"><strong>Series guardadas</strong><span>${sets.length} en este ejercicio</span></div>
       <div class="partySetList compact">${sets.map(set => {
       const active = set.id === editingSetId;
-      const weight = number(set.weight);
+      const weight = number(set.weight),performance=window.WORKOUT_METRICS?.calculateSetMetrics?.(set)||{};
       const setType=window.WORKOUT_SET_MODEL?.type?.(set.setType)||'working',typeLabel=window.WORKOUT_SET_MODEL?.label?.(setType,{short:true})||'Efectiva';
-      const meta = `${typeLabel} - ${number(set.reps)} reps - ${weight ? `${round(weight,1)} ${state.unit}` : 'peso corporal'}${set.rir !== null && set.rir !== undefined ? ` - RIR ${set.rir}` : ''}`;
+      const effort=performance.measurementMode==='time'?`${number(performance.durationSeconds)} s`:performance.measurementMode==='distance'?`${number(performance.distanceMeters)} m`:performance.loadMode==='assistance'?`${number(set.reps)} reps - ${round(performance.assistanceKg,1)} ${state.unit} asistencia`:`${number(set.reps)} reps - ${weight ? `${round(weight,1)} ${state.unit}` : 'peso corporal'}`;
+      const meta = `${typeLabel} - ${effort}${set.rir !== null && set.rir !== undefined ? ` - RIR ${set.rir}` : ''}`;
       return `<div class="partySetRow ${active ? 'editing' : ''}">
         <div><strong>Serie ${set.setNumber || ''}</strong><span>${escape(meta)}</span></div>
         <div class="partySetRowActions">
@@ -1701,6 +1720,20 @@
     const rirValue = draft?.rir ?? editingSet?.rir ?? 2;
     const rpeValue = draft?.rpe ?? editingSet?.rpe ?? '';
     const noteValue = draft?.note ?? editingSet?.note ?? '';
+    const equipmentModel=window.WORKOUT_EQUIPMENT;
+    const measurementModeValue=draft?.measurementMode??editingSet?.measurementMode??state.currentExerciseMeasurementMode??'reps';
+    const loadModeValue=draft?.loadMode??editingSet?.loadMode??state.currentExerciseLoadMode??(bodyweightValue?'bodyweight':'total');
+    const equipmentIdValue=draft?.equipmentId??editingSet?.equipmentId??state.currentExerciseEquipmentId??'';
+    const equipmentNameValue=draft?.equipmentName??editingSet?.equipmentName??'';
+    const barWeightValue=draft?.barWeight??editingSet?.barWeightKg??0;
+    const lateralityValue=draft?.laterality??editingSet?.laterality??'bilateral';
+    const durationValue=draft?.durationSeconds??editingSet?.durationSeconds??0;
+    const distanceValue=draft?.distanceMeters??editingSet?.distanceMeters??0;
+    const selectOptions=(items,value)=>items.map(item=>`<option value="${escape(item.id)}" ${item.id===value?'selected':''}>${escape(item.label||item.name)}</option>`).join('');
+    const measurementModeOptions=selectOptions(equipmentModel?.measurementModes?.()||[{id:'reps',label:'Repeticiones'}],measurementModeValue);
+    const loadModeOptions=selectOptions(equipmentModel?.loadModes?.()||[{id:'total',label:'Carga total'}],loadModeValue);
+    const equipmentOptions=`<option value="">Sin especificar</option>`+selectOptions((api.getEquipmentProfiles?.()||equipmentModel?.profiles?.()||[]).filter(item=>item.id!=='unspecified'),equipmentIdValue);
+    const lateralityOptions=selectOptions(equipmentModel?.lateralities?.()||[{id:'bilateral',label:'Ambos lados'}],lateralityValue);
     const saveText = editingSet ? 'Guardar cambios' : 'Guardar serie';
     const gymSettings=api.getGymSettings?.()||{};
     const hint = h ? `Ultima vez: ${h.name} - ${h.lastWeight||0} ${state.unit} x ${h.lastReps||0} reps.` : 'Sin historial previo. Empeza conservador y prioriza tecnica.';
@@ -1728,6 +1761,16 @@
         ${editingSet ? '<div class="auditItem good">Editando una serie guardada. Guardar cambios no crea una serie nueva.</div>' : ''}
         <details class="partyNestedFold">
           <summary>Opcional</summary>
+          <div class="partyQuickInputs">
+            <div class="field"><label>Medición</label><select id="partyQuickMeasurementMode">${measurementModeOptions}</select></div>
+            <div class="field"><label>Modo de carga</label><select id="partyQuickLoadMode">${loadModeOptions}</select></div>
+            <div class="field"><label>Equipo</label><select id="partyQuickEquipmentId">${equipmentOptions}</select></div>
+            <div class="field"><label>Nombre del equipo</label><input id="partyQuickEquipmentName" value="${escape(equipmentNameValue)}" placeholder="Opcional"></div>
+            <div class="field"><label>Barra (kg)</label><input type="text" inputmode="decimal" id="partyQuickBarWeight" value="${escape(barWeightValue)}"></div>
+            <div class="field"><label>Lateralidad</label><select id="partyQuickLaterality">${lateralityOptions}</select></div>
+            <div class="field"><label>Duración (segundos)</label><input type="text" inputmode="decimal" id="partyQuickDurationSeconds" value="${escape(durationValue)}"></div>
+            <div class="field"><label>Distancia (metros)</label><input type="text" inputmode="decimal" id="partyQuickDistanceMeters" value="${escape(distanceValue)}"></div>
+          </div>
           <div class="field"><label>Tipo de serie</label><select id="partyQuickSetType">${setTypeOptions}</select><div class="muted small">El volumen y las sugerencias usan solo series efectivas.</div></div>
           <div class="partyQuickInputs">
             <div class="field"><label>RIR</label><input type="text" inputmode="decimal" id="partyQuickRir" value="${escape(rirValue)}"></div>
@@ -2109,6 +2152,14 @@
       exerciseId: partyWorkoutSelectedExerciseId(),
       reps: document.getElementById('partyQuickReps')?.value,
       weight: document.getElementById('partyQuickWeight')?.value,
+      durationSeconds: document.getElementById('partyQuickDurationSeconds')?.value,
+      distanceMeters: document.getElementById('partyQuickDistanceMeters')?.value,
+      measurementMode: document.getElementById('partyQuickMeasurementMode')?.value || 'reps',
+      loadMode: document.getElementById('partyQuickLoadMode')?.value || 'total',
+      equipmentId: document.getElementById('partyQuickEquipmentId')?.value || '',
+      equipmentName: document.getElementById('partyQuickEquipmentName')?.value || '',
+      barWeight: document.getElementById('partyQuickBarWeight')?.value,
+      laterality: document.getElementById('partyQuickLaterality')?.value || 'bilateral',
       setType: document.getElementById('partyQuickSetType')?.value || 'working',
       bodyweight: document.getElementById('partyQuickBodyweight')?.checked,
       rir: document.getElementById('partyQuickRir')?.value,
@@ -2123,7 +2174,7 @@
     window.APP_DRAFTS?.remove?.(savedDraftId);
     const nextExerciseId=result.state?.currentExerciseId||result.exercise?.id||partyWorkoutSelectedExerciseId();
     partyQuickDrafts.delete(partyDraftKey(selectedWorkoutDate(),partyWorkoutSelectedExerciseId(),editingSetId));
-    partyQuickDrafts.set(partyDraftKey(selectedWorkoutDate(),nextExerciseId,''),{reps:payload.reps,weight:payload.weight,setType:payload.setType,bodyweight:!!payload.bodyweight,rir:payload.rir,rpe:payload.rpe,note:''});
+    partyQuickDrafts.set(partyDraftKey(selectedWorkoutDate(),nextExerciseId,''),{reps:payload.reps,weight:payload.weight,durationSeconds:payload.durationSeconds,distanceMeters:payload.distanceMeters,measurementMode:payload.measurementMode,loadMode:payload.loadMode,equipmentId:payload.equipmentId,equipmentName:payload.equipmentName,barWeight:payload.barWeight,laterality:payload.laterality,setType:payload.setType,bodyweight:!!payload.bodyweight,rir:payload.rir,rpe:payload.rpe,note:''});
     saveSettings({partyQuickExerciseId: nextExerciseId, partyEditingSetId: ''});
     refreshPartyWorkoutShare();
     renderGymParty();
@@ -2133,8 +2184,8 @@
   function repeatPartyWorkoutSet(){
     const state=workoutApi()?.getQuickWorkoutState?.({date:selectedWorkoutDate(),exerciseId:partyWorkoutSelectedExerciseId()});
     const currentSets=safeArray(state?.currentSets),last=currentSets.slice().reverse().find(set=>window.WORKOUT_SET_MODEL?.countsForProgression?.(set)??true)||currentSets.slice(-1)[0]||state?.history;if(!last){flashMessage('Todavia no hay una serie anterior para repetir.');return;}
-    const reps=document.getElementById('partyQuickReps'),weight=document.getElementById('partyQuickWeight'),type=document.getElementById('partyQuickSetType'),body=document.getElementById('partyQuickBodyweight'),rir=document.getElementById('partyQuickRir');
-    if(reps)reps.value=last.reps??last.lastReps??8;if(weight)weight.value=last.weight??last.lastWeight??0;if(type)type.value=window.WORKOUT_SET_MODEL?.type?.(last.setType)||'working';if(body)body.checked=!!last.bodyweight;if(rir&&last.rir!==null&&last.rir!==undefined)rir.value=last.rir;capturePartyQuickDraft();
+    const reps=document.getElementById('partyQuickReps'),weight=document.getElementById('partyQuickWeight'),type=document.getElementById('partyQuickSetType'),body=document.getElementById('partyQuickBodyweight'),rir=document.getElementById('partyQuickRir'),measurement=document.getElementById('partyQuickMeasurementMode'),load=document.getElementById('partyQuickLoadMode'),equipment=document.getElementById('partyQuickEquipmentId'),bar=document.getElementById('partyQuickBarWeight'),laterality=document.getElementById('partyQuickLaterality'),duration=document.getElementById('partyQuickDurationSeconds'),distance=document.getElementById('partyQuickDistanceMeters');
+    if(reps)reps.value=last.reps??last.lastReps??8;if(weight)weight.value=last.weight??last.lastWeight??0;if(type)type.value=window.WORKOUT_SET_MODEL?.type?.(last.setType)||'working';if(body)body.checked=!!last.bodyweight;if(rir&&last.rir!==null&&last.rir!==undefined)rir.value=last.rir;if(measurement)measurement.value=last.measurementMode||'reps';if(load)load.value=last.loadMode||(last.bodyweight?'bodyweight':'total');if(equipment)equipment.value=last.equipmentId||'';if(bar)bar.value=last.barWeightKg||0;if(laterality)laterality.value=last.laterality||'bilateral';if(duration)duration.value=last.durationSeconds||0;if(distance)distance.value=last.distanceMeters||0;capturePartyQuickDraft();
   }
   function editPartyWorkoutSet(event){
     const button = event?.target?.closest?.('[data-party-set-id]');
@@ -2827,7 +2878,7 @@
       }
     });
     document.addEventListener('input',event=>{
-      if(event.target&&['partyQuickReps','partyQuickWeight','partyQuickSetType','partyQuickBodyweight','partyQuickRir','partyQuickRpe','partyQuickNote'].includes(event.target.id))capturePartyQuickDraft();
+      if(event.target&&['partyQuickReps','partyQuickWeight','partyQuickDurationSeconds','partyQuickDistanceMeters','partyQuickMeasurementMode','partyQuickLoadMode','partyQuickEquipmentId','partyQuickEquipmentName','partyQuickBarWeight','partyQuickLaterality','partyQuickSetType','partyQuickBodyweight','partyQuickRir','partyQuickRpe','partyQuickNote'].includes(event.target.id))capturePartyQuickDraft();
       const id=event.target?.id||'';
       if(['gymPartyCreateName','gymPartyCreateAlias',...partyPrivacySuffixes.map(suffix=>`create${suffix}`)].includes(id))capturePartyFormDraft('create');
       if(['gymPartyJoinCode','gymPartyJoinAlias',...partyPrivacySuffixes.map(suffix=>`join${suffix}`)].includes(id))capturePartyFormDraft('join');
@@ -2920,6 +2971,8 @@
     assertFirebaseSessionMatchesMembership,
     restoreFirebaseMembershipForCurrentUser,
     privacyFromMember,
+    sanitizeWorkoutSets,
+    normalizeSessionsFromSets,
     firestorePayload
   };
   window.renderGymParty = renderGymParty;

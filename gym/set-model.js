@@ -1,7 +1,7 @@
 (function(global){
   'use strict';
 
-  const VERSION=1;
+  const VERSION=2;
   const definitions=Object.freeze([
     {id:'warmup',label:'Calentamiento',shortLabel:'Calentamiento',mainVolume:false,records:false,progression:false},
     {id:'working',label:'Serie efectiva',shortLabel:'Efectiva',mainVolume:true,records:true,progression:true},
@@ -25,9 +25,10 @@
   }
   function definition(value){return byId.get(type(value))||byId.get('working');}
   function normalize(set={}){
+    const loadNormalized=global.WORKOUT_EQUIPMENT?.normalizeSet?.(set,set.exercise||{})||set;
     const setType=type(set.setType);
     return {
-      ...set,
+      ...loadNormalized,
       setType,
       completed:set.completed!==false,
       note:String(set.note??set.notes??''),

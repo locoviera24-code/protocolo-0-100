@@ -3,7 +3,9 @@ import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
 
 const source = await readFile(new URL('../gym-party.js', import.meta.url), 'utf8');
+const equipmentSource=await readFile(new URL('../gym/equipment.js',import.meta.url),'utf8');
 const setModelSource=await readFile(new URL('../gym/set-model.js',import.meta.url),'utf8');
+const workoutMetricsSource=await readFile(new URL('../workout-metrics.js',import.meta.url),'utf8');
 const syncSource=await readFile(new URL('../gym-party-sync.js',import.meta.url),'utf8');
 const firebaseServiceSource=await readFile(new URL('../firebase-service.js',import.meta.url),'utf8');
 const metricsSource=await readFile(new URL('../gym-party-metrics.js',import.meta.url),'utf8');
@@ -62,7 +64,9 @@ function createContext() {
   };
   context.window = context;
   const vmContext=vm.createContext(context);
+  vm.runInContext(equipmentSource,vmContext,{filename:'gym/equipment.js'});
   vm.runInContext(setModelSource,vmContext,{filename:'gym/set-model.js'});
+  vm.runInContext(workoutMetricsSource,vmContext,{filename:'workout-metrics.js'});
   vm.runInContext(firebaseServiceSource,vmContext,{filename:'firebase-service.js'});
   vm.runInContext(syncSource,vmContext,{filename:'gym-party-sync.js'});
   vm.runInContext(metricsSource,vmContext,{filename:'gym-party-metrics.js'});
@@ -118,6 +122,13 @@ assert.equal(cleanLegacySession.totalSets,3);
 assert.equal(Object.hasOwn(cleanLegacySession,'legacyField'),false);
 assert.equal(Object.hasOwn(cleanLegacySession,'deleted'),false);
 assert.equal(Object.hasOwn(cleanLegacySession,'source'),false);
+const sharedEquipmentSet=party.sanitizeWorkoutSets({id:'local-session',date:'2026-07-12',startedAt:'2026-07-12T10:00:00.000Z',exercises:[{id:'press',exerciseId:'press',name:'Press banca',muscle:'Pecho',sets:[{id:'set-1',reps:8,weight:30,loadMode:'perSide',barWeightKg:20,equipmentId:'barbell-20',measurementMode:'reps'}]}]},{partyId:'party',userId:'user',backendMode:'firebase'},{shareAggregateOnly:false,shareSetDetails:true,hideAbsoluteWeights:false})[0];
+assert.equal(sharedEquipmentSet.loadMode,'perSide');
+assert.equal(context.WORKOUT_EQUIPMENT.normalizeSet(sharedEquipmentSet).normalizedTotalKg,80);
+assert.equal(sharedEquipmentSet.equipmentId,'barbell-20');
+const sharedTimedSet=party.sanitizeWorkoutSets({id:'timed',date:'2026-07-12',exercises:[{id:'plank',name:'Plancha',sets:[{id:'time-1',measurementMode:'time',loadMode:'bodyweight',durationSeconds:60}]}]},{partyId:'party',userId:'user',backendMode:'firebase'},{shareAggregateOnly:false,shareSetDetails:true,hideAbsoluteWeights:false})[0];
+assert.equal(sharedTimedSet.durationSeconds,60);
+assert.equal(party.normalizeSessionsFromSets([{id:'party_user_timed'}],[{...sharedTimedSet,sessionId:'party_user_timed'}])[0].totalVolume,0);
 
 const demo2 = party.buildDemoData(2);
 assert.equal(demo2.members.length, 2);

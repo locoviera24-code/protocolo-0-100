@@ -59,6 +59,9 @@ jobs:
       - name: Probar metricas de gimnasio
         run: node ./scripts/test-workout-metrics.mjs
 
+      - name: Probar equipo y modalidades de gimnasio
+        run: node ./scripts/test-workout-equipment.mjs
+
       - name: Probar Gym Party
         run: node ./scripts/test-gym-party.mjs
 

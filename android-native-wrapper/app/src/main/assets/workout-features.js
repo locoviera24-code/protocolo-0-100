@@ -6,6 +6,7 @@
     workoutSessions:'protocolo_0_100_workout_sessions_v1',
     exerciseHistory:'protocolo_0_100_exercise_history_v1',
     exerciseLibrary:'protocolo_0_100_exercise_library_v1',
+    equipmentProfiles:'protocolo_0_100_equipment_profiles_v1',
     exercisePreferences:'protocolo_0_100_exercise_preferences_v1',
     exerciseLibraryMeta:'protocolo_0_100_exercise_library_meta_v1',
     gymSettings:'protocolo_0_100_gym_settings_v1',
@@ -13,7 +14,7 @@
   };
   const dayOrder=['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
   const dayLabels={monday:'Lunes',tuesday:'Martes',wednesday:'Miércoles',thursday:'Jueves',friday:'Viernes',saturday:'Sábado',sunday:'Domingo'};
-  const EXERCISE_LIBRARY_VERSION=3;
+  const EXERCISE_LIBRARY_VERSION=4;
   const actionOpenToday='com.protocolo.cien.ACTION_OPEN_TODAY_WORKOUT';
   const actionQuickLog='com.protocolo.cien.ACTION_QUICK_LOG_SET';
   const actionCompleteExercise='com.protocolo.cien.ACTION_COMPLETE_CURRENT_EXERCISE';
@@ -40,6 +41,13 @@
     ex('peso-muerto-rumano','Peso muerto rumano',['rumano'],'Isquiotibiales','peso libre','kg',['hamstrings'],['glutes','lower-back'],'Bisagra de cadera y espalda neutra.'),
     ex('movilidad-suave','Movilidad suave',['movilidad','estiramiento'],'Movilidad','movilidad','tiempo',['other'],[],'Recuperación también cuenta.')
   ];
+
+  exerciseLibrary.push(
+    ex('plancha','Plancha',['plank','plancha abdominal'],'Core','peso corporal','tiempo',['core'],['lower-back'],'Mantene una posicion que puedas controlar.',{measurementMode:'time',defaultLoadMode:'bodyweight',bodyweight:true}),
+    ex('caminata','Caminata',['caminar','caminata suave'],'Cardio','cardio','distancia',['other'],['calves'],'Usa distancia y tiempo; el ritmo es orientativo.',{measurementMode:'distance',defaultLoadMode:'bodyweight'}),
+    ex('bicicleta','Bicicleta',['bici','bicicleta fija'],'Cardio','cardio','distancia',['quads'],['calves','glutes'],'Registra distancia y duracion si estan disponibles.',{measurementMode:'distance',defaultLoadMode:'bodyweight'}),
+    ex('estiramiento-suave','Estiramiento suave',['estiramientos','stretching'],'Movilidad','movilidad','tiempo',['other'],[],'Evita forzar rangos dolorosos.',{measurementMode:'time',defaultLoadMode:'bodyweight'})
+  );
 
   const torsoExercises=[
     item('peck-deck','Pecho'),
@@ -80,12 +88,12 @@
   let restTimerEndsAt=0;
   let importingNativeWidgetState=false;
 
-  function ex(id,name,aliases,muscle,type,unit,primary,secondary,notes){
-    return {id,name,aliases,group:muscle,type,unit,primaryMuscles:primary,secondaryMuscles:secondary,notes};
+  function ex(id,name,aliases,muscle,type,unit,primary,secondary,notes,options={}){
+    return {id,name,aliases,group:muscle,type,unit,primaryMuscles:primary,secondaryMuscles:secondary,notes,...options};
   }
   function item(exerciseId,muscle,bodyweight=false,notes=''){
     const exercise=exerciseLibrary.find(x=>x.id===exerciseId);
-    return {id:`${exerciseId}-${muscle.toLowerCase().replace(/[^a-z0-9]+/g,'-')}`,exerciseId,name:exercise?.name||exerciseId,muscle,type:exercise?.type||'máquina',unit:exercise?.unit||'kg',bodyweight:!!bodyweight,primaryMuscles:[...(exercise?.primaryMuscles||[])],secondaryMuscles:[...(exercise?.secondaryMuscles||[])],muscleTaxonomyVersion:window.MUSCLE_TAXONOMY?.VERSION||1,notes};
+    return {id:`${exerciseId}-${muscle.toLowerCase().replace(/[^a-z0-9]+/g,'-')}`,exerciseId,name:exercise?.name||exerciseId,muscle,type:exercise?.type||'máquina',unit:exercise?.unit||'kg',bodyweight:!!bodyweight||!!exercise?.bodyweight,measurementMode:exercise?.measurementMode||'reps',defaultLoadMode:exercise?.defaultLoadMode||(bodyweight?'bodyweight':'total'),equipmentId:exercise?.equipmentId||'',primaryMuscles:[...(exercise?.primaryMuscles||[])],secondaryMuscles:[...(exercise?.secondaryMuscles||[])],muscleTaxonomyVersion:window.MUSCLE_TAXONOMY?.VERSION||1,notes};
   }
   function day(key,name,muscles,exercises){
     return {dayKey:key,weekday:dayLabels[key],name,type:'workout',muscles:[...muscles],exercises:exercises.map(x=>({...x}))};
@@ -96,9 +104,19 @@
   function clone(value){ return window.WORKOUT_STORE?.clone?.(value)??JSON.parse(JSON.stringify(value)); }
   function numeric(value,fallback=0){const parsed=window.APP_NUMBERS?.parse?.(value);if(parsed!==undefined)return parsed??fallback;const number=Number(value);return Number.isFinite(number)?number:fallback;}
   function setModel(){return window.WORKOUT_SET_MODEL||null;}
-  function normalizeSet(set={}){return setModel()?.normalize?.(set)||{...set,setType:set.setType||'working',completed:set.completed!==false,excludeFromRecords:!!set.excludeFromRecords,excludeFromProgression:!!set.excludeFromProgression};}
+  function normalizeSet(set={},exercise={}){
+    const load=window.WORKOUT_EQUIPMENT?.normalizeSet?.(set,exercise)||set;
+    return setModel()?.normalize?.(load)||{...load,setType:load.setType||'working',completed:load.completed!==false,excludeFromRecords:!!load.excludeFromRecords,excludeFromProgression:!!load.excludeFromProgression};
+  }
   function setTypeLabel(value){return setModel()?.label?.(value,{short:true})||'Efectiva';}
   function setTypeOptions(){return(setModel()?.definitions?.()||[{id:'working',label:'Serie efectiva'}]).map(item=>`<option value="${escapeHtml(item.id)}">${escapeHtml(item.label)}</option>`).join('');}
+  function equipmentModel(){return window.WORKOUT_EQUIPMENT||null;}
+  function optionHtml(items,selected=''){return(items||[]).map(item=>`<option value="${escapeHtml(item.id)}" ${item.id===selected?'selected':''}>${escapeHtml(item.label||item.name)}</option>`).join('');}
+  function equipmentProfiles(){
+    const defaults=equipmentModel()?.profiles?.()||[];
+    const custom=readStore(keys.equipmentProfiles,[]);
+    return [...defaults,...custom.filter(item=>item?.id&&!defaults.some(base=>base.id===item.id))];
+  }
   function readStore(key,fallback){return window.WORKOUT_STORE?.read?.(key,fallback)??getLocalData(key,fallback);}
   function writeStore(key,value){return window.WORKOUT_STORE?.write?.(key,value)??setLocalData(key,value);}
   function normalizeText(value){ return window.WORKOUT_PLAN?.normalizeText?.(value)??String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim(); }
@@ -151,12 +169,13 @@
   }
   function ensureWorkoutData(){
     const store=window.WORKOUT_STORE;
-    if(store){store.ensure(keys.weeklyWorkoutPlan,clone(defaultWeeklyPlan));store.ensure(keys.exerciseLibrary,clone(exerciseLibrary));store.ensure(keys.exerciseHistory,{});store.ensure(keys.workoutSessions,[]);store.ensure(keys.gymSettings,settings());store.ensure(keys.exercisePreferences,{schemaVersion:1,exercises:{},updatedAt:null});}
+    if(store){store.ensure(keys.weeklyWorkoutPlan,clone(defaultWeeklyPlan));store.ensure(keys.exerciseLibrary,clone(exerciseLibrary));store.ensure(keys.exerciseHistory,{});store.ensure(keys.workoutSessions,[]);store.ensure(keys.equipmentProfiles,[]);store.ensure(keys.gymSettings,settings());store.ensure(keys.exercisePreferences,{schemaVersion:1,exercises:{},updatedAt:null});}
     else{
       if(!localStorage.getItem(keys.weeklyWorkoutPlan)) writeStore(keys.weeklyWorkoutPlan,clone(defaultWeeklyPlan));
       if(!localStorage.getItem(keys.exerciseLibrary)) writeStore(keys.exerciseLibrary,clone(exerciseLibrary));
       if(!localStorage.getItem(keys.exerciseHistory)) writeStore(keys.exerciseHistory,{});
       if(!localStorage.getItem(keys.workoutSessions)) writeStore(keys.workoutSessions,[]);
+      if(!localStorage.getItem(keys.equipmentProfiles)) writeStore(keys.equipmentProfiles,[]);
       if(!localStorage.getItem(keys.gymSettings)) writeStore(keys.gymSettings,settings());
       if(!localStorage.getItem(keys.exercisePreferences)) writeStore(keys.exercisePreferences,{schemaVersion:1,exercises:{},updatedAt:null});
     }
@@ -244,6 +263,9 @@
       group:input.muscle||input.group||'General',
       type:input.type||'personalizado',
       unit:input.bodyweight?'peso corporal':(input.unit||settings().unit),
+      measurementMode:input.measurementMode||(input.unit==='tiempo'?'time':input.unit==='distancia'?'distance':'reps'),
+      defaultLoadMode:input.defaultLoadMode||(input.bodyweight?'bodyweight':'total'),
+      equipmentId:input.equipmentId||'',
       primaryMuscles:[input.muscle||input.group||'General'],
       secondaryMuscles:[],
       notes:input.notes||'',
@@ -388,8 +410,10 @@
     const duration=start?Math.max(0,Math.round((finish-start)/60000)):0;
     const bestByExercise={};
     exercises.forEach(exercise=>{
-      const best=(exercise.sets||[]).filter(set=>setModel()?.countsForRecords?.(set)??true).slice().sort((a,b)=>((Number(b.reps)||0)*(Number(b.weight)||0))-((Number(a.reps)||0)*(Number(a.weight)||0)) || (Number(b.reps)||0)-(Number(a.reps)||0))[0];
-      if(best) bestByExercise[exercise.exerciseId]={reps:Number(best.reps)||0,weight:Number(best.weight)||0,bodyweight:!!best.bodyweight,volume:(Number(best.reps)||0)*(Number(best.weight)||0),date:session.date};
+      const candidates=(exercise.sets||[]).map(set=>({set:normalizeSet(set,exercise),metric:window.WORKOUT_METRICS?.calculateSetMetrics?.(set,exercise)||{}})).filter(row=>row.metric.recordEligible??(setModel()?.countsForRecords?.(row.set)??true));
+      const score=row=>row.metric.measurementMode==='distance'?row.metric.distanceMeters:row.metric.measurementMode==='time'?row.metric.durationSeconds:row.metric.loadMode==='assistance'?(row.metric.assistanceKg?1/row.metric.assistanceKg:0):(row.metric.externalLoadVolume||row.metric.reps||0);
+      const best=candidates.sort((a,b)=>score(b)-score(a))[0];
+      if(best) bestByExercise[exercise.exerciseId]={...clone(best.set),reps:best.metric.reps||0,weight:best.metric.weight||0,normalizedTotalKg:best.metric.normalizedTotalKg||0,bodyweight:best.metric.bodyweight,volume:best.metric.externalLoadVolume||0,date:session.date};
     });
     return {
       durationMinutes:duration,
@@ -405,6 +429,12 @@
       bodyweightReps:metric.bodyweightReps,
       addedLoadReps:metric.addedLoadReps,
       addedLoadVolume:metric.addedLoadVolume,
+      durationSeconds:metric.durationSeconds||0,
+      distanceMeters:metric.distanceMeters||0,
+      bestDurationSeconds:metric.bestDurationSeconds||0,
+      bestDistanceMeters:metric.bestDistanceMeters||0,
+      bestPaceSecondsPerKm:metric.bestPaceSecondsPerKm||0,
+      lowestAssistanceKg:metric.lowestAssistanceKg||0,
       bestWeight:metric.bestWeight,
       bestSetVolume:metric.bestSetVolume,
       maxReps:metric.maxReps,
@@ -416,25 +446,31 @@
   function updateExerciseHistory(session){
     const map=history();
     (session.exercises||[]).forEach(exercise=>{
-      const sets=exercise.sets||[];
+      const sets=(exercise.sets||[]).map(set=>normalizeSet(set,exercise));
       if(!sets.length) return;
       const progressionSets=sets.filter(set=>setModel()?.countsForProgression?.(set)??true),recordSets=sets.filter(set=>setModel()?.countsForRecords?.(set)??true);
       const last=progressionSets[progressionSets.length-1]||sets[sets.length-1];
-      const best=recordSets.slice().sort((a,b)=>((Number(b.reps)||0)*(Number(b.weight)||0))-((Number(a.reps)||0)*(Number(a.weight)||0)) || (Number(b.reps)||0)-(Number(a.reps)||0))[0] || last;
+      const best=recordSets.slice().sort((a,b)=>((Number(b.reps)||0)*(Number(b.normalizedTotalKg??b.weight)||0))-((Number(a.reps)||0)*(Number(a.normalizedTotalKg??a.weight)||0)) || (Number(b.reps)||0)-(Number(a.reps)||0))[0] || last;
       const metric=window.WORKOUT_METRICS?.calculateExerciseMetrics?.(exercise)||{};
       map[exercise.exerciseId]={
         exerciseId:exercise.exerciseId,
         name:exercise.name,
-        lastWeight:Number(last.weight)||0,
+        lastWeight:Number(last.recordLoadKg??last.weight)||0,
         lastReps:Number(last.reps)||0,
+        lastSet:clone(last),
         lastSets:metric.workingSets??progressionSets.length,
         totalLoggedSets:metric.totalSets??sets.length,
         warmupSets:metric.warmupSets||0,
-        bestSet:{reps:Number(best.reps)||0,weight:Number(best.weight)||0,volume:(Number(best.reps)||0)*(Number(best.weight)||0),bodyweight:!!best.bodyweight},
+        bestSet:{...clone(best),reps:Number(best.reps)||0,weight:Number(best.recordLoadKg??best.weight)||0,volume:(Number(best.reps)||0)*(Number(best.normalizedTotalKg??best.weight)||0),bodyweight:!!best.bodyweight},
         previousVolume:exerciseVolume(exercise),
         externalLoadVolume:metric.externalLoadVolume||0,
         bodyweightReps:metric.bodyweightReps||0,
         addedLoadVolume:metric.addedLoadVolume||0,
+        durationSeconds:metric.durationSeconds||0,
+        distanceMeters:metric.distanceMeters||0,
+        bestDurationSeconds:metric.bestDurationSeconds||0,
+        bestDistanceMeters:metric.bestDistanceMeters||0,
+        lowestAssistanceKg:metric.lowestAssistanceKg||0,
         bestWeight:metric.bestWeight||0,
         bestSetVolume:metric.bestSetVolume||0,
         maxReps:metric.maxReps||0,
@@ -479,8 +515,10 @@
           </div>
           <div class="quickPrimaryInputs">
             <div class="field quickSetNumberField"><label>Serie</label><input type="text" inputmode="decimal" id="quickSetNumber" value="1"></div>
-            <div class="field"><label>Repeticiones</label><input type="text" inputmode="decimal" id="quickReps" value="8"><div class="quickAdjustRow"><button type="button" class="secondary" data-quick-adjust="reps:-1">-1</button><button type="button" class="secondary" data-quick-adjust="reps:1">+1</button></div></div>
-            <div class="field"><label>Kilos / lastre</label><input type="text" inputmode="decimal" id="quickWeight" value="0"><div class="quickAdjustRow"><button type="button" class="secondary" data-quick-adjust="weight:-0.5">-0.5</button><button type="button" class="secondary" data-quick-adjust="weight:0.5">+0.5</button><button type="button" class="secondary" data-quick-adjust="weight:-2.5">-2.5</button><button type="button" class="secondary" data-quick-adjust="weight:2.5">+2.5</button><button type="button" class="secondary" data-quick-adjust="weight:-5">-5</button><button type="button" class="secondary" data-quick-adjust="weight:5">+5</button></div></div>
+            <div class="field" id="quickRepsField"><label>Repeticiones</label><input type="text" inputmode="decimal" id="quickReps" value="8"><div class="quickAdjustRow"><button type="button" class="secondary" data-quick-adjust="reps:-1">-1</button><button type="button" class="secondary" data-quick-adjust="reps:1">+1</button></div></div>
+            <div class="field" id="quickWeightField"><label id="quickWeightLabel">Kilos / lastre</label><input type="text" inputmode="decimal" id="quickWeight" value="0"><div class="quickAdjustRow"><button type="button" class="secondary" data-quick-adjust="weight:-0.5">-0.5</button><button type="button" class="secondary" data-quick-adjust="weight:0.5">+0.5</button><button type="button" class="secondary" data-quick-adjust="weight:-2.5">-2.5</button><button type="button" class="secondary" data-quick-adjust="weight:2.5">+2.5</button><button type="button" class="secondary" data-quick-adjust="weight:-5">-5</button><button type="button" class="secondary" data-quick-adjust="weight:5">+5</button></div></div>
+            <div class="field hidden" id="quickDurationField"><label>Duracion (segundos)</label><input type="text" inputmode="decimal" id="quickDurationSeconds" value="60"></div>
+            <div class="field hidden" id="quickDistanceField"><label>Distancia (metros)</label><input type="text" inputmode="decimal" id="quickDistanceMeters" value="1000"></div>
           </div>
           <div class="quickStickyActions">
             <button type="button" class="good" id="saveQuickSetBtn">Guardar serie</button>
@@ -493,6 +531,14 @@
           <div class="quickLoggedSets" id="quickLoggedSets"></div>
           <details class="quickSecondaryDetails">
             <summary>Opcional y finalizar</summary>
+            <div class="formGrid quickLoadSetup">
+              <div class="field"><label>Como se mide</label><select id="quickMeasurementMode"></select></div>
+              <div class="field"><label>Interpretacion de carga</label><select id="quickLoadMode"></select></div>
+              <div class="field"><label>Equipo</label><select id="quickEquipmentId"></select></div>
+              <div class="field hidden" id="quickBarWeightField"><label>Peso de la barra</label><input type="text" inputmode="decimal" id="quickBarWeight" value="20"></div>
+              <div class="field hidden" id="quickLateralityField"><label>Lado registrado</label><select id="quickLaterality"></select></div>
+              <div class="field"><label>Nombre del equipo (opcional)</label><input type="text" id="quickEquipmentName" placeholder="Ej. Polea 2 del gimnasio"></div>
+            </div>
             <div class="field" style="margin-top:10px"><label>Tipo de serie</label><select id="quickSetType">${setTypeOptions()}</select><div class="muted small">Solo las series efectivas alimentan el volumen y las sugerencias. Los calentamientos quedan visibles por separado.</div></div>
             <label class="check" style="margin-top:10px"><input type="checkbox" id="quickBodyweight"><span>Peso corporal: reps sin kilos o kilos como lastre.</span></label>
             <div class="formGrid" style="margin-top:10px"><div class="field"><label>RIR opcional</label><input type="text" inputmode="decimal" id="quickRir" value="2"></div><div class="field"><label>RPE opcional</label><input type="text" inputmode="decimal" id="quickRpe" placeholder="Ej. 8"></div></div>
@@ -555,6 +601,14 @@
     setupWorkoutEvents();
   }
   function setupWorkoutEvents(){
+    const measurementSelect=document.getElementById('quickMeasurementMode');
+    if(measurementSelect)measurementSelect.innerHTML=optionHtml(equipmentModel()?.measurementModes?.()||[]);
+    const loadSelect=document.getElementById('quickLoadMode');
+    if(loadSelect)loadSelect.innerHTML=optionHtml(equipmentModel()?.loadModes?.()||[]);
+    const equipmentSelect=document.getElementById('quickEquipmentId');
+    if(equipmentSelect)equipmentSelect.innerHTML=optionHtml(equipmentProfiles());
+    const lateralitySelect=document.getElementById('quickLaterality');
+    if(lateralitySelect)lateralitySelect.innerHTML=optionHtml(equipmentModel()?.lateralities?.()||[]);
     dayOrder.forEach(key=>{
       const label=`${dayLabels[key]} — ${weeklyPlan()[key]?.name||defaultWeeklyPlan[key].name}`;
       ['planEditorDay','copyPlanFrom','copyPlanTo'].forEach(id=>{
@@ -572,9 +626,17 @@
     document.getElementById('undoQuickSetDeleteBtn')?.addEventListener('click',undoDeletedQuickSet);
     document.getElementById('finishWorkoutBtn')?.addEventListener('click',finishWorkout);
     document.getElementById('quickSetLoggerPanel')?.addEventListener('click',handleQuickLoggerAction);
-    ['quickSetNumber','quickReps','quickWeight','quickSetType','quickRir','quickRpe','quickNote','quickBodyweight'].forEach(id=>{
+    ['quickSetNumber','quickReps','quickWeight','quickDurationSeconds','quickDistanceMeters','quickMeasurementMode','quickLoadMode','quickEquipmentId','quickEquipmentName','quickBarWeight','quickLaterality','quickSetType','quickRir','quickRpe','quickNote','quickBodyweight'].forEach(id=>{
       document.getElementById(id)?.addEventListener('input',captureQuickDraft);
       document.getElementById(id)?.addEventListener('change',captureQuickDraft);
+    });
+    document.getElementById('quickMeasurementMode')?.addEventListener('change',()=>updateQuickModeFields());
+    document.getElementById('quickLoadMode')?.addEventListener('change',()=>updateQuickModeFields());
+    document.getElementById('quickEquipmentId')?.addEventListener('change',applyQuickEquipmentProfile);
+    document.getElementById('quickBodyweight')?.addEventListener('change',event=>{
+      const load=document.getElementById('quickLoadMode');
+      if(load)load.value=event.target.checked?(numeric(document.getElementById('quickWeight')?.value,0)>0?'addedLoad':'bodyweight'):'total';
+      updateQuickModeFields();
     });
     document.getElementById('planEditorDay')?.addEventListener('change',event=>{currentPlanEditorDay=event.target.value;renderPlanEditor();});
     ['planEditorName','planEditorMuscles','planEditorExercises','planCustomExerciseName','planCustomExerciseMuscle'].forEach(id=>document.getElementById(id)?.addEventListener('input',capturePlanDraft));
@@ -638,26 +700,82 @@
   function quickDraftKey(exerciseId=currentQuickExerciseId,date=todayStr()){ return `${date}:${exerciseId||''}`; }
   function quickPersistentDraftId(exerciseId=currentQuickExerciseId,date=todayStr(),setId=editingQuickSetId||'new'){return `gym-set:${date}:${exerciseId||''}:${setId||'new'}`;}
   function quickInputValue(id){ const element=document.getElementById(id); return element?.type==='checkbox'?!!element.checked:(element?.value??''); }
+  function updateQuickModeFields({capture=true}={}){
+    const measurement=equipmentModel()?.measurementMode?.(quickInputValue('quickMeasurementMode'))||'reps';
+    let load=equipmentModel()?.loadMode?.(quickInputValue('quickLoadMode'))||'total';
+    if(measurement==='assistance'&&load!=='assistance'){
+      load='assistance';
+      const input=document.getElementById('quickLoadMode');if(input)input.value=load;
+    }
+    const usesReps=measurement==='reps'||measurement==='assistance';
+    document.getElementById('quickRepsField')?.classList.toggle('hidden',!usesReps);
+    document.getElementById('quickDurationField')?.classList.toggle('hidden',!['time','distance'].includes(measurement));
+    document.getElementById('quickDistanceField')?.classList.toggle('hidden',measurement!=='distance');
+    document.getElementById('quickWeightField')?.classList.toggle('hidden',!usesReps||load==='bodyweight');
+    document.getElementById('quickBarWeightField')?.classList.toggle('hidden',load!=='perSide');
+    document.getElementById('quickLateralityField')?.classList.toggle('hidden',!['perHand','perSide'].includes(load));
+    const label=document.getElementById('quickWeightLabel');
+    if(label)label.textContent=`${equipmentModel()?.weightLabel?.(load)||'Carga'} (${settings().unit})`;
+    const body=document.getElementById('quickBodyweight');
+    if(body)body.checked=['bodyweight','addedLoad'].includes(load);
+    if(capture)captureQuickDraft();
+  }
+  function applyQuickEquipmentProfile(){
+    const profile=equipmentModel()?.profile?.(quickInputValue('quickEquipmentId'),readStore(keys.equipmentProfiles,[]));
+    if(profile){
+      const load=document.getElementById('quickLoadMode');if(load)load.value=profile.loadMode||'total';
+      const bar=document.getElementById('quickBarWeight');if(bar&&profile.barWeightKg!==undefined)bar.value=displayWeight(profile.barWeightKg);
+      const name=document.getElementById('quickEquipmentName');if(name)name.value=profile.id==='unspecified'?'':profile.name;
+      if(profile.loadMode==='assistance'){
+        const measurement=document.getElementById('quickMeasurementMode');if(measurement)measurement.value='assistance';
+      }
+    }
+    updateQuickModeFields();
+  }
   function captureQuickDraft(){
-    const exerciseId=document.getElementById('quickExerciseSelect')?.value||currentQuickExerciseId;
-    if(!exerciseId||String(exerciseId).startsWith('library:')) return;
+    const selectedId=document.getElementById('quickExerciseSelect')?.value||currentQuickExerciseId;
+    if(!selectedId)return;
+    const libraryId=String(selectedId).startsWith('library:')?String(selectedId).slice(8):'';
+    const source=(activeSession(todayStr())||latestSessionForDate(todayStr()))?.exercises||planForDate(todayStr()).exercises||[];
+    const active=libraryId?source.find(exercise=>exercise.exerciseId===libraryId||exercise.id===libraryId):null;
+    const exerciseId=active?.id||active?.exerciseId||selectedId;
     const payload={
-      setNumber:quickInputValue('quickSetNumber'),reps:quickInputValue('quickReps'),weight:quickInputValue('quickWeight'),setType:quickInputValue('quickSetType'),rir:quickInputValue('quickRir'),rpe:quickInputValue('quickRpe'),note:quickInputValue('quickNote'),bodyweight:quickInputValue('quickBodyweight')
+      setNumber:quickInputValue('quickSetNumber'),reps:quickInputValue('quickReps'),weight:quickInputValue('quickWeight'),durationSeconds:quickInputValue('quickDurationSeconds'),distanceMeters:quickInputValue('quickDistanceMeters'),measurementMode:quickInputValue('quickMeasurementMode'),loadMode:quickInputValue('quickLoadMode'),equipmentId:quickInputValue('quickEquipmentId'),equipmentName:quickInputValue('quickEquipmentName'),barWeight:quickInputValue('quickBarWeight'),laterality:quickInputValue('quickLaterality'),setType:quickInputValue('quickSetType'),rir:quickInputValue('quickRir'),rpe:quickInputValue('quickRpe'),note:quickInputValue('quickNote'),bodyweight:quickInputValue('quickBodyweight')
     };
     quickDrafts.set(quickDraftKey(exerciseId),payload);
     window.APP_DRAFTS?.schedule?.({id:quickPersistentDraftId(exerciseId),domain:'gym-set',payload:{...payload,date:todayStr(),exerciseId,setId:editingQuickSetId||''}});
   }
   function applyQuickDraft(draft){
     if(!draft) return;
-    for(const [id,key] of [['quickSetNumber','setNumber'],['quickReps','reps'],['quickWeight','weight'],['quickSetType','setType'],['quickRir','rir'],['quickRpe','rpe'],['quickNote','note']]){
+    for(const [id,key] of [['quickSetNumber','setNumber'],['quickReps','reps'],['quickWeight','weight'],['quickDurationSeconds','durationSeconds'],['quickDistanceMeters','distanceMeters'],['quickMeasurementMode','measurementMode'],['quickLoadMode','loadMode'],['quickEquipmentId','equipmentId'],['quickEquipmentName','equipmentName'],['quickBarWeight','barWeight'],['quickLaterality','laterality'],['quickSetType','setType'],['quickRir','rir'],['quickRpe','rpe'],['quickNote','note']]){
       const element=document.getElementById(id); if(element&&draft[key]!==undefined) element.value=draft[key];
     }
     const bodyweight=document.getElementById('quickBodyweight'); if(bodyweight&&draft.bodyweight!==undefined) bodyweight.checked=!!draft.bodyweight;
+    updateQuickModeFields({capture:false});
+  }
+  function formatDuration(seconds){
+    const total=Math.max(0,Math.round(numeric(seconds,0)));
+    return total>=60?`${Math.floor(total/60)}:${String(total%60).padStart(2,'0')} min`:`${total} s`;
+  }
+  function formatPace(seconds){
+    const total=Math.max(0,Math.round(numeric(seconds,0)));if(!total)return'';
+    return `${Math.floor(total/60)}:${String(total%60).padStart(2,'0')} min/km`;
+  }
+  function setPerformanceText(raw,exercise={}){
+    const set=normalizeSet(raw,exercise),unit=settings().unit;
+    if(set.measurementMode==='time')return formatDuration(set.durationSeconds);
+    if(set.measurementMode==='distance')return `${(set.distanceMeters/1000).toLocaleString('es-PY',{maximumFractionDigits:2})} km${set.paceSecondsPerKm?` · ${formatPace(set.paceSecondsPerKm)}`:''}`;
+    const reps=`${set.reps||0} reps`;
+    if(set.loadMode==='bodyweight')return `${reps} · peso corporal`;
+    if(set.loadMode==='assistance')return `${reps} · ${displayWeight(set.assistanceKg)} ${unit} de asistencia`;
+    const amount=displayWeight(set.weightKg??set.weight);
+    const suffix=set.loadMode==='perHand'?' por mano':set.loadMode==='perSide'?` por lado + barra ${displayWeight(set.barWeightKg)} ${unit}`:set.loadMode==='addedLoad'?' de lastre':'';
+    return `${reps} · ${amount} ${unit}${suffix}`;
   }
   function quickSetRowsHtml(exercise){
     const sets=exercise?.sets||[];
     if(!sets.length) return '<div class="muted small">Todavía no hay series en este ejercicio.</div>';
-    return sets.map(raw=>{const set=normalizeSet(raw);return `<div class="quickLoggedSet ${set.id===editingQuickSetId?'editing':''}"><div><strong>Serie ${set.setNumber} · ${escapeHtml(setTypeLabel(set.setType))}</strong><span>${set.reps} reps · ${set.weight?`${displayWeight(set.weight)} ${settings().unit}`:'peso corporal'}${set.rir!==null&&set.rir!==undefined?` · RIR ${set.rir}`:''}</span></div><div class="buttons"><button type="button" class="secondary" data-quick-edit-set="${escapeHtml(set.id)}" aria-label="Editar serie ${set.setNumber} de ${escapeHtml(exercise.name)}">Editar</button><button type="button" class="danger" data-quick-delete-set="${escapeHtml(set.id)}" aria-label="Eliminar serie ${set.setNumber} de ${escapeHtml(exercise.name)}">Eliminar</button></div></div>`;}).join('');
+    return sets.map(raw=>{const set=normalizeSet(raw,exercise);return `<div class="quickLoggedSet ${set.id===editingQuickSetId?'editing':''}"><div><strong>Serie ${set.setNumber} · ${escapeHtml(setTypeLabel(set.setType))}</strong><span>${escapeHtml(setPerformanceText(set,exercise))}${set.rir!==null&&set.rir!==undefined?` · RIR ${set.rir}`:''}${set.equipmentName?` · ${escapeHtml(set.equipmentName)}`:''}</span></div><div class="buttons"><button type="button" class="secondary" data-quick-edit-set="${escapeHtml(set.id)}" aria-label="Editar serie ${set.setNumber} de ${escapeHtml(exercise.name)}">Editar</button><button type="button" class="danger" data-quick-delete-set="${escapeHtml(set.id)}" aria-label="Eliminar serie ${set.setNumber} de ${escapeHtml(exercise.name)}">Eliminar</button></div></div>`;}).join('');
   }
   function updateRestTimerDisplay(){
     const box=document.getElementById('quickRestTimer'),value=document.getElementById('quickRestTimerValue'); if(!box||!value)return;
@@ -701,23 +819,33 @@
     const last=sets.slice().reverse().find(set=>setModel()?.countsForProgression?.(set)??true)||sets[sets.length-1]||null;
     document.getElementById('quickSetNumber').value=editingSet?.setNumber||(sets.length||0)+1;
     const bodyweight=!!exercise.bodyweight || !!h?.bodyweight;
-    document.getElementById('quickBodyweight').checked=bodyweight;
+    const suggested=normalizeSet(editingSet||last||h?.lastSet||{measurementMode:exercise.measurementMode||'reps',loadMode:exercise.defaultLoadMode||(bodyweight?'bodyweight':'total'),bodyweight},exercise);
+    document.getElementById('quickBodyweight').checked=['bodyweight','addedLoad'].includes(suggested.loadMode)||bodyweight;
     document.getElementById('quickReps').value=editingSet?.reps??last?.reps??h?.lastReps??8;
-    document.getElementById('quickWeight').value=displayWeight(editingSet?.weight??last?.weight??h?.lastWeight??0);
-    document.getElementById('quickSetType').value=normalizeSet(editingSet||last||{}).setType;
+    document.getElementById('quickWeight').value=displayWeight(suggested.loadMode==='assistance'?suggested.assistanceKg:(suggested.weightKg??h?.lastWeight??0));
+    document.getElementById('quickDurationSeconds').value=suggested.durationSeconds||60;
+    document.getElementById('quickDistanceMeters').value=suggested.distanceMeters||1000;
+    document.getElementById('quickMeasurementMode').value=suggested.measurementMode||'reps';
+    document.getElementById('quickLoadMode').value=suggested.loadMode||'total';
+    document.getElementById('quickEquipmentId').value=suggested.equipmentId||exercise.equipmentId||'unspecified';
+    document.getElementById('quickEquipmentName').value=suggested.equipmentName||exercise.equipmentName||'';
+    document.getElementById('quickBarWeight').value=displayWeight(suggested.barWeightKg||0);
+    document.getElementById('quickLaterality').value=suggested.laterality||'bilateral';
+    document.getElementById('quickSetType').value=suggested.setType;
     document.getElementById('quickRir').value=editingSet?.rir??last?.rir??2;
     document.getElementById('quickRpe').value=editingSet?.rpe??'';
     document.getElementById('quickNote').value=editingSet?.note??'';
-    document.getElementById('quickBodyweight').checked=editingSet?!!editingSet.bodyweight:bodyweight;
+    document.getElementById('quickBodyweight').checked=editingSet?['bodyweight','addedLoad'].includes(suggested.loadMode):(['bodyweight','addedLoad'].includes(suggested.loadMode)||bodyweight);
     const persistentDraft=window.APP_DRAFTS?.get?.(quickPersistentDraftId(currentQuickExerciseId,date,editingQuickSetId||'new'));
     if(persistentDraft?.payload)applyQuickDraft(persistentDraft.payload);
     else if(!editingSet)applyQuickDraft(quickDrafts.get(quickDraftKey(currentQuickExerciseId)));
+    updateQuickModeFields({capture:false});
     if(persistentDraft&&!workoutDraftNotices.has(persistentDraft.id)){
       workoutDraftNotices.add(persistentDraft.id);
       window.APP_DRAFTS?.announceRestored?.({id:persistentDraft.id,label:'Borrador de serie restaurado.',onDiscard:()=>{quickDrafts.delete(quickDraftKey(currentQuickExerciseId));renderQuickLogger();}});
     }
     const hint=document.getElementById('quickLastHint');
-    if(h) hint.textContent=`Última vez: ${h.name} — ${displayWeight(h.lastWeight)} ${settings().unit} x ${h.lastReps||0} reps. Podés repetir la carga anterior; si te sentís bien, intentá +1 rep.`;
+    if(h) hint.textContent=`Última vez: ${h.name} — ${h.lastSet?setPerformanceText(h.lastSet,exercise):`${displayWeight(h.lastWeight)} ${settings().unit} x ${h.lastReps||0} reps`}. Podés repetir el registro anterior; si te sentís bien, progresá de forma gradual.`;
     else hint.textContent='Última vez: sin datos todavía. Si estás fatigado, mantener carga también cuenta.';
     const stat=document.getElementById('quickSetStats');
     if(stat){
@@ -791,10 +919,13 @@
       muscles,
       message:plan.message||'',
       suggestions:plan.suggestions||[],
-      exercises:source.map(ex=>({id:ex.id,exerciseId:ex.exerciseId,name:ex.name,muscle:ex.muscle,bodyweight:!!ex.bodyweight,completed:!!ex.completed,setsLogged:exerciseSetCount(ex)})),
+      exercises:source.map(ex=>({id:ex.id,exerciseId:ex.exerciseId,name:ex.name,muscle:ex.muscle,bodyweight:!!ex.bodyweight,measurementMode:ex.measurementMode||'reps',defaultLoadMode:ex.defaultLoadMode||ex.loadMode||(ex.bodyweight?'bodyweight':'total'),equipmentId:ex.equipmentId||'',completed:!!ex.completed,setsLogged:exerciseSetCount(ex)})),
       currentExerciseId:exercise?.id||exercise?.exerciseId||'',
       currentExerciseName:exercise?.name||'',
       currentExerciseMuscle:exercise?.muscle||'',
+      currentExerciseMeasurementMode:last?.measurementMode||exercise?.measurementMode||'reps',
+      currentExerciseLoadMode:last?.loadMode||exercise?.defaultLoadMode||exercise?.loadMode||(bodyweight?'bodyweight':'total'),
+      currentExerciseEquipmentId:last?.equipmentId||exercise?.equipmentId||'',
       currentSets:sets.map(displaySet),
       currentExerciseSets:exerciseSetCount(exercise),
       currentMuscleSets:muscleSetCount(source,exercise?.muscle),
@@ -843,6 +974,9 @@
       type:officialMatch?.type||String(payload.type||'personalizado'),
       unit:officialMatch?.unit||String(payload.unit||settings().unit),
       bodyweight:!!payload.bodyweight || officialMatch?.unit==='peso corporal' || !!officialMatch?.bodyweight,
+      measurementMode:officialMatch?.measurementMode||payload.measurementMode||(payload.unit==='tiempo'?'time':payload.unit==='distancia'?'distance':'reps'),
+      defaultLoadMode:officialMatch?.defaultLoadMode||payload.defaultLoadMode||(payload.bodyweight?'bodyweight':'total'),
+      equipmentId:officialMatch?.equipmentId||payload.equipmentId||'',
       notes:String(payload.notes||'Agregado manualmente desde Gym Party.').trim(),
       aliases:safeAliases(payload.aliases)
     };
@@ -864,6 +998,9 @@
       type:baseInput.type,
       unit:baseInput.bodyweight?'peso corporal':baseInput.unit,
       bodyweight:baseInput.bodyweight,
+      measurementMode:baseInput.measurementMode,
+      defaultLoadMode:baseInput.defaultLoadMode,
+      equipmentId:baseInput.equipmentId,
       primaryMuscles:[...classification.primaryMuscles],
       secondaryMuscles:[...classification.secondaryMuscles],
       muscleTaxonomyVersion:window.MUSCLE_TAXONOMY?.VERSION||1,
@@ -936,6 +1073,49 @@
     return {ok:true,session:clone(session),exercise:clone(exercise),state:getQuickWorkoutState({date,exerciseId:exercise.id}),remembered,savedToLibrary:saveToLibrary||!!officialMatch,message};
   }
   function safeAliases(value){ return Array.isArray(value)?value.map(alias=>String(alias||'').trim()).filter(Boolean):[]; }
+  function canonicalSetInput(payload={},exercise={},existing={}){
+    const unit=payload.unit||settings().unit;
+    const originalWeight=Math.max(0,numeric(payload.originalWeight??payload.weight,0));
+    const inputWeightKg=payload.weightCanonical?Math.max(0,numeric(payload.weight,0)):canonicalWeight(payload.weight,unit);
+    const inputBarKg=payload.weightCanonical?Math.max(0,numeric(payload.barWeight??payload.barWeightKg,0)):canonicalWeight(payload.barWeight??payload.barWeightKg,unit);
+    const measurementMode=equipmentModel()?.measurementMode?.(payload.measurementMode||existing.measurementMode||exercise.measurementMode||'reps')||'reps';
+    let loadMode=equipmentModel()?.loadMode?.(payload.loadMode||existing.loadMode||exercise.defaultLoadMode||(payload.bodyweight?'bodyweight':'total'))||'total';
+    if(measurementMode==='assistance')loadMode='assistance';
+    if(payload.bodyweight&&!payload.loadMode)loadMode=inputWeightKg>0?'addedLoad':'bodyweight';
+    const equipmentId=String(payload.equipmentId??existing.equipmentId??exercise.equipmentId??'').trim();
+    const selectedProfile=equipmentModel()?.profile?.(equipmentId,readStore(keys.equipmentProfiles,[]));
+    const base={
+      ...existing,
+      reps:measurementMode==='time'||measurementMode==='distance'?0:Math.max(0,numeric(payload.reps,existing.reps||0)),
+      measurementMode,
+      loadMode,
+      weight:loadMode==='assistance'||loadMode==='bodyweight'?0:inputWeightKg,
+      weightKg:loadMode==='assistance'||loadMode==='bodyweight'?0:inputWeightKg,
+      addedLoadKg:loadMode==='addedLoad'?inputWeightKg:0,
+      assistanceKg:loadMode==='assistance'?inputWeightKg:0,
+      originalWeight,
+      originalUnit:String(payload.originalUnit||(payload.weightCanonical?'kg':unit))==='lb'?'lb':'kg',
+      barWeightKg:loadMode==='perSide'?inputBarKg:0,
+      equipmentId,
+      equipmentName:String(payload.equipmentName??existing.equipmentName??selectedProfile?.name??'').trim(),
+      gymName:String(payload.gymName??existing.gymName??'').trim(),
+      incrementKg:Math.max(0,numeric(payload.incrementKg,selectedProfile?.incrementKg??existing.incrementKg??.5)),
+      laterality:String(payload.laterality||existing.laterality||'bilateral'),
+      repsMode:String(payload.repsMode||existing.repsMode||'total'),
+      durationSeconds:Math.max(0,Math.round(numeric(payload.durationSeconds,existing.durationSeconds||0))),
+      distanceMeters:Math.max(0,numeric(payload.distanceMeters,existing.distanceMeters||0)),
+      bodyweight:['bodyweight','addedLoad'].includes(loadMode),
+      isBodyweight:['bodyweight','addedLoad'].includes(loadMode),
+      setType:payload.setType??existing.setType??'working',
+      completed:payload.completed??existing.completed??true,
+      excludeFromRecords:payload.excludeFromRecords??existing.excludeFromRecords??false,
+      excludeFromProgression:payload.excludeFromProgression??existing.excludeFromProgression??false,
+      rir:payload.rir===''||payload.rir===undefined?null:Math.max(0,numeric(payload.rir,0)),
+      rpe:payload.rpe===''||payload.rpe===undefined?null:Math.max(0,numeric(payload.rpe,0)),
+      note:String(payload.note??existing.note??'').trim()
+    };
+    return normalizeSet(base,exercise);
+  }
   function saveQuickSetPayload(payload={}){
     const date=payload.date||todayStr();
     const session=ensureSession(date);
@@ -945,14 +1125,9 @@
     if(!exercise) exercise=currentExercise(session);
     if(!exercise) return {ok:false,reason:'missing-exercise',message:'Elegí un ejercicio para registrar.'};
     const setNumber=Math.max(1,numeric(payload.setNumber,(exercise.sets||[]).length+1));
-    const reps=Math.max(0,numeric(payload.reps,0));
-    const weight=payload.weightCanonical?Math.max(0,numeric(payload.weight,0)):canonicalWeight(payload.weight,payload.unit||settings().unit);
-    const bodyweight=!!payload.bodyweight;
-    const rir=payload.rir===''||payload.rir===undefined?null:Math.max(0,numeric(payload.rir,0));
-    const rpe=payload.rpe===''||payload.rpe===undefined?null:Math.max(0,numeric(payload.rpe,0));
-    const note=String(payload.note||'').trim();
-    const classification=normalizeSet(payload);
-    const set={id:uid('set'),setNumber,reps,weight,rir,rpe,bodyweight,note,setType:classification.setType,completed:classification.completed,excludeFromRecords:classification.excludeFromRecords,excludeFromProgression:classification.excludeFromProgression,savedAt:new Date().toISOString(),volume:Math.round(reps*weight)};
+    const canonical=canonicalSetInput(payload,exercise);
+    const set={...canonical,id:uid('set'),setNumber,savedAt:new Date().toISOString()};
+    set.volume=Math.round(window.WORKOUT_METRICS?.calculateSetMetrics?.(set,exercise)?.externalLoadVolume??set.reps*set.normalizedTotalKg);
     exercise.sets=exercise.sets||[];
     exercise.sets.push(set);
     recordExercisePreference(session,exercise);
@@ -974,18 +1149,9 @@
     const setNumber=Number(payload.setNumber);
     const set=(setId?sets.find(item=>String(item.id||'')===setId):null) || (Number.isFinite(setNumber)?sets.find(item=>Number(item.setNumber)===setNumber):null);
     if(!set) return {ok:false,reason:'missing-set',message:'No encontre esa serie.'};
-    set.reps=Math.max(0,Number(payload.reps)||0);
-    set.weight=payload.weightCanonical?Math.max(0,Number(payload.weight)||0):canonicalWeight(payload.weight,payload.unit||settings().unit);
-    set.bodyweight=!!payload.bodyweight;
-    set.rir=payload.rir===''||payload.rir===undefined?null:Math.max(0,Number(payload.rir)||0);
-    set.rpe=payload.rpe===''||payload.rpe===undefined?null:Math.max(0,Number(payload.rpe)||0);
-    set.note=String(payload.note||'').trim();
-    const classification=normalizeSet({...set,...payload});
-    set.setType=classification.setType;
-    set.completed=classification.completed;
-    set.excludeFromRecords=classification.excludeFromRecords;
-    set.excludeFromProgression=classification.excludeFromProgression;
-    set.volume=Math.round(set.reps*set.weight);
+    const canonical=canonicalSetInput(payload,exercise,set);
+    Object.assign(set,canonical);
+    set.volume=Math.round(window.WORKOUT_METRICS?.calculateSetMetrics?.(set,exercise)?.externalLoadVolume??set.reps*set.normalizedTotalKg);
     set.editedAt=new Date().toISOString();
     session.currentExerciseIndex=session.exercises.findIndex(x=>x.id===exercise.id);
     currentQuickExerciseId=exercise.id;
@@ -1056,13 +1222,13 @@
     if(!session){ flash('Hoy toca descanso. Podés registrar movilidad suave si querés.'); return; }
     const exercise=selectedQuickExercise(session);
     if(!exercise){ flash('Elegí un ejercicio para registrar.'); return; }
-    const payload={date:session.date,exerciseId:exercise.id,setNumber:document.getElementById('quickSetNumber').value,reps:document.getElementById('quickReps').value,weight:document.getElementById('quickWeight').value,setType:document.getElementById('quickSetType').value,bodyweight:document.getElementById('quickBodyweight').checked,rir:document.getElementById('quickRir').value,rpe:document.getElementById('quickRpe').value,note:document.getElementById('quickNote').value};
+    const payload={date:session.date,exerciseId:exercise.id,setNumber:document.getElementById('quickSetNumber').value,reps:document.getElementById('quickReps').value,weight:document.getElementById('quickWeight').value,durationSeconds:document.getElementById('quickDurationSeconds').value,distanceMeters:document.getElementById('quickDistanceMeters').value,measurementMode:document.getElementById('quickMeasurementMode').value,loadMode:document.getElementById('quickLoadMode').value,equipmentId:document.getElementById('quickEquipmentId').value,equipmentName:document.getElementById('quickEquipmentName').value,barWeight:document.getElementById('quickBarWeight').value,laterality:document.getElementById('quickLaterality').value,setType:document.getElementById('quickSetType').value,bodyweight:document.getElementById('quickBodyweight').checked,rir:document.getElementById('quickRir').value,rpe:document.getElementById('quickRpe').value,note:document.getElementById('quickNote').value};
     const savedDraftId=quickPersistentDraftId(exercise.id,session.date,editingQuickSetId||'new');
     const result=editingQuickSetId?updateQuickSetPayload({...payload,setId:editingQuickSetId}):saveQuickSetPayload(payload);
     if(!result.ok){flash(result.message||'No se pudo guardar la serie.');return;}
     window.APP_DRAFTS?.remove?.(savedDraftId);
     const wasEditing=!!editingQuickSetId;editingQuickSetId='';
-    quickDrafts.set(quickDraftKey(exercise.id),{setNumber:(result.exercise.sets?.length||0)+1,reps:payload.reps,weight:payload.weight,setType:payload.setType,rir:payload.rir,rpe:payload.rpe,note:'',bodyweight:payload.bodyweight});
+    quickDrafts.set(quickDraftKey(exercise.id),{setNumber:(result.exercise.sets?.length||0)+1,reps:payload.reps,weight:payload.weight,durationSeconds:payload.durationSeconds,distanceMeters:payload.distanceMeters,measurementMode:payload.measurementMode,loadMode:payload.loadMode,equipmentId:payload.equipmentId,equipmentName:payload.equipmentName,barWeight:payload.barWeight,laterality:payload.laterality,setType:payload.setType,rir:payload.rir,rpe:payload.rpe,note:'',bodyweight:payload.bodyweight});
     renderGym();
     hapticFeedback();startRestTimer();
     flash(wasEditing?'Serie actualizada.':'Serie guardada. Registrar ya es progreso.');
@@ -1072,10 +1238,20 @@
     const last=exercise?.sets?.slice().reverse().find(set=>setModel()?.countsForProgression?.(set)??true) || exercise?.sets?.slice(-1)[0] || history()[exercise?.exerciseId] || null;
     if(!last){ flash('Todavía no hay una serie anterior para repetir.'); return; }
     document.getElementById('quickReps').value=last.reps||last.lastReps||8;
-    document.getElementById('quickWeight').value=displayWeight(last.weight??last.lastWeight??0);
-    document.getElementById('quickSetType').value=normalizeSet(last).setType;
+    const normalized=normalizeSet(last,exercise||{});
+    document.getElementById('quickWeight').value=displayWeight(normalized.loadMode==='assistance'?normalized.assistanceKg:(normalized.weightKg??last.lastWeight??0));
+    document.getElementById('quickDurationSeconds').value=normalized.durationSeconds||60;
+    document.getElementById('quickDistanceMeters').value=normalized.distanceMeters||1000;
+    document.getElementById('quickMeasurementMode').value=normalized.measurementMode||'reps';
+    document.getElementById('quickLoadMode').value=normalized.loadMode||'total';
+    document.getElementById('quickEquipmentId').value=normalized.equipmentId||'unspecified';
+    document.getElementById('quickEquipmentName').value=normalized.equipmentName||'';
+    document.getElementById('quickBarWeight').value=displayWeight(normalized.barWeightKg||0);
+    document.getElementById('quickLaterality').value=normalized.laterality||'bilateral';
+    document.getElementById('quickSetType').value=normalized.setType;
     if(last.rir!==undefined && last.rir!==null) document.getElementById('quickRir').value=last.rir;
     document.getElementById('quickBodyweight').checked=!!last.bodyweight;
+    updateQuickModeFields({capture:false});
     captureQuickDraft();
   }
   function adjustQuickInput(target,delta){
@@ -1387,6 +1563,7 @@
     const previousQuick=previousState.quickLog||{};
     const currentSets=current?.sets||[];
     const lastSet=currentSets[currentSets.length-1]||null;
+    const normalizedLast=normalizeSet(lastSet||{measurementMode:current?.measurementMode||'reps',loadMode:current?.defaultLoadMode||(current?.bodyweight?'bodyweight':'total')},current||{});
     const h=current?.exerciseId ? history()[current.exerciseId] : null;
     const currentId=current?.id||current?.exerciseId||'';
     const quickMatches=previousQuick.currentExerciseId && previousQuick.currentExerciseId===currentId;
@@ -1399,7 +1576,7 @@
       ? `Ultima vez: ${h.name} — ${displayWeight(h.lastWeight,s.unit)} ${s.unit} x ${h.lastReps||0} reps.`
       : 'Ajusta reps/kg y guarda desde el widget.';
     return {
-      schemaVersion:2,
+      schemaVersion:3,
       date,
       dayKey:plan.dayKey,
       weekday:plan.weekday,
@@ -1418,6 +1595,9 @@
         muscle:x.muscle,
         type:x.type,
         unit:x.unit,
+        measurementMode:x.measurementMode||'reps',
+        defaultLoadMode:x.defaultLoadMode||(x.bodyweight?'bodyweight':'total'),
+        equipmentId:x.equipmentId||'',
         completed:!!x.completed,
         setsLogged:x.sets?.length||0,
         sets:(x.sets||[]).map(displaySet),
@@ -1436,6 +1616,12 @@
         weight:Math.max(0,Math.round(quickWeight*2)/2),
         setType:'working',
         bodyweight:quickBodyweight,
+        measurementMode:normalizedLast.measurementMode||'reps',
+        loadMode:normalizedLast.loadMode||(quickBodyweight?'bodyweight':'total'),
+        equipmentId:normalizedLast.equipmentId||current?.equipmentId||'',
+        equipmentName:normalizedLast.equipmentName||'',
+        barWeight:displayWeight(normalizedLast.barWeightKg||0,s.unit),
+        laterality:normalizedLast.laterality||'bilateral',
         unit:s.unit,
         weightStep:0.5,
         weightFastStep:5,
@@ -1481,7 +1667,7 @@
     else if(action===actionWidgetSaveSet){syncWorkoutWidget();openGymToday();}
   }
 
-  window.WORKOUT_FEATURES={keys,dayOrder,defaultWeeklyPlan:clone(defaultWeeklyPlan),exerciseLibrary:clone(exerciseLibrary),EXERCISE_LIBRARY_VERSION,getExerciseLibrary:()=>clone(libraryData()),getGymSettings:()=>clone(settings()),updateGymSettings:next=>{saveSettings(next||{});return clone(settings());},displayWeight,canonicalWeight,displayVolume,migrateExerciseLibrary,migrateLegacyGymSessions,dayKeyForDate,planForDate,rankExercisesForContext,getQuickWorkoutState,addManualExercisePayload,saveQuickSetPayload,updateQuickSetPayload,deleteQuickSetPayload,undoDeleteQuickSetPayload,canUndoQuickSetDelete:()=>!!lastDeletedQuickSet,replaceSessionPayload,completeQuickExercisePayload,finishWorkoutPayload,buildWorkoutWidgetState,syncWorkoutWidget,importWidgetStateFromAndroid};
+  window.WORKOUT_FEATURES={keys,dayOrder,defaultWeeklyPlan:clone(defaultWeeklyPlan),exerciseLibrary:clone(exerciseLibrary),EXERCISE_LIBRARY_VERSION,getExerciseLibrary:()=>clone(libraryData()),getEquipmentProfiles:()=>clone(equipmentProfiles()),getGymSettings:()=>clone(settings()),updateGymSettings:next=>{saveSettings(next||{});return clone(settings());},displayWeight,canonicalWeight,displayVolume,migrateExerciseLibrary,migrateLegacyGymSessions,dayKeyForDate,planForDate,rankExercisesForContext,getQuickWorkoutState,addManualExercisePayload,saveQuickSetPayload,updateQuickSetPayload,deleteQuickSetPayload,undoDeleteQuickSetPayload,canUndoQuickSetDelete:()=>!!lastDeletedQuickSet,replaceSessionPayload,completeQuickExercisePayload,finishWorkoutPayload,buildWorkoutWidgetState,syncWorkoutWidget,importWidgetStateFromAndroid};
   window.openGymToday=openGymToday;
   window.openQuickSetLogger=openQuickSetLogger;
   window.handleAndroidWidgetIntent=(action,payload)=>handleAndroidWidgetIntent(action,payload||{});
