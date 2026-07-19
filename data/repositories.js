@@ -15,8 +15,11 @@
     }
     owns(key){return this.allowedKeys.includes(key);}
     get(key,fallback){return data.read(key,fallback);}
+    getResult(key){return data.readResult(key);}
     getByName(name,fallback){return this.get(this.keys[name],fallback);}
+    getResultByName(name){return this.getResult(this.keys[name]);}
     getAsync(key,fallback){return data.readIndexed(key,fallback);}
+    getAsyncResult(key){return data.readIndexedResult(key);}
     set(key,value){return data.write(key,value);}
     setByName(name,value){return this.set(this.keys[name],value);}
     remove(key){return data.remove(key);}

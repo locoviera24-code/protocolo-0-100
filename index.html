@@ -706,6 +706,7 @@
             </div>
             <div class="quickStats dataStats"><div class="quickStat"><span>Última copia</span><strong id="lastBackupAt">Nunca</strong></div><div class="quickStat"><span>Almacenamiento local</span><strong id="localStorageEstimate">0 KB</strong></div><div class="quickStat"><span>Schema</span><strong id="dataSchemaVersion">3</strong></div><div class="quickStat"><span>Claves locales</span><strong id="localStorageKeyCount">0</strong></div></div>
             <div class="moduleCard"><div class="sectionHeading"><div><h3>Copia interna recuperable</h3><p class="muted small" id="dataLayerDescription">Las claves históricas siguen activas mientras se crea una copia transaccional local para historiales crecientes.</p></div><strong id="indexedDbStatus">Preparando</strong></div></div>
+            <div class="moduleCard hidden" id="dataIntegrityCard"><div class="sectionHeading"><div><h3>Datos que necesitan revisión</h3><p class="muted small">La app apartó una copia que no pudo interpretar. No la reemplazó por datos vacíos.</p></div><strong id="dataIntegrityCount">0</strong></div><div class="auditList" id="dataIntegrityList"></div><div class="buttons"><button type="button" class="secondary" id="exportQuarantineBtn">Exportar copias para revisar</button></div></div>
             <div class="moduleCard"><h3>Restablecimiento selectivo</h3><p class="muted small">Borra solo el área elegida. Las demás permanecen intactas.</p><div class="buttons"><button type="button" class="secondary" data-reset-scope="protocol">Protocolo diario</button><button type="button" class="secondary" data-reset-scope="gym">Gym local</button><button type="button" class="secondary" data-reset-scope="nutrition">Nutrición</button><button type="button" class="secondary" data-reset-scope="ui">Preferencias visuales</button></div></div>
             <details class="moduleCard dangerZone"><summary>Zona de peligro</summary><p>Esta acción borra todos los datos locales de Protocolo 0→100 en este navegador.</p><button type="button" class="danger" id="resetAllDataBtn">Borrar todos los datos locales</button></details>
           </section>
@@ -1027,6 +1028,32 @@ function maybeShowInternalReminder(){
 function estimatedLocalStorage(){let bytes=0;for(let index=0;index<localStorage.length;index++){const key=localStorage.key(index)||'';bytes+=(key.length+(localStorage.getItem(key)||'').length)*2;}return bytes;}
 function formatStorage(bytes){return bytes<1024?(bytes+' B'):bytes<1048576?((bytes/1024).toFixed(1)+' KB'):((bytes/1048576).toFixed(1)+' MB');}
 function androidVersionLabel(){try{const raw=window.AndroidBridge?.getAppInfo?.();if(!raw)return 'Web/PWA';const info=JSON.parse(raw);return info.versionName?(info.versionName+' ('+info.versionCode+')'):'APK Android';}catch(error){return 'APK Android';}}
+function dataIntegrityMessage(item){if(item.status==='unsupported')return 'Fue guardado por una versión de datos posterior.';if(item.error==='invalid-json')return 'El contenido JSON está incompleto o dañado.';return 'El contenido no cumple la estructura esperada.';}
+async function renderDataIntegrity(){
+  const card=document.getElementById('dataIntegrityCard'),list=document.getElementById('dataIntegrityList'),count=document.getElementById('dataIntegrityCount');if(!card||!list||!window.APP_DATA?.quarantineList)return;
+  try{
+    const items=await window.APP_DATA.quarantineList();card.classList.toggle('hidden',!items.length);if(count)count.textContent=String(items.length);
+    list.innerHTML=items.map(item=>`<div class="auditItem"><div><strong>${escapeHtml(item.domain)} · ${escapeHtml(item.name)}</strong><span class="muted small">${escapeHtml(dataIntegrityMessage(item))} Copia: ${escapeHtml(new Intl.DateTimeFormat('es-PY',{dateStyle:'short',timeStyle:'short'}).format(new Date(item.lastSeenAt)))}</span></div><div class="buttons"><button type="button" class="secondary" data-quarantine-action="repair" data-quarantine-id="${escapeHtml(item.id)}" ${item.redacted?'disabled':''}>Reparar y restaurar</button><button type="button" class="secondary" data-quarantine-action="export" data-quarantine-id="${escapeHtml(item.id)}">Exportar</button><button type="button" class="danger" data-quarantine-action="delete" data-quarantine-id="${escapeHtml(item.id)}">Eliminar copia</button></div></div>`).join('');
+  }catch(error){card.classList.add('hidden');}
+}
+function downloadQuarantinePayload(payload,name='protocolo-cuarentena.json'){downloadBlob(JSON.stringify(payload,null,2),name,'application/json');}
+async function repairQuarantineEntry(id){
+  const item=await window.APP_DATA?.quarantineGet?.(id,{includeRaw:true});if(!item)return;
+  if(item.redacted||item.raw===null){flash('Esta copia fue redactada por seguridad. Solo puede eliminarse.',{tone:'warning'});return;}
+  const result=await window.APP_FORM_DIALOG?.ask?.({title:'Reparar datos locales',message:'Editá únicamente si reconocés la estructura JSON. La copia original permanece hasta que el contenido sea válido.',submitLabel:'Validar y restaurar',fieldList:[{name:'raw',label:'Contenido JSON',multiline:true,required:true,value:item.raw,validate:value=>{const status=window.APP_DATA.inspectRaw(item.key,value);return['valid','legacy'].includes(status.status)?'':`El contenido sigue sin ser válido (${status.error||status.status}).`;}}]});
+  if(!result)return;
+  try{await window.APP_DATA.quarantineRestore(id,result.raw);flash('Datos reparados y restaurados.',{tone:'success'});await renderDataIntegrity();renderAll();}
+  catch(error){flash(error.message||'No se pudo restaurar la copia.',{tone:'error'});}
+}
+async function handleQuarantineAction(button){
+  const id=button.dataset.quarantineId,action=button.dataset.quarantineAction;if(!id||!action)return;
+  if(action==='repair'){await repairQuarantineEntry(id);return;}
+  if(action==='export'){const item=await window.APP_DATA.quarantineGet(id,{includeRaw:true});if(item)downloadQuarantinePayload({schemaVersion:1,exportedAt:new Date().toISOString(),entries:[item]},`protocolo-cuarentena-${item.domain}.json`);return;}
+  if(action==='delete'){
+    const accepted=await window.APP_CONFIRMATION.ask({title:'Eliminar copia en cuarentena',message:'Se eliminará esta copia local que no pudo interpretarse. Exportala antes si querés conservarla para revisión.',confirmLabel:'Eliminar copia',danger:true});if(!accepted)return;
+    await window.APP_DATA.quarantineDelete(id);flash('Copia en cuarentena eliminada.');await renderDataIntegrity();
+  }
+}
 function renderSettingsData(){
   applyUiPreferences();const meta=getLocalData(BACKUP_META_KEY,{});
   const last=document.getElementById('lastBackupAt');if(last)last.textContent=meta.lastExportAt?new Intl.DateTimeFormat('es-PY',{dateStyle:'short',timeStyle:'short'}).format(new Date(meta.lastExportAt)):'Nunca';
@@ -1036,10 +1063,11 @@ function renderSettingsData(){
   if(indexedStatus&&window.APP_DATA){
     indexedStatus.textContent='Preparando';
     window.APP_DATA.ready().then(()=>window.APP_DATA.diagnostics()).then(diagnostics=>{
-      const domains=Object.values(diagnostics.domains||{}),complete=domains.filter(item=>item.status==='complete').length;
-      indexedStatus.textContent=!diagnostics.indexedDB?'No disponible':complete===domains.length?'Lista':`${complete}/${domains.length} áreas`;
+      const domains=Object.values(diagnostics.domains||{}),complete=domains.filter(item=>item.status==='complete').length,review=domains.filter(item=>item.status==='review-needed').length;
+      indexedStatus.textContent=!diagnostics.indexedDB?'No disponible':review?`${review} por revisar`:complete===domains.length?'Lista':`${complete}/${domains.length} áreas`;
       const description=document.getElementById('dataLayerDescription');
       if(description&&diagnostics.lastError)description.textContent=diagnostics.lastError.type==='quota'?'No queda espacio suficiente para actualizar la copia interna. Los datos históricos permanecen en sus claves actuales.':'La copia interna tuvo un problema recuperable. Los datos históricos permanecen en sus claves actuales.';
+      else if(description&&diagnostics.schemaRegistry?.unknownLocalKeys?.length)description.textContent=`Hay ${diagnostics.schemaRegistry.unknownLocalKeys.length} clave(s) de una versión o extensión no reconocida. Se conservaron intactas y no se migraron.`;
     }).catch(()=>{indexedStatus.textContent='No disponible';});
   }
   const latestImport=window.BACKUP_SERVICE?.history?.()?.[0],undoPanel=document.getElementById('importUndoPanel');
@@ -1052,6 +1080,7 @@ function renderSettingsData(){
   const android=document.getElementById('aboutAndroidVersion');if(android)android.textContent=androidVersionLabel();
   const cache=document.getElementById('aboutCacheVersion');if(cache)cache.textContent=APP_CACHE_VERSION;
   const updated=document.getElementById('aboutUpdatedAt');if(updated)updated.textContent=window.APP_VERSION_INFO?.updatedAt||'desconocida';
+  renderDataIntegrity();
 }
 function resetKeysForScope(scope){
   const resetGroup={protocol:'protocol',gym:'workout',nutrition:'nutrition',ui:'settings'}[scope];
@@ -2786,6 +2815,10 @@ document.getElementById('cancelImportBtn')?.addEventListener('click',closeImport
 document.getElementById('closeImportPreviewBtn')?.addEventListener('click',closeImportPreview);
 document.getElementById('undoImportBtn')?.addEventListener('click',undoLastImport);
 document.getElementById('importPreviewBackdrop')?.addEventListener('click',event=>{if(event.target===event.currentTarget)closeImportPreview();});
+document.getElementById('dataIntegrityList')?.addEventListener('click',event=>{const button=event.target.closest('[data-quarantine-action]');if(button)handleQuarantineAction(button).catch(error=>flash(error.message||'No se pudo revisar la copia.',{tone:'error'}));});
+document.getElementById('exportQuarantineBtn')?.addEventListener('click',async()=>downloadQuarantinePayload(await window.APP_DATA.quarantineExport()));
+window.addEventListener('app-data-quarantined',()=>{renderDataIntegrity();flash('Se apartó una copia local que necesita revisión.',{tone:'warning'});});
+window.addEventListener('app-data-quarantine-change',renderDataIntegrity);
 document.getElementById('openDrawerBtn').addEventListener('click', openDrawer);
 document.getElementById('openGymPartyTopBtn').addEventListener('click', ()=>setModule('gym-party'));
 document.getElementById('routeBackBtn').addEventListener('click',()=>window.APP_ROUTER?.back());

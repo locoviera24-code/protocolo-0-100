@@ -23,6 +23,8 @@ assert.throws(()=>service.prepareText(''),'vacio');
 assert.throws(()=>service.prepareText('{no-json'),'JSON valido');
 assert.throws(()=>service.prepareText(JSON.stringify({schemaVersion:99,entries:[]})),'posterior');
 assert.throws(()=>service.prepareText(JSON.stringify({hello:'world'})),'compatible');
+assert.throws(()=>service.prepareText(JSON.stringify({schemaVersion:3,entries:{date:'2026-07-12'}})),'estructura compatible');
+assert.throws(()=>service.prepareText(JSON.stringify({schemaVersion:3,entries:[],equipmentProfiles:[null]})),'estructura compatible');
 
 const legacy=service.prepareText(JSON.stringify({entries:[{date:'2026-07-12',note:'<img src=x onerror=alert(1)>\u0000'}],unknownField:'ignored',__protoField:'safe'}));
 assert.equal(legacy.schemaVersion,1);

@@ -2505,3 +2505,61 @@ Estado preparado: version `2.7.0`, Android `33`, build/cache `76`
 validacion estructurada y cuarentena antes de promover Nutricion desde
 IndexedDB `shadow` a lectura primaria. No iniciar a la vez la promocion de
 Workout.
+
+## 59. Integridad estructurada y cuarentena recuperable
+
+Bloque iniciado despues de `4ad50bc` y preparado como build 77:
+
+- `APP_SCHEMA_REGISTRY.validate()` devuelve `missing`, `valid`, `legacy`,
+  `corrupt` o `unsupported`. Los registros con version propia declaran
+  `versionField`; `protocolo_0_100_state_v2` acepta schema 2 como legacy,
+  trabaja con schema 3 y rechaza versiones futuras.
+- Los validadores de sesiones, biblioteca, perfiles de equipo, alimentos,
+  recetas, comidas guardadas y datos compartidos exigen listas de objetos. Los
+  borradores validan su contenedor versionado y la fecha inicial exige formato
+  ISO. Las escrituras y `replaceMany` validan antes de tocar localStorage.
+- `data/indexeddb.js` sube su base interna a version 2 y crea el store
+  `quarantine`. `readResult`/`readIndexedResult` exponen el estado real. La API
+  compatible `read` conserva el fallback para las vistas actuales, pero una
+  corrupcion ya no es silenciosa: primero se copia el raw a cuarentena, luego
+  se retira de la clave activa y se emite un estado visible.
+- La cuarentena guarda clave, dominio, error, schema, fechas y ocurrencias. No
+  guarda credenciales: claves marcadas sensibles se redactan; un JSON ilegible
+  con redaccion Firebase tampoco conserva raw. Incluye APIs para listar,
+  exportar, reparar/restaurar y eliminar.
+- **Mas > Datos y copias** muestra solo cuando hace falta la tarjeta **Datos que
+  necesitan revision**. Permite exportar una o todas las copias, editar el JSON
+  en un dialogo accesible con validacion inline, restaurar solo contenido valido
+  o eliminar la copia con confirmacion.
+- La migracion shadow sube su contrato interno a version 2, omite claves
+  corruptas y marca el dominio `review-needed`; nunca copia corrupcion hacia la
+  futura fuente primaria. Claves desconocidas se conservan intactas y aparecen
+  en diagnosticos.
+- `data/backup-service.js` valida cada area mediante el registro antes de mostrar
+  preview o aplicar. Un array mal formado o un perfil de equipo incompatible se
+  rechaza sin crear una escritura parcial.
+- Se corrigio `ui/form-dialog.js`: un campo multilinea ya no intenta asignar la
+  propiedad de solo lectura `type` de `HTMLTextAreaElement`.
+
+Pruebas del bloque:
+
+- `test:data`, Nutricion, Workout Features, Gym Party, modulos y validacion
+  estatica: correctos;
+- E2E de cuarentena y redaccion: 6/6 aprobadas en Android Chromium, iPhone
+  WebKit y escritorio Chromium. Cubre copia del raw, retiro seguro de la clave,
+  UI, reparacion/restauracion y exclusion de un secreto FDC ilegible;
+- regresion E2E de preview, importacion, rollback y reset selectivo: 9/9
+  aprobadas en los tres motores;
+- el primer intento de reparacion encontro el defecto real del textarea; tras
+  corregir el componente, la matriz completa aprobo.
+
+Estado preparado: version `2.7.0`, Android `33`, build/cache `77`
+(`protocolo-0-100-pwa-2.7.0-b77`). El artifact contiene 65 recursos con hash y
+su prueba servida paso sin 404, errores de pagina ni consola. La validacion de
+assets confirmo 450 IDs unicos y paridad web/Android. Gradle 8.10.2 con Java 17
+completo `clean assembleDebug`; el APK mide 1.599.154 bytes y su SHA-256 es
+`2C0531B0CAE055C2D304B1A511902A28921EA92964C906F48BE0E5C4E5B07BA3`.
+
+Siguiente fase exacta: promocion controlada de **NutritionRepository** desde
+shadow a lectura primaria con feature flag, comparacion, divergencia visible y
+rollback; no promover Workout en el mismo commit.

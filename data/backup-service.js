@@ -45,6 +45,11 @@
     if(!value||typeof value!=='object')return value;
     const output={...value};delete output.firebaseConfig;return output;
   }
+  function validateForImport(record,value,field){
+    const result=registry.validate(record.key,value);
+    if(!['valid','legacy'].includes(result.status))throw new Error(`El área ${field} no tiene una estructura compatible (${result.error||result.status}).`);
+    return result.value;
+  }
   function buildChanges(data){
     const changes={},usedFields=new Set(),rawKeys=[];
     Object.entries(FIELD_MAP).forEach(([field,key])=>{
@@ -54,16 +59,16 @@
       const record=registry.get(key);if(!record||record.sensitive||!record.backup)return;
       let value=sanitizeForRecord(record,data[field]);
       if(record===registry.getByName('protocol','startDate')&&!(typeof value==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(value)))return;
-      changes[key]=value;
+      changes[key]=validateForImport(record,value,field);
       if(record.serialization==='raw')rawKeys.push(key);
     });
     const settings=data.settings&&typeof data.settings==='object'?data.settings:null;
     if(settings){
       if(typeof settings.activeModule==='string'){
-        changes[ACTIVE_MODULE_KEY]=cleanString(settings.activeModule).slice(0,40);rawKeys.push(ACTIVE_MODULE_KEY);
+        const value=cleanString(settings.activeModule).slice(0,40);changes[ACTIVE_MODULE_KEY]=validateForImport(registry.get(ACTIVE_MODULE_KEY),value,'settings.activeModule');rawKeys.push(ACTIVE_MODULE_KEY);
       }
-      if(settings.nutritionProfile)changes[registry.getByName('nutrition','profile').key]=settings.nutritionProfile;
-      if(settings.ranking)changes[registry.getByName('laboratory','rankingSettings').key]=settings.ranking;
+      if(settings.nutritionProfile){const record=registry.getByName('nutrition','profile');changes[record.key]=validateForImport(record,settings.nutritionProfile,'settings.nutritionProfile');}
+      if(settings.ranking){const record=registry.getByName('laboratory','rankingSettings');changes[record.key]=validateForImport(record,settings.ranking,'settings.ranking');}
       usedFields.add('settings');
     }
     const ignored=Object.keys(data).filter(field=>!usedFields.has(field)&&!META_FIELDS.has(field));

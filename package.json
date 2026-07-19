@@ -16,7 +16,7 @@
     "test:progress": "node scripts/test-progress-view.mjs && node scripts/test-muscle-progress.mjs && node scripts/test-exercise-progress.mjs",
     "test:version": "node scripts/sync-app-version.mjs --check && node scripts/test-version-alignment.mjs",
     "test:settings": "node scripts/test-settings-contract.mjs",
-    "test:data": "node scripts/test-schema-registry.mjs && node scripts/test-data-layer.mjs && node scripts/test-backup-service.mjs",
+    "test:data": "node scripts/test-schema-registry.mjs && node scripts/test-data-integrity.mjs && node scripts/test-data-layer.mjs && node scripts/test-backup-service.mjs",
     "test:nutrition": "node scripts/test-numbers.mjs && node scripts/test-nutrition-modules.mjs",
     "test:fdc": "node scripts/test-fdc-confidence.mjs",
     "test:e2e": "playwright test"

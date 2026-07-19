@@ -6,7 +6,7 @@
   function inputFor(field){
     const input=field.options?document.createElement('select'):document.createElement(field.multiline?'textarea':'input');
     input.id=`appFormField-${field.name}`;input.name=field.name;
-    if(!field.options){input.type=field.type||'text';if(field.inputmode)input.inputMode=field.inputmode;if(field.placeholder)input.placeholder=field.placeholder;if(field.min!==undefined)input.min=field.min;if(field.max!==undefined)input.max=field.max;if(field.step!==undefined)input.step=field.step;}
+    if(!field.options){if(!field.multiline)input.type=field.type||'text';if(field.inputmode)input.inputMode=field.inputmode;if(field.placeholder)input.placeholder=field.placeholder;if(field.min!==undefined)input.min=field.min;if(field.max!==undefined)input.max=field.max;if(field.step!==undefined)input.step=field.step;}
     else field.options.forEach(option=>{const node=document.createElement('option'),item=typeof option==='object'?option:{value:option,label:option};node.value=String(item.value);node.textContent=String(item.label);input.append(node);});
     input.value=String(field.value??'');input.required=!!field.required;return input;
   }

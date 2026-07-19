@@ -4,10 +4,11 @@
   const registry=global.APP_SCHEMA_REGISTRY;
   if(!registry)throw new Error('APP_SCHEMA_REGISTRY debe cargar antes de IndexedDB.');
   const DB_NAME='protocolo_0_100_data';
-  const DB_VERSION=1;
+  const DB_VERSION=2;
   const RECORDS_STORE='records';
   const META_STORE='meta';
   const RECOVERY_STORE='recovery';
+  const QUARANTINE_STORE='quarantine';
   const CONFIG_KEY=registry.getByName('diagnostics','dataLayerConfig').key;
   const CHANNEL_NAME='protocolo_0_100_data_changes_v1';
   const MAX_RECOVERY_SNAPSHOTS=5;
@@ -22,6 +23,7 @@
   let databasePromise=null;
   let initializationPromise=null;
   let mirrorQueue=Promise.resolve();
+  let quarantineQueue=Promise.resolve();
   let channel=null;
   let lastError=null;
 
@@ -81,6 +83,11 @@
           const store=database.createObjectStore(RECOVERY_STORE,{keyPath:'id'});
           store.createIndex('createdAt','createdAt');
         }
+        if(!database.objectStoreNames.contains(QUARANTINE_STORE)){
+          const store=database.createObjectStore(QUARANTINE_STORE,{keyPath:'id'});
+          store.createIndex('createdAt','createdAt');
+          store.createIndex('key','key');
+        }
       };
       request.onsuccess=()=>{
         const database=request.result;
@@ -105,6 +112,39 @@
     lastError={type:classifyError(error),operation,key,message:String(error?.message||error||'Error de almacenamiento'),at:new Date().toISOString()};
     emit('app-data-error',{...lastError,userMessage:lastError.type==='quota'?'No queda espacio local suficiente. Exporta una copia antes de liberar almacenamiento.':'No se pudo completar una operacion local. Tus datos existentes no se borraron.'});
   }
+  function hashRaw(value){
+    let hash=2166136261;for(let index=0;index<String(value).length;index++){hash^=String(value).charCodeAt(index);hash=Math.imul(hash,16777619);}return(hash>>>0).toString(16).padStart(8,'0');
+  }
+  function rawForQuarantine(record,raw){
+    if(record.sensitive)return null;
+    if(record.redaction!=='firebase-config')return raw;
+    try{const value=JSON.parse(raw);if(value&&typeof value==='object'&&!Array.isArray(value))delete value.firebaseConfig;return JSON.stringify(value);}
+    catch(error){return null;}
+  }
+  function inspectRaw(key,raw){
+    const record=registry.get(key);
+    if(!record)return{status:'unsupported',key,raw,error:'unregistered-key'};
+    if(raw===null||raw===undefined)return{status:'missing',key,record,raw:null};
+    let value;
+    try{value=record.serialization==='raw'?String(raw):JSON.parse(raw);}
+    catch(error){return{status:'corrupt',key,record,raw:String(raw),error:'invalid-json'};}
+    return{...registry.validate(key,value),raw:String(raw)};
+  }
+  async function captureQuarantine(result){
+    if(!global.indexedDB||!result?.record||!['corrupt','unsupported'].includes(result.status))return null;
+    const safeRaw=rawForQuarantine(result.record,result.raw),fingerprint=hashRaw(`${result.key}:${result.raw}`),id=`quarantine_${fingerprint}`;
+    const database=await openDatabase(),transaction=database.transaction([QUARANTINE_STORE,RECORDS_STORE],'readwrite'),done=transactionDone(transaction),store=transaction.objectStore(QUARANTINE_STORE),existing=await requestResult(store.get(id)),now=new Date().toISOString();
+    const entry={id,key:result.key,name:result.record.name,domain:result.record.domain,status:result.status,error:result.error||'schema-validation',schemaVersion:result.record.schemaVersion,storedVersion:result.storedVersion||null,createdAt:existing?.createdAt||now,lastSeenAt:now,occurrences:Number(existing?.occurrences||0)+1,raw:safeRaw,redacted:safeRaw===null};
+    store.put(entry);transaction.objectStore(RECORDS_STORE).delete(result.key);await done;
+    if(localStorage.getItem(result.key)===result.raw)localStorage.removeItem(result.key);
+    notifyChange(result.key,'quarantine');
+    emit('app-data-quarantined',{id,key:entry.key,domain:entry.domain,status:entry.status,error:entry.error,redacted:entry.redacted});
+    return entry;
+  }
+  function scheduleQuarantine(result){
+    quarantineQueue=quarantineQueue.then(()=>captureQuarantine(result)).catch(error=>reportError(error,'quarantine',result?.key||''));
+    return quarantineQueue;
+  }
   function notifyChange(key,source='local'){
     const detail={key,domain:domainForKey(key),source,at:new Date().toISOString()};
     emit('app-data-change',detail);
@@ -112,12 +152,15 @@
       try{channel?.postMessage(detail);}catch(error){/* Storage event remains as fallback. */}
     }
   }
-  function read(key,fallback){
+  function readResult(key,{quarantine=true}={}){
     recordForKey(key);
-    try{
-      const raw=localStorage.getItem(key);
-      return raw===null?clone(fallback):(JSON.parse(raw)??clone(fallback));
-    }catch(error){return clone(fallback);}
+    const result=inspectRaw(key,localStorage.getItem(key));
+    if(quarantine&&['corrupt','unsupported'].includes(result.status))scheduleQuarantine(result);
+    return result;
+  }
+  function read(key,fallback){
+    const result=readResult(key);
+    return ['valid','legacy'].includes(result.status)?clone(result.value):clone(fallback);
   }
   function enqueueMirror(task,operation,key){
     mirrorQueue=mirrorQueue.then(task).catch(error=>{reportError(error,operation,key);});
@@ -136,7 +179,8 @@
     await transactionDone(transaction);
   }
   function writeRaw(key,raw,{notify=true,mirror=true}={}){
-    recordForKey(key);
+    const result=inspectRaw(key,String(raw));
+    if(!['valid','legacy'].includes(result.status))throw new Error(`Datos invalidos para ${key}: ${result.error||result.status}`);
     try{localStorage.setItem(key,String(raw));}
     catch(error){reportError(error,'local-write',key);throw error;}
     if(notify)notifyChange(key);
@@ -144,8 +188,8 @@
     return raw;
   }
   function write(key,value,options){
-    let raw;
-    try{raw=JSON.stringify(value);}
+    const record=recordForKey(key);let raw;
+    try{raw=record.serialization==='raw'?String(value):JSON.stringify(value);}
     catch(error){reportError(error,'serialize',key);throw error;}
     writeRaw(key,raw,options);
     return value;
@@ -157,7 +201,7 @@
     if(notify)notifyChange(key);
     if(mirror&&shouldMirror(key))enqueueMirror(()=>deleteRecord(key),'mirror-remove',key);
   }
-  async function readIndexed(key,fallback){
+  async function readIndexedResult(key,{quarantine=true}={}){
     recordForKey(key);
     try{
       const database=await openDatabase();
@@ -165,9 +209,15 @@
       const done=transactionDone(transaction);
       const record=await requestResult(transaction.objectStore(RECORDS_STORE).get(key));
       await done;
-      if(!record)return clone(fallback);
-      return JSON.parse(record.raw)??clone(fallback);
-    }catch(error){reportError(error,'indexed-read',key);return clone(fallback);}
+      if(!record)return{status:'missing',key,record:recordForKey(key),raw:null};
+      const result=inspectRaw(key,record.raw);
+      if(quarantine&&['corrupt','unsupported'].includes(result.status))scheduleQuarantine(result);
+      return result;
+    }catch(error){reportError(error,'indexed-read',key);return{status:'corrupt',key,record:recordForKey(key),error:'indexed-read',raw:null};}
+  }
+  async function readIndexed(key,fallback){
+    const result=await readIndexedResult(key);
+    return ['valid','legacy'].includes(result.status)?clone(result.value):clone(fallback);
   }
   async function getMeta(id){
     const database=await openDatabase();
@@ -208,21 +258,23 @@
     if(!keys)throw new Error(`Dominio de datos desconocido: ${domain}`);
     const currentConfig=config();
     if(!currentConfig.enabled||currentConfig.domains[domain]===false)return {domain,status:'disabled'};
-    const targetVersion=1,metaId=`domain:${domain}`,previous=await getMeta(metaId);
+    const targetVersion=2,metaId=`domain:${domain}`,previous=await getMeta(metaId);
     if(previous?.status==='complete'&&Number(previous.version)>=targetVersion)return previous;
     const snapshot=await createRecoverySnapshot(keys,`migration:${domain}:v${targetVersion}`);
     try{
       const database=await openDatabase();
       const transaction=database.transaction([RECORDS_STORE,META_STORE],'readwrite');
       const records=transaction.objectStore(RECORDS_STORE);
-      let keyCount=0;
+      let keyCount=0;const invalidKeys=[];
       keys.forEach(key=>{
         const raw=localStorage.getItem(key);
         if(raw===null)return;
+        const result=inspectRaw(key,raw);
+        if(!['valid','legacy'].includes(result.status)){invalidKeys.push(key);scheduleQuarantine(result);return;}
         records.put({key,domain,raw:sanitizeRawForMirror(key,raw),updatedAt:new Date().toISOString()});
         keyCount+=1;
       });
-      const result={id:metaId,domain,version:targetVersion,status:'complete',mode:'shadow',keyCount,snapshotId:snapshot.id,completedAt:new Date().toISOString()};
+      const result={id:metaId,domain,version:targetVersion,status:invalidKeys.length?'review-needed':'complete',mode:'shadow',keyCount,invalidKeys,snapshotId:snapshot.id,completedAt:new Date().toISOString()};
       transaction.objectStore(META_STORE).put(result);
       await transactionDone(transaction);
       emit('app-data-migrated',result);
@@ -254,15 +306,16 @@
     }));
     return initializationPromise;
   }
-  async function flush(){await mirrorQueue;}
+  async function flush(){await mirrorQueue;await quarantineQueue;}
   async function replaceMany(changes,{reason='transaction',rawKeys=[]}={}){
     const entries=Object.entries(changes||{});
     const keys=entries.map(([key])=>key);
     keys.forEach(recordForKey);
+    const rawSet=new Set(rawKeys);
+    const rawEntries=entries.map(([key,value])=>[key,value===undefined?null:rawSet.has(key)?String(value):recordForKey(key).serialization==='raw'?String(value):JSON.stringify(value)]);
+    rawEntries.forEach(([key,raw])=>{if(raw===null)return;const result=inspectRaw(key,raw);if(!['valid','legacy'].includes(result.status))throw new Error(`Datos invalidos para ${key}: ${result.error||result.status}`);});
     const snapshot=await createRecoverySnapshot(keys,reason);
     try{
-      const rawSet=new Set(rawKeys);
-      const rawEntries=entries.map(([key,value])=>[key,value===undefined?null:rawSet.has(key)?String(value):JSON.stringify(value)]);
       rawEntries.forEach(([key,raw])=>{
         if(raw===null)localStorage.removeItem(key);
         else localStorage.setItem(key,raw);
@@ -317,12 +370,13 @@
   }
   async function purgeKeys(keys){
     const selected=[...new Set((keys||[]).filter(Boolean))];
+    selected.forEach(key=>{if(registry.get(key))return;throw new Error(`Clave persistida no registrada: ${key}`);});
     selected.forEach(key=>localStorage.removeItem(key));
     if(global.indexedDB&&selected.length){
       const database=await openDatabase();
-      const transaction=database.transaction([RECORDS_STORE,RECOVERY_STORE],'readwrite');
+      const transaction=database.transaction([RECORDS_STORE,RECOVERY_STORE,QUARANTINE_STORE],'readwrite');
       const done=transactionDone(transaction);
-      const records=transaction.objectStore(RECORDS_STORE),recovery=transaction.objectStore(RECOVERY_STORE);
+      const records=transaction.objectStore(RECORDS_STORE),recovery=transaction.objectStore(RECOVERY_STORE),quarantine=transaction.objectStore(QUARANTINE_STORE);
       selected.forEach(key=>records.delete(key));
       const snapshots=await requestResult(recovery.getAll());
       snapshots.forEach(snapshot=>{
@@ -331,6 +385,8 @@
         if(snapshot.keys.length)recovery.put(snapshot);
         else recovery.delete(snapshot.id);
       });
+      const quarantined=await requestResult(quarantine.getAll());
+      quarantined.filter(entry=>selected.includes(entry.key)).forEach(entry=>quarantine.delete(entry.id));
       await done;
     }
     selected.forEach(key=>notifyChange(key));
@@ -345,10 +401,11 @@
     localKeys.forEach(key=>localStorage.removeItem(key));
     if(global.indexedDB){
       const database=await openDatabase();
-      const transaction=database.transaction([RECORDS_STORE,META_STORE,RECOVERY_STORE],'readwrite');
+      const transaction=database.transaction([RECORDS_STORE,META_STORE,RECOVERY_STORE,QUARANTINE_STORE],'readwrite');
       transaction.objectStore(RECORDS_STORE).clear();
       transaction.objectStore(META_STORE).clear();
       transaction.objectStore(RECOVERY_STORE).clear();
+      transaction.objectStore(QUARANTINE_STORE).clear();
       await transactionDone(transaction);
     }
     localKeys.forEach(key=>notifyChange(key));
@@ -360,8 +417,9 @@
       const key=localStorage.key(index);
       if(key?.startsWith('protocolo_0_100_')&&!registry.get(key))unknownLocalKeys.push(key);
     }
-    const output={database:DB_NAME,version:DB_VERSION,mode:config().mode,enabled:config().enabled,indexedDB:!!global.indexedDB,lastError:lastError?{...lastError}:null,schemaRegistry:{version:registry.REGISTRY_VERSION,registeredKeys:registry.all().length,unknownLocalKeys},domains:{}};
+    const output={database:DB_NAME,version:DB_VERSION,mode:config().mode,enabled:config().enabled,indexedDB:!!global.indexedDB,lastError:lastError?{...lastError}:null,schemaRegistry:{version:registry.REGISTRY_VERSION,registeredKeys:registry.all().length,unknownLocalKeys},quarantine:{count:0},domains:{}};
     if(!global.indexedDB)return output;
+    try{output.quarantine.count=(await quarantineList()).length;}catch(error){output.quarantine={count:0,status:'unavailable'};}
     for(const domain of Object.keys(DOMAIN_KEYS)){
       try{const meta=await getMeta(`domain:${domain}`);output.domains[domain]=meta?{status:meta.status,version:meta.version,keyCount:meta.keyCount,completedAt:meta.completedAt}:{status:'pending'};}
       catch(error){output.domains[domain]={status:'unavailable'};}
@@ -371,6 +429,25 @@
     }
     return output;
   }
+  async function quarantineList({includeRaw=false}={}){
+    if(!global.indexedDB)return[];
+    const database=await openDatabase(),transaction=database.transaction(QUARANTINE_STORE,'readonly'),done=transactionDone(transaction),items=await requestResult(transaction.objectStore(QUARANTINE_STORE).getAll());await done;
+    return items.sort((a,b)=>String(b.lastSeenAt).localeCompare(String(a.lastSeenAt))).map(item=>includeRaw?{...item}:{...item,raw:undefined});
+  }
+  async function quarantineGet(id,{includeRaw=false}={}){
+    const database=await openDatabase(),transaction=database.transaction(QUARANTINE_STORE,'readonly'),done=transactionDone(transaction),item=await requestResult(transaction.objectStore(QUARANTINE_STORE).get(id));await done;
+    return item?(includeRaw?{...item}:{...item,raw:undefined}):null;
+  }
+  async function quarantineDelete(id){
+    const database=await openDatabase(),transaction=database.transaction(QUARANTINE_STORE,'readwrite');transaction.objectStore(QUARANTINE_STORE).delete(id);await transactionDone(transaction);emit('app-data-quarantine-change',{id,action:'deleted'});return true;
+  }
+  async function quarantineRestore(id,repairedRaw){
+    const item=await quarantineGet(id,{includeRaw:true});if(!item)throw new Error('El registro en cuarentena ya no existe.');
+    const raw=repairedRaw===undefined?item.raw:String(repairedRaw);if(raw===null)throw new Error('Este registro fue redactado por seguridad y no puede restaurarse.');
+    const result=inspectRaw(item.key,raw);if(!['valid','legacy'].includes(result.status))throw new Error(`Los datos aun no son validos: ${result.error||result.status}`);
+    const snapshot=await createRecoverySnapshot([item.key],`quarantine-restore:${id}`);writeRaw(item.key,raw);await flush();await quarantineDelete(id);emit('app-data-quarantine-change',{id,key:item.key,action:'restored'});return{ok:true,key:item.key,snapshotId:snapshot.id,status:result.status};
+  }
+  async function quarantineExport(){return{schemaVersion:1,exportedAt:new Date().toISOString(),entries:await quarantineList({includeRaw:true})};}
   function setupCrossTabChannel(){
     if(typeof global.BroadcastChannel==='function'){
       try{
@@ -385,8 +462,9 @@
 
   global.APP_DATA=Object.freeze({
     DB_NAME,DB_VERSION,CONFIG_KEY,DOMAIN_KEYS,domainForKey,config,read,write,writeRaw,remove,
-    readIndexed,migrateDomain,migrateAll,initialize,ready:initialize,flush,replaceMany,
-    createRecoverySnapshot,restoreRecovery,purgeKeys,clearAllData,diagnostics
+    readResult,readIndexed,readIndexedResult,inspectRaw,migrateDomain,migrateAll,initialize,ready:initialize,flush,replaceMany,
+    createRecoverySnapshot,restoreRecovery,purgeKeys,clearAllData,diagnostics,
+    quarantineList,quarantineGet,quarantineDelete,quarantineRestore,quarantineExport
   });
   setupCrossTabChannel();
   initialize();
