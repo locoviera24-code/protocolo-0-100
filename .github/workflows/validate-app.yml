@@ -67,6 +67,9 @@ jobs:
       - name: Probar motor de progresion
         run: node ./scripts/test-progression-engine.mjs
 
+      - name: Probar deteccion de anomalias Gym
+        run: node ./scripts/test-workout-anomalies.mjs
+
       - name: Probar Gym Party
         run: node ./scripts/test-gym-party.mjs
 

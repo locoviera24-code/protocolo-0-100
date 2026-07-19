@@ -15,7 +15,7 @@ PWA y APK Android para medir habitos, atencion, actividad fisica y nutricion con
 
 ## Navegacion y diseno
 
-La version actual `v2.7.0` (build web `72`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
+La version actual `v2.7.0` (build web `73`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
 **Gym**, **Nutricion**, **Progreso** y **Mas**. En escritorio usa una barra
 lateral compacta. Gym Party se abre desde **Gym > Grupo**, desde un acceso
 discreto en Inicio o mediante un enlace `gymPartyCode`; ya no ocupa un boton
@@ -121,6 +121,7 @@ progress/muscle-taxonomy.js  IDs anatomicos estables y compatibilidad legacy
 progress/muscle-progress.js Series, volumen y frecuencia por musculo
 progress/exercise-progress.js Fuerza, historial y sugerencia por ejercicio
 progress/personal-records.js Records derivados de sesiones canonicas
+gym/anomaly-detector.js     Revision conservadora de registros inusuales
 gym/progression-engine.js   Prescripciones y sugerencias conservadoras comparables
 workout-store.js            Acceso conservador y versionado al repositorio Gym
 workout-plan.js             Normalizacion, deduplicacion e insercion en rutinas
@@ -236,6 +237,16 @@ marcado para revision no provocan una sugerencia de subir carga. La vista de
 Progreso explica las sesiones y objetivos usados, el nivel de confianza y el
 incremento orientativo. Las recomendaciones son conservadoras y no sustituyen
 criterio tecnico ni profesional.
+
+Antes de aceptar como record un salto ampliamente superior al historial, la
+app muestra una revision interna. Se puede confirmar y contar, conservar sin
+record, conservar fuera de record y progresion, o volver a editar. Se revisan
+posibles confusiones kg/lb, reps o volumen extremos, cambios entre carga total
+y carga por mano/lado, y cambios entre lastre y asistencia. Ningun valor se
+borra automaticamente. **Progreso > Gym > Records** mantiene una lista plegada
+de los registros revisados. Una mutacion sospechosa recibida desde el widget se
+guarda como pendiente y queda temporalmente excluida hasta confirmarla en la
+app.
 
 La vista principal se mantiene deliberadamente limpia: foco en registrar el
 entrenamiento y revisar el resumen semanal. El codigo para invitar, sincronizar,
@@ -462,6 +473,7 @@ node ./scripts/test-service-worker.mjs
 node ./scripts/test-workout-features.mjs
 node ./scripts/test-workout-metrics.mjs
 node ./scripts/test-progression-engine.mjs
+node ./scripts/test-workout-anomalies.mjs
 node ./scripts/test-gym-party.mjs
 node ./scripts/test-gym-party-sync.mjs
 node ./scripts/test-module-boundaries.mjs

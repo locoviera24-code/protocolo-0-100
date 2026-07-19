@@ -2143,7 +2143,7 @@
     renderGymParty();
     flashMessage(result.message || 'Ejercicio agregado. Ya podes registrar la serie.');
   }
-  function savePartyWorkoutSet(){
+  async function savePartyWorkoutSet(){
     const api = workoutApi();
     if(!api?.saveQuickSetPayload){ flashMessage('Registro de gym no disponible todavia.'); return; }
     const editingSetId = settings().partyEditingSetId || '';
@@ -2167,9 +2167,15 @@
       note: document.getElementById('partyQuickNote')?.value
     };
     const savedDraftId=partyPersistentSetDraftId(selectedWorkoutDate(),partyWorkoutSelectedExerciseId(),editingSetId);
-    const result = editingSetId && api.updateQuickSetPayload
-      ? api.updateQuickSetPayload({...payload, setId: editingSetId})
-      : api.saveQuickSetPayload(payload);
+    const persist=nextPayload=>editingSetId&&api.updateQuickSetPayload
+      ?api.updateQuickSetPayload({...nextPayload,setId:editingSetId})
+      :api.saveQuickSetPayload(nextPayload);
+    let result=persist(payload);
+    if(result.reason==='confirmation-required'){
+      const decision=await api.reviewAnomalousSetResult?.(result);
+      if(!decision){document.getElementById(result.analysis?.issues?.some(item=>item.code==='reps-improbable')?'partyQuickReps':'partyQuickWeight')?.focus();return;}
+      result=persist({...payload,anomalyDecision:decision});
+    }
     if(!result.ok){ flashMessage(result.message || 'No se pudo guardar la serie.'); return; }
     window.APP_DRAFTS?.remove?.(savedDraftId);
     const nextExerciseId=result.state?.currentExerciseId||result.exercise?.id||partyWorkoutSelectedExerciseId();

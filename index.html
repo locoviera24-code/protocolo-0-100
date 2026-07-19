@@ -581,6 +581,7 @@
               </section>
               <section class="hidden" data-progress-gym-panel="records" aria-labelledby="progressRecordsTitle">
                 <div class="moduleCard"><h2 id="progressRecordsTitle">Récords personales</h2><p class="muted small">Derivados de las sesiones guardadas; sincronizar otra vez la misma sesión no crea un récord duplicado.</p><div class="entryList" id="progressRecordsList"></div></div>
+                <details class="moduleCard advancedDetails"><summary>Registros inusuales revisados</summary><p class="muted small">Se conservan en el historial. La decisión guardada determina si cuentan para récords y recomendaciones.</p><div class="entryList" id="progressSuspiciousList"></div></details>
               </section>
             </section>
 
@@ -807,7 +808,7 @@
   </div>
 
   <div class="modalBackdrop hidden" id="appConfirmationBackdrop" role="alertdialog" aria-modal="true" aria-labelledby="appConfirmationTitle" aria-describedby="appConfirmationMessage" aria-hidden="true">
-    <div class="actionModal confirmationDialog"><div class="modalHd"><div><span class="pill">Confirmacion</span><h2 id="appConfirmationTitle">Confirmar accion</h2></div><button type="button" class="closeBtn" id="appConfirmationClose" aria-label="Cerrar confirmacion">&times;</button></div><div class="modalBd"><p id="appConfirmationMessage"></p><div class="buttons"><button type="button" class="secondary" id="appConfirmationCancel">Cancelar</button><button type="button" class="good" id="appConfirmationConfirm">Continuar</button></div></div></div>
+    <div class="actionModal confirmationDialog"><div class="modalHd"><div><span class="pill">Confirmacion</span><h2 id="appConfirmationTitle">Confirmar accion</h2></div><button type="button" class="closeBtn" id="appConfirmationClose" aria-label="Cerrar confirmacion">&times;</button></div><div class="modalBd"><p id="appConfirmationMessage"></p><div class="confirmationChoices hidden" id="appConfirmationChoices"></div><div class="buttons"><button type="button" class="secondary" id="appConfirmationCancel">Cancelar</button><button type="button" class="good" id="appConfirmationConfirm">Continuar</button></div></div></div>
   </div>
 
   <div class="modalBackdrop hidden" id="appFormDialogBackdrop" role="dialog" aria-modal="true" aria-labelledby="appFormDialogTitle" aria-describedby="appFormDialogMessage" aria-hidden="true">
@@ -2963,6 +2964,7 @@ window.addEventListener('app-time-context-changed',()=>{
 <script src="gym/equipment.js"></script>
 <script src="gym/set-model.js"></script>
 <script src="workout-metrics.js"></script>
+<script src="gym/anomaly-detector.js"></script>
 <script src="gym/progression-engine.js"></script>
 <script src="workout-ranking.js"></script>
 <script src="workout-ui.js"></script>

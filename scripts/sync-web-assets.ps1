@@ -30,6 +30,7 @@ $relativeFiles = @(
     'workout-plan.js',
     'gym/equipment.js',
     'gym/set-model.js',
+    'gym/anomaly-detector.js',
     'gym/progression-engine.js',
     'workout-metrics.js',
     'workout-ranking.js',

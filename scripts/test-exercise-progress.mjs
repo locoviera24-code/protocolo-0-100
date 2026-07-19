@@ -13,6 +13,7 @@ assert.equal(model.exercises.length,3);assert.equal(press.all.bestWeight,60);ass
 assert.equal(press.all.sets,6);assert.equal(press.all.loggedSets,7);assert.equal(press.all.warmupSets,1);
 const painful=window.EXERCISE_PROGRESS.recommendation([{bestWeight:60,maxReps:8,rows:[{sets:[{note:'dolor de hombro'}]}]},{bestWeight:60,maxReps:8,rows:[]}]);assert.equal(painful.kind,'maintain');
 const records=window.PERSONAL_RECORDS.build(model);assert.equal(records.filter(item=>item.exerciseId==='press'&&item.type==='weight').length,1);assert.ok(records.some(item=>item.type==='reps-bodyweight'));assert.ok(!records.some(item=>item.type==='e1rm'&&item.exerciseId==='dominadas'));
+const reviewed=window.PERSONAL_RECORDS.reviewQueue([{id:'reviewed',date:'2026-07-12',exercises:[ex('press','Press banca',[{id:'review-set',setNumber:1,reps:8,weight:140,anomalyReview:{decision:'exclude-progression',status:'excluded',codes:['load-jump']}}])]}]);assert.equal(reviewed.length,1);assert.equal(reviewed[0].decision,'exclude-progression');
 const equipmentSessions=[
   {id:'bar',date:'2026-07-01',exercises:[ex('press','Press banca',[{reps:8,weight:30,loadMode:'perSide',barWeightKg:20,equipmentId:'barbell-20'}])]},
   {id:'smith',date:'2026-07-11',exercises:[ex('press','Press banca',Array.from({length:3},()=>({reps:8,weight:40,loadMode:'perSide',barWeightKg:0,equipmentId:'smith'})))]},

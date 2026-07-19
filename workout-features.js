@@ -311,6 +311,22 @@
       return false;
     }
   }
+  function protectNativeSession(rawSession){
+    const detector=window.WORKOUT_ANOMALY_DETECTOR;
+    if(!rawSession?.id||!detector?.analyze||!detector?.markPending)return rawSession;
+    const next=clone(rawSession),existingById=new Map(sessions().flatMap(session=>(session.exercises||[]).flatMap(exercise=>(exercise.sets||[]).map(set=>[String(set.id||''),{set,exercise}]))));
+    (next.exercises||[]).forEach(exercise=>{
+      exercise.sets=(exercise.sets||[]).map(set=>{
+        if(set.anomalyReview?.status)return set;
+        const existing=existingById.get(String(set.id||''));
+        if(existing&&detector.signature(existing.set,existing.exercise)===detector.signature(set,exercise))return set;
+        const analysis=detector.analyze({candidate:set,history:historicalSetsForExercise(exercise,set.id),exercise});
+        return analysis.suspicious?detector.markPending(set,analysis):set;
+      });
+    });
+    next.summary=sessionSummary(next);
+    return next;
+  }
   function importWidgetStateFromAndroid(state){
     if(!state || typeof state!=='object') return false;
     const nativeStamp=String(state.lastNativeMutationAt||'');
@@ -324,7 +340,7 @@
         saveHistory({...history(),...state.exerciseHistory});
       }
       if(state.workoutSession && state.workoutSession.id){
-        const session=state.workoutSession;
+        const session=protectNativeSession(state.workoutSession);
         const list=sessions();
         const index=list.findIndex(item=>item.id===session.id);
         if(index>=0) list[index]=session; else list.push(session);
@@ -783,7 +799,7 @@
   function quickSetRowsHtml(exercise){
     const sets=exercise?.sets||[];
     if(!sets.length) return '<div class="muted small">Todavía no hay series en este ejercicio.</div>';
-    return sets.map(raw=>{const set=normalizeSet(raw,exercise);return `<div class="quickLoggedSet ${set.id===editingQuickSetId?'editing':''}"><div><strong>Serie ${set.setNumber} · ${escapeHtml(setTypeLabel(set.setType))}</strong><span>${escapeHtml(setPerformanceText(set,exercise))}${set.rir!==null&&set.rir!==undefined?` · RIR ${set.rir}`:''}${set.equipmentName?` · ${escapeHtml(set.equipmentName)}`:''}</span></div><div class="buttons"><button type="button" class="secondary" data-quick-edit-set="${escapeHtml(set.id)}" aria-label="Editar serie ${set.setNumber} de ${escapeHtml(exercise.name)}">Editar</button><button type="button" class="danger" data-quick-delete-set="${escapeHtml(set.id)}" aria-label="Eliminar serie ${set.setNumber} de ${escapeHtml(exercise.name)}">Eliminar</button></div></div>`;}).join('');
+    return sets.map(raw=>{const set=normalizeSet(raw,exercise),review=set.anomalyReview?.decision?` · Revisado: ${window.WORKOUT_ANOMALY_DETECTOR?.label?.(set.anomalyReview.decision)||'dato inusual'}`:'';return `<div class="quickLoggedSet ${set.id===editingQuickSetId?'editing':''}"><div><strong>Serie ${set.setNumber} · ${escapeHtml(setTypeLabel(set.setType))}</strong><span>${escapeHtml(setPerformanceText(set,exercise))}${set.rir!==null&&set.rir!==undefined?` · RIR ${set.rir}`:''}${set.equipmentName?` · ${escapeHtml(set.equipmentName)}`:''}${escapeHtml(review)}</span></div><div class="buttons"><button type="button" class="secondary" data-quick-edit-set="${escapeHtml(set.id)}" aria-label="Editar serie ${set.setNumber} de ${escapeHtml(exercise.name)}">Editar</button><button type="button" class="danger" data-quick-delete-set="${escapeHtml(set.id)}" aria-label="Eliminar serie ${set.setNumber} de ${escapeHtml(exercise.name)}">Eliminar</button></div></div>`;}).join('');
   }
   function updateRestTimerDisplay(){
     const box=document.getElementById('quickRestTimer'),value=document.getElementById('quickRestTimerValue'); if(!box||!value)return;
@@ -1124,6 +1140,46 @@
     };
     return normalizeSet(base,exercise);
   }
+  function historicalSetsForExercise(exercise={},excludeSetId=''){
+    const canonicalId=String(exercise.exerciseId||exercise.id||'');
+    return sessions().flatMap(session=>(session.exercises||[])
+      .filter(item=>String(item.exerciseId||item.id||'')===canonicalId)
+      .flatMap(item=>(item.sets||[])
+        .filter(set=>String(set.id||'')!==String(excludeSetId||''))
+        .map(set=>({...set,date:session.date,sessionId:session.id}))));
+  }
+  function reviewSetCandidate(candidate,exercise,payload={},existing={}){
+    const detector=window.WORKOUT_ANOMALY_DETECTOR;
+    if(!detector?.analyze)return{ok:true,set:candidate,analysis:null};
+    const analysis=detector.analyze({candidate,history:historicalSetsForExercise(exercise,existing.id||payload.setId),exercise});
+    if(!analysis.suspicious){
+      const clean={...candidate};
+      if(clean.anomalyReview?.signature&&clean.anomalyReview.signature!==analysis.signature){
+        if(clean.anomalyReview.decision==='exclude-record'&&payload.excludeFromRecords===undefined)clean.excludeFromRecords=false;
+        if(['exclude-progression','pending'].includes(clean.anomalyReview.decision)&&payload.excludeFromProgression===undefined){clean.excludeFromRecords=false;clean.excludeFromProgression=false;}
+        delete clean.anomalyReview;
+      }
+      return{ok:true,set:clean,analysis};
+    }
+    const previousDecision=existing.anomalyReview?.signature===analysis.signature?existing.anomalyReview.decision:'';
+    const decision=payload.anomalyDecision||previousDecision;
+    if(!detector.DECISIONS.includes(decision))return{ok:false,reason:'confirmation-required',message:'Este dato supera ampliamente tu historial. Confirmalo o corregilo.',analysis};
+    return{ok:true,set:detector.applyDecision(candidate,analysis,decision,previousDecision?{now:existing.anomalyReview.detectedAt}:undefined),analysis};
+  }
+  async function reviewAnomalousSetResult(result={}){
+    if(result.reason!=='confirmation-required'||!result.analysis)return null;
+    const details=(result.analysis.issues||[]).map(item=>item.title).join('. ');
+    return window.APP_CONFIRMATION?.choose?.({
+      title:'Revisar este registro',
+      message:`Este dato supera ampliamente tu historial. ${details}. Confirmalo o corregilo.`,
+      cancelLabel:'Editar',
+      options:[
+        {value:'confirm',label:'Confirmar y contar',className:'good',description:'Cuenta para records y progresion.'},
+        {value:'exclude-record',label:'Guardar sin contar como record',className:'secondary',description:'Conserva la serie y no la usa como record.'},
+        {value:'exclude-progression',label:'Guardar fuera de record y progresion',className:'secondary',description:'Conserva la serie sin usarla en records ni recomendaciones.'}
+      ]
+    })||null;
+  }
   function saveQuickSetPayload(payload={}){
     const date=payload.date||todayStr();
     const session=ensureSession(date);
@@ -1133,8 +1189,9 @@
     if(!exercise) exercise=currentExercise(session);
     if(!exercise) return {ok:false,reason:'missing-exercise',message:'Elegí un ejercicio para registrar.'};
     const setNumber=Math.max(1,numeric(payload.setNumber,(exercise.sets||[]).length+1));
-    const canonical=canonicalSetInput(payload,exercise);
-    const set={...canonical,id:uid('set'),setNumber,savedAt:new Date().toISOString()};
+    const canonical=canonicalSetInput(payload,exercise),review=reviewSetCandidate(canonical,exercise,payload);
+    if(!review.ok)return review;
+    const set={...review.set,id:uid('set'),setNumber,savedAt:new Date().toISOString()};
     set.volume=Math.round(window.WORKOUT_METRICS?.calculateSetMetrics?.(set,exercise)?.externalLoadVolume??set.reps*set.normalizedTotalKg);
     exercise.sets=exercise.sets||[];
     exercise.sets.push(set);
@@ -1157,8 +1214,10 @@
     const setNumber=Number(payload.setNumber);
     const set=(setId?sets.find(item=>String(item.id||'')===setId):null) || (Number.isFinite(setNumber)?sets.find(item=>Number(item.setNumber)===setNumber):null);
     if(!set) return {ok:false,reason:'missing-set',message:'No encontre esa serie.'};
-    const canonical=canonicalSetInput(payload,exercise,set);
-    Object.assign(set,canonical);
+    const canonical=canonicalSetInput(payload,exercise,set),review=reviewSetCandidate(canonical,exercise,payload,set);
+    if(!review.ok)return review;
+    Object.keys(set).forEach(key=>{if(!(key in review.set))delete set[key];});
+    Object.assign(set,review.set);
     set.volume=Math.round(window.WORKOUT_METRICS?.calculateSetMetrics?.(set,exercise)?.externalLoadVolume??set.reps*set.normalizedTotalKg);
     set.editedAt=new Date().toISOString();
     session.currentExerciseIndex=session.exercises.findIndex(x=>x.id===exercise.id);
@@ -1225,14 +1284,20 @@
     replaceSession(session);
     return {ok:true,session:clone(session),state:getQuickWorkoutState({date})};
   }
-  function saveQuickSet(){
+  async function saveQuickSet(){
     const session=selectedSessionForQuick();
     if(!session){ flash('Hoy toca descanso. Podés registrar movilidad suave si querés.'); return; }
     const exercise=selectedQuickExercise(session);
     if(!exercise){ flash('Elegí un ejercicio para registrar.'); return; }
     const payload={date:session.date,exerciseId:exercise.id,setNumber:document.getElementById('quickSetNumber').value,reps:document.getElementById('quickReps').value,weight:document.getElementById('quickWeight').value,durationSeconds:document.getElementById('quickDurationSeconds').value,distanceMeters:document.getElementById('quickDistanceMeters').value,measurementMode:document.getElementById('quickMeasurementMode').value,loadMode:document.getElementById('quickLoadMode').value,equipmentId:document.getElementById('quickEquipmentId').value,equipmentName:document.getElementById('quickEquipmentName').value,barWeight:document.getElementById('quickBarWeight').value,laterality:document.getElementById('quickLaterality').value,setType:document.getElementById('quickSetType').value,bodyweight:document.getElementById('quickBodyweight').checked,rir:document.getElementById('quickRir').value,rpe:document.getElementById('quickRpe').value,note:document.getElementById('quickNote').value};
     const savedDraftId=quickPersistentDraftId(exercise.id,session.date,editingQuickSetId||'new');
-    const result=editingQuickSetId?updateQuickSetPayload({...payload,setId:editingQuickSetId}):saveQuickSetPayload(payload);
+    const persist=nextPayload=>editingQuickSetId?updateQuickSetPayload({...nextPayload,setId:editingQuickSetId}):saveQuickSetPayload(nextPayload);
+    let result=persist(payload);
+    if(result.reason==='confirmation-required'){
+      const decision=await reviewAnomalousSetResult(result);
+      if(!decision){document.getElementById(result.analysis?.issues?.some(item=>item.code==='reps-improbable')?'quickReps':'quickWeight')?.focus();return;}
+      result=persist({...payload,anomalyDecision:decision});
+    }
     if(!result.ok){flash(result.message||'No se pudo guardar la serie.');return;}
     window.APP_DRAFTS?.remove?.(savedDraftId);
     const wasEditing=!!editingQuickSetId;editingQuickSetId='';
@@ -1688,7 +1753,7 @@
     else if(action===actionWidgetSaveSet){syncWorkoutWidget();openGymToday();}
   }
 
-  window.WORKOUT_FEATURES={keys,dayOrder,defaultWeeklyPlan:clone(defaultWeeklyPlan),exerciseLibrary:clone(exerciseLibrary),EXERCISE_LIBRARY_VERSION,getExerciseLibrary:()=>clone(libraryData()),getWeeklyWorkoutPlan:()=>clone(weeklyPlan()),getEquipmentProfiles:()=>clone(equipmentProfiles()),getGymSettings:()=>clone(settings()),updateGymSettings:next=>{saveSettings(next||{});return clone(settings());},displayWeight,canonicalWeight,displayVolume,migrateExerciseLibrary,migrateLegacyGymSessions,dayKeyForDate,planForDate,rankExercisesForContext,getQuickWorkoutState,addManualExercisePayload,saveQuickSetPayload,updateQuickSetPayload,deleteQuickSetPayload,undoDeleteQuickSetPayload,canUndoQuickSetDelete:()=>!!lastDeletedQuickSet,replaceSessionPayload,completeQuickExercisePayload,finishWorkoutPayload,buildWorkoutWidgetState,syncWorkoutWidget,importWidgetStateFromAndroid};
+  window.WORKOUT_FEATURES={keys,dayOrder,defaultWeeklyPlan:clone(defaultWeeklyPlan),exerciseLibrary:clone(exerciseLibrary),EXERCISE_LIBRARY_VERSION,getExerciseLibrary:()=>clone(libraryData()),getWeeklyWorkoutPlan:()=>clone(weeklyPlan()),getEquipmentProfiles:()=>clone(equipmentProfiles()),getGymSettings:()=>clone(settings()),updateGymSettings:next=>{saveSettings(next||{});return clone(settings());},displayWeight,canonicalWeight,displayVolume,migrateExerciseLibrary,migrateLegacyGymSessions,dayKeyForDate,planForDate,rankExercisesForContext,getQuickWorkoutState,addManualExercisePayload,saveQuickSetPayload,updateQuickSetPayload,reviewAnomalousSetResult,deleteQuickSetPayload,undoDeleteQuickSetPayload,canUndoQuickSetDelete:()=>!!lastDeletedQuickSet,replaceSessionPayload,completeQuickExercisePayload,finishWorkoutPayload,buildWorkoutWidgetState,syncWorkoutWidget,importWidgetStateFromAndroid};
   window.openGymToday=openGymToday;
   window.openQuickSetLogger=openQuickSetLogger;
   window.handleAndroidWidgetIntent=(action,payload)=>handleAndroidWidgetIntent(action,payload||{});

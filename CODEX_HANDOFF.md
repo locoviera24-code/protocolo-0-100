@@ -2271,3 +2271,60 @@ Pendiente siguiente exacto despues de cerrar estas pruebas: deteccion y
 confirmacion de registros anomalos sin borrar datos, seguida por clasificacion
 muscular ambigua de ejercicios personalizados. IndexedDB primario, PWA atomica
 y quality gate unico continúan pendientes posteriores.
+
+## 55. Revision conservadora de registros inusuales
+
+Bloque iniciado despues de `4715322` y preparado como build 73:
+
+- `gym/anomaly-detector.js` es un detector puro versionado. Evalua saltos de
+  carga y volumen frente al propio historial comparable, reps/duracion/distancia
+  improbables, una relacion compatible con confusion kg/lb y cambios de
+  interpretacion entre total, por mano/lado, lastre y asistencia. No diagnostica
+  ni borra valores y evita marcar calentamientos como records.
+- `saveQuickSetPayload` y `updateQuickSetPayload` devuelven
+  `confirmation-required` antes de persistir una serie sospechosa. El contrato
+  se aplica tanto al registro Gym como al registro directo de Gym Party; una UI
+  no puede eludirlo llamando al API local sin indicar una decision valida.
+- `APP_CONFIRMATION.choose()` extiende el dialogo accesible existente sin usar
+  `confirm` nativo. Las opciones son confirmar y contar, guardar sin record,
+  guardar fuera de record/progresion o volver a editar. El foco regresa al
+  control previo y Escape/cancelar no persisten la serie.
+- Cada revision guarda un `anomalyReview` pequeno con version, decision, estado,
+  severidad, codigos, fecha y firma tecnica. No contiene notas, emails,
+  credenciales ni configuracion Firebase. `excludeFromRecords` y
+  `excludeFromProgression` siguen siendo la fuente de elegibilidad para
+  metricas, records, recomendaciones y Gym Party.
+- Una serie sospechosa recibida desde el widget Android no se pierde: se marca
+  `pending`, se conserva y queda temporalmente fuera de record/progresion. Al
+  editarla en la app se exige confirmar, excluir o corregir. Una mutacion nativa
+  ya conocida y sin cambios no se vuelve a marcar.
+- **Progreso > Gym > Records** incluye `progressSuspiciousList`, una lista
+  secundaria de registros revisados/pendientes. Los records principales se
+  siguen derivando solo de series elegibles y no dependen de una clave mutable.
+- `scripts/test-workout-anomalies.mjs`, Workout Features y Playwright cubren
+  detector, decisiones, exclusiones, importacion nativa, persistencia, cancelar,
+  lista de Progreso y el flujo directo de Gym Party.
+
+Pruebas finales del bloque:
+
+- detector puro, Workout Features, metricas, Progreso, Gym Party, limites
+  modulares y fuente unica de version: correctos;
+- `validate-app.ps1 -CheckAndroidAssets`: correcto, con paridad web/Android,
+  cache build 73 y 446 IDs estaticos unicos;
+- artifact web build 73: 64 recursos con hash; validacion estatica y prueba
+  Chromium servida pasaron sin 404, errores de pagina o consola;
+- E2E de anomalias, tipos de serie y mensajes/recuperacion: 36/36 aprobadas en
+  Android Chromium, iPhone WebKit y escritorio Chromium. Cubre Gym, Gym Party,
+  cancelar, tres decisiones, lista de Progreso y regresion del dialogo binario;
+- Gradle 8.10.2 con Java 21 termino `:app:assembleDebug`. El APK debug mide
+  1.620.287 bytes y contiene los mismos assets del build web.
+
+Estado publicable del bloque: `2.7.0`, Android `33`, build/cache `73`
+(`protocolo-0-100-pwa-2.7.0-b73`). No se modificaron Firestore Rules: Gym Party
+comparte las exclusiones ya admitidas y mantiene el contrato remoto anterior.
+
+Pendiente siguiente exacto: clasificacion muscular ambigua de ejercicios
+personalizados con fuente/confianza y una cola `needs-review`, sin inventar que
+`hombro` significa deltoides anterior ni que `pierna` significa cuadriceps.
+Luego continuan IndexedDB primario, PWA atomica, quality gate unico y la
+simplificacion adicional de Nutricion/busqueda externa.

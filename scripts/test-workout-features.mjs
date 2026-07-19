@@ -6,6 +6,7 @@ const source = await readFile(new URL('../workout-features.js', import.meta.url)
 const taxonomySource = await readFile(new URL('../progress/muscle-taxonomy.js', import.meta.url), 'utf8');
 const setModelSource = await readFile(new URL('../gym/set-model.js', import.meta.url), 'utf8');
 const metricsSource = await readFile(new URL('../workout-metrics.js', import.meta.url), 'utf8');
+const anomalySource = await readFile(new URL('../gym/anomaly-detector.js', import.meta.url), 'utf8');
 const rankingSource = await readFile(new URL('../workout-ranking.js', import.meta.url), 'utf8');
 const storeSource = await readFile(new URL('../workout-store.js', import.meta.url), 'utf8');
 const planSource = await readFile(new URL('../workout-plan.js', import.meta.url), 'utf8');
@@ -69,6 +70,7 @@ function createContext(preloaded = {}, today = '2026-06-22') {
   vm.runInContext(storeSource, vmContext, {filename: 'workout-store.js'});
   vm.runInContext(planSource, vmContext, {filename: 'workout-plan.js'});
   vm.runInContext(metricsSource, vmContext, {filename: 'workout-metrics.js'});
+  vm.runInContext(anomalySource, vmContext, {filename: 'gym/anomaly-detector.js'});
   vm.runInContext(uiSource, vmContext, {filename: 'workout-ui.js'});
   vm.runInContext(rankingSource, vmContext, {filename: 'workout-ranking.js'});
   vm.runInContext(source, vmContext, {filename: 'workout-features.js'});
@@ -295,4 +297,23 @@ assert.equal(rankedPlan.groups[0].label,'Rutina de hoy');
 assert.ok(rankedPlan.groups[0].items.some(item=>item.exerciseId==='peck-deck'));
 assert.ok(rankStore.get('protocolo_0_100_exercise_preferences_v1'));
 
-console.log('Workout features correcto: plan semanal, widget, editar/eliminar/deshacer serie, ajustes rapidos y preferencias UX.');
+const {context: anomalyContext}=createContext({},'2026-08-10');
+const anomalyWorkout=anomalyContext.WORKOUT_FEATURES,anomalyExercise=anomalyWorkout.getQuickWorkoutState({date:'2026-08-10'}).currentExerciseId;
+for(const weight of [60,60,62.5,62.5])assert.equal(anomalyWorkout.saveQuickSetPayload({date:'2026-08-10',exerciseId:anomalyExercise,reps:8,weight}).ok,true);
+const reviewRequired=anomalyWorkout.saveQuickSetPayload({date:'2026-08-10',exerciseId:anomalyExercise,reps:8,weight:140});
+assert.equal(reviewRequired.reason,'confirmation-required');
+assert.ok(reviewRequired.analysis.issues.some(issue=>issue.code==='possible-unit-error'||issue.code==='load-jump'));
+const reviewed=anomalyWorkout.saveQuickSetPayload({date:'2026-08-10',exerciseId:anomalyExercise,reps:8,weight:140,anomalyDecision:'exclude-progression'});
+assert.equal(reviewed.ok,true);assert.equal(reviewed.set.anomalyReview.status,'excluded');assert.equal(reviewed.set.excludeFromRecords,true);assert.equal(reviewed.set.excludeFromProgression,true);
+
+const baselineNativeSets=[60,60,62.5,62.5].map((weight,index)=>({id:`native-base-${index}`,setNumber:index+1,reps:8,weight,weightKg:weight,measurementMode:'reps',loadMode:'total',equipmentId:'barbell-20',setType:'working',completed:true}));
+const baselineNativeSession={id:'native-anomaly-session',date:'2026-08-10',status:'en progreso',currentExerciseIndex:0,routine:{name:'Torso A'},exercises:[{id:'press-current',exerciseId:'press-banca',name:'Press de banca',muscle:'Pecho',sets:baselineNativeSets}]};
+const {context:nativeAnomalyContext,store:nativeAnomalyStore}=createContext({protocolo_0_100_workout_sessions_v1:JSON.stringify([baselineNativeSession])},'2026-08-10');
+const importedNative={...baselineNativeSession,exercises:[{...baselineNativeSession.exercises[0],sets:[...baselineNativeSets,{id:'native-suspicious',setNumber:5,reps:8,weight:140,weightKg:140,measurementMode:'reps',loadMode:'total',equipmentId:'barbell-20',setType:'working',completed:true}]}]};
+assert.equal(nativeAnomalyContext.WORKOUT_FEATURES.importWidgetStateFromAndroid({lastNativeMutationAt:'2026-08-10T12:00:00.000Z',lastNativeMutationSource:'android-widget-direct',workoutSession:importedNative}),true);
+const pendingNative=JSON.parse(nativeAnomalyStore.get('protocolo_0_100_workout_sessions_v1'))[0].exercises[0].sets.at(-1);
+assert.equal(pendingNative.anomalyReview.status,'pending');assert.equal(pendingNative.excludeFromRecords,true);assert.equal(pendingNative.excludeFromProgression,true);
+const correctedNative=nativeAnomalyContext.WORKOUT_FEATURES.updateQuickSetPayload({date:'2026-08-10',exerciseId:'press-current',setId:'native-suspicious',reps:8,weight:65});
+assert.equal(correctedNative.ok,true);assert.equal(correctedNative.set.anomalyReview,undefined);assert.equal(correctedNative.set.excludeFromRecords,false);assert.equal(correctedNative.set.excludeFromProgression,false);
+
+console.log('Workout features correcto: plan semanal, widget, series, anomalias, ajustes rapidos y preferencias UX.');

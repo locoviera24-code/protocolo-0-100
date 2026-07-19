@@ -23,5 +23,22 @@
     });
   }
 
-  global.PERSONAL_RECORDS=Object.freeze({build});
+  function reviewQueue(sessions=[]){
+    return (Array.isArray(sessions)?sessions:[]).flatMap(session=>(session.exercises||[]).flatMap(exercise=>(exercise.sets||[]).filter(set=>set.anomalyReview?.decision).map(set=>({
+      sessionId:session.id||'',
+      date:session.date||'',
+      exerciseId:exercise.exerciseId||exercise.id||'',
+      exerciseName:exercise.name||exercise.exerciseName||'Ejercicio',
+      setId:set.id||'',
+      setNumber:set.setNumber||0,
+      reps:set.reps||0,
+      weightKg:set.recordLoadKg??set.normalizedTotalKg??set.weightKg??set.weight??0,
+      decision:set.anomalyReview.decision,
+      status:set.anomalyReview.status||'reviewed',
+      severity:set.anomalyReview.severity||'warning',
+      codes:[...(set.anomalyReview.codes||[])]
+    })))).sort((a,b)=>String(b.date).localeCompare(String(a.date))||String(b.setId).localeCompare(String(a.setId)));
+  }
+
+  global.PERSONAL_RECORDS=Object.freeze({build,reviewQueue});
 })(window);
