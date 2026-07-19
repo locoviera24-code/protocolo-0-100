@@ -105,6 +105,8 @@ assert.equal(widgetState.currentMuscleName, 'Pecho');
 assert.ok(widgetState.weeklyWorkoutPlan.monday);
 assert.ok(widgetState.exerciseHistory);
 assert.ok(widgetState.exercises.length >= 9);
+assert.equal(widgetState.exercises[0].muscleClassificationSnapshot.classificationStatus,'official');
+assert.deepEqual(Array.from(widgetState.exercises[0].muscleClassificationSnapshot.primaryMuscles),['chest']);
 assert.equal(store.has(workout.keys.weeklyWorkoutPlan), true);
 
 const {context: quickContext, store: quickStore} = createContext();
@@ -123,6 +125,10 @@ assert.equal(quickSaved.ok, true);
 assert.equal(quickSaved.set.weight, 20.5);
 assert.equal(quickSaved.set.setType, 'working');
 assert.equal(quickSaved.set.completed, true);
+const firstCapturedSession=JSON.parse(quickStore.get(quickWorkout.keys.workoutSessions))[0];
+assert.equal(firstCapturedSession.exercises[0].muscleClassificationSnapshot.classificationStatus,'official');
+assert.equal(firstCapturedSession.exercises[0].muscleClassificationSnapshot.classificationConfidence,'high');
+assert.equal(firstCapturedSession.exercises[0].muscleClassificationSnapshot.capturedAt,firstCapturedSession.startedAt);
 assert.equal(JSON.parse(quickStore.get(quickWorkout.keys.exercisePreferences)).exercises['peck-deck'].totalUses, 1);
 const quickAfterSave = quickWorkout.getQuickWorkoutState({date: '2026-06-22', exerciseId: quickState.currentExerciseId});
 assert.equal(quickAfterSave.currentExerciseSets, 1);
@@ -173,7 +179,9 @@ assert.equal(manualExercise.state.currentExerciseMuscle, 'Hombro');
 assert.equal(manualExercise.remembered, true);
 assert.equal(manualExercise.savedToLibrary, true);
 assert.deepEqual(Array.from(manualExercise.exercise.primaryMuscles),['other']);
-assert.equal(manualExercise.exercise.muscleClassificationConfidence,'needs-review');
+assert.equal(manualExercise.exercise.classificationStatus,'needs-review');
+assert.equal(manualExercise.exercise.classificationConfidence,'unknown');
+assert.equal(manualExercise.exercise.muscleClassificationSnapshot.classificationStatus,'needs-review');
 assert.ok(quickWorkout.getPendingMuscleClassifications().some(exercise=>exercise.id===manualExercise.exercise.exerciseId));
 assert.match(manualExercise.message, /proximos lunes/);
 const rememberedMonday = quickWorkout.planForDate('2026-06-29').exercises.filter(exercise => exercise.exerciseId === manualExercise.exercise.exerciseId);
@@ -204,11 +212,18 @@ const reviewedClassification=quickWorkout.confirmExerciseClassificationPayload({
 assert.equal(reviewedClassification.ok,true);
 assert.deepEqual(Array.from(reviewedClassification.exercise.primaryMuscles),['side-delts','rear-delts']);
 assert.deepEqual(Array.from(reviewedClassification.exercise.secondaryMuscles),['traps']);
-assert.equal(reviewedClassification.exercise.muscleClassificationConfidence,'confirmed');
+assert.equal(reviewedClassification.exercise.classificationStatus,'confirmed');
+assert.equal(reviewedClassification.exercise.classificationSource,'user-confirmed');
+assert.equal(reviewedClassification.exercise.classificationConfidence,'high');
 assert.equal(quickWorkout.getPendingMuscleClassifications().some(exercise=>exercise.id===manualExercise.exercise.exerciseId),false);
 assert.deepEqual(Array.from(quickWorkout.planForDate('2026-06-29').exercises.find(exercise=>exercise.exerciseId===manualExercise.exercise.exerciseId).primaryMuscles),['side-delts','rear-delts'],'La rutina futura debe usar la clasificacion confirmada');
 const historicalManualAfter=JSON.parse(quickStore.get(quickWorkout.keys.workoutSessions))[0].exercises.find(exercise=>exercise.name==='Face pull');
+assert.deepEqual(Array.from(historicalManualAfter.muscleClassificationSnapshot.primaryMuscles),['other']);
 assert.deepEqual(historicalManualAfter,historicalManualBefore,'Confirmar la biblioteca no debe reescribir sesiones históricas');
+assert.equal(quickWorkout.saveQuickSetPayload({date:'2026-06-29',exerciseId:manualExercise.exercise.exerciseId,reps:12,weight:10}).ok,true);
+const futureManual=JSON.parse(quickStore.get(quickWorkout.keys.workoutSessions)).find(session=>session.date==='2026-06-29').exercises.find(exercise=>exercise.exerciseId===manualExercise.exercise.exerciseId);
+assert.deepEqual(Array.from(futureManual.muscleClassificationSnapshot.primaryMuscles),['side-delts','rear-delts'],'Una sesion nueva debe capturar la clasificacion confirmada');
+assert.equal(futureManual.muscleClassificationSnapshot.classificationStatus,'confirmed');
 assert.equal(quickWorkout.confirmExerciseClassificationPayload({exerciseId:'press-banca',primaryMuscles:['chest']}).reason,'official-exercise');
 
 const {context:typeContext,store:typeStore}=createContext();
@@ -226,6 +241,16 @@ const legacySetSession={id:'legacy-set-session',date:'2026-06-22',status:'en pro
 const {context:legacySetContext,store:legacySetStore}=createContext({protocolo_0_100_workout_sessions_v1:JSON.stringify([legacySetSession])});
 assert.equal(legacySetContext.WORKOUT_FEATURES.getQuickWorkoutState({date:'2026-06-22',exerciseId:'legacy-press'}).currentSets[0].setType,'working');
 assert.equal(Object.hasOwn(JSON.parse(legacySetStore.get('protocolo_0_100_workout_sessions_v1'))[0].exercises[0].sets[0],'setType'),false,'La lectura no debe reescribir series legacy');
+const classificationPreview=legacySetContext.WORKOUT_FEATURES.previewHistoricalClassificationMigration();
+assert.equal(classificationPreview.affectedSessions,1);
+assert.equal(classificationPreview.affectedExercises,1);
+assert.equal(Object.hasOwn(JSON.parse(legacySetStore.get('protocolo_0_100_workout_sessions_v1'))[0].exercises[0],'muscleClassificationSnapshot'),false,'La vista previa no debe modificar el historial');
+assert.equal((await legacySetContext.WORKOUT_FEATURES.applyHistoricalClassificationMigration(classificationPreview.id)).ok,true);
+const migratedHistoricalExercise=JSON.parse(legacySetStore.get('protocolo_0_100_workout_sessions_v1'))[0].exercises[0];
+assert.equal(migratedHistoricalExercise.muscleClassificationSnapshot.classificationStatus,'official');
+assert.equal(migratedHistoricalExercise.sets[0].reps,8);
+assert.equal((await legacySetContext.WORKOUT_FEATURES.undoHistoricalClassificationMigration()).ok,true);
+assert.equal(Object.hasOwn(JSON.parse(legacySetStore.get('protocolo_0_100_workout_sessions_v1'))[0].exercises[0],'muscleClassificationSnapshot'),false);
 
 const {context: poundsContext,store:poundsStore}=createContext({
   protocolo_0_100_gym_settings_v1:JSON.stringify({unit:'lb'})
@@ -297,7 +322,8 @@ assert.ok(migratedLibrary.find(exercise=>exercise.id==='press-banca').legacyPrim
 assert.deepEqual(Array.from(migratedLibrary.find(exercise=>exercise.id==='dominadas').primaryMuscles),['lats']);
 assert.equal(migratedLibrary.filter(exercise=>exercise.name==='Face pull').length,1);
 assert.deepEqual(Array.from(migratedLibrary.find(exercise=>exercise.name==='Face pull').primaryMuscles),['other']);
-assert.equal(migratedLibrary.find(exercise=>exercise.name==='Face pull').muscleClassificationConfidence,'needs-review');
+assert.equal(migratedLibrary.find(exercise=>exercise.name==='Face pull').classificationStatus,'needs-review');
+assert.equal(migratedLibrary.find(exercise=>exercise.name==='Face pull').classificationConfidence,'unknown');
 assert.equal(migratedLibrary.some(exercise=>exercise.id==='tibial-anterior'),true);
 assert.equal(JSON.parse(migrationStore.get('protocolo_0_100_workout_sessions_v1'))[0].exercises[0].name,'Nombre histórico');
 assert.equal(JSON.parse(migrationStore.get('protocolo_0_100_exercise_library_meta_v1')).libraryVersion,migrationContext.WORKOUT_FEATURES.EXERCISE_LIBRARY_VERSION);

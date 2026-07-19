@@ -80,6 +80,8 @@
   let currentPlanEditorDay='monday';
   let lastDeletedPlanExercise=null;
   let lastDeletedQuickSet=null;
+  let pendingHistoricalClassificationMigration=null;
+  let lastHistoricalClassificationMigration=null;
   let editingQuickSetId='';
   const quickDrafts=new Map();
   const workoutDraftNotices=new Set();
@@ -195,7 +197,7 @@
   function canonicalLibraryRecord(record={}){
     const taxonomy=window.MUSCLE_TAXONOMY;if(!taxonomy)return record;
     const legacyPrimary=[...(record.legacyPrimaryMuscles||[]),...(record.primaryMuscles||[]),record.muscle,record.group].filter(Boolean),legacySecondary=[...(record.legacySecondaryMuscles||[]),...(record.secondaryMuscles||[])],resolved=taxonomy.resolveExercise({exercise:record,definition:record});
-    return {...record,primaryMuscles:resolved.primaryMuscles,secondaryMuscles:resolved.secondaryMuscles,legacyPrimaryMuscles:[...new Set(taxonomy.legacyValues(legacyPrimary))],legacySecondaryMuscles:[...new Set(taxonomy.legacyValues(legacySecondary))],muscleTaxonomyVersion:taxonomy.VERSION,muscleTaxonomySource:resolved.source,muscleClassificationSource:resolved.classificationSource,muscleClassificationConfidence:resolved.confidence,muscleClassificationNeedsReview:resolved.needsReview};
+    return {...record,primaryMuscles:resolved.primaryMuscles,secondaryMuscles:resolved.secondaryMuscles,legacyPrimaryMuscles:[...new Set(taxonomy.legacyValues(legacyPrimary))],legacySecondaryMuscles:[...new Set(taxonomy.legacyValues(legacySecondary))],muscleTaxonomyVersion:taxonomy.VERSION,muscleTaxonomySource:resolved.source,classificationStatus:resolved.classificationStatus,classificationSource:resolved.classificationSource,classificationConfidence:resolved.classificationConfidence,muscleClassificationNeedsReview:resolved.needsReview};
   }
   function saveLibraryData(value){ writeStore(keys.exerciseLibrary,(value||[]).map(canonicalLibraryRecord)); }
   function migrateExerciseLibrary(){
@@ -282,8 +284,9 @@
       equipmentId:input.equipmentId||'',
       primaryMuscles:input.primaryMuscles?.length?[...input.primaryMuscles]:[input.muscle||input.group||'General'],
       secondaryMuscles:[...(input.secondaryMuscles||[])],
-      muscleClassificationSource:input.muscleClassificationSource||(input.primaryMuscles?.length?'user-confirmed':'legacy-label'),
-      muscleClassificationConfidence:input.muscleClassificationConfidence||(input.primaryMuscles?.length?'confirmed':undefined),
+      classificationStatus:input.classificationStatus||(input.primaryMuscles?.length?'confirmed':undefined),
+      classificationSource:input.classificationSource||input.muscleClassificationSource||(input.primaryMuscles?.length?'user-confirmed':'legacy-label'),
+      classificationConfidence:input.classificationConfidence||(input.primaryMuscles?.length?'high':undefined),
       notes:input.notes||'',
       bodyweight:!!input.bodyweight,
       custom:true,
@@ -314,9 +317,46 @@
     exercise.aliases=[...new Set([...(exercise.aliases||[]),previousName,exercise.name].filter(Boolean))];
     saveLibraryData(library);
     const plan=weeklyPlan();let planChanged=false;
-    dayOrder.forEach(dayKey=>(plan[dayKey]?.exercises||[]).forEach(item=>{if(item.exerciseId!==exercise.id)return;Object.assign(item,{primaryMuscles:[...updated.primaryMuscles],secondaryMuscles:[...updated.secondaryMuscles],muscleTaxonomyVersion:updated.muscleTaxonomyVersion,muscleClassificationSource:updated.muscleClassificationSource,muscleClassificationConfidence:updated.muscleClassificationConfidence,muscleClassificationNeedsReview:false});planChanged=true;}));
+    dayOrder.forEach(dayKey=>(plan[dayKey]?.exercises||[]).forEach(item=>{if(item.exerciseId!==exercise.id)return;Object.assign(item,{primaryMuscles:[...updated.primaryMuscles],secondaryMuscles:[...updated.secondaryMuscles],muscleTaxonomyVersion:updated.muscleTaxonomyVersion,classificationStatus:updated.classificationStatus,classificationSource:updated.classificationSource,classificationConfidence:updated.classificationConfidence,muscleClassificationNeedsReview:false});planChanged=true;}));
     if(planChanged)saveWeeklyPlan(plan);
     return{ok:true,exercise:clone(libraryData().find(item=>item.id===exercise.id)),pending:pendingMuscleClassifications()};
+  }
+  function previewHistoricalClassificationMigration(){
+    const taxonomy=window.MUSCLE_TAXONOMY,current=sessions(),next=clone(current),library=libraryData(),capturedAt=new Date().toISOString(),affectedSessions=new Set();let affectedExercises=0;
+    next.forEach(session=>(session.exercises||[]).forEach((exercise,index)=>{
+      if(taxonomy?.resolveSnapshot?.(exercise.muscleClassificationSnapshot))return;
+      const definition=libraryMatchFor(exercise,library),captured=captureMuscleClassification(exercise,definition,capturedAt);
+      Object.assign(session.exercises[index],captured,{classificationMigratedAt:capturedAt,classificationMigrationSource:'explicit-user-action'});
+      affectedExercises+=1;affectedSessions.add(session.id||session.date||`session-${affectedSessions.size+1}`);
+    }));
+    const preview={id:`classification_${Date.now()}`,affectedSessions:affectedSessions.size,affectedExercises,taxonomyVersion:taxonomy?.VERSION||0,createdAt:capturedAt};
+    pendingHistoricalClassificationMigration={...preview,baseline:JSON.stringify(current),before:clone(current),next};
+    return clone(preview);
+  }
+  async function applyHistoricalClassificationMigration(previewId){
+    const pending=pendingHistoricalClassificationMigration;
+    if(!pending||pending.id!==previewId)return{ok:false,reason:'missing-preview',message:'Generá una vista previa nueva antes de aplicar.'};
+    if(JSON.stringify(sessions())!==pending.baseline)return{ok:false,reason:'changed-since-preview',message:'Los entrenamientos cambiaron desde la vista previa. Revisá de nuevo antes de aplicar.'};
+    if(!pending.affectedExercises){pendingHistoricalClassificationMigration=null;return{ok:true,affectedSessions:0,affectedExercises:0,snapshotId:null};}
+    let snapshotId=null;
+    if(window.APP_DATA?.replaceMany){
+      const result=await window.APP_DATA.replaceMany({[keys.workoutSessions]:pending.next},{reason:`classification-history:${pending.id}`});
+      if(!result?.ok)return{ok:false,reason:'persistence-failed',message:'No se pudo aplicar la clasificación y se conservó el historial anterior.'};
+      snapshotId=result.snapshotId||null;
+    }else saveSessions(pending.next);
+    lastHistoricalClassificationMigration={id:pending.id,snapshotId,before:pending.before,affectedSessions:pending.affectedSessions,affectedExercises:pending.affectedExercises};
+    pendingHistoricalClassificationMigration=null;syncWorkoutWidget();
+    return{ok:true,snapshotId,affectedSessions:pending.affectedSessions,affectedExercises:pending.affectedExercises};
+  }
+  async function undoHistoricalClassificationMigration(){
+    const previous=lastHistoricalClassificationMigration;
+    if(!previous)return{ok:false,reason:'nothing-to-undo',message:'No hay una migración histórica reciente para deshacer.'};
+    if(previous.snapshotId&&window.APP_DATA?.restoreRecovery){
+      const restored=await window.APP_DATA.restoreRecovery(previous.snapshotId);
+      if(!restored?.ok)return{ok:false,reason:'restore-failed',message:'No se pudo restaurar el snapshot anterior.'};
+    }else saveSessions(previous.before);
+    lastHistoricalClassificationMigration=null;syncWorkoutWidget();
+    return{ok:true,affectedSessions:previous.affectedSessions,affectedExercises:previous.affectedExercises};
   }
   function planForDate(date=todayStr()){ return weeklyPlan()[dayKeyForDate(date)] || defaultWeeklyPlan[dayKeyForDate(date)]; }
   function sessions(){ return readStore(keys.workoutSessions,[]); }
@@ -390,22 +430,29 @@
   function latestSessionForDate(date=todayStr()){
     return sessions().filter(s=>s.date===date).sort((a,b)=>String(b.startedAt||'').localeCompare(String(a.startedAt||'')))[0] || null;
   }
+  function captureMuscleClassification(exercise={},definition=null,capturedAt=new Date().toISOString()){
+    const taxonomy=window.MUSCLE_TAXONOMY;if(!taxonomy)return clone(exercise);
+    const snapshot=taxonomy.snapshotFor({exercise,definition,capturedAt});
+    return {...clone(exercise),primaryMuscles:[...snapshot.primaryMuscles],secondaryMuscles:[...snapshot.secondaryMuscles],muscleTaxonomyVersion:snapshot.taxonomyVersion,classificationStatus:snapshot.classificationStatus,classificationSource:snapshot.classificationSource,classificationConfidence:snapshot.classificationConfidence,muscleClassificationNeedsReview:snapshot.classificationStatus==='needs-review',muscleClassificationSnapshot:snapshot};
+  }
   function ensureSession(date=todayStr()){
     const existing=activeSession(date);
     if(existing) return existing;
     const plan=planForDate(date);
     if(plan.type==='rest') return null;
+    const startedAt=new Date().toISOString(),library=libraryData();
+    const capturedExercises=plan.exercises.map((exercise,index)=>captureMuscleClassification({...exercise,order:index+1},libraryMatchFor(exercise,library),startedAt));
     const created={
       id:uid('workout'),
       date,
       dayKey:plan.dayKey,
       weekday:plan.weekday,
-      routine:{dayKey:plan.dayKey,name:plan.name,muscles:plan.muscles,exercises:clone(plan.exercises)},
-      startedAt:new Date().toISOString(),
+      routine:{dayKey:plan.dayKey,name:plan.name,muscles:plan.muscles,exercises:clone(capturedExercises)},
+      startedAt,
       finishedAt:null,
       status:'en progreso',
       currentExerciseIndex:0,
-      exercises:plan.exercises.map((exercise,index)=>({...exercise,order:index+1,sets:[],completed:false})),
+      exercises:capturedExercises.map(exercise=>({...exercise,sets:[],completed:false})),
       notes:'',
       subjectiveNote:'',
       summary:null
@@ -646,6 +693,16 @@
           <div id="exerciseClassificationStatus" class="exerciseClassificationStatus" role="status" aria-live="polite"></div>
           <div class="field"><label>Clasificación</label><select id="exerciseClassificationFilter"><option value="all">Todos los ejercicios</option><option value="pending">Pendientes de revisar</option></select></div>
           <div id="exerciseLibraryList" class="exerciseLibraryList"></div>
+          <details class="advancedDetails" id="historicalClassificationMigration">
+            <summary>Clasificación de sesiones antiguas</summary>
+            <p class="muted small">Las sesiones nuevas conservan un snapshot. Las antiguas solo se actualizan desde esta acción explícita, con vista previa y Deshacer.</p>
+            <div id="historicalClassificationStatus" class="exerciseClassificationStatus" role="status" aria-live="polite">Todavía no se analizó el historial.</div>
+            <div class="buttons">
+              <button type="button" class="secondary" id="previewHistoricalClassificationBtn">Revisar sesiones antiguas</button>
+              <button type="button" class="secondary" id="applyHistoricalClassificationBtn" disabled>Aplicar migración</button>
+              <button type="button" class="secondary" id="undoHistoricalClassificationBtn" disabled>Deshacer</button>
+            </div>
+          </details>
         </details>
         <div class="formGrid" style="margin-top:10px">
           <div class="field"><label>Copiar desde</label><select id="copyPlanFrom"></select></div>
@@ -712,6 +769,9 @@
     document.getElementById('exerciseLibrarySearch')?.addEventListener('input',renderExerciseLibraryEditor);
     document.getElementById('exerciseClassificationFilter')?.addEventListener('change',renderExerciseLibraryEditor);
     document.getElementById('exerciseLibraryList')?.addEventListener('click',handleExerciseLibraryAction);
+    document.getElementById('previewHistoricalClassificationBtn')?.addEventListener('click',previewHistoricalClassificationFromUi);
+    document.getElementById('applyHistoricalClassificationBtn')?.addEventListener('click',applyHistoricalClassificationFromUi);
+    document.getElementById('undoHistoricalClassificationBtn')?.addEventListener('click',undoHistoricalClassificationFromUi);
     document.getElementById('planEditorCards')?.addEventListener('change',updatePlanExerciseFromCard);
     document.getElementById('planEditorCards')?.addEventListener('click',handlePlanExerciseAction);
     document.getElementById('resetDefaultPlanBtn')?.addEventListener('click',resetDefaultPlan);
@@ -1045,20 +1105,22 @@
       aliases:safeAliases(payload.aliases),
       primaryMuscles:officialMatch?.primaryMuscles||window.MUSCLE_TAXONOMY?.canonicalizeList?.(payload.primaryMuscles)||[],
       secondaryMuscles:officialMatch?.secondaryMuscles||window.MUSCLE_TAXONOMY?.canonicalizeList?.(payload.secondaryMuscles)||[],
-      muscleClassificationSource:officialMatch?.muscleClassificationSource||(payload.primaryMuscles?.length?'user-confirmed':'legacy-label'),
-      muscleClassificationConfidence:officialMatch?.muscleClassificationConfidence||(payload.primaryMuscles?.length?'confirmed':undefined)
+      classificationStatus:officialMatch?.classificationStatus||(payload.primaryMuscles?.length?'confirmed':undefined),
+      classificationSource:officialMatch?.classificationSource||officialMatch?.muscleClassificationSource||(payload.primaryMuscles?.length?'user-confirmed':'legacy-label'),
+      classificationConfidence:officialMatch?.classificationConfidence||(payload.primaryMuscles?.length?'high':undefined),
+      muscleClassificationConfidence:officialMatch?.muscleClassificationConfidence
     };
     let libraryRecord=officialMatch;
     if(saveToLibrary && !libraryRecord) libraryRecord=addOrReuseLibraryExercise(baseInput).exercise;
     const exerciseId=libraryRecord?.id||stableCustomExerciseId(name,storedLibrary);
     const classification=window.MUSCLE_TAXONOMY?.resolveExercise?.({exercise:{...baseInput,exerciseId,id:exerciseId},definition:libraryRecord})||{primaryMuscles:[baseInput.muscle],secondaryMuscles:[]};
-    const candidate={...baseInput,exerciseId,id:exerciseId,aliases:libraryRecord?.aliases||baseInput.aliases,primaryMuscles:[...classification.primaryMuscles],secondaryMuscles:[...classification.secondaryMuscles],muscleTaxonomyVersion:window.MUSCLE_TAXONOMY?.VERSION||1,muscleClassificationSource:classification.classificationSource||classification.source,muscleClassificationConfidence:classification.confidence,muscleClassificationNeedsReview:classification.needsReview};
+    const candidate={...baseInput,exerciseId,id:exerciseId,aliases:libraryRecord?.aliases||baseInput.aliases,primaryMuscles:[...classification.primaryMuscles],secondaryMuscles:[...classification.secondaryMuscles],muscleTaxonomyVersion:window.MUSCLE_TAXONOMY?.VERSION||1,classificationStatus:classification.classificationStatus,classificationSource:classification.classificationSource,classificationConfidence:classification.classificationConfidence,muscleClassificationNeedsReview:classification.needsReview};
     const existingSession=(session.exercises||[]).find(exercise=>sameExercise(exercise,candidate));
     if(existingSession){
       currentQuickExerciseId=existingSession.id;
       return {ok:true,reused:true,session:clone(session),exercise:clone(existingSession),state:getQuickWorkoutState({date,exerciseId:existingSession.id}),remembered:false,savedToLibrary:!!libraryRecord,message:'Ese ejercicio ya estaba en este entrenamiento.'};
     }
-    const exercise={
+    const exercise=captureMuscleClassification({
       id:`${exerciseId}-${targetDayKey}`,
       exerciseId,
       name,
@@ -1072,15 +1134,16 @@
       primaryMuscles:[...classification.primaryMuscles],
       secondaryMuscles:[...classification.secondaryMuscles],
       muscleTaxonomyVersion:window.MUSCLE_TAXONOMY?.VERSION||1,
-      muscleClassificationSource:classification.classificationSource||classification.source,
-      muscleClassificationConfidence:classification.confidence,
+      classificationStatus:classification.classificationStatus,
+      classificationSource:classification.classificationSource,
+      classificationConfidence:classification.classificationConfidence,
       muscleClassificationNeedsReview:classification.needsReview,
       notes:baseInput.notes,
       order:(session.exercises||[]).length+1,
       sets:[],
       completed:false,
       manual:true
-    };
+    },libraryRecord,new Date().toISOString());
     session.exercises=session.exercises||[];
     const afterId=String(payload.insertAfterExerciseId||'');
     const inserted=window.WORKOUT_PLAN?.insert?.(session.exercises,exercise,afterId);
@@ -1121,6 +1184,7 @@
       const planExercise={...exercise,id:`${exerciseId}-${targetDayKey}`,order:dayPlan.exercises.length+1};
       delete planExercise.sets;
       delete planExercise.completed;
+      delete planExercise.muscleClassificationSnapshot;
       if(!dayPlan.exercises.some(item=>sameExercise(item,planExercise))){
         const insertedPlan=window.WORKOUT_PLAN?.insert?.(dayPlan.exercises,planExercise,afterId);
         if(insertedPlan) dayPlan.exercises=insertedPlan.items;
@@ -1546,7 +1610,7 @@
       const pref=preferences[exercise.id]||{};
       const days=exerciseUsageDays(exercise);
       const custom=!!(exercise.custom||exercise.origin==='custom')&&!exercise.official;
-      const classification=taxonomy?.resolveExercise?.({exercise,definition:exercise})||{primaryMuscles:['other'],secondaryMuscles:[],confidence:'needs-review',needsReview:true};
+      const classification=taxonomy?.resolveExercise?.({exercise,definition:exercise})||{primaryMuscles:['other'],secondaryMuscles:[],classificationStatus:'needs-review',classificationConfidence:'unknown',needsReview:true};
       const primary=classification.primaryMuscles.map(id=>taxonomy?.label?.(id)||id).join(', '),secondary=classification.secondaryMuscles.map(id=>taxonomy?.label?.(id)||id).join(', ');
       return `<div class="exerciseLibraryRow" data-library-exercise-id="${escapeHtml(exercise.id)}">
         <div><strong>${escapeHtml(exercise.name)}</strong><span>${escapeHtml(exercise.group||'General')} · ${escapeHtml(exercise.type||'personalizado')} · ${escapeHtml(exercise.unit||'kg')}</span><span>Principal: ${escapeHtml(primary)}${secondary?` · Secundarios: ${escapeHtml(secondary)}`:''}</span>${classification.needsReview?'<span class="exerciseClassificationBadge">Revisar clasificación</span>':''}<span>${days.length?`Se usa: ${escapeHtml(days.join(', '))}`:'No está en la rutina semanal'} · ${pref.lastUsedDate?`último uso ${escapeHtml(pref.lastUsedDate)}`:'sin uso registrado'}</span></div>
@@ -1558,6 +1622,29 @@
         </div>
       </div>`;
     }).join(''):'<div class="emptyState">No hay ejercicios que coincidan con la búsqueda.</div>';
+  }
+  function setHistoricalClassificationUi(message,{canApply=false,canUndo=!!lastHistoricalClassificationMigration}={}){
+    const status=document.getElementById('historicalClassificationStatus');if(status)status.textContent=message;
+    const apply=document.getElementById('applyHistoricalClassificationBtn');if(apply)apply.disabled=!canApply;
+    const undo=document.getElementById('undoHistoricalClassificationBtn');if(undo)undo.disabled=!canUndo;
+  }
+  function previewHistoricalClassificationFromUi(){
+    const preview=previewHistoricalClassificationMigration();
+    setHistoricalClassificationUi(preview.affectedExercises?`${preview.affectedExercises} ejercicio(s) en ${preview.affectedSessions} sesión(es) pueden recibir un snapshot. Todavía no se modificó nada.`:'Todas las sesiones ya tienen una clasificación histórica fija.',{canApply:preview.affectedExercises>0});
+  }
+  async function applyHistoricalClassificationFromUi(){
+    const preview=pendingHistoricalClassificationMigration;if(!preview){previewHistoricalClassificationFromUi();return;}
+    const confirmed=await window.APP_CONFIRMATION?.ask?.({title:'Fijar clasificación histórica',message:`Se agregarán snapshots a ${preview.affectedExercises} ejercicio(s) de ${preview.affectedSessions} sesión(es). No se cambiarán series, cargas ni repeticiones.`,confirmLabel:'Aplicar',cancelLabel:'Cancelar'});
+    if(!confirmed)return;
+    const result=await applyHistoricalClassificationMigration(preview.id);
+    if(!result.ok){setHistoricalClassificationUi(result.message||'No se pudo aplicar la migración.',{canApply:result.reason!=='changed-since-preview'});return;}
+    setHistoricalClassificationUi(`Clasificación fijada en ${result.affectedExercises} ejercicio(s). Podés deshacer este cambio.`,{canUndo:true});
+    flash('Clasificación histórica aplicada.');
+  }
+  async function undoHistoricalClassificationFromUi(){
+    const result=await undoHistoricalClassificationMigration();
+    setHistoricalClassificationUi(result.ok?'Se restauró el historial anterior.':'No hay una migración reciente para deshacer.',{canUndo:false});
+    if(result.ok)flash('Migración histórica deshecha.');
   }
   async function handleExerciseLibraryAction(event){
     const button=event.target.closest('[data-library-action]'); if(!button) return;
@@ -1634,7 +1721,7 @@
     const source=libraryData().find(exercise=>exercise.id===id); if(!source) return;
     const plan=weeklyPlan(),dayPlan=plan[currentPlanEditorDay]; if(!dayPlan||dayPlan.type==='rest'){flash('Convertí primero el día de descanso desde la edición avanzada.');return;}
     const measurementMode=source.measurementMode||'reps',defaultLoadMode=source.defaultLoadMode||(source.bodyweight||source.unit==='peso corporal'?'bodyweight':'total');
-    const candidate={id:`${source.id}-${currentPlanEditorDay}`,exerciseId:source.id,name:source.name,muscle:source.group||'General',primaryMuscles:[...(source.primaryMuscles||[])],secondaryMuscles:[...(source.secondaryMuscles||[])],muscleTaxonomyVersion:source.muscleTaxonomyVersion||window.MUSCLE_TAXONOMY?.VERSION||1,muscleClassificationSource:source.muscleClassificationSource,muscleClassificationConfidence:source.muscleClassificationConfidence,muscleClassificationNeedsReview:!!source.muscleClassificationNeedsReview,type:source.type||'personalizado',unit:source.unit||settings().unit,bodyweight:source.bodyweight||source.unit==='peso corporal',measurementMode,defaultLoadMode,notes:source.notes||'',targetSets:3,repsMin:8,repsMax:12,targetRirMin:1,targetRirMax:3,progressionMode:defaultProgressionMode(measurementMode,defaultLoadMode),incrementKg:source.incrementKg||.5,restSeconds:90};
+    const candidate={id:`${source.id}-${currentPlanEditorDay}`,exerciseId:source.id,name:source.name,muscle:source.group||'General',primaryMuscles:[...(source.primaryMuscles||[])],secondaryMuscles:[...(source.secondaryMuscles||[])],muscleTaxonomyVersion:source.muscleTaxonomyVersion||window.MUSCLE_TAXONOMY?.VERSION||1,classificationStatus:source.classificationStatus,classificationSource:source.classificationSource||source.muscleClassificationSource,classificationConfidence:source.classificationConfidence,muscleClassificationConfidence:source.muscleClassificationConfidence,muscleClassificationNeedsReview:!!source.muscleClassificationNeedsReview,type:source.type||'personalizado',unit:source.unit||settings().unit,bodyweight:source.bodyweight||source.unit==='peso corporal',measurementMode,defaultLoadMode,notes:source.notes||'',targetSets:3,repsMin:8,repsMax:12,targetRirMin:1,targetRirMax:3,progressionMode:defaultProgressionMode(measurementMode,defaultLoadMode),incrementKg:source.incrementKg||.5,restSeconds:90};
     if(dayPlan.exercises.some(exercise=>sameExercise(exercise,candidate))){flash('Ese ejercicio ya está en este día.');return;}
     dayPlan.exercises.push(candidate); dayPlan.muscles=[...new Set([...(dayPlan.muscles||[]),candidate.muscle])]; plan[currentPlanEditorDay]=dayPlan; saveWeeklyPlan(plan); renderPlanEditor();
   }
@@ -1642,7 +1729,7 @@
     const name=document.getElementById('planCustomExerciseName')?.value.trim()||''; if(!name){flash('Escribí el nombre del ejercicio personalizado.');return;}
     const muscle=document.getElementById('planCustomExerciseMuscle')?.value.trim()||'General';
     const primaryMuscles=selectedMuscleChoices('planCustomPrimaryMuscles'),secondaryMuscles=selectedMuscleChoices('planCustomSecondaryMuscles');
-    const record=addOrReuseLibraryExercise({name,muscle,type:'personalizado',unit:settings().unit,bodyweight:false,notes:'',primaryMuscles,secondaryMuscles,muscleClassificationSource:primaryMuscles.length?'user-confirmed':'legacy-label',muscleClassificationConfidence:primaryMuscles.length?'confirmed':'needs-review'}).exercise;
+    const record=addOrReuseLibraryExercise({name,muscle,type:'personalizado',unit:settings().unit,bodyweight:false,notes:'',primaryMuscles,secondaryMuscles,classificationStatus:primaryMuscles.length?'confirmed':'needs-review',classificationSource:primaryMuscles.length?'user-confirmed':'legacy-label',classificationConfidence:primaryMuscles.length?'high':'unknown'}).exercise;
     const select=document.getElementById('planLibrarySelect'); if(select) select.value=record.id;
     addPlanLibraryExercise();
     renderPlanLibrarySelect();renderExerciseLibraryEditor();
@@ -1700,7 +1787,8 @@
   }
   function buildWorkoutWidgetState(date=todayStr()){
     const plan=planForDate(date),session=latestSessionForDate(date),summary=session?sessionSummary(session):null;
-    const exercises=session?.exercises?.length?session.exercises:plan.exercises||[];
+    const generatedAt=new Date().toISOString(),sourceExercises=session?.exercises?.length?session.exercises:plan.exercises||[],library=libraryData();
+    const exercises=sourceExercises.map(exercise=>exercise.muscleClassificationSnapshot?exercise:captureMuscleClassification(exercise,libraryMatchFor(exercise,library),generatedAt));
     const current=currentExercise(session)||exercises.find(x=>!x.completed)||exercises[0]||null;
     const completed=summary?.completedExercises||0,total=exercises.length,totalSets=summary?.totalSets||0,totalVolume=summary?.totalVolume||0;
     const s=settings();
@@ -1744,6 +1832,12 @@
         measurementMode:x.measurementMode||'reps',
         defaultLoadMode:x.defaultLoadMode||(x.bodyweight?'bodyweight':'total'),
         equipmentId:x.equipmentId||'',
+        primaryMuscles:[...(x.primaryMuscles||[])],
+        secondaryMuscles:[...(x.secondaryMuscles||[])],
+        classificationStatus:x.classificationStatus,
+        classificationSource:x.classificationSource,
+        classificationConfidence:x.classificationConfidence,
+        muscleClassificationSnapshot:x.muscleClassificationSnapshot?clone(x.muscleClassificationSnapshot):null,
         completed:!!x.completed,
         setsLogged:x.sets?.length||0,
         sets:(x.sets||[]).map(displaySet),
@@ -1787,7 +1881,7 @@
       lastNativeMutationAt:previousState.lastNativeMutationAt||null,
       lastNativeMutationSource:previousState.lastNativeMutationSource||'',
       lastWidgetActionText:previousState.lastWidgetActionText||quickHint,
-      updatedAt:new Date().toISOString()
+      updatedAt:generatedAt
     };
   }
   function syncWorkoutWidget(){
@@ -1813,7 +1907,7 @@
     else if(action===actionWidgetSaveSet){syncWorkoutWidget();openGymToday();}
   }
 
-  window.WORKOUT_FEATURES={keys,dayOrder,defaultWeeklyPlan:clone(defaultWeeklyPlan),exerciseLibrary:clone(exerciseLibrary),EXERCISE_LIBRARY_VERSION,getExerciseLibrary:()=>clone(libraryData()),getPendingMuscleClassifications:()=>clone(pendingMuscleClassifications()),confirmExerciseClassificationPayload,getWeeklyWorkoutPlan:()=>clone(weeklyPlan()),getEquipmentProfiles:()=>clone(equipmentProfiles()),getGymSettings:()=>clone(settings()),updateGymSettings:next=>{saveSettings(next||{});return clone(settings());},displayWeight,canonicalWeight,displayVolume,migrateExerciseLibrary,migrateLegacyGymSessions,dayKeyForDate,planForDate,rankExercisesForContext,getQuickWorkoutState,addManualExercisePayload,saveQuickSetPayload,updateQuickSetPayload,reviewAnomalousSetResult,deleteQuickSetPayload,undoDeleteQuickSetPayload,canUndoQuickSetDelete:()=>!!lastDeletedQuickSet,replaceSessionPayload,completeQuickExercisePayload,finishWorkoutPayload,buildWorkoutWidgetState,syncWorkoutWidget,importWidgetStateFromAndroid};
+  window.WORKOUT_FEATURES={keys,dayOrder,defaultWeeklyPlan:clone(defaultWeeklyPlan),exerciseLibrary:clone(exerciseLibrary),EXERCISE_LIBRARY_VERSION,getExerciseLibrary:()=>clone(libraryData()),getPendingMuscleClassifications:()=>clone(pendingMuscleClassifications()),confirmExerciseClassificationPayload,previewHistoricalClassificationMigration,applyHistoricalClassificationMigration,undoHistoricalClassificationMigration,getWeeklyWorkoutPlan:()=>clone(weeklyPlan()),getEquipmentProfiles:()=>clone(equipmentProfiles()),getGymSettings:()=>clone(settings()),updateGymSettings:next=>{saveSettings(next||{});return clone(settings());},displayWeight,canonicalWeight,displayVolume,migrateExerciseLibrary,migrateLegacyGymSessions,dayKeyForDate,planForDate,rankExercisesForContext,getQuickWorkoutState,addManualExercisePayload,saveQuickSetPayload,updateQuickSetPayload,reviewAnomalousSetResult,deleteQuickSetPayload,undoDeleteQuickSetPayload,canUndoQuickSetDelete:()=>!!lastDeletedQuickSet,replaceSessionPayload,completeQuickExercisePayload,finishWorkoutPayload,buildWorkoutWidgetState,syncWorkoutWidget,importWidgetStateFromAndroid};
   window.openGymToday=openGymToday;
   window.openQuickSetLogger=openQuickSetLogger;
   window.handleAndroidWidgetIntent=(action,payload)=>handleAndroidWidgetIntent(action,payload||{});

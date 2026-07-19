@@ -13,12 +13,13 @@
     return{current,previous,thisWeek,lastFourWeeks,weekly};
   }
   function build({sessions=[],library=[],days=30,today=data().format(new Date())}={}){
-    const rows=gym().flatten(sessions,library),period=data().windows(rows.map(row=>row.date),{days,today}),weekStart=data().monday(today),fourWeekStart=data().shift(weekStart,-21),definitions=taxonomy().definitions(),hasOther=rows.some(row=>row.muscleId==='other'),groups=hasOther?[...definitions,taxonomy().get('other')]:definitions;
-    const result=groups.map(definition=>{
-      const primaryRows=rows.filter(row=>row.muscleId===definition.id),secondaryRows=rows.filter(row=>(row.secondaryMuscles||[]).includes(definition.id)),primary=metricsForWindows(primaryRows,{period,weekStart,fourWeekStart,today}),secondary=metricsForWindows(secondaryRows,{period,weekStart,fourWeekStart,today});
+    const rows=gym().flatten(sessions,library),period=data().windows(rows.map(row=>row.date),{days,today}),weekStart=data().monday(today),fourWeekStart=data().shift(weekStart,-21),definitions=taxonomy().definitions(),anatomicalRows=rows.filter(row=>(row.primaryMuscles||[row.muscleId]).some(id=>id!=='other')),unclassifiedRows=rows.filter(row=>(row.primaryMuscles||[row.muscleId]).every(id=>id==='other'));
+    const result=definitions.map(definition=>{
+      const primaryRows=rows.filter(row=>(row.primaryMuscles||[row.muscleId]).includes(definition.id)),secondaryRows=rows.filter(row=>(row.secondaryMuscles||[]).includes(definition.id)),primary=metricsForWindows(primaryRows,{period,weekStart,fourWeekStart,today}),secondary=metricsForWindows(secondaryRows,{period,weekStart,fourWeekStart,today});
       return{id:definition.id,name:definition.label,region:definition.region,current:primary.current,previous:primary.previous,thisWeek:primary.thisWeek,lastFourWeeks:primary.lastFourWeeks,weekly:primary.weekly,secondaryCurrent:secondary.current,secondaryPrevious:secondary.previous,secondaryThisWeek:secondary.thisWeek,secondaryLastFourWeeks:secondary.lastFourWeeks,secondaryWeekly:secondary.weekly,frequencyPerWeek:Math.round((primary.lastFourWeeks.sessions/4)*10)/10,setsChange:data().percentChange(primary.current.sets,primary.previous.sets),volumeChange:data().percentChange(primary.current.volume,primary.previous.volume),state:stateFor(primary.current)};
     });
-    return{period,hasData:rows.length>0,rows,muscles:result,byId:Object.fromEntries(result.map(item=>[item.id,item])),primarySets:rows.reduce((sum,row)=>sum+row.sets.filter(set=>set.mainVolume!==false).length,0),loggedSets:rows.reduce((sum,row)=>sum+row.sets.filter(set=>set.completed!==false).length,0)};
+    const unclassified=metricsForWindows(unclassifiedRows,{period,weekStart,fourWeekStart,today});
+    return{period,hasData:rows.length>0,rows,muscles:result,byId:Object.fromEntries(result.map(item=>[item.id,item])),unclassified:{...unclassified.current,state:stateFor(unclassified.current)},primarySets:anatomicalRows.reduce((sum,row)=>sum+row.sets.filter(set=>set.mainVolume!==false).length,0),unclassifiedSets:unclassifiedRows.reduce((sum,row)=>sum+row.sets.filter(set=>set.mainVolume!==false).length,0),loggedSets:rows.reduce((sum,row)=>sum+row.sets.filter(set=>set.completed!==false).length,0)};
   }
   global.MUSCLE_PROGRESS=Object.freeze({aggregate,stateFor,build});
 })(window);

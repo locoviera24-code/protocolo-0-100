@@ -793,9 +793,53 @@ public final class WorkoutWidgetUpdateService {
         put(exercise, "type", bodyweight ? "peso corporal" : "maquina");
         put(exercise, "unit", bodyweight ? "peso corporal" : "kg");
         put(exercise, "bodyweight", bodyweight);
+        JSONArray primaryMuscles = primaryMuscles(exerciseId);
+        JSONArray secondaryMuscles = secondaryMuscles(exerciseId);
+        put(exercise, "primaryMuscles", primaryMuscles);
+        put(exercise, "secondaryMuscles", secondaryMuscles);
+        put(exercise, "classificationStatus", "official");
+        put(exercise, "classificationSource", "official-library");
+        put(exercise, "classificationConfidence", "high");
+        JSONObject snapshot = new JSONObject();
+        put(snapshot, "taxonomyVersion", 3);
+        put(snapshot, "primaryMuscles", cloneArray(primaryMuscles));
+        put(snapshot, "secondaryMuscles", cloneArray(secondaryMuscles));
+        put(snapshot, "classificationStatus", "official");
+        put(snapshot, "classificationSource", "official-library");
+        put(snapshot, "classificationConfidence", "high");
+        put(snapshot, "capturedAt", nowIso());
+        put(exercise, "muscleClassificationSnapshot", snapshot);
         put(exercise, "completed", false);
         put(exercise, "sets", new JSONArray());
         return exercise;
+    }
+
+    private static JSONArray primaryMuscles(String exerciseId) {
+        if ("peck-deck".equals(exerciseId) || "press-banca".equals(exerciseId)) return array("chest");
+        if ("dominadas".equals(exerciseId) || "jalon-pecho-sentado".equals(exerciseId)) return array("lats");
+        if ("laterales-polea".equals(exerciseId)) return array("side-delts");
+        if ("press-militar-maquina".equals(exerciseId)) return array("front-delts");
+        if ("curl-martillo".equals(exerciseId)) return array("brachialis");
+        if ("curl-barra-z-sentado".equals(exerciseId)) return array("biceps");
+        if ("extension-triceps-polea".equals(exerciseId)) return array("triceps");
+        if ("prensa".equals(exerciseId) || "extension-cuadriceps".equals(exerciseId)) return array("quads");
+        if ("aductores-maquina".equals(exerciseId)) return array("adductors");
+        if ("pantorrillas-sentado".equals(exerciseId)) return array("calves");
+        if ("tibial-anterior".equals(exerciseId)) return array("tibialis");
+        return array("other");
+    }
+
+    private static JSONArray secondaryMuscles(String exerciseId) {
+        if ("peck-deck".equals(exerciseId)) return array("front-delts");
+        if ("press-banca".equals(exerciseId)) return array("triceps", "front-delts");
+        if ("dominadas".equals(exerciseId)) return array("biceps", "upper-back");
+        if ("jalon-pecho-sentado".equals(exerciseId)) return array("biceps");
+        if ("laterales-polea".equals(exerciseId)) return array("traps");
+        if ("press-militar-maquina".equals(exerciseId)) return array("triceps", "side-delts");
+        if ("curl-martillo".equals(exerciseId)) return array("biceps", "forearms");
+        if ("curl-barra-z-sentado".equals(exerciseId)) return array("brachialis", "forearms");
+        if ("prensa".equals(exerciseId)) return array("glutes", "hamstrings");
+        return new JSONArray();
     }
 
     private static JSONArray array(String... values) {

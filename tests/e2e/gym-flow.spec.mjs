@@ -30,7 +30,8 @@ test('ejercicio personalizado ambiguo exige clasificacion canonica',async ({page
   await page.locator('#planCustomExerciseMuscle').fill('Hombro');
   await page.locator('#createPlanCustomExerciseBtn').click();
   const pendingRecord=await page.evaluate(()=>({library:JSON.parse(localStorage.getItem('protocolo_0_100_exercise_library_v1')).find(exercise=>exercise.name==='Face pull personal'),pending:window.WORKOUT_FEATURES.getPendingMuscleClassifications().map(exercise=>exercise.name)}));
-  expect(pendingRecord.library?.muscleClassificationConfidence).toBe('needs-review');
+  expect(pendingRecord.library?.classificationStatus).toBe('needs-review');
+  expect(pendingRecord.library?.classificationConfidence).toBe('unknown');
   expect(pendingRecord.pending).toContain('Face pull personal');
   const libraryPanel=page.locator('#exerciseLibraryEditor');
   await libraryPanel.locator('> summary').click();
@@ -50,7 +51,9 @@ test('ejercicio personalizado ambiguo exige clasificacion canonica',async ({page
   const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('protocolo_0_100_exercise_library_v1')).find(exercise=>exercise.name==='Face pull personal'));
   expect(saved.primaryMuscles).toEqual(['side-delts','rear-delts']);
   expect(saved.secondaryMuscles).toEqual(['traps']);
-  expect(saved.muscleClassificationConfidence).toBe('confirmed');
+  expect(saved.classificationStatus).toBe('confirmed');
+  expect(saved.classificationSource).toBe('user-confirmed');
+  expect(saved.classificationConfidence).toBe('high');
   await page.reload();
   expect(await page.evaluate(()=>window.WORKOUT_FEATURES.getPendingMuscleClassifications().some(exercise=>exercise.name==='Face pull personal'))).toBe(false);
 });

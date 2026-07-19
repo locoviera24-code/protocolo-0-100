@@ -2394,3 +2394,59 @@ dominio desde `shadow` con comparacion y rollback. Despues siguen PWA atomica,
 quality gate unico y la simplificacion adicional de Nutricion con busqueda
 externa abstraida. No volver a crear la taxonomia granular ni esta cola de
 clasificacion.
+
+## 57. Semantica de clasificacion y snapshots historicos
+
+Bloque iniciado sobre `6b3a0a0` y preparado como build 75:
+
+- La regresion completa previa del build 74 quedo en verde antes de editar:
+  contratos y modulos correctos; artifact de 64 recursos sin 404; Playwright
+  completo con 214 aprobadas, 14 omisiones condicionadas por plataforma y cero
+  fallos; Firestore Emulator correcto; `:app:assembleDebug` correcto.
+- `progress/muscle-taxonomy.js` sube a taxonomia 3 y separa los tres ejes que el
+  build 74 mezclaba: `classificationStatus` (`official`, `confirmed`,
+  `inferred`, `needs-review`), `classificationSource` y
+  `classificationConfidence` (`high`, `medium`, `low`, `unknown`). Los campos
+  legacy del build 74 siguen siendo legibles mediante adaptadores y no se hace
+  una reescritura masiva.
+- Cada ejercicio de una sesion nueva guarda `muscleClassificationSnapshot` con
+  version, primarios, secundarios, estado, fuente, confianza y fecha de captura.
+  Cambiar la biblioteca solo afecta sesiones futuras. Progreso usa primero el
+  snapshot; los registros legacy sin snapshot se marcan
+  `classificationDerived: true` y confianza baja/desconocida.
+- **Gym > Rutina > Biblioteca > Clasificacion de sesiones antiguas** permite
+  revisar cuantas sesiones legacy serian afectadas. Aplicar exige confirmacion,
+  crea recovery snapshot mediante `APP_DATA.replaceMany` y ofrece Deshacer. La
+  vista previa no modifica series, cargas, reps ni sesiones.
+- Los ejercicios con varios musculos primarios aparecen en cada grupo declarado,
+  pero una serie se cuenta una sola vez en el total general. `other` se conserva
+  como no clasificado y ya no entra en el total anatomico; se informa por
+  `unclassifiedSets`.
+- El estado enviado al widget incluye el snapshot. El fallback nativo de
+  `WorkoutWidgetUpdateService.java` agrega la clasificacion oficial a la rutina
+  predeterminada, de modo que una sesion creada directamente desde el widget
+  tambien conserva el contrato historico.
+- Backups schema 3 preservan el snapshot sin cambiar schema ni perder
+  compatibilidad. No se modificaron Firestore Rules, payloads privados ni datos
+  de Gym Party.
+
+Pruebas del bloque ejecutadas hasta este punto:
+
+- modelos de taxonomia, Progreso muscular, Workout Features, backup y contrato
+  Android: correctos;
+- E2E afectada `gym-flow.spec.mjs`: 11 aprobadas y una omision esperada del
+  service worker en WebKit; Android Chromium, iPhone WebKit y escritorio
+  validaron clasificacion, recarga, Gym Party, registro, edicion y offline.
+- artifact web build 75: 64 recursos con hash; rutas profundas, modulos y
+  service worker cargaron sin 404, errores de pagina ni consola;
+- `validate-app.ps1 -CheckAndroidAssets`: correcto, cache build 75, 446 IDs
+  estaticos unicos y paridad exacta web/Android;
+- Gradle 8.10.2 con Java 21 ejecuto un build limpio `:app:assembleDebug`. El APK
+  debug mide 1.593.298 bytes y su SHA-256 es
+  `D3D08078ED4233537BF7D81E4E8A061A72058F7C7F82DEE41DEEF4BF7734D20C`.
+
+Estado preparado: version `2.7.0`, Android `33`, build/cache `75`
+(`protocolo-0-100-pwa-2.7.0-b75`). La siguiente fase estructural exacta es crear
+`data/schema-registry.js`, incluir `equipmentProfiles` en el dominio Workout y
+derivar de ese registro IndexedDB, repositorios, backups, reset y diagnosticos
+antes de promover ningun dominio desde `shadow`.

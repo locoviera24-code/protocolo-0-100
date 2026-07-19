@@ -19,15 +19,25 @@ assert.deepEqual(Array.from(taxonomy.ambiguousTerms(['Pierna'])[0].candidates),[
 
 const ambiguousCustom=taxonomy.resolveExercise({exercise:{id:'custom-face-pull',name:'Face pull',group:'Hombro',custom:true,primaryMuscles:['front-delts']}});
 assert.deepEqual(Array.from(ambiguousCustom.primaryMuscles),['other']);
-assert.equal(ambiguousCustom.confidence,'needs-review');
-const confirmedCustom=taxonomy.resolveExercise({exercise:taxonomy.confirmClassification({id:'custom-face-pull',group:'Hombro',custom:true},{primaryMuscles:['side-delts','rear-delts'],secondaryMuscles:['traps']})});
+assert.equal(ambiguousCustom.classificationStatus,'needs-review');
+assert.equal(ambiguousCustom.classificationConfidence,'unknown');
+const confirmedCustom=taxonomy.resolveExercise({exercise:taxonomy.confirmClassification({id:'custom-face-pull',group:'Hombro',custom:true},{primaryMuscles:['side-delts','rear-delts'],secondaryMuscles:['side-delts','traps']})});
 assert.deepEqual(Array.from(confirmedCustom.primaryMuscles),['side-delts','rear-delts']);
 assert.deepEqual(Array.from(confirmedCustom.secondaryMuscles),['traps']);
-assert.equal(confirmedCustom.confidence,'confirmed');
+assert.equal(confirmedCustom.classificationStatus,'confirmed');
+assert.equal(confirmedCustom.classificationConfidence,'high');
 const officialShoulder=taxonomy.resolveExercise({exercise:{exerciseId:'laterales-polea',muscle:'Hombro'}});
 assert.deepEqual(Array.from(officialShoulder.primaryMuscles),['side-delts']);
-assert.equal(officialShoulder.confidence,'official');
+assert.equal(officialShoulder.classificationStatus,'official');
+assert.equal(officialShoulder.classificationConfidence,'high');
 assert.deepEqual(Array.from(taxonomy.resolveExercise({exercise:{id:'laterales-polea-monday',exerciseId:'laterales-polea',muscle:'Hombro'}}).primaryMuscles),['side-delts'],'El ID de instancia no debe ocultar el exerciseId oficial');
+const build74Confirmed=taxonomy.resolveExercise({exercise:{id:'custom-legacy',custom:true,primaryMuscles:['rear-delts'],muscleClassificationSource:'user-confirmed',muscleClassificationConfidence:'confirmed'}});
+assert.equal(build74Confirmed.classificationStatus,'confirmed','El campo mezclado del build 74 debe seguir siendo legible');
+assert.equal(build74Confirmed.classificationConfidence,'high');
+assert.equal(build74Confirmed.legacyBuild74,true);
+const fixedSnapshot=taxonomy.snapshotFor({exercise:taxonomy.confirmClassification({id:'custom-snapshot',custom:true},{primaryMuscles:['side-delts'],secondaryMuscles:['traps']}),capturedAt:'2026-07-01T10:00:00.000Z'});
+assert.equal(taxonomy.resolveSnapshot(fixedSnapshot).classificationStatus,'confirmed');
+assert.equal(taxonomy.resolveSnapshot({...fixedSnapshot,classificationConfidence:'invalid'}),null);
 
 const library=[
   {id:'press-banca',name:'Press de banca',group:'Pecho',primaryMuscles:['Pecho'],secondaryMuscles:['Tríceps','Hombro anterior']},
@@ -53,6 +63,24 @@ assert.equal(window.GYM_PROGRESS_MODEL.flatten(sessions,library).find(row=>row.e
 const customRows=window.GYM_PROGRESS_MODEL.flatten([{id:'custom-session',date:'2026-07-11',exercises:[exercise('custom-face-pull','Face pull','Hombro',[{reps:12,weight:15}])]}],[{id:'custom-face-pull',name:'Face pull',group:'Hombro',custom:true,primaryMuscles:['front-delts']}]);
 assert.equal(customRows[0].muscleId,'other');
 assert.equal(customRows[0].classificationNeedsReview,true);
+assert.equal(customRows[0].classificationDerived,true);
+const historicalSnapshot={...fixedSnapshot,primaryMuscles:['side-delts']};
+const historicalSession={id:'historical-classification',date:'2026-07-11',exercises:[{...exercise('custom-snapshot','Elevacion propia','Hombro',[{reps:12,weight:10}]),muscleClassificationSnapshot:historicalSnapshot}]};
+const reclassifiedLibrary=[{id:'custom-snapshot',name:'Elevacion propia',custom:true,classificationStatus:'confirmed',classificationSource:'user-confirmed',classificationConfidence:'high',primaryMuscles:['rear-delts']}];
+const historicalRow=window.GYM_PROGRESS_MODEL.flatten([historicalSession],reclassifiedLibrary)[0];
+assert.equal(historicalRow.muscleId,'side-delts','Una reclasificacion de biblioteca no debe reinterpretar una sesion con snapshot');
+assert.equal(historicalRow.classificationDerived,false);
+const newDerivedRow=window.GYM_PROGRESS_MODEL.flatten([{...historicalSession,id:'new-classification',exercises:[{...historicalSession.exercises[0],muscleClassificationSnapshot:undefined,primaryMuscles:['rear-delts'],classificationStatus:'confirmed',classificationSource:'user-confirmed',classificationConfidence:'high'}]}],reclassifiedLibrary)[0];
+assert.equal(newDerivedRow.muscleId,'rear-delts');
+const unclassifiedModel=window.MUSCLE_PROGRESS.build({sessions:[{id:'unclassified',date:'2026-07-11',exercises:[exercise('custom-unknown','Ejercicio desconocido','Pierna',[{reps:10,weight:10}])]}],library:[{id:'custom-unknown',custom:true,group:'Pierna'}],days:7,today:'2026-07-12'});
+assert.equal(unclassifiedModel.muscles.length,20);
+assert.equal(unclassifiedModel.primarySets,0,'Otro no debe entrar en el total anatomico');
+assert.equal(unclassifiedModel.unclassifiedSets,1);
+const multiplePrimarySnapshot={...fixedSnapshot,primaryMuscles:['side-delts','rear-delts']};
+const multiplePrimaryModel=window.MUSCLE_PROGRESS.build({sessions:[{id:'multiple-primary',date:'2026-07-11',exercises:[{...exercise('custom-snapshot','Elevacion propia','Hombro',[{reps:12,weight:10}]),muscleClassificationSnapshot:multiplePrimarySnapshot}]}],library:reclassifiedLibrary,days:7,today:'2026-07-12'});
+assert.equal(multiplePrimaryModel.byId['side-delts'].current.sets,1);
+assert.equal(multiplePrimaryModel.byId['rear-delts'].current.sets,1);
+assert.equal(multiplePrimaryModel.primarySets,1,'El total general no debe duplicar una serie con varios musculos primarios');
 assert.equal(window.MUSCLE_PROGRESS.stateFor({sets:0,sessions:0,exercises:[]}), 'no-data');
 assert.equal(window.MUSCLE_PROGRESS.stateFor({sets:2,sessions:1,exercises:[]}), 'insufficient');
 const all=window.MUSCLE_PROGRESS.build({sessions,library,days:'all',today:'2026-07-12'});assert.equal(all.period.currentStart,'2026-07-03');

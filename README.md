@@ -15,7 +15,7 @@ PWA y APK Android para medir habitos, atencion, actividad fisica y nutricion con
 
 ## Navegacion y diseno
 
-La version actual `v2.7.0` (build web `74`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
+La version actual `v2.7.0` (build web `75`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
 **Gym**, **Nutricion**, **Progreso** y **Mas**. En escritorio usa una barra
 lateral compacta. Gym Party se abre desde **Gym > Grupo**, desde un acceso
 discreto en Inicio o mediante un enlace `gymPartyCode`; ya no ocupa un boton
@@ -432,8 +432,12 @@ secundarios. Etiquetas amplias como `hombro`, `espalda` o `pierna` no se
 convierten automáticamente en un músculo específico: quedan como **Otro / sin
 clasificar** hasta revisarlas en **Gym > Rutina > Biblioteca de ejercicios**.
 La revisión actualiza la biblioteca y los análisis futuros sin reescribir
-sesiones históricas; los secundarios se muestran por separado y no se suman al
-total principal.
+sesiones históricas. Desde el build 75 cada sesión nueva guarda un snapshot de
+su clasificación; cambiar luego la biblioteca no altera ese análisis. Las
+sesiones antiguas se mantienen derivadas y solo pueden fijarse desde
+**Clasificación de sesiones antiguas**, con vista previa, snapshot de
+recuperación y Deshacer. Los secundarios se muestran por separado y no se
+suman de forma oculta al total general.
 
 ### Tipos de serie
 

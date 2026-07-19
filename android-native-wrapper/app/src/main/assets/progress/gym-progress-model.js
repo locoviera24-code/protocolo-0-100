@@ -64,12 +64,19 @@
       comparisonKey:equipment()?.comparisonKey?.(set,id)||[id,metrics.measurementMode,metrics.loadMode,metrics.equipmentId||'unspecified',metrics.gymName||'',metrics.laterality||'bilateral'].join('|')
     };
   }
+  function historicalClassification(exercise={}){
+    const stored=taxonomy()?.resolveSnapshot?.(exercise.muscleClassificationSnapshot);
+    if(stored)return{...stored,classificationDerived:false};
+    const derived=taxonomy()?.resolveExercise?.({exercise})||{primaryMuscles:[canonicalMuscleId(exercise.muscle)],secondaryMuscles:[],classificationStatus:'inferred',classificationSource:'legacy-label',classificationConfidence:'unknown',needsReview:false};
+    const classificationConfidence=derived.needsReview?'unknown':'low';
+    return{...derived,confidence:classificationConfidence,classificationConfidence,classificationDerived:true};
+  }
   function flatten(sessions,library=[]){
     const byId=libraryMap(library),rows=[];
     (sessions||[]).forEach(session=>(session.exercises||[]).forEach(exercise=>{
       const definition=byId.get(exercise.exerciseId)||byId.get(exercise.id);
       const id=exerciseId(exercise,definition);
-      const classification=taxonomy()?.resolveExercise?.({exercise,definition})||{primaryMuscles:[canonicalMuscleId(exercise.muscle||definition?.group)],secondaryMuscles:[],source:'legacy-map'};
+      const classification=historicalClassification(exercise);
       const primaryMuscle=classification.primaryMuscles[0]||'other';
       const sets=(exercise.sets||[]).map((raw,index)=>normalizeProgressSet(raw,exercise,definition,session,index,id));
       if(!sets.length)return;
@@ -80,11 +87,16 @@
         exerciseName:exercise.name||definition?.name||'Ejercicio',
         muscleId:primaryMuscle,
         muscle:taxonomy()?.label?.(primaryMuscle)||canonicalMuscle(primaryMuscle),
+        primaryMuscles:[...classification.primaryMuscles],
+        primaryMuscleLabels:classification.primaryMuscles.map(muscleId=>taxonomy()?.label?.(muscleId)||muscleId),
         secondaryMuscles:[...classification.secondaryMuscles],
         secondaryMuscleLabels:classification.secondaryMuscles.map(muscleId=>taxonomy()?.label?.(muscleId)||muscleId),
-        classificationSource:classification.source,
-        classificationConfidence:classification.confidence||'inferred',
+        classificationStatus:classification.classificationStatus,
+        classificationSource:classification.classificationSource||classification.source,
+        classificationConfidence:classification.classificationConfidence||classification.confidence||'unknown',
         classificationNeedsReview:!!classification.needsReview,
+        classificationDerived:!!classification.classificationDerived,
+        classificationTaxonomyVersion:classification.taxonomyVersion||exercise.muscleClassificationSnapshot?.taxonomyVersion||exercise.muscleTaxonomyVersion||0,
         bodyweight:sets.some(set=>set.isBodyweight),
         sets
       });
@@ -92,5 +104,5 @@
     return rows;
   }
 
-  global.GYM_PROGRESS_MODEL=Object.freeze({normalize,canonicalMuscleId,canonicalMuscle,libraryMap,flatten});
+  global.GYM_PROGRESS_MODEL=Object.freeze({normalize,canonicalMuscleId,canonicalMuscle,libraryMap,historicalClassification,flatten});
 })(window);

@@ -1,7 +1,7 @@
 (function(global){
   'use strict';
 
-  const VERSION=2;
+  const VERSION=3;
   const DEFINITIONS=[
     {id:'chest',label:'Pecho',region:'torso',aliases:['pecho','pectorales','pectoral']},
     {id:'lats',label:'Dorsales',region:'torso',aliases:['dorsal','dorsales','lat','lats','espalda dorsal']},
@@ -27,7 +27,8 @@
   const OTHER=Object.freeze({id:'other',label:'Otro / sin clasificar',region:'other',aliases:['general','otro','otros','movilidad','recuperacion','recuperación'],order:DEFINITIONS.length+1,anatomical:false});
   const ALL=Object.freeze([...DEFINITIONS,OTHER]);
   const BY_ID=new Map(ALL.map(item=>[item.id,item]));
-  const CLASSIFICATION_CONFIDENCE=Object.freeze(['official','confirmed','inferred','needs-review']);
+  const CLASSIFICATION_STATUSES=Object.freeze(['official','confirmed','inferred','needs-review']);
+  const CLASSIFICATION_CONFIDENCE=Object.freeze(['high','medium','low','unknown']);
   const CLASSIFICATION_SOURCES=Object.freeze(['official-library','user-confirmed','specific-label','legacy-label','unclassified']);
   const AMBIGUOUS_TERMS=Object.freeze({
     hombro:Object.freeze(['front-delts','side-delts','rear-delts']),
@@ -96,42 +97,83 @@
     const secondaryMuscles=canonicalizeList(secondary).filter(id=>id!=='other'&&!primaryMuscles.includes(id));
     return{primaryMuscles:[...new Set(primaryMuscles)],secondaryMuscles:[...new Set(secondaryMuscles)]};
   }
+  function validValue(values,value){return values.includes(String(value||''))?String(value):'';}
+  function legacyStatus(record={}){
+    return validValue(CLASSIFICATION_STATUSES,record.muscleClassificationConfidence);
+  }
+  function statusFor(record={}){
+    return validValue(CLASSIFICATION_STATUSES,record.classificationStatus||record.muscleClassificationStatus)||legacyStatus(record);
+  }
+  function sourceFor(record={}){
+    return validValue(CLASSIFICATION_SOURCES,record.classificationSource||record.muscleClassificationSource);
+  }
+  function confidenceFor(record={},status=''){
+    const explicit=validValue(CLASSIFICATION_CONFIDENCE,record.classificationConfidence)||validValue(CLASSIFICATION_CONFIDENCE,record.muscleClassificationConfidence);
+    if(explicit)return explicit;
+    if(status==='official'||status==='confirmed')return'high';
+    if(status==='inferred')return'medium';
+    return'unknown';
+  }
+  function classificationMetadata(record={}){
+    const classificationStatus=statusFor(record);
+    return{
+      classificationStatus,
+      classificationSource:sourceFor(record),
+      classificationConfidence:confidenceFor(record,classificationStatus),
+      legacyBuild74:!!legacyStatus(record)&&!record.classificationStatus
+    };
+  }
   function resolveExercise({exercise={},definition=null}={}){
     const source=definition||exercise||{},exerciseId=source.exerciseId||exercise.exerciseId||source.id||exercise.id||'',override=exerciseOverride(exerciseId);
     const rawPrimary=source.primaryMuscles||exercise.primaryMuscles||[],rawSecondary=source.secondaryMuscles||exercise.secondaryMuscles||[];
-    const storedConfidence=CLASSIFICATION_CONFIDENCE.includes(source.muscleClassificationConfidence)?source.muscleClassificationConfidence:'';
+    const stored=classificationMetadata({...exercise,...source});
     const ambiguities=ambiguousTerms([exercise.muscle,exercise.group,source.muscle,source.group,...(source.legacyPrimaryMuscles||[])]);
-    let classification,confidence,classificationSource;
+    let classification,classificationStatus,classificationSource,classificationConfidence;
     if(override||source.official){
       classification=cleanClassification(override?.primary||rawPrimary,override?.secondary||rawSecondary);
-      confidence='official';classificationSource='official-library';
-    }else if(storedConfidence==='confirmed'){
+      classificationStatus='official';classificationSource='official-library';classificationConfidence='high';
+    }else if(stored.classificationStatus==='confirmed'){
       classification=cleanClassification(rawPrimary,rawSecondary);
-      confidence='confirmed';classificationSource=source.muscleClassificationSource||'user-confirmed';
+      classificationStatus='confirmed';classificationSource=stored.classificationSource||'user-confirmed';classificationConfidence=stored.classificationConfidence||'high';
     }else if(isCustomRecord(source,exerciseId)||isCustomRecord(exercise,exerciseId)){
-      if(ambiguities.length||storedConfidence==='needs-review'){
+      if(ambiguities.length||stored.classificationStatus==='needs-review'){
         classification={primaryMuscles:['other'],secondaryMuscles:[]};
-        confidence='needs-review';classificationSource='legacy-label';
+        classificationStatus='needs-review';classificationSource=stored.classificationSource||'legacy-label';classificationConfidence='unknown';
       }else{
         classification=cleanClassification(rawPrimary.length?rawPrimary:[exercise.muscle,source.group],rawSecondary);
-        confidence=classification.primaryMuscles[0]==='other'?'needs-review':'inferred';
-        classificationSource=confidence==='inferred'?'specific-label':'unclassified';
+        classificationStatus=classification.primaryMuscles[0]==='other'?'needs-review':'inferred';
+        classificationSource=stored.classificationSource||(classificationStatus==='inferred'?'specific-label':'unclassified');
+        classificationConfidence=classificationStatus==='inferred'?(stored.classificationConfidence||'medium'):'unknown';
       }
     }else{
       classification=cleanClassification(rawPrimary.length?rawPrimary:[exercise.muscle,source.group],rawSecondary);
-      confidence=classification.primaryMuscles[0]==='other'?'needs-review':'inferred';
-      classificationSource=confidence==='inferred'?'specific-label':'unclassified';
+      classificationStatus=classification.primaryMuscles[0]==='other'?'needs-review':'inferred';
+      classificationSource=stored.classificationSource||(classificationStatus==='inferred'?'specific-label':'unclassified');
+      classificationConfidence=classificationStatus==='inferred'?(stored.classificationConfidence||'medium'):'unknown';
     }
-    return{...classification,source:classificationSource,classificationSource,confidence,needsReview:confidence==='needs-review',ambiguities};
+    return{...classification,status:classificationStatus,source:classificationSource,confidence:classificationConfidence,classificationStatus,classificationSource,classificationConfidence,needsReview:classificationStatus==='needs-review',legacyBuild74:stored.legacyBuild74,ambiguities};
   }
   function confirmClassification(record={},options={}){
     const classification=cleanClassification(options.primaryMuscles,options.secondaryMuscles);
-    return {...record,...classification,muscleClassificationSource:options.source||'user-confirmed',muscleClassificationConfidence:'confirmed',muscleClassificationNeedsReview:false,muscleClassificationReviewedAt:options.reviewedAt||new Date().toISOString(),muscleTaxonomyVersion:VERSION};
+    return {...record,...classification,classificationStatus:'confirmed',classificationSource:options.source||'user-confirmed',classificationConfidence:'high',muscleClassificationNeedsReview:false,muscleClassificationReviewedAt:options.reviewedAt||new Date().toISOString(),muscleTaxonomyVersion:VERSION};
+  }
+  function snapshotFor({exercise={},definition=null,capturedAt}={}){
+    const resolved=resolveExercise({exercise,definition});
+    return{taxonomyVersion:VERSION,primaryMuscles:[...resolved.primaryMuscles],secondaryMuscles:[...resolved.secondaryMuscles],classificationStatus:resolved.classificationStatus,classificationSource:resolved.classificationSource,classificationConfidence:resolved.classificationConfidence,capturedAt:capturedAt||new Date().toISOString()};
+  }
+  function resolveSnapshot(snapshot){
+    if(!snapshot||typeof snapshot!=='object')return null;
+    const classification=cleanClassification(snapshot.primaryMuscles,snapshot.secondaryMuscles);
+    const classificationStatus=validValue(CLASSIFICATION_STATUSES,snapshot.classificationStatus);
+    const classificationSource=validValue(CLASSIFICATION_SOURCES,snapshot.classificationSource);
+    const classificationConfidence=validValue(CLASSIFICATION_CONFIDENCE,snapshot.classificationConfidence);
+    if(!classificationStatus||!classificationSource||!classificationConfidence||!String(snapshot.capturedAt||''))return null;
+    return{...classification,status:classificationStatus,source:classificationSource,confidence:classificationConfidence,classificationStatus,classificationSource,classificationConfidence,needsReview:classificationStatus==='needs-review',taxonomyVersion:Number(snapshot.taxonomyVersion)||0,capturedAt:String(snapshot.capturedAt)};
   }
   function pendingClassifications(records=[]){
     return (records||[]).filter(record=>isCustomRecord(record,record?.id)).map(record=>({record,resolution:resolveExercise({exercise:record,definition:record})})).filter(item=>item.resolution.needsReview);
   }
   function definitions({includeOther=false}={}){return (includeOther?ALL:DEFINITIONS).slice();}
 
-  global.MUSCLE_TAXONOMY=Object.freeze({VERSION,CLASSIFICATION_CONFIDENCE,CLASSIFICATION_SOURCES,definitions,get,label,isCanonical,canonicalId,canonicalizeList,legacyValues,exerciseOverride,ambiguousTerms,resolveExercise,confirmClassification,pendingClassifications,normalize});
+  global.MUSCLE_TAXONOMY=Object.freeze({VERSION,CLASSIFICATION_STATUSES,CLASSIFICATION_CONFIDENCE,CLASSIFICATION_SOURCES,definitions,get,label,isCanonical,canonicalId,canonicalizeList,legacyValues,exerciseOverride,ambiguousTerms,classificationMetadata,resolveExercise,confirmClassification,snapshotFor,resolveSnapshot,pendingClassifications,normalize});
 })(window);
