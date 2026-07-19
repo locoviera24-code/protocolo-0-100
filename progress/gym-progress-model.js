@@ -83,6 +83,8 @@
         secondaryMuscles:[...classification.secondaryMuscles],
         secondaryMuscleLabels:classification.secondaryMuscles.map(muscleId=>taxonomy()?.label?.(muscleId)||muscleId),
         classificationSource:classification.source,
+        classificationConfidence:classification.confidence||'inferred',
+        classificationNeedsReview:!!classification.needsReview,
         bodyweight:sets.some(set=>set.isBodyweight),
         sets
       });

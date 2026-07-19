@@ -22,6 +22,39 @@ test.beforeEach(async ({page})=>{
   await page.evaluate(()=>localStorage.clear());
 });
 
+test('ejercicio personalizado ambiguo exige clasificacion canonica',async ({page})=>{
+  await page.goto('/index.html?module=gym&view=routine');
+  const config=page.locator('#workoutConfigPanel > details');
+  await config.evaluate(details=>{details.open=true;});
+  await page.locator('#planCustomExerciseName').fill('Face pull personal');
+  await page.locator('#planCustomExerciseMuscle').fill('Hombro');
+  await page.locator('#createPlanCustomExerciseBtn').click();
+  const pendingRecord=await page.evaluate(()=>({library:JSON.parse(localStorage.getItem('protocolo_0_100_exercise_library_v1')).find(exercise=>exercise.name==='Face pull personal'),pending:window.WORKOUT_FEATURES.getPendingMuscleClassifications().map(exercise=>exercise.name)}));
+  expect(pendingRecord.library?.muscleClassificationConfidence).toBe('needs-review');
+  expect(pendingRecord.pending).toContain('Face pull personal');
+  const libraryPanel=page.locator('#exerciseLibraryEditor');
+  await libraryPanel.locator('> summary').click();
+  await expect(page.locator('#exerciseClassificationStatus')).toContainText('1 ejercicio necesita');
+  await page.locator('#exerciseClassificationFilter').selectOption('pending');
+  const row=page.locator('.exerciseLibraryRow').filter({hasText:'Face pull personal'});
+  await expect(row).toContainText('Otro / sin clasificar');
+  await row.getByRole('button',{name:'Revisar músculos'}).click();
+  const primary=page.locator('[data-form-group="primaryMuscles"]');
+  const secondary=page.locator('[data-form-group="secondaryMuscles"]');
+  await primary.getByLabel('Deltoides lateral').check();
+  await primary.getByLabel('Deltoides posterior').check();
+  await secondary.getByLabel('Trapecios').check();
+  await page.locator('#appFormDialogSubmit').click();
+  await expect(page.locator('#appFormDialogBackdrop')).toBeHidden();
+  await expect(page.locator('#exerciseClassificationStatus')).toContainText('Todas las clasificaciones');
+  const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('protocolo_0_100_exercise_library_v1')).find(exercise=>exercise.name==='Face pull personal'));
+  expect(saved.primaryMuscles).toEqual(['side-delts','rear-delts']);
+  expect(saved.secondaryMuscles).toEqual(['traps']);
+  expect(saved.muscleClassificationConfidence).toBe('confirmed');
+  await page.reload();
+  expect(await page.evaluate(()=>window.WORKOUT_FEATURES.getPendingMuscleClassifications().some(exercise=>exercise.name==='Face pull personal'))).toBe(false);
+});
+
 test('rutina semanal, registro, edicion, borrado, deshacer y offline',async ({page,context})=>{
   await createLocalParty(page);
   await setWorkoutDate(page,'2026-07-06');

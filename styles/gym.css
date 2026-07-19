@@ -241,6 +241,41 @@
   padding: 7px 9px;
   font-size: var(--font-label);
 }
+.exerciseClassificationStatus {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--state-warning-border);
+  border-radius: var(--radius-card);
+  background: var(--color-warning-soft);
+  color: var(--state-warning-text);
+}
+.exerciseClassificationStatus[data-empty="true"] {
+  border-color: var(--line);
+  background: var(--surface-glass-soft);
+  color: var(--muted);
+}
+.exerciseClassificationBadge {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-warning-soft);
+  color: var(--state-warning-text);
+  font-size: var(--font-label);
+  font-weight: 750;
+}
+.muscleChoicePanel { grid-column: 1 / -1; }
+.muscleChoiceColumns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); margin-top: var(--space-2); }
+.muscleChoiceColumns fieldset { min-width: 0; border: 1px solid var(--line); border-radius: var(--radius-control); padding: var(--space-2); }
+.muscleChoiceColumns legend { padding: 0 var(--space-1); font-weight: 700; }
+.muscleChoiceColumns label { display: flex; align-items: center; gap: var(--space-2); min-height: var(--touch-target); }
+@media (max-width: 520px) {
+  .formChoiceGrid,
+  .muscleChoiceColumns { grid-template-columns: 1fr; }
+}
 .workoutSafety {
   border: 1px solid var(--state-warning-border);
   border-radius: var(--radius-card);

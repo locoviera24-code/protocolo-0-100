@@ -81,6 +81,17 @@
 .confirmationChoices { display: grid; gap: var(--space-2); }
 .confirmationChoices button { width: 100%; text-align: left; }
 .formDialog .formGrid { max-height: min(56vh, 520px); overflow-y: auto; padding: var(--space-1); }
+.formChoiceGroup {
+  grid-column: 1 / -1;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  padding: var(--space-3);
+}
+.formChoiceGroup legend { padding: 0 var(--space-1); font-weight: 700; }
+.formChoiceGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-1) var(--space-2); }
+.formChoiceGrid label { display: flex; align-items: center; gap: var(--space-2); min-height: var(--touch-target); }
+.formChoiceGrid input { flex: 0 0 auto; }
 html[data-safe-mode="true"] #fdcSearchCard,
 html[data-safe-mode="true"] [data-experimental] { display: none !important; }
 

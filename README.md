@@ -15,7 +15,7 @@ PWA y APK Android para medir habitos, atencion, actividad fisica y nutricion con
 
 ## Navegacion y diseno
 
-La version actual `v2.7.0` (build web `73`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
+La version actual `v2.7.0` (build web `74`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
 **Gym**, **Nutricion**, **Progreso** y **Mas**. En escritorio usa una barra
 lateral compacta. Gym Party se abre desde **Gym > Grupo**, desde un acceso
 discreto en Inicio o mediante un enlace `gymPartyCode`; ya no ocupa un boton
@@ -425,6 +425,15 @@ Android.
 Para agregarlo: instala el APK, manten presionada la pantalla de inicio, entra a **Widgets**, busca **Protocolo 0->100 · Gym** y agregalo. El widget pequeno ofrece guardado rapido minimo; el mediano muestra controles completos.
 
 Rutina predeterminada: lunes Torso A, martes Pierna A, miercoles Torso B, jueves Pierna B, viernes Torso C, sabado descanso o actividad suave y domingo descanso o revision semanal. Dentro de **Gym** se puede editar la rutina semanal, copiar un dia a otro, restablecer la rutina predeterminada exacta, cambiar kg/lb, activar RIR/RPE y actualizar manualmente el widget.
+
+Los ejercicios oficiales conservan una clasificación muscular validada. Al
+crear un ejercicio personalizado se pueden elegir varios músculos principales y
+secundarios. Etiquetas amplias como `hombro`, `espalda` o `pierna` no se
+convierten automáticamente en un músculo específico: quedan como **Otro / sin
+clasificar** hasta revisarlas en **Gym > Rutina > Biblioteca de ejercicios**.
+La revisión actualiza la biblioteca y los análisis futuros sin reescribir
+sesiones históricas; los secundarios se muestran por separado y no se suman al
+total principal.
 
 ### Tipos de serie
 

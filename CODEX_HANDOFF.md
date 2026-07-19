@@ -2328,3 +2328,69 @@ personalizados con fuente/confianza y una cola `needs-review`, sin inventar que
 `hombro` significa deltoides anterior ni que `pierna` significa cuadriceps.
 Luego continuan IndexedDB primario, PWA atomica, quality gate unico y la
 simplificacion adicional de Nutricion/busqueda externa.
+
+## 56. Clasificacion muscular revisable para ejercicios personalizados
+
+Bloque iniciado despues de `ee60f16` y preparado como build 74:
+
+- `progress/muscle-taxonomy.js` sube su contrato a version 2. Los veinte IDs
+  anatomicos se conservan, pero `hombro`, `espalda` y `pierna` dejan de ser
+  aliases de un musculo especifico. Los ejercicios oficiales siguen usando su
+  mapa estable por `exerciseId`; un ejercicio personalizado ambiguo se resuelve
+  como `other` y `needs-review` en vez de inventar precision.
+- La clasificacion de biblioteca guarda `primaryMuscles`,
+  `secondaryMuscles`, `muscleClassificationSource`,
+  `muscleClassificationConfidence` (`official`, `confirmed`, `inferred` o
+  `needs-review`) y la version de taxonomia. Los secundarios siguen separados
+  y no se suman al total principal.
+- `workout-features.js` migra la biblioteca a version 5 de forma idempotente.
+  Los ejercicios oficiales no se pueden reclasificar. Confirmar un ejercicio
+  personalizado actualiza la biblioteca y las rutinas futuras; no reescribe
+  `workoutSessions`, rutinas historicas ni backups anteriores.
+- **Gym > Rutina > Biblioteca de ejercicios** muestra el numero de
+  clasificaciones pendientes, permite filtrar la cola y abre un formulario con
+  seleccion multiple de musculos principales y secundarios. La creacion de un
+  ejercicio personalizado ofrece el mismo selector dentro de una seccion
+  secundaria; dejarlo vacio crea una revision pendiente segura.
+- `ui/form-dialog.js` admite grupos de checkboxes accesibles, con validacion
+  inline y retorno de foco. `styles/components.css` y `styles/gym.css` agregan
+  los estados y layouts responsivos usando tokens existentes.
+- `progress/gym-progress-model.js` expone fuente, confianza y estado de revision
+  por fila. Un registro ambiguo queda visible bajo **Otro / sin clasificar** y
+  no contamina deltoides, espalda alta o cuadriceps.
+- `scripts/test-muscle-progress.mjs`, `scripts/test-workout-features.mjs` y
+  `tests/e2e/gym-flow.spec.mjs` cubren aliases ambiguos, ejercicios oficiales,
+  multiples musculos, cola pendiente, persistencia tras recarga y la garantia
+  de no reescribir sesiones historicas.
+
+Pruebas ejecutadas hasta este punto:
+
+- diseno, accesibilidad estatica, Inicio/Ajustes, datos, backups, Workout
+  Features, metricas, equipo, progresion, anomalias, Progreso, Gym Party, sync,
+  service worker y limites modulares: correctos;
+- flujo de clasificacion: 3/3 aprobado en Android Chromium, iPhone WebKit y
+  escritorio Chromium;
+- el primer gate de version se detuvo como estaba previsto porque este handoff
+  aun no mencionaba el build 74. Esta seccion corrige esa desalineacion antes
+  de repetir el gate; no fue un fallo funcional;
+- matriz E2E afectada de Gym, Progreso y mensajes/formularios: 41 aprobadas y
+  una omision esperada del service worker en WebKit. Chromium cubrio instalacion
+  y offline; WebKit cubrio la interfaz iPhone y el formulario multiseleccion;
+- artifact web build 74: 64 recursos con hash, rutas profundas, modulos y
+  service worker servidos sin 404 ni errores de consola;
+- `validate-app.ps1 -CheckAndroidAssets`: correcto, con cache build 74, 446 IDs
+  estaticos unicos y paridad exacta entre web y Android;
+- seguridad WebView y contrato Android release: correctos;
+- Gradle 8.10.2 con Java 21 termino `:app:assembleDebug`. El APK debug mide
+  1.623.071 bytes y contiene los mismos assets del artifact web.
+
+Estado del bloque: version `2.7.0`, Android `33`, build/cache `74`
+(`protocolo-0-100-pwa-2.7.0-b74`). No se modificaron Firestore Rules ni el
+schema de backups; Firebase, Gym Party, widget y datos legacy conservan sus
+contratos existentes.
+
+Pendiente siguiente despues de cerrar este bloque: promover IndexedDB por
+dominio desde `shadow` con comparacion y rollback. Despues siguen PWA atomica,
+quality gate unico y la simplificacion adicional de Nutricion con busqueda
+externa abstraida. No volver a crear la taxonomia granular ni esta cola de
+clasificacion.

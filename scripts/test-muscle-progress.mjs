@@ -13,6 +13,21 @@ assert.deepEqual(Array.from(taxonomy.definitions(),item=>item.id),expectedIds);
 assert.equal(taxonomy.canonicalId('Pecho'),'chest');
 assert.equal(taxonomy.canonicalId('Deltoides lateral'),'side-delts');
 assert.equal(taxonomy.canonicalId('Sóleo'),'calves');
+assert.equal(taxonomy.canonicalId('Hombro',{fallback:null}),null,'Una etiqueta amplia no debe inventar un deltoides concreto');
+assert.equal(taxonomy.canonicalId('Espalda',{fallback:null}),null,'Espalda no equivale automáticamente a espalda alta');
+assert.deepEqual(Array.from(taxonomy.ambiguousTerms(['Pierna'])[0].candidates),['glutes','quads','hamstrings','adductors','abductors','calves','tibialis']);
+
+const ambiguousCustom=taxonomy.resolveExercise({exercise:{id:'custom-face-pull',name:'Face pull',group:'Hombro',custom:true,primaryMuscles:['front-delts']}});
+assert.deepEqual(Array.from(ambiguousCustom.primaryMuscles),['other']);
+assert.equal(ambiguousCustom.confidence,'needs-review');
+const confirmedCustom=taxonomy.resolveExercise({exercise:taxonomy.confirmClassification({id:'custom-face-pull',group:'Hombro',custom:true},{primaryMuscles:['side-delts','rear-delts'],secondaryMuscles:['traps']})});
+assert.deepEqual(Array.from(confirmedCustom.primaryMuscles),['side-delts','rear-delts']);
+assert.deepEqual(Array.from(confirmedCustom.secondaryMuscles),['traps']);
+assert.equal(confirmedCustom.confidence,'confirmed');
+const officialShoulder=taxonomy.resolveExercise({exercise:{exerciseId:'laterales-polea',muscle:'Hombro'}});
+assert.deepEqual(Array.from(officialShoulder.primaryMuscles),['side-delts']);
+assert.equal(officialShoulder.confidence,'official');
+assert.deepEqual(Array.from(taxonomy.resolveExercise({exercise:{id:'laterales-polea-monday',exerciseId:'laterales-polea',muscle:'Hombro'}}).primaryMuscles),['side-delts'],'El ID de instancia no debe ocultar el exerciseId oficial');
 
 const library=[
   {id:'press-banca',name:'Press de banca',group:'Pecho',primaryMuscles:['Pecho'],secondaryMuscles:['Tríceps','Hombro anterior']},
@@ -35,6 +50,9 @@ assert.equal(sideDelts.current.sets,2);assert.equal(sideDelts.current.volume,172
 assert.equal(triceps.current.sets,0,'Los secundarios no deben sumarse al total principal');
 assert.equal(triceps.secondaryCurrent.sets,3,'Los secundarios deben quedar disponibles por separado');
 assert.equal(window.GYM_PROGRESS_MODEL.flatten(sessions,library).find(row=>row.exerciseId==='dominadas').muscleId,'lats','El ID conocido debe corregir la etiqueta legacy amplia');
+const customRows=window.GYM_PROGRESS_MODEL.flatten([{id:'custom-session',date:'2026-07-11',exercises:[exercise('custom-face-pull','Face pull','Hombro',[{reps:12,weight:15}])]}],[{id:'custom-face-pull',name:'Face pull',group:'Hombro',custom:true,primaryMuscles:['front-delts']}]);
+assert.equal(customRows[0].muscleId,'other');
+assert.equal(customRows[0].classificationNeedsReview,true);
 assert.equal(window.MUSCLE_PROGRESS.stateFor({sets:0,sessions:0,exercises:[]}), 'no-data');
 assert.equal(window.MUSCLE_PROGRESS.stateFor({sets:2,sessions:1,exercises:[]}), 'insufficient');
 const all=window.MUSCLE_PROGRESS.build({sessions,library,days:'all',today:'2026-07-12'});assert.equal(all.period.currentStart,'2026-07-03');
