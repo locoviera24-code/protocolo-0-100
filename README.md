@@ -15,7 +15,7 @@ PWA y APK Android para medir habitos, atencion, actividad fisica y nutricion con
 
 ## Navegacion y diseno
 
-La version actual `v2.7.0` (build web `75`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
+La version actual `v2.7.0` (build web `76`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
 **Gym**, **Nutricion**, **Progreso** y **Mas**. En escritorio usa una barra
 lateral compacta. Gym Party se abre desde **Gym > Grupo**, desde un acceso
 discreto en Inicio o mediante un enlace `gymPartyCode`; ya no ocupa un boton
@@ -103,6 +103,7 @@ ui/error-boundary.js        Log circular sanitizado y captura de fallos
 ui/recovery-view.js         Reintento, reinicio, modo seguro y diagnostico local
 app/drafts.js               Borradores versionados, expiracion y coordinacion entre pestanas
 app/dates.js                Medianoche, zona horaria, background y fechas manuales
+data/schema-registry.js     Fuente unica de claves, schemas, backup, reset y retencion
 data/indexeddb.js           Espejo transaccional, migraciones y recuperacion local
 data/repositories.js        Repositorios por dominio sobre claves compatibles
 data/backup-service.js      Validacion, preview, importacion transaccional y Deshacer
@@ -151,6 +152,14 @@ firebase/                   Reglas, esquema y configuracion ejemplo para Gym Par
 ```
 
 `advanced-features.js` mantiene un estado consolidado con `schemaVersion: 3`. No se incluyen API keys en backups. El service worker usa navegacion `network-first`, conserva offline los assets principales y no intercepta llamadas FDC ni otros origenes.
+
+`data/schema-registry.js` registra cada clave persistida con dominio, version,
+valor inicial, validador, migracion, campo de backup, sensibilidad, modo de
+almacenamiento, reset y retencion. IndexedDB, repositorios, exportacion,
+importacion, restablecimientos y diagnosticos derivan sus contratos de ese
+registro. La configuracion FDC permanece local y excluida; la configuracion
+Firebase embebida en Gym Party se elimina al exportar. IndexedDB sigue en modo
+`shadow` en este build: todavia no se borran ni se sustituyen las claves legacy.
 
 Nutricion mantiene por compatibilidad sus APIs globales actuales, pero el
 nucleo ya se divide en `nutrition/*.js`. Las lecturas y escrituras pasan por

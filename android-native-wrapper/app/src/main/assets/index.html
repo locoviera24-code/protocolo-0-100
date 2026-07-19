@@ -823,6 +823,7 @@
 <script src="app/numbers.js"></script>
 <script src="app/drafts.js"></script>
 <script src="app/dates.js"></script>
+<script src="data/schema-registry.js"></script>
 <script src="data/indexeddb.js"></script>
 <script src="data/repositories.js"></script>
 <script src="data/backup-service.js"></script>
@@ -1053,11 +1054,9 @@ function renderSettingsData(){
   const updated=document.getElementById('aboutUpdatedAt');if(updated)updated.textContent=window.APP_VERSION_INFO?.updatedAt||'desconocida';
 }
 function resetKeysForScope(scope){
-  const keys=[];for(let index=0;index<localStorage.length;index++)keys.push(localStorage.key(index));
-  if(scope==='protocol')return keys.filter(key=>[STORAGE_KEY,START_KEY,ACTION_DISMISS_KEY].includes(key));
-  if(scope==='gym')return keys.filter(key=>key===GYM_SESSIONS_KEY||(/^protocolo_0_100_(weekly_workout|workout_|exercise_|gym_settings|gym_quick|workout_widget)/).test(key||''));
-  if(scope==='nutrition')return keys.filter(key=>(/protocolo_0_100_(nutrition|body_metrics|custom_foods|saved_meals|fdc_)/).test(key||''));
-  if(scope==='ui')return keys.filter(key=>[UI_PREFERENCES_KEY,ACTIVE_MODULE_KEY].includes(key));return [];
+  const resetGroup={protocol:'protocol',gym:'workout',nutrition:'nutrition',ui:'settings'}[scope];
+  if(!resetGroup||!window.APP_SCHEMA_REGISTRY)return[];
+  return window.APP_SCHEMA_REGISTRY.records().filter(record=>record.resetGroup===resetGroup&&localStorage.getItem(record.key)!==null).map(record=>record.key);
 }
 async function resetDataScope(scope){
   const labels={protocol:'el protocolo diario',gym:'los datos locales de Gym',nutrition:'Nutrición',ui:'las preferencias visuales'};
@@ -2567,7 +2566,8 @@ function updateUI(){ updateHomeHeader(); updatePlanUI(); updateScorePreview(); r
 function renderAll(){ updateUI(); renderStats(); renderPeriodMetrics(); renderInsights(); renderBadges(); renderHistory(); renderPlanTable(); drawChart(); updatePhonePanel(); renderGym(); renderNutrition(); renderSettingsData(); }
 
 function exportJson(){
-  const data=window.buildCompleteBackup?window.buildCompleteBackup():{startDate:document.getElementById('startDate').value,entries:getEntries(),gymSessions:getLocalData(GYM_SESSIONS_KEY,[]),nutritionEntries:getLocalData(NUTRITION_ENTRIES_KEY,[]),nutritionTargets:nutritionTargets(),bodyMetrics:getLocalData(BODY_METRICS_KEY,{}),customFoods:getLocalData(CUSTOM_FOODS_KEY,[]),nutritionAliases:getLocalData(NUTRITION_ALIASES_KEY,{}),savedMeals:window.NUTRITION_STORE?.savedMeals?.()||[],recipes:window.NUTRITION_STORE?.recipes?.()||[],foodPortions:window.NUTRITION_STORE?.portions?.()||{},exportedAt:new Date().toISOString()};
+  if(!window.buildCompleteBackup){flash('No se pudo preparar una copia completa. Tus datos no fueron modificados.',{tone:'error'});return;}
+  const data=window.buildCompleteBackup();
   downloadBlob(JSON.stringify(data,null,2),'protocolo_0_100_registros.json','application/json');
   setLocalData(BACKUP_META_KEY,{lastExportAt:new Date().toISOString(),schemaVersion:Number(data.schemaVersion)||3});
   renderSettingsData();

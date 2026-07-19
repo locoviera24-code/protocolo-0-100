@@ -12,7 +12,9 @@ for(const view of ['overview','habits','gym','nutrition','history','achievements
 }
 for(const contract of ['progressPeriod','progressArea','renderOverview','renderGym','renderNutrition','analyticsBars','percentChange','previousWindow'])assert.match(html+progress,new RegExp(contract));
 assert.match(progress,/WORKOUT_METRICS/);
-assert.match(progress,/protocolo_0_100_nutrition_entries_v1/);
+assert.match(progress,/APP_SCHEMA_REGISTRY/);
+assert.match(progress,/getByName\('nutrition','entries'\)/);
+assert.doesNotMatch(progress,/localStorage/);
 assert.match(serviceWorker,/progress\/progress-view\.js/);
 assert.match(serviceWorker,/progress\/muscle-taxonomy\.js/);
 assert.doesNotMatch(progress,/style\.textContent|createElement\(['"]style/);

@@ -2,13 +2,16 @@
   'use strict';
 
   const data=global.APP_DATA;
-  if(!data)return;
+  const registry=global.APP_SCHEMA_REGISTRY;
+  if(!data||!registry)return;
+
+  function keysFor(domain){return Object.fromEntries(registry.records({domain}).map(record=>[record.name,record.key]));}
 
   class BaseRepository{
-    constructor(domain,keys){
+    constructor(domain){
       this.domain=domain;
-      this.keys=Object.freeze({...keys});
-      this.allowedKeys=Object.freeze(Object.values(keys));
+      this.keys=Object.freeze(keysFor(domain));
+      this.allowedKeys=Object.freeze(Object.values(this.keys));
     }
     owns(key){return this.allowedKeys.includes(key);}
     get(key,fallback){return data.read(key,fallback);}
@@ -24,59 +27,22 @@
   }
 
   class ProtocolRepository extends BaseRepository{
-    constructor(){super('protocol',{
-      dailyLogs:'protocolo_0_100_tracker_v1',
-      legacyGymSessions:'protocolo_0_100_gym_sessions_v1'
-    });}
+    constructor(){super('protocol');}
   }
   class WorkoutRepository extends BaseRepository{
-    constructor(){super('workout',{
-      weeklyPlan:'protocolo_0_100_weekly_workout_plan_v1',
-      sessions:'protocolo_0_100_workout_sessions_v1',
-      exerciseHistory:'protocolo_0_100_exercise_history_v1',
-      exerciseLibrary:'protocolo_0_100_exercise_library_v1',
-      exerciseLibraryMeta:'protocolo_0_100_exercise_library_meta_v1',
-      equipmentProfiles:'protocolo_0_100_equipment_profiles_v1',
-      exercisePreferences:'protocolo_0_100_exercise_preferences_v1',
-      settings:'protocolo_0_100_gym_settings_v1',
-      widgetState:'protocolo_0_100_workout_widget_state_v1'
-    });}
+    constructor(){super('workout');}
   }
   class NutritionRepository extends BaseRepository{
-    constructor(){super('nutrition',{
-      entries:'protocolo_0_100_nutrition_entries_v1',
-      targets:'protocolo_0_100_nutrition_targets_v1',
-      bodyMetrics:'protocolo_0_100_body_metrics_v1',
-      customFoods:'protocolo_0_100_custom_foods_v1',
-      aliases:'protocolo_0_100_nutrition_aliases_v1',
-      profile:'protocolo_0_100_nutrition_profile_v1',
-      savedMeals:'protocolo_0_100_saved_meals_v1',
-      recipes:'protocolo_0_100_recipes_v1',
-      portions:'protocolo_0_100_food_portions_v1',
-      cachedFdcFoods:'protocolo_0_100_cached_fdc_foods_v1',
-      fdcSearchCache:'protocolo_0_100_fdc_search_cache_v1'
-    });}
+    constructor(){super('nutrition');}
   }
   class GymPartyLocalRepository extends BaseRepository{
-    constructor(){super('gymParty',{
-      settings:'protocolo_0_100_gym_party_settings_v1',
-      membership:'protocolo_0_100_gym_party_membership_v1',
-      sharedSessions:'protocolo_0_100_shared_workout_sessions_v1',
-      sharedSets:'protocolo_0_100_shared_workout_sets_v1',
-      syncQueue:'protocolo_0_100_gym_party_sync_queue_v1',
-      lastSyncAt:'protocolo_0_100_last_gym_party_sync_at_v1',
-      lastRemoteSyncAt:'protocolo_0_100_gym_party_last_remote_sync_at_v1',
-      demoData:'protocolo_0_100_gym_party_demo_data_v1'
-    });}
+    constructor(){super('gymParty');}
   }
   class SettingsRepository extends BaseRepository{
-    constructor(){super('settings',{
-      uiPreferences:'protocolo_0_100_ui_preferences_v1',
-      backupMeta:'protocolo_0_100_backup_meta_v1'
-    });}
+    constructor(){super('settings');}
   }
   class BackupRepository extends BaseRepository{
-    constructor(){super('backup',{versionedState:'protocolo_0_100_state_v2',importHistory:'protocolo_0_100_import_history_v1'});}
+    constructor(){super('backup');}
     createRecovery(keys,reason='backup-before-change'){return data.createRecoverySnapshot(keys,reason);}
     restoreRecovery(snapshotId){return data.restoreRecovery(snapshotId);}
     diagnostics(){return data.diagnostics();}
@@ -90,7 +56,7 @@
     settings:new SettingsRepository(),
     backup:new BackupRepository()
   };
-  function forKey(key){return Object.values(repositories).find(repository=>repository.owns(key))||null;}
+  function forKey(key){const record=registry.get(key);return record?repositories[record.domain]||null:null;}
 
   global.ProtocolRepository=ProtocolRepository;
   global.WorkoutRepository=WorkoutRepository;

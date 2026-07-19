@@ -40,6 +40,7 @@ $gymProgressModel = Read-Utf8 'progress/gym-progress-model.js'
 $muscleProgress = Read-Utf8 'progress/muscle-progress.js'
 $exerciseProgress = Read-Utf8 'progress/exercise-progress.js'
 $personalRecords = Read-Utf8 'progress/personal-records.js'
+$schemaRegistry = Read-Utf8 'data/schema-registry.js'
 $indexedData = Read-Utf8 'data/indexeddb.js'
 $repositories = Read-Utf8 'data/repositories.js'
 $backupService = Read-Utf8 'data/backup-service.js'
@@ -108,7 +109,7 @@ Assert-True ($duplicates.Count -eq 0) "Hay IDs HTML duplicados: $($duplicates -j
 
 $requiredFiles = @(
     'nutrition/nutrition-store.js', 'nutrition/nutrition-model.js', 'nutrition/recipes.js', 'nutrition/portions.js', 'nutrition/food-search.js', 'nutrition/food-entry-flow.js', 'nutrition/meal-history.js', 'nutrition/nutrition-confidence.js', 'nutrition/nutrition-view.js', 'scripts/test-nutrition-modules.mjs', 'scripts/test-fdc-confidence.mjs', 'tests/e2e/nutrition-domain.spec.mjs', 'tests/e2e/nutrition-today.spec.mjs', 'tests/e2e/nutrition-recipes-portions.spec.mjs', 'tests/e2e/nutrition-numbers-targets.spec.mjs',
-    'data/backup-service.js', 'scripts/test-backup-service.mjs', 'tests/e2e/backup-import.spec.mjs',
+    'data/schema-registry.js', 'data/backup-service.js', 'scripts/test-schema-registry.mjs', 'scripts/test-backup-service.mjs', 'tests/e2e/backup-import.spec.mjs',
     'ui/confirmation-dialog.js',
     'app-version.json', 'app-version.js', 'app/numbers.js', 'scripts/test-numbers.mjs', 'data/indexeddb.js', 'data/repositories.js', 'nutrition-data.js', 'fdc-client.js', 'workout-store.js', 'workout-plan.js', 'gym/equipment.js', 'gym/set-model.js', 'gym/anomaly-detector.js', 'gym/progression-engine.js', 'workout-metrics.js', 'workout-ranking.js', 'workout-ui.js', 'workout-features.js', 'advanced-features.js', 'ui/router.js', 'ui/navigation.js', 'ui/notifications.js', 'ui/form-dialog.js', 'ui/error-boundary.js', 'ui/recovery-view.js', 'progress/muscle-taxonomy.js', 'progress/progress-data-model.js', 'progress/gym-progress-model.js', 'progress/muscle-progress.js', 'progress/exercise-progress.js', 'progress/personal-records.js', 'progress/progress-view.js',
     'firebase-config.js', 'firebase-service.js', 'gym-party-sync.js', 'gym-party-metrics.js', 'gym-party-ui.js', 'gym-party.js',
@@ -136,7 +137,7 @@ foreach ($script in @('nutrition-data.js', 'fdc-client.js', 'workout-store.js', 
     Assert-True ($html.Contains("<script src=`"$script`"></script>")) "index.html no carga $script"
     Assert-True ($serviceWorker.Contains("'./$script'")) "sw.js no cachea $script"
 }
-foreach ($script in @('data/indexeddb.js', 'data/repositories.js', 'data/backup-service.js')) {
+foreach ($script in @('data/schema-registry.js', 'data/indexeddb.js', 'data/repositories.js', 'data/backup-service.js')) {
     Assert-True ($html.Contains("<script src=`"$script`"></script>")) "index.html no carga $script"
     Assert-True ($serviceWorker.Contains("'./$script'")) "sw.js no cachea $script"
 }
@@ -156,7 +157,11 @@ foreach ($contract in @('lastAmount','lastUnit','lastMeal','combinations','favor
     Assert-True ($nutritionPortions.Contains($contract)) "Falta contrato de porciones habituales: $contract"
 }
 Assert-True ($html.IndexOf('<script src="nutrition/nutrition-store.js"></script>') -lt $html.IndexOf('<script src="fdc-client.js"></script>')) 'El dominio Nutricion debe cargar antes del cliente FDC'
+Assert-True ($html.IndexOf('<script src="data/schema-registry.js"></script>') -lt $html.IndexOf('<script src="data/indexeddb.js"></script>')) 'El registro de schemas debe cargar antes de IndexedDB'
 Assert-True ($html.IndexOf('<script src="data/indexeddb.js"></script>') -lt $html.IndexOf('<script src="fdc-client.js"></script>')) 'La capa IndexedDB debe cargar antes de FDC y los modulos de datos'
+foreach ($contract in @('equipmentProfiles','backupField','sensitive','mirrorEnabled','legacyKeys','fdcSearchCache')) {
+    Assert-True ($schemaRegistry.Contains($contract)) "Falta contrato del registro de schemas: $contract"
+}
 foreach ($contract in @('ProtocolRepository','WorkoutRepository','NutritionRepository','GymPartyLocalRepository','SettingsRepository','BackupRepository')) {
     Assert-True ($repositories.Contains($contract)) "Falta repositorio de datos: $contract"
 }
@@ -677,15 +682,13 @@ foreach ($contract in @(
     Assert-True ($mainActivity.Contains($contract)) "Falta puente Android/WebView: $contract"
 }
 
-foreach ($contract in @(
-    'localStorage.setItem(ACTIVE_MODULE_KEY,state.settings.activeModule)',
-    'setLocalData(COIN_LEDGER_KEY,state.coinLedger)',
-    'setLocalData(MONTHLY_RANKINGS_KEY,state.monthlyRankings)',
-    'setLocalData(REWARDS_KEY,state.rewards)',
-    "Object.prototype.hasOwnProperty.call(state,'userReferral')"
-)) {
-    Assert-True ($advanced.Contains($contract)) "La importacion v3 no restaura: $contract"
+foreach ($contract in @('BACKUP_SERVICE.prepareText', 'BACKUP_SERVICE.apply')) {
+    Assert-True ($advanced.Contains($contract)) "La importacion debe pasar por el servicio transaccional: $contract"
 }
+foreach ($recordName in @('activeModule', 'coinLedger', 'monthlyRankings', 'rewards', 'userReferral')) {
+    Assert-True ($schemaRegistry.Contains("entry('$recordName'")) "El registro de schemas no cubre la importacion de: $recordName"
+}
+Assert-True ($backupService.Contains('registry.backupFieldMap()')) 'La importacion debe derivar sus campos del registro de schemas'
 
 foreach ($safetyText in @('no diagnostica deficiencias', 'no son dinero', 'pagos reales requieren backend')) {
     Assert-True ($html.Contains($safetyText)) "Falta aviso de seguridad/legal: $safetyText"

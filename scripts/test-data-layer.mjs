@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 
 const indexed=fs.readFileSync('data/indexeddb.js','utf8');
 const repositories=fs.readFileSync('data/repositories.js','utf8');
+const registry=fs.readFileSync('data/schema-registry.js','utf8');
+const backup=fs.readFileSync('data/backup-service.js','utf8');
 const html=fs.readFileSync('index.html','utf8');
 const sw=fs.readFileSync('sw.js','utf8');
 const sync=fs.readFileSync('scripts/sync-web-assets.ps1','utf8');
@@ -16,9 +18,17 @@ for(const repository of ['ProtocolRepository','WorkoutRepository','NutritionRepo
 }
 assert.ok(!indexed.includes('protocolo_0_100_fdc_config_v1'),'La configuracion FDC no debe copiarse a IndexedDB.');
 assert.ok(!indexed.includes('firebaseConfig.js'),'La configuracion Firebase no debe copiarse a IndexedDB.');
+assert.ok(registry.includes("entry('equipmentProfiles','protocolo_0_100_equipment_profiles_v1','workout'"),'El equipo debe pertenecer al dominio Workout.');
+assert.ok(!/protocolo_0_100_[a-z0-9_]+_v\d+/.test(repositories),'Los repositorios no deben mantener otra lista manual de claves.');
+const indexedWithoutCoordinationIds=indexed.replaceAll('protocolo_0_100_data_changes_v1','');
+assert.ok(!/protocolo_0_100_[a-z0-9_]+_v\d+/.test(indexedWithoutCoordinationIds),'IndexedDB debe derivar claves persistidas del registro.');
+assert.ok(!/protocolo_0_100_[a-z0-9_]+_v\d+/.test(backup),'BackupService debe derivar claves del registro.');
+assert.ok(indexed.includes("registry.domainKeys({mirrorOnly:true})"));
+assert.ok(backup.includes('registry.backupFieldMap()'));
+assert.ok(html.indexOf('data/schema-registry.js')<html.indexOf('data/indexeddb.js'),'El registro debe cargar antes de IndexedDB.');
 assert.ok(html.indexOf('data/indexeddb.js')<html.indexOf('fdc-client.js'),'La capa de datos debe cargar antes de los consumidores.');
 assert.ok(html.includes('APP_REPOSITORIES?.protocol.get'),'El protocolo no usa el repositorio compatible.');
-for(const asset of ['data/indexeddb.js','data/repositories.js','data/backup-service.js']){
+for(const asset of ['data/schema-registry.js','data/indexeddb.js','data/repositories.js','data/backup-service.js']){
   assert.ok(sw.includes(`'./${asset}'`),`Service worker no incluye ${asset}`);
   assert.ok(sync.includes(`'${asset}'`),`Android no sincroniza ${asset}`);
   assert.ok(deploy.includes('npm run build:web'),`Pages no construye el artifact que contiene ${asset}`);

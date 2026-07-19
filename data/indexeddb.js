@@ -1,65 +1,17 @@
 (function(global){
   'use strict';
 
+  const registry=global.APP_SCHEMA_REGISTRY;
+  if(!registry)throw new Error('APP_SCHEMA_REGISTRY debe cargar antes de IndexedDB.');
   const DB_NAME='protocolo_0_100_data';
   const DB_VERSION=1;
   const RECORDS_STORE='records';
   const META_STORE='meta';
   const RECOVERY_STORE='recovery';
-  const CONFIG_KEY='protocolo_0_100_data_layer_v1';
+  const CONFIG_KEY=registry.getByName('diagnostics','dataLayerConfig').key;
   const CHANNEL_NAME='protocolo_0_100_data_changes_v1';
   const MAX_RECOVERY_SNAPSHOTS=5;
-  const DOMAIN_KEYS=Object.freeze({
-    protocol:[
-      'protocolo_0_100_tracker_v1',
-      'protocolo_0_100_gym_sessions_v1'
-    ],
-    workout:[
-      'protocolo_0_100_weekly_workout_plan_v1',
-      'protocolo_0_100_workout_sessions_v1',
-      'protocolo_0_100_exercise_history_v1',
-      'protocolo_0_100_exercise_library_v1',
-      'protocolo_0_100_exercise_library_meta_v1',
-      'protocolo_0_100_exercise_preferences_v1',
-      'protocolo_0_100_gym_settings_v1',
-      'protocolo_0_100_workout_widget_state_v1'
-    ],
-    nutrition:[
-      'protocolo_0_100_nutrition_entries_v1',
-      'protocolo_0_100_nutrition_targets_v1',
-      'protocolo_0_100_body_metrics_v1',
-      'protocolo_0_100_custom_foods_v1',
-      'protocolo_0_100_nutrition_aliases_v1',
-      'protocolo_0_100_nutrition_profile_v1',
-      'protocolo_0_100_saved_meals_v1',
-      'protocolo_0_100_recipes_v1',
-      'protocolo_0_100_food_portions_v1',
-      'protocolo_0_100_cached_fdc_foods_v1',
-      'protocolo_0_100_fdc_search_cache_v1'
-    ],
-    gymParty:[
-      'protocolo_0_100_gym_party_settings_v1',
-      'protocolo_0_100_gym_party_membership_v1',
-      'protocolo_0_100_shared_workout_sessions_v1',
-      'protocolo_0_100_shared_workout_sets_v1',
-      'protocolo_0_100_gym_party_sync_queue_v1',
-      'protocolo_0_100_last_gym_party_sync_at_v1',
-      'protocolo_0_100_gym_party_last_remote_sync_at_v1',
-      'protocolo_0_100_gym_party_demo_data_v1'
-    ],
-    settings:[
-      'protocolo_0_100_ui_preferences_v1',
-      'protocolo_0_100_backup_meta_v1'
-    ],
-    backup:[
-      'protocolo_0_100_state_v2',
-      'protocolo_0_100_import_history_v1'
-    ]
-  });
-  const KEY_DOMAINS=Object.freeze(Object.entries(DOMAIN_KEYS).reduce((map,[domain,keys])=>{
-    keys.forEach(key=>{map[key]=domain;});
-    return map;
-  },{}));
+  const DOMAIN_KEYS=registry.domainKeys({mirrorOnly:true});
   const DEFAULT_CONFIG=Object.freeze({
     schemaVersion:1,
     enabled:true,
@@ -84,13 +36,19 @@
       return {...DEFAULT_CONFIG,...stored,domains:{...DEFAULT_CONFIG.domains,...(stored.domains||{})}};
     }catch(error){return {...DEFAULT_CONFIG,domains:{...DEFAULT_CONFIG.domains}};}
   }
-  function domainForKey(key){return KEY_DOMAINS[key]||'';}
+  function recordForKey(key){
+    const record=registry.get(key);
+    if(!record)throw new Error(`Clave persistida no registrada: ${key}`);
+    return record;
+  }
+  function domainForKey(key){return registry.get(key)?.domain||'';}
   function shouldMirror(key){
-    const domain=domainForKey(key),current=config();
-    return !!(domain&&current.enabled&&current.mode==='shadow'&&current.domains[domain]!==false);
+    const record=registry.get(key),domain=record?.domain,current=config();
+    return !!(record?.mirrorEnabled&&domain&&current.enabled&&current.mode==='shadow'&&current.domains[domain]!==false);
   }
   function sanitizeRawForMirror(key,raw){
-    if(key!=='protocolo_0_100_gym_party_settings_v1')return raw;
+    const record=recordForKey(key);
+    if(record.redaction!=='firebase-config')return raw;
     try{
       const value=JSON.parse(raw);
       if(value&&typeof value==='object'&&!Array.isArray(value))delete value.firebaseConfig;
@@ -155,6 +113,7 @@
     }
   }
   function read(key,fallback){
+    recordForKey(key);
     try{
       const raw=localStorage.getItem(key);
       return raw===null?clone(fallback):(JSON.parse(raw)??clone(fallback));
@@ -177,6 +136,7 @@
     await transactionDone(transaction);
   }
   function writeRaw(key,raw,{notify=true,mirror=true}={}){
+    recordForKey(key);
     try{localStorage.setItem(key,String(raw));}
     catch(error){reportError(error,'local-write',key);throw error;}
     if(notify)notifyChange(key);
@@ -191,12 +151,14 @@
     return value;
   }
   function remove(key,{notify=true,mirror=true}={}){
+    recordForKey(key);
     try{localStorage.removeItem(key);}
     catch(error){reportError(error,'local-remove',key);throw error;}
     if(notify)notifyChange(key);
     if(mirror&&shouldMirror(key))enqueueMirror(()=>deleteRecord(key),'mirror-remove',key);
   }
   async function readIndexed(key,fallback){
+    recordForKey(key);
     try{
       const database=await openDatabase();
       const transaction=database.transaction(RECORDS_STORE,'readonly');
@@ -224,6 +186,7 @@
     await done;
   }
   async function createRecoverySnapshot(keys,reason='migration'){
+    keys.forEach(recordForKey);
     const rawByKey={};
     keys.forEach(key=>{const raw=localStorage.getItem(key);rawByKey[key]=raw===null?null:raw;});
     const snapshot={id:`recovery_${Date.now()}_${Math.random().toString(36).slice(2,8)}`,reason,createdAt:new Date().toISOString(),keys:[...keys],rawByKey};
@@ -295,6 +258,7 @@
   async function replaceMany(changes,{reason='transaction',rawKeys=[]}={}){
     const entries=Object.entries(changes||{});
     const keys=entries.map(([key])=>key);
+    keys.forEach(recordForKey);
     const snapshot=await createRecoverySnapshot(keys,reason);
     try{
       const rawSet=new Set(rawKeys);
@@ -391,7 +355,12 @@
     return localKeys.length;
   }
   async function diagnostics(){
-    const output={database:DB_NAME,version:DB_VERSION,mode:config().mode,enabled:config().enabled,indexedDB:!!global.indexedDB,lastError:lastError?{...lastError}:null,domains:{}};
+    const unknownLocalKeys=[];
+    for(let index=0;index<localStorage.length;index++){
+      const key=localStorage.key(index);
+      if(key?.startsWith('protocolo_0_100_')&&!registry.get(key))unknownLocalKeys.push(key);
+    }
+    const output={database:DB_NAME,version:DB_VERSION,mode:config().mode,enabled:config().enabled,indexedDB:!!global.indexedDB,lastError:lastError?{...lastError}:null,schemaRegistry:{version:registry.REGISTRY_VERSION,registeredKeys:registry.all().length,unknownLocalKeys},domains:{}};
     if(!global.indexedDB)return output;
     for(const domain of Object.keys(DOMAIN_KEYS)){
       try{const meta=await getMeta(`domain:${domain}`);output.domains[domain]=meta?{status:meta.status,version:meta.version,keyCount:meta.keyCount,completedAt:meta.completedAt}:{status:'pending'};}

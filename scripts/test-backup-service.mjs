@@ -2,8 +2,9 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
-const storage=new Map(),events=[],transactions=[];
+const storage=new Map(),rawStorage=new Map(),events=[],transactions=[];
 const window={
+  localStorage:{getItem:key=>rawStorage.has(key)?rawStorage.get(key):null,setItem:(key,value)=>rawStorage.set(key,String(value)),removeItem:key=>rawStorage.delete(key)},
   APP_DATA:{
     read:(key,fallback)=>storage.has(key)?structuredClone(storage.get(key)):fallback,
     write:(key,value)=>{storage.set(key,structuredClone(value));return value;},
@@ -14,6 +15,7 @@ const window={
 };
 class CustomEvent{constructor(type,options={}){this.type=type;this.detail=options.detail;}}
 const context=vm.createContext({window,Blob,CustomEvent,structuredClone,console,setTimeout,Date,Math,JSON,Object,Array,Set,Map,String,Number,RegExp});
+vm.runInContext(fs.readFileSync('data/schema-registry.js','utf8'),context);
 vm.runInContext(fs.readFileSync('data/backup-service.js','utf8'),context);
 const service=window.BACKUP_SERVICE;
 
@@ -36,6 +38,15 @@ assert.equal(prepared.changes.protocolo_0_100_food_portions_v1.rice.lastAmount,1
 assert.equal(prepared.changes.protocolo_0_100_workout_sessions_v1[0].exercises[0].sets[0].setType,'warmup');
 assert.deepEqual(Array.from(prepared.changes.protocolo_0_100_workout_sessions_v1[0].exercises[0].muscleClassificationSnapshot.primaryMuscles),['chest']);
 assert.equal(prepared.changes.protocolo_0_100_workout_sessions_v1[0].exercises[0].muscleClassificationSnapshot.classificationStatus,'official');
+storage.set('protocolo_0_100_equipment_profiles_v1',[{id:'barbell-20',name:'Barra 20 kg'}]);
+storage.set('protocolo_0_100_gym_party_settings_v1',{backendMode:'firebase',firebaseConfig:{apiKey:'omit'},localUserId:'local'});
+storage.set('protocolo_0_100_fdc_config_v1',{apiKey:'never-export'});
+rawStorage.set('protocolo_0_100_start_date_v1','2026-07-01');
+const exported=service.buildExport({appVersion:'2.7.0'});
+assert.equal(exported.equipmentProfiles[0].id,'barbell-20');
+assert.equal(exported.gymPartySettings.firebaseConfig,undefined);
+assert.equal(exported.startDate,'2026-07-01');
+assert.equal(Object.hasOwn(exported,'fdcConfig'),false);
 const result=await service.apply(prepared);
 assert.equal(result.snapshotId,'recovery-before-import');
 assert.ok(transactions[0].options.reason.startsWith('import:'));

@@ -570,51 +570,15 @@
   }
   function buildCompleteBackup(){
     syncVersionedState();
-    const state=getLocalData(APP_STATE_KEY,{});
-    const workoutKeys=window.WORKOUT_FEATURES?.keys||{};
-    const gymPartyState=window.GYM_PARTY_FEATURES?.exportState?.()||{};
-    return {...state,...gymPartyState,startDate:localStorage.getItem(START_KEY)||todayStr(),entries:getEntries(),gymSessions:getLocalData(GYM_SESSIONS_KEY,[]),weeklyWorkoutPlan:getLocalData(workoutKeys.weeklyWorkoutPlan||'protocolo_0_100_weekly_workout_plan_v1',null),workoutSessions:getLocalData(workoutKeys.workoutSessions||'protocolo_0_100_workout_sessions_v1',[]),exerciseHistory:getLocalData(workoutKeys.exerciseHistory||'protocolo_0_100_exercise_history_v1',{}),exerciseLibrary:getLocalData(workoutKeys.exerciseLibrary||'protocolo_0_100_exercise_library_v1',[]),exerciseLibraryMeta:getLocalData(workoutKeys.exerciseLibraryMeta||'protocolo_0_100_exercise_library_meta_v1',null),exercisePreferences:getLocalData(workoutKeys.exercisePreferences||'protocolo_0_100_exercise_preferences_v1',{schemaVersion:1,exercises:{}}),gymSettings:getLocalData(workoutKeys.gymSettings||'protocolo_0_100_gym_settings_v1',{}),workoutWidgetState:getLocalData(workoutKeys.workoutWidgetState||'protocolo_0_100_workout_widget_state_v1',null),nutritionEntries:getLocalData(NUTRITION_ENTRIES_KEY,[]),nutritionTargets:advancedTargets(),bodyMetrics:getLocalData(BODY_METRICS_KEY,{}),customFoods:getLocalData(CUSTOM_FOODS_KEY,[]),cachedFdcFoods:FDC?.cachedFoods?.()||[],nutritionAliases:getLocalData(NUTRITION_ALIASES_KEY,{}),uiPreferences:getLocalData('protocolo_0_100_ui_preferences_v1',{}),exportedAt:new Date().toISOString()};
+    const payload={appVersion:window.APP_VERSION_INFO?.version||'unknown',updatedAt:new Date().toISOString(),settings:{activeModule:localStorage.getItem(ACTIVE_MODULE_KEY)||'home',nutritionProfile:nutritionProfile(),ranking:getLocalData(RANKING_SETTINGS_KEY,{alias:'Anónimo 0→100',optIn:false})},exportedAt:new Date().toISOString()};
+    if(!window.BACKUP_SERVICE?.buildExport)throw new Error('El servicio de backup no está disponible. No se generó una copia incompleta.');
+    return window.BACKUP_SERVICE.buildExport(payload);
   }
   window.buildCompleteBackup=buildCompleteBackup;
   function importCompleteBackupData(data){
-    if(window.BACKUP_SERVICE&&window.APP_DATA){
-      const prepared=window.BACKUP_SERVICE.prepareText(JSON.stringify(data),{fileName:'importacion-interna.json'});
-      return window.BACKUP_SERVICE.apply(prepared).then(result=>{window.refreshAfterBackupImport?.();return result;});
-    }
-    const state=data?.schemaVersion?data:null;
-    if(state){
-      if(Array.isArray(state.dailyLogs))setEntries(state.dailyLogs);
-      if(Array.isArray(state.meals))setLocalData(NUTRITION_ENTRIES_KEY,state.meals);
-      if(Array.isArray(state.gymSessions))setLocalData(GYM_SESSIONS_KEY,state.gymSessions);
-      const workoutKeys=window.WORKOUT_FEATURES?.keys||{};
-      if(state.weeklyWorkoutPlan)setLocalData(workoutKeys.weeklyWorkoutPlan||'protocolo_0_100_weekly_workout_plan_v1',state.weeklyWorkoutPlan);
-      if(Array.isArray(state.workoutSessions))setLocalData(workoutKeys.workoutSessions||'protocolo_0_100_workout_sessions_v1',state.workoutSessions);
-      if(state.exerciseHistory)setLocalData(workoutKeys.exerciseHistory||'protocolo_0_100_exercise_history_v1',state.exerciseHistory);
-      if(Array.isArray(state.exerciseLibrary))setLocalData(workoutKeys.exerciseLibrary||'protocolo_0_100_exercise_library_v1',state.exerciseLibrary);
-      if(state.exerciseLibraryMeta)setLocalData(workoutKeys.exerciseLibraryMeta||'protocolo_0_100_exercise_library_meta_v1',state.exerciseLibraryMeta);
-      if(state.exercisePreferences)setLocalData(workoutKeys.exercisePreferences||'protocolo_0_100_exercise_preferences_v1',state.exercisePreferences);
-      if(state.gymSettings)setLocalData(workoutKeys.gymSettings||'protocolo_0_100_gym_settings_v1',state.gymSettings);
-      if(state.workoutWidgetState)setLocalData(workoutKeys.workoutWidgetState||'protocolo_0_100_workout_widget_state_v1',state.workoutWidgetState);
-      if(Array.isArray(state.customFoods))setLocalData(CUSTOM_FOODS_KEY,state.customFoods);
-      if(Array.isArray(state.cachedFdcFoods)&&FDC)FDC.replaceCache(state.cachedFdcFoods);
-      if(state.nutritionTargets)setLocalData(NUTRITION_TARGETS_KEY,state.nutritionTargets);
-      if(state.bodyMetrics)setLocalData(BODY_METRICS_KEY,state.bodyMetrics);
-      if(state.uiPreferences)setLocalData('protocolo_0_100_ui_preferences_v1',state.uiPreferences);
-      if(Array.isArray(state.savedMeals))setLocalData(SAVED_MEALS_KEY,state.savedMeals);
-      if(Array.isArray(state.recipes))setLocalData(RECIPES_KEY,state.recipes);
-      if(state.foodPortions&&typeof state.foodPortions==='object'&&!Array.isArray(state.foodPortions))setLocalData(FOOD_PORTIONS_KEY,state.foodPortions);
-      if(typeof state.settings?.activeModule==='string')localStorage.setItem(ACTIVE_MODULE_KEY,state.settings.activeModule);
-      if(state.settings?.nutritionProfile)setLocalData(NUTRITION_PROFILE_KEY,state.settings.nutritionProfile);
-      if(state.settings?.ranking)setLocalData(RANKING_SETTINGS_KEY,state.settings.ranking);
-      if(Array.isArray(state.referralCodes))setLocalData(REFERRAL_CODES_KEY,state.referralCodes);
-      if(Object.prototype.hasOwnProperty.call(state,'userReferral'))setLocalData(USER_REFERRAL_KEY,state.userReferral);
-      if(Array.isArray(state.coinLedger))setLocalData(COIN_LEDGER_KEY,state.coinLedger);
-      if(state.monthlyRankings&&typeof state.monthlyRankings==='object')setLocalData(MONTHLY_RANKINGS_KEY,state.monthlyRankings);
-      if(state.rewards&&typeof state.rewards==='object')setLocalData(REWARDS_KEY,state.rewards);
-      if(window.GYM_PARTY_FEATURES?.importState)window.GYM_PARTY_FEATURES.importState(state);
-    }
-    migrateAdvancedState();populateFoods();loadAdvancedTargetFields();renderSavedMeals();renderAll();renderAdvancedNutrition();renderAdvancedProgress();
-    if(typeof state?.settings?.activeModule==='string')setModule(state.settings.activeModule);
+    if(!window.BACKUP_SERVICE||!window.APP_DATA)return Promise.reject(new Error('El servicio de importacion no esta disponible. No se modificaron datos.'));
+    const prepared=window.BACKUP_SERVICE.prepareText(JSON.stringify(data),{fileName:'importacion-interna.json'});
+    return window.BACKUP_SERVICE.apply(prepared).then(result=>{window.refreshAfterBackupImport?.();return result;});
   }
   window.importCompleteBackupData=importCompleteBackupData;
   function syncVersionedState(){

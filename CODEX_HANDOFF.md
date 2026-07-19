@@ -2450,3 +2450,58 @@ Estado preparado: version `2.7.0`, Android `33`, build/cache `75`
 `data/schema-registry.js`, incluir `equipmentProfiles` en el dominio Workout y
 derivar de ese registro IndexedDB, repositorios, backups, reset y diagnosticos
 antes de promover ningun dominio desde `shadow`.
+
+## 58. Registro unico de claves y schemas
+
+Bloque iniciado sobre `07ec4ee` y preparado como build 76:
+
+- `data/schema-registry.js` es la fuente unica para las 53 claves persistidas
+  conocidas. Cada registro declara nombre, dominio, schema, valor inicial,
+  validador, migracion, backup, campo y aliases de backup, sensibilidad, modo de
+  almacenamiento, espejo, grupo de reset, retencion, serializacion, redaccion y
+  claves legacy.
+- `equipmentProfiles` pertenece ahora de forma verificable al dominio Workout y
+  entra en el espejo IndexedDB y en backups. Recetas y porciones pertenecen a
+  Nutricion. Las caches FDC declaran LRU/TTL; la configuracion FDC es sensible,
+  queda solo en localStorage y no se exporta ni se copia a IndexedDB.
+- `data/indexeddb.js`, `data/repositories.js` y `data/backup-service.js` derivan
+  sus claves y campos del registro. Una escritura a una clave no registrada
+  falla de forma explicita. Diagnosticos informa claves locales desconocidas.
+  IndexedDB continua en `shadow`: este bloque no promovio ningun dominio ni
+  borro claves legacy.
+- Exportacion e importacion ya no tienen una ruta manual parcial. Ambas pasan
+  por `BACKUP_SERVICE`; si el servicio no esta disponible, la operacion se
+  rechaza sin modificar datos. La configuracion Firebase de Gym Party se
+  redacta al exportar.
+- Los resets selectivos derivan su alcance de `resetGroup`. Progreso obtiene las
+  claves de Workout y Nutricion mediante el registro/repositorio y no lee
+  `localStorage` directamente.
+- `scripts/test-schema-registry.mjs` recorre automaticamente todo el codigo web
+  fuente, comprueba que cada clave referenciada este registrada, valida
+  unicidad, dominios, backups, sensibilidad, retencion y paridad contractual
+  web/Android. `test:data` incluye esta auditoria.
+
+Pruebas del bloque ejecutadas:
+
+- registro de schemas, capa de datos, backup/importacion, Nutricion, FDC,
+  Progreso, Workout Features, metricas, modulos, diseno y validacion estatica:
+  correctos;
+- E2E dirigida de backup, Ajustes, Gym y Nutricion en Android Chromium, iPhone
+  WebKit y escritorio Chromium: 38 aprobadas y 3 omisiones condicionadas por
+  plataforma. Un primer intento de Nutricion en escritorio perdio el contexto
+  durante una navegacion; el caso aislado se repitio y aprobo, por lo que queda
+  registrado como intermitencia de Playwright, no como fallo reproducible;
+- artifact web build 76: 65 recursos con inventario y hashes, al incorporar
+  `data/schema-registry.js`; la prueba servida abrio rutas profundas, modulos y
+  service worker sin 404, errores de pagina ni consola;
+- `validate-app.ps1 -CheckAndroidAssets` confirmo cache build 76, 446 IDs
+  estaticos unicos y paridad exacta web/Android;
+- Gradle 8.10.2 con Java 17 ejecuto un build limpio `:app:assembleDebug`. El APK
+  debug mide 1.594.852 bytes y su SHA-256 es
+  `F2032EFD22587EC1E755427C7320F8F6127CA6E1BCEADD7FC9F59C23F63F3326`.
+
+Estado preparado: version `2.7.0`, Android `33`, build/cache `76`
+(`protocolo-0-100-pwa-2.7.0-b76`). El siguiente bloque exacto es crear
+validacion estructurada y cuarentena antes de promover Nutricion desde
+IndexedDB `shadow` a lectura primaria. No iniciar a la vez la promocion de
+Workout.

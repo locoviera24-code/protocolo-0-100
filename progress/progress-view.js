@@ -1,7 +1,8 @@
 (function(){
   'use strict';
 
-  const NUTRITION_KEY='protocolo_0_100_nutrition_entries_v1';
+  const registry=window.APP_SCHEMA_REGISTRY;
+  const NUTRITION_KEY=registry?.getByName('nutrition','entries')?.key;
   const views=new Set(['overview','habits','gym','nutrition','history','achievements']);
   const muscleMapTargets=[
     {id:'chest',x:50,y:31},{id:'lats',x:150,y:39},{id:'upper-back',x:150,y:29},{id:'traps',x:150,y:22},
@@ -14,7 +15,7 @@
   let activeView='overview';
 
   function read(key,fallback){
-    try{const value=JSON.parse(localStorage.getItem(key));return value??fallback;}catch(error){return fallback;}
+    return window.APP_REPOSITORIES?.forKey?.(key)?.get(key,fallback)??window.APP_DATA?.read?.(key,fallback)??fallback;
   }
   function escape(value){
     return String(value??'').replace(/[&<>"]/g,character=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[character]));
@@ -33,7 +34,7 @@
   }
   function protocolEntries(){return (window.getEntries?.()||[]).slice().sort((a,b)=>String(a.date).localeCompare(String(b.date)));}
   function workoutSessions(){
-    const key=window.WORKOUT_FEATURES?.keys?.workoutSessions||'protocolo_0_100_workout_sessions_v1';
+    const key=window.WORKOUT_FEATURES?.keys?.workoutSessions||registry?.getByName('workout','sessions')?.key;
     return read(key,[]);
   }
   function nutritionEntries(){return read(NUTRITION_KEY,[]);}
@@ -63,7 +64,7 @@
   function percentChange(current,previous){return previous?Math.round(((current-previous)/previous)*100):null;}
   function deltaLabel(current,previous){const delta=percentChange(current,previous);return delta===null?'Sin período anterior':`${delta>0?'+':''}${delta}% vs anterior`;}
   function observedPeriodDays(){const dates=[...protocolEntries().map(item=>item.date),...workoutSessions().map(item=>item.date),...nutritionEntries().map(item=>item.date)].filter(Boolean).sort();if(!dates.length)return 1;return Math.max(1,Math.round((localDate(dates[dates.length-1])-localDate(dates[0]))/86400000)+1);}
-  function plannedGymDays(){const key=window.WORKOUT_FEATURES?.keys?.weeklyWorkoutPlan||'protocolo_0_100_weekly_workout_plan_v1',fallback=window.WORKOUT_FEATURES?.defaultWeeklyPlan||{},plan=read(key,fallback);return Math.max(1,Object.values(plan||{}).filter(day=>day?.type!=='rest'&&(day?.exercises||[]).length).length||3);}
+  function plannedGymDays(){const key=window.WORKOUT_FEATURES?.keys?.weeklyWorkoutPlan||registry?.getByName('workout','weeklyPlan')?.key,fallback=window.WORKOUT_FEATURES?.defaultWeeklyPlan||{},plan=read(key,fallback);return Math.max(1,Object.values(plan||{}).filter(day=>day?.type!=='rest'&&(day?.exercises||[]).length).length||3);}
   function kpi(label,value,detail){return `<article class="progressKpi"><span>${escape(label)}</span><strong>${escape(value)}</strong><small>${escape(detail)}</small></article>`;}
   function barRows(rows,{value,label,detail,display,max,empty='Todavía no hay datos comparables.'}){
     if(!rows.length)return `<div class="emptyState">${escape(empty)}</div>`;

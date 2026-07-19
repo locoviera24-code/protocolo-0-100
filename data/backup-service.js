@@ -5,17 +5,12 @@
   const MAX_STRING_LENGTH=20000;
   const MAX_ARRAY_ITEMS=50000;
   const CURRENT_SCHEMA=3;
-  const START_KEY='protocolo_0_100_start_date_v1';
-  const ACTIVE_MODULE_KEY='protocolo_0_100_active_module_v1';
-  const HISTORY_KEY='protocolo_0_100_import_history_v1';
+  const registry=global.APP_SCHEMA_REGISTRY;
+  if(!registry)throw new Error('APP_SCHEMA_REGISTRY debe cargar antes de BackupService.');
+  const ACTIVE_MODULE_KEY=registry.getByName('settings','activeModule').key;
+  const HISTORY_KEY=registry.getByName('backup','importHistory').key;
   const DANGEROUS_KEYS=new Set(['__proto__','prototype','constructor']);
-  const FIELD_MAP=Object.freeze({
-    entries:'protocolo_0_100_tracker_v1',dailyLogs:'protocolo_0_100_tracker_v1',gymSessions:'protocolo_0_100_gym_sessions_v1',
-    weeklyWorkoutPlan:'protocolo_0_100_weekly_workout_plan_v1',workoutSessions:'protocolo_0_100_workout_sessions_v1',exerciseHistory:'protocolo_0_100_exercise_history_v1',exerciseLibrary:'protocolo_0_100_exercise_library_v1',exerciseLibraryMeta:'protocolo_0_100_exercise_library_meta_v1',equipmentProfiles:'protocolo_0_100_equipment_profiles_v1',exercisePreferences:'protocolo_0_100_exercise_preferences_v1',gymSettings:'protocolo_0_100_gym_settings_v1',workoutWidgetState:'protocolo_0_100_workout_widget_state_v1',
-    nutritionEntries:'protocolo_0_100_nutrition_entries_v1',meals:'protocolo_0_100_nutrition_entries_v1',nutritionTargets:'protocolo_0_100_nutrition_targets_v1',bodyMetrics:'protocolo_0_100_body_metrics_v1',customFoods:'protocolo_0_100_custom_foods_v1',nutritionAliases:'protocolo_0_100_nutrition_aliases_v1',savedMeals:'protocolo_0_100_saved_meals_v1',recipes:'protocolo_0_100_recipes_v1',foodPortions:'protocolo_0_100_food_portions_v1',cachedFdcFoods:'protocolo_0_100_cached_fdc_foods_v1',uiPreferences:'protocolo_0_100_ui_preferences_v1',
-    gymPartySettings:'protocolo_0_100_gym_party_settings_v1',gymPartyMembership:'protocolo_0_100_gym_party_membership_v1',sharedWorkoutSessions:'protocolo_0_100_shared_workout_sessions_v1',sharedWorkoutSets:'protocolo_0_100_shared_workout_sets_v1',syncQueue:'protocolo_0_100_gym_party_sync_queue_v1',lastGymPartySyncAt:'protocolo_0_100_last_gym_party_sync_at_v1',lastGymPartyRemoteSyncAt:'protocolo_0_100_gym_party_last_remote_sync_at_v1',gymPartyDemoData:'protocolo_0_100_gym_party_demo_data_v1',
-    referralCodes:'protocolo_0_100_referral_codes_v1',userReferral:'protocolo_0_100_user_referral_v1',coinLedger:'protocolo_0_100_coin_ledger_v1',monthlyRankings:'protocolo_0_100_monthly_rankings_v1',rewards:'protocolo_0_100_rewards_v1'
-  });
+  const FIELD_MAP=registry.backupFieldMap();
   const META_FIELDS=new Set(['schemaVersion','appVersion','updatedAt','exportedAt','settings','startDate']);
 
   function cleanString(value){return String(value).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g,'').slice(0,MAX_STRING_LENGTH);}
@@ -45,7 +40,8 @@
     if(!schema&&!Array.isArray(data.entries))throw new Error('El JSON no contiene un backup compatible ni registros antiguos.');
     return schema||1;
   }
-  function sanitizeGymPartySettings(value){
+  function sanitizeForRecord(record,value){
+    if(record?.redaction!=='firebase-config')return value;
     if(!value||typeof value!=='object')return value;
     const output={...value};delete output.firebaseConfig;return output;
   }
@@ -55,20 +51,19 @@
       if(!Object.prototype.hasOwnProperty.call(data,field))return;
       usedFields.add(field);
       if(Object.prototype.hasOwnProperty.call(changes,key))return;
-      let value=data[field];
-      if(field==='gymPartySettings')value=sanitizeGymPartySettings(value);
+      const record=registry.get(key);if(!record||record.sensitive||!record.backup)return;
+      let value=sanitizeForRecord(record,data[field]);
+      if(record===registry.getByName('protocol','startDate')&&!(typeof value==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(value)))return;
       changes[key]=value;
+      if(record.serialization==='raw')rawKeys.push(key);
     });
-    if(typeof data.startDate==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(data.startDate)){
-      changes[START_KEY]=data.startDate;rawKeys.push(START_KEY);usedFields.add('startDate');
-    }
     const settings=data.settings&&typeof data.settings==='object'?data.settings:null;
     if(settings){
       if(typeof settings.activeModule==='string'){
         changes[ACTIVE_MODULE_KEY]=cleanString(settings.activeModule).slice(0,40);rawKeys.push(ACTIVE_MODULE_KEY);
       }
-      if(settings.nutritionProfile)changes.protocolo_0_100_nutrition_profile_v1=settings.nutritionProfile;
-      if(settings.ranking)changes.protocolo_0_100_ranking_settings_v1=settings.ranking;
+      if(settings.nutritionProfile)changes[registry.getByName('nutrition','profile').key]=settings.nutritionProfile;
+      if(settings.ranking)changes[registry.getByName('laboratory','rankingSettings').key]=settings.ranking;
       usedFields.add('settings');
     }
     const ignored=Object.keys(data).filter(field=>!usedFields.has(field)&&!META_FIELDS.has(field));
@@ -91,6 +86,23 @@
       summary.keys+=1;summary.records+=part.records;summary.added+=part.added;summary.replaced+=part.replaced;summary.conflicts+=part.conflicts;
       return summary;
     },{keys:0,records:0,added:0,replaced:0,conflicts:0});
+  }
+  function readForExport(record){
+    if(record.serialization==='raw'){
+      const raw=global.localStorage?.getItem?.(record.key);
+      return raw===null||raw===undefined?record.defaultValue:raw;
+    }
+    return global.APP_DATA.read(record.key,record.defaultValue);
+  }
+  function buildExport(seed={}){
+    const output={...seed};
+    registry.records({backupOnly:true}).forEach(record=>{
+      const value=sanitizeForRecord(record,readForExport(record));
+      if(value!==undefined)output[record.backupField]=value;
+    });
+    output.schemaVersion=CURRENT_SCHEMA;
+    output.exportedAt=seed.exportedAt||new Date().toISOString();
+    return output;
   }
   async function prepareFile(file){
     if(!file)throw new Error('Selecciona un archivo JSON.');
@@ -125,5 +137,5 @@
     return result;
   }
 
-  global.BACKUP_SERVICE=Object.freeze({MAX_FILE_BYTES,CURRENT_SCHEMA,HISTORY_KEY,prepareFile,prepareText,apply,undo,history});
+  global.BACKUP_SERVICE=Object.freeze({MAX_FILE_BYTES,CURRENT_SCHEMA,HISTORY_KEY,FIELD_MAP,buildExport,prepareFile,prepareText,apply,undo,history});
 })(window);
