@@ -6,8 +6,8 @@ test('Nutricion usa el repositorio y conserva entradas tras recargar',async({pag
   await page.goto('/index.html?module=nutrition&view=meals');
   await expect.poll(()=>page.evaluate(()=>!!window.NUTRITION_STORE&&!!window.NUTRITION_MODEL)).toBe(true);
   await page.locator('[data-open-nutrition-view="registrar"]').first().click();
-  await page.locator('.nutritionFoodFallback summary').click();
-  await page.locator('#nutritionFood').selectOption({index:1});
+  await page.locator('#nutritionFoodSearch').fill('mandioca');
+  await page.locator('[data-food-flow-select]').first().click();
   await page.locator('#foodQuantity').fill('150');
   await page.locator('#foodAmountNextBtn').click();
   await page.locator('#nutritionMeal').selectOption('Almuerzo');

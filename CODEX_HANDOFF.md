@@ -2612,3 +2612,79 @@ Estado preparado: version `2.7.0`, Android `33`, build/cache `78`
 dominios. La siguiente fase debe ser un bloque aislado: simplificar la busqueda
 nutricional mediante un servicio unificado y proveedor externo opcional, o
 hacer atomica la PWA; no promover Workout en paralelo con ninguna de ellas.
+
+## 61. Busqueda nutricional unificada y parsimoniosa
+
+Bloque iniciado despues de `7f43125` y preparado como build 79:
+
+- `nutrition/food-search-service.js` concentra la busqueda cotidiana. Primero
+  ordena alimentos incluidos, personales, recetas, favoritos, recientes,
+  frecuentes y guardados; una coincidencia exacta o un alias de alta confianza
+  no genera trafico externo.
+- Cuando la coincidencia interna es debil, ambigua o inexistente, el servicio
+  consulta automaticamente el proveedor disponible. Usa debounce de 400 ms,
+  `AbortController`, timeout, limite de resultados, deduplicacion y descarte de
+  respuestas obsoletas. Una consulta de menos de tres caracteres nunca sale
+  del dispositivo.
+- `nutrition/food-provider.js` define `NutritionExternalProvider` con
+  `isAvailable`, `health`, `search`, `getFood` y `normalize`. El adaptador actual
+  conserva compatibilidad con `FDC_CLIENT`; la vista no conoce ni muestra el
+  proveedor que respondio.
+- La pantalla **Registrar alimento** tiene un buscador grande, voz integrada,
+  una sola lista y la accion secundaria **No encuentro este alimento**. No
+  muestra bases de datos, USDA, FDC, endpoints, API keys, cache, paginacion ni
+  una accion manual de importar.
+- Buscar `200 g de pollo` puede preseleccionar cantidad y unidad. Seleccionar un
+  resultado externo lo normaliza, conserva procedencia/confianza/snapshot, lo
+  guarda para uso posterior y continua a cantidad, comida y revision sin un
+  paso de importacion.
+- Sin conexion o sin proveedor configurado, la app sigue usando alimentos
+  incluidos, personales, recetas y cache. El estado visible se limita a
+  mensajes como **Buscando mas opciones**, **No encontramos mas coincidencias**
+  o **Sin conexion**; nunca bloquea el registro.
+- La configuracion tecnica queda plegada en **Mas > Ajustes > Nutricion >
+  Diagnostico avanzado de fuentes**. No se agrego ninguna credencial al repo.
+  Una clave de desarrollo configurada en el navegador sigue excluida de backup;
+  produccion debe usar un proxy/backend que conserve el secreto del lado
+  servidor.
+- `fdc-client.js` acepta cancelacion y timeout externos. Se retiro del flujo
+  normal la antigua busqueda paginada y el boton de importacion, pero se
+  preservan cache, normalizacion, edicion diagnostica y compatibilidad de datos.
+- Los nuevos modulos forman parte del service worker, del artifact Pages y del
+  sincronizador Android. La validacion impide volver a introducir terminologia
+  tecnica dentro de la tarjeta normal de registro.
+
+Pruebas ejecutadas antes de preparar artefactos:
+
+- `test:nutrition`, `test:fdc`, `test:modules`, service worker y validacion
+  estatica: correctos;
+- `nutrition-unified-search.spec.mjs`: 12/12 en Android Chromium, iPhone WebKit
+  y escritorio Chromium. Cubre coincidencia local sin red, fallback automatico,
+  normalizacion/cache, cancelacion, offline, ausencia de terminos tecnicos y
+  flujo hasta cantidad;
+- regresion Nutricion/borradores en escritorio: 25/25; dominio y
+  recetas/porciones en las tres plataformas: 12/12, sin omisiones;
+- datos/backups, Progreso, diseno, router, layout, Ajustes, Inicio, Workout y
+  Gym Party aprobaron sus pruebas Node/contrato. La suite E2E agregada completa
+  (261 casos entre proyectos) no se repitio en este bloque; se ejecutaron las
+  matrices relacionadas indicadas arriba;
+- el primer mock de transporte mediante interceptacion de red no era estable en
+  WebKit. La prueba se corrigio para inyectar un transporte falso detras del
+  contrato real `NutritionExternalProvider`; no se omitio ningun navegador ni
+  se agrego una excepcion de produccion.
+
+Verificacion publicable:
+
+- el artifact Pages contiene 67 recursos con inventario y hashes. Las rutas
+  profundas, modulos, manifest y service worker respondieron sin 404, errores
+  de pagina ni errores de consola;
+- `validate-app.ps1 -CheckAndroidAssets` confirmo 449 IDs estaticos unicos,
+  cache build 79 y paridad exacta web/Android;
+- Gradle 8.10.2 con Java 17 completo `clean assembleDebug`. El APK debug mide
+  1.605.139 bytes y su SHA-256 es
+  `6625698F8768F7CC4083EE37DF9E4862FBCA1ADBBB158C63D7AF00981CFDD553`.
+
+Estado publicable: version `2.7.0`, Android `33`, build/cache `79`
+(`protocolo-0-100-pwa-2.7.0-b79`). Siguiente fase estructural recomendada:
+hacer atomica la instalacion PWA y despues crear un quality gate unico. No
+promover Workout a IndexedDB en paralelo.

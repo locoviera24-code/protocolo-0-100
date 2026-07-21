@@ -54,9 +54,6 @@
     folate:'lenteja, poroto, garbanzo, espinaca o palta',
     omega3:'sardina, salmón o nueces'
   };
-  let fdcSearchPage=1;
-  let fdcLastSearch={query:'',local:[],cached:[],remote:{foods:[],totalHits:0,currentPage:1,totalPages:0,source:'empty'}};
-
   function round(value,digits=1){
     const p=10**digits;
     return Math.round((Number(value)||0)*p)/p;
@@ -252,82 +249,6 @@
     next._meta=metadata;window.NUTRITION_STORE?.saveTargets?.(next)??setLocalData(NUTRITION_TARGETS_KEY,next);
     loadAdvancedTargetFields();renderAdvancedNutrition();syncVersionedState();flash('Objetivos manuales guardados.');
   }
-  function filterFoodSelect(){
-    const query=normalizeFoodText(document.getElementById('nutritionFoodSearch')?.value||'');
-    const select=document.getElementById('nutritionFood'); if(!select) return;
-    const foods=allFoods();
-    const nutrientKey=Object.entries(DEFINITIONS).find(([,d])=>normalizeFoodText(d.label).includes(query))?.[0];
-    select.innerHTML=foods.map((food,index)=>({food,index})).filter(({food,index})=>{
-      if(index===0) return true;
-      if(!query) return true;
-      const haystack=normalizeFoodText([food.name,...(food.aliases||[]),food.category].join(' '));
-      return haystack.includes(query)||(nutrientKey&&foodNutrient(food,nutrientKey)>0);
-    }).map(({food,index})=>`<option value="${index}">${escapeHtml(food.name)}${food.fdcImported?' · USDA':food.custom?' · propio':''}</option>`).join('');
-    select.value='0'; applySelectedFood();
-    renderFdcLocalHint(query);
-  }
-  function fdcLocalFoods(){
-    return [...(window.NUTRITION_DB||[]).slice(1),...getLocalData(CUSTOM_FOODS_KEY,[])];
-  }
-  function fdcCard(food,{cached=false}={}){
-    const brand=food.brandOwner?` · ${food.brandOwner}`:'';
-    const action=cached?'<span class="statusChip good">Disponible offline</span>':`<button type="button" class="secondary" data-import-fdc="${escapeHtml(String(food.fdcId))}">Importar detalle</button>`;
-    return `<div class="fdcResult"><strong>${escapeHtml(food.description||food.name)}</strong><div class="fdcMeta">FDC ${escapeHtml(String(food.fdcId||''))} · ${escapeHtml(food.dataType||'')}${escapeHtml(brand)}</div>${action}</div>`;
-  }
-  function renderFdcLocalHint(query){
-    const status=document.getElementById('fdcSearchStatus');if(!status||!FDC)return;
-    const text=String(query||'').trim();
-    if(!text){status.textContent='Buscá primero por nombre o alias. La consulta remota es opcional.';return;}
-    const local=fdcLocalFoods().filter(food=>normalizeFoodText([food.name,...(food.aliases||[]),food.category].join(' ')).includes(text)).length;
-    const cached=FDC.findCachedByQuery(text,30).length;
-    status.textContent=`Primera capa: ${local} coincidencia(s) locales y ${cached} alimento(s) USDA en caché. Pulsá “Buscar también en USDA” para ampliar.`;
-  }
-  function renderFdcSearch(){
-    const results=document.getElementById('fdcSearchResults'),status=document.getElementById('fdcSearchStatus');if(!results||!status||!FDC)return;
-    const {query,local,cached,remote}=fdcLastSearch,remoteFoods=(remote.foods||[]).filter(food=>!cached.some(item=>String(item.fdcId)===String(food.fdcId)));
-    const groups=[];
-    if(cached.length)groups.push(`<div><strong>Ya guardados (${cached.length})</strong><div class="fdcResultGrid">${cached.map(food=>fdcCard(food,{cached:true})).join('')}</div></div>`);
-    if(remoteFoods.length)groups.push(`<div><strong>Resultados USDA (${remote.totalHits||remoteFoods.length})</strong><div class="fdcResultGrid">${remoteFoods.map(food=>fdcCard(food)).join('')}</div></div>`);
-    results.innerHTML=groups.join('')||'<div class="emptyState">No hay resultados adicionales para mostrar.</div>';
-    const access=FDC.hasRemoteAccess()?'Acceso remoto configurado.':'Sin acceso remoto configurado; se muestran base local y caché.';
-    status.textContent=`${local.length} resultado(s) locales · ${cached.length} en caché · página ${remote.currentPage||1}/${remote.totalPages||1}. ${access}`;
-    const prev=document.getElementById('fdcPrevPageBtn'),next=document.getElementById('fdcNextPageBtn');
-    if(prev)prev.disabled=(remote.currentPage||1)<=1;if(next)next.disabled=!remote.totalPages||(remote.currentPage||1)>=remote.totalPages;
-    if(query)document.getElementById('nutritionFoodSearch').value=query;
-  }
-  async function runFdcSearch(page=1){
-    if(!FDC)return;
-    const query=document.getElementById('nutritionFoodSearch')?.value.trim()||'',status=document.getElementById('fdcSearchStatus');
-    if(query.length<2){flash('Escribí al menos dos caracteres para buscar.');return;}
-    const normalized=normalizeFoodText(query),local=fdcLocalFoods().filter(food=>normalizeFoodText([food.name,...(food.aliases||[]),food.category].join(' ')).includes(normalized)).slice(0,FDC.config().pageSize);
-    const cached=FDC.findCachedByQuery(query,FDC.config().pageSize);
-    fdcSearchPage=Math.max(1,page);
-    fdcLastSearch={query,local,cached,remote:{foods:[],totalHits:0,currentPage:fdcSearchPage,totalPages:0,source:'pending'}};
-    renderFdcSearch();
-    if(!FDC.hasRemoteAccess()){if(status)status.textContent=`${local.length} resultado(s) locales y ${cached.length} en caché. Configurá acceso para ampliar con USDA.`;return;}
-    if(status)status.textContent=`Resultados locales listos (${local.length}+${cached.length}). Consultando USDA en segundo plano…`;
-    document.getElementById('searchFdcBtn').disabled=true;
-    try{
-      const remote=await FDC.searchFoods(query,{pageNumber:fdcSearchPage,pageSize:FDC.config().pageSize});
-      fdcLastSearch={query,local,cached,remote};renderFdcSearch();
-    }catch(error){
-      const messages={FDC_RATE_LIMIT:'Se alcanzó temporalmente el límite de consultas de FDC.',FDC_NOT_CONFIGURED:'Configurá una API key personal o un backend/proxy.'};
-      if(status)status.textContent=messages[error.message]||'No pude consultar FoodData Central. La búsqueda local sigue disponible.';
-    }finally{document.getElementById('searchFdcBtn').disabled=false}
-  }
-  async function importFdcFood(fdcId){
-    if(!FDC)return;
-    const status=document.getElementById('fdcSearchStatus'),summary=fdcLastSearch.remote.foods.find(food=>String(food.fdcId)===String(fdcId));
-    if(status)status.textContent='Obteniendo detalle y normalizando nutrientes por 100 g…';
-    try{
-      const food=await FDC.importFood(summary||fdcId);
-      populateFoods();renderFdcCachedFoods();filterFoodSelect();syncVersionedState();
-      if(status)status.textContent=`${food.name} quedó guardado offline y disponible para registrar o editar.`;
-      flash('Alimento USDA importado.');
-    }catch(error){
-      if(status)status.textContent=error.message==='FDC_RATE_LIMIT'?'Se alcanzó el límite temporal de FDC.':'No pude importar ese alimento.';
-    }
-  }
   function loadFdcConfigFields(){
     if(!FDC)return;const value=FDC.config();
     const key=document.getElementById('fdcApiKey'),backend=document.getElementById('fdcBackendUrl'),size=document.getElementById('fdcPageSize');
@@ -336,7 +257,7 @@
   function saveFdcConfig(){
     if(!FDC)return;
     FDC.saveConfig({apiKey:document.getElementById('fdcApiKey')?.value||'',backendUrl:document.getElementById('fdcBackendUrl')?.value||'',pageSize:document.getElementById('fdcPageSize')?.value||20});
-    renderFdcLocalHint(document.getElementById('nutritionFoodSearch')?.value||'');flash('Configuración FDC guardada solo en este dispositivo.');
+    flash('Configuración avanzada guardada solo en este dispositivo.');
   }
   function clearFdcApiKey(){
     if(!FDC)return;FDC.saveConfig({...FDC.config(),apiKey:''});loadFdcConfigFields();flash('API key local eliminada.');
@@ -651,10 +572,6 @@
   function setupEvents(){
     document.querySelectorAll('[data-nutrition-view]').forEach(button=>button.addEventListener('click',()=>setNutritionView(button.dataset.nutritionView,{focus:true})));
     document.querySelectorAll('[data-open-nutrition-view]').forEach(button=>button.addEventListener('click',()=>setNutritionView(button.dataset.openNutritionView,{focus:true})));
-    document.getElementById('nutritionFoodSearch')?.addEventListener('input',filterFoodSelect);
-    document.getElementById('searchFdcBtn')?.addEventListener('click',()=>runFdcSearch(1));
-    document.getElementById('fdcPrevPageBtn')?.addEventListener('click',()=>runFdcSearch(Math.max(1,fdcSearchPage-1)));
-    document.getElementById('fdcNextPageBtn')?.addEventListener('click',()=>runFdcSearch(fdcSearchPage+1));
     document.getElementById('saveFdcConfigBtn')?.addEventListener('click',saveFdcConfig);
     document.getElementById('clearFdcApiKeyBtn')?.addEventListener('click',clearFdcApiKey);
     document.getElementById('importFdcDatasetBtn')?.addEventListener('click',importFdcDataset);
@@ -675,7 +592,6 @@
     document.getElementById('nutritionMeal')?.addEventListener('change',renderNutrition);
     document.addEventListener('click',event=>{
       const customAction=event.target.closest('[data-custom-food-action]');if(customAction){customAction.closest('details.nutritionFoodMenu')?.removeAttribute('open');handleCustomFoodAction(customAction);return;}
-      const importFdc=event.target.closest('[data-import-fdc]');if(importFdc){importFdcFood(importFdc.dataset.importFdc);return;}
       const editFdc=event.target.closest('[data-edit-fdc]');if(editFdc){editCachedFdcFood(editFdc.dataset.editFdc);return;}
       const deleteFdc=event.target.closest('[data-delete-fdc]');if(deleteFdc&&FDC){FDC.removeCachedFood(deleteFdc.dataset.deleteFdc);populateFoods();renderFdcCachedFoods();syncVersionedState();flash('Alimento USDA quitado de la caché.');}
     });

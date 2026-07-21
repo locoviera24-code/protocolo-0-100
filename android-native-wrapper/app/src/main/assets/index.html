@@ -289,26 +289,6 @@
               <details class="advancedDetails"><summary>Ver todos los micronutrientes</summary><div class="coverageGrid" id="nutritionCoverageExtended" style="margin-top:10px"></div></details>
             </div>
 
-            <div class="assistantBox" id="nutritionAssistantCard" data-nutrition-panel="registrar">
-              <details class="nutritionAssistantDetails">
-              <summary>Registrar con texto o voz</summary>
-              <div class="muted small">Contale qué comiste y revisá la vista previa antes de guardar.</div>
-              <div class="assistantExamples">
-                <button type="button" class="assistantExample" data-assistant-example="Desayuné 2 huevos, 2 rebanadas de pan integral y una banana">2 huevos + pan + banana</button>
-                <button type="button" class="assistantExample" data-assistant-example="Almorcé 200 g de pechuga con una taza de arroz cocido">pollo + taza de arroz</button>
-                <button type="button" class="assistantExample" data-assistant-example="Ayer cené salmón 180g y media palta">salmón + media palta</button>
-              </div>
-              <div class="field" style="margin-top:10px"><textarea id="nutritionAssistantInput" placeholder="Ej. Almorcé 200 g de pollo, una taza de arroz y media palta"></textarea></div>
-              <div class="buttons">
-                <button type="button" class="good" id="analyzeNutritionBtn">Analizar comida</button>
-                <button type="button" class="secondary" id="speakNutritionBtn">🎙️ Hablar</button>
-                <button type="button" class="secondary" id="clearNutritionAssistantBtn">Limpiar</button>
-              </div>
-              <div class="assistantResult" id="nutritionAssistantResult"></div>
-              <div class="assistantPreview" id="nutritionAssistantPreview"></div>
-              </details>
-            </div>
-
             <div class="moduleCard" id="nutritionTargetsCard" data-nutrition-settings-card>
               <h3>Objetivos diarios manuales</h3>
               <div class="sectionIntro"><div><strong>Qué mide</strong>Metas que vos ingresás para comparar lo registrado.</div><div><strong>Qué hacer</strong>Usá una indicación profesional o valores que ya conozcas.</div><div><strong>Qué no hace</strong>No calcula necesidades desde un perfil ni diagnostica.</div></div>
@@ -339,20 +319,22 @@
             </div>
 
             <div class="moduleCard" id="nutritionBuilderCard" data-nutrition-panel="registrar">
-              <h3>Agregar alimento</h3>
-              <div class="muted small">Buscá, ajustá la porción y revisá antes de guardar.</div>
+              <h3>Registrar alimento</h3>
+              <div class="muted small">Buscá lo que comiste y ajustá la cantidad.</div>
               <ol class="nutritionFlowSteps" id="nutritionFlowSteps" aria-label="Progreso del registro">
                 <li data-food-flow-indicator="search">1. Alimento</li><li data-food-flow-indicator="amount">2. Cantidad</li><li data-food-flow-indicator="meal">3. Comida</li><li data-food-flow-indicator="review">4. Revisar</li>
               </ol>
               <section class="nutritionFlowPanel" data-food-flow-step="search" aria-labelledby="nutritionSearchStepTitle">
                 <h4 id="nutritionSearchStepTitle">¿Qué comiste?</h4>
                 <div class="formGrid nutritionSearchFields">
-                  <div class="field"><label>Buscar por nombre o alias</label><input type="search" id="nutritionFoodSearch" placeholder="Ej. mandioca, chipa, pollo…" autocomplete="off"></div>
+                  <div class="field nutritionUnifiedSearch"><label for="nutritionFoodSearch">¿Qué comiste?</label><div class="nutritionSearchInput"><input type="search" id="nutritionFoodSearch" placeholder="Ej. pollo, mandioca, café con leche…" autocomplete="off" aria-controls="nutritionFoodSuggestions" aria-describedby="nutritionFoodSearchStatus"><button type="button" class="secondary" id="nutritionFoodVoiceBtn" aria-label="Buscar alimento por voz">Voz</button></div></div>
                 </div>
+                <div class="muted small" id="nutritionFoodSearchStatus" aria-live="polite">Escribí al menos tres letras para buscar más opciones.</div>
                 <div class="nutritionFoodSuggestions" id="nutritionFoodSuggestions" aria-live="polite"></div>
-                <details class="advancedDetails nutritionFoodFallback"><summary>Ver lista completa</summary><div class="field"><label>Todos los alimentos</label><select id="nutritionFood"></select></div></details>
+                <select id="nutritionFood" class="hidden" aria-hidden="true" tabindex="-1"></select>
               <details class="advancedDetails" id="customFoodDetails">
-                <summary>Crear alimento personalizado</summary>
+                <summary>No encuentro este alimento</summary>
+                <h4>Crear alimento</h4>
                 <div class="formGrid customFoodBasicFields">
                   <div class="field"><label>Nombre</label><input type="text" id="customFoodName" placeholder="Ej. receta casera"></div>
                   <div class="field"><label>Porción base (g)</label><input type="text" inputmode="decimal" id="foodPortionGrams" value="100"></div>
@@ -390,7 +372,7 @@
                 <div class="nutritionSelectedFood" id="nutritionSelectedFood"></div>
                 <div class="formGrid nutritionAmountFields">
                   <div class="field"><label for="foodQuantity">Cantidad</label><input type="text" inputmode="decimal" id="foodQuantity" value="100"></div>
-                  <div class="field"><label for="foodUnit">Unidad</label><select id="foodUnit"><option value="g">g</option><option value="ml">ml</option><option value="unidad">unidad</option><option value="taza">taza</option><option value="cucharada">cucharada</option><option value="rebanada">rebanada</option><option value="lata">lata</option><option value="porcion">porción</option></select></div>
+                  <div class="field"><label for="foodUnit">Unidad</label><select id="foodUnit"><option value="g">g</option><option value="kg">kg</option><option value="ml">ml</option><option value="l">l</option><option value="unidad">unidad</option><option value="taza">taza</option><option value="cucharada">cucharada</option><option value="rebanada">rebanada</option><option value="lata">lata</option><option value="porcion">porción</option></select></div>
                 </div>
               <div class="foodQuickActions" aria-label="Porciones rápidas">
                 <button type="button" data-food-portion="50">50 g</button><button type="button" data-food-portion="100">100 g</button><button type="button" data-food-portion="150">150 g</button><button type="button" data-food-portion="200">200 g</button><button type="button" id="useFoodBasePortionBtn">Porción sugerida</button>
@@ -418,9 +400,29 @@
               </details>
             </div>
 
+            <div class="assistantBox" id="nutritionAssistantCard" data-nutrition-panel="registrar">
+              <details class="nutritionAssistantDetails">
+              <summary>Registrar una comida completa con texto o voz</summary>
+              <div class="muted small">Opción secundaria para varios alimentos a la vez. Revisá la vista previa antes de guardar.</div>
+              <div class="assistantExamples">
+                <button type="button" class="assistantExample" data-assistant-example="Desayuné 2 huevos, 2 rebanadas de pan integral y una banana">2 huevos + pan + banana</button>
+                <button type="button" class="assistantExample" data-assistant-example="Almorcé 200 g de pechuga con una taza de arroz cocido">pollo + taza de arroz</button>
+                <button type="button" class="assistantExample" data-assistant-example="Ayer cené salmón 180g y media palta">salmón + media palta</button>
+              </div>
+              <div class="field"><textarea id="nutritionAssistantInput" placeholder="Ej. Almorcé 200 g de pollo, una taza de arroz y media palta"></textarea></div>
+              <div class="buttons">
+                <button type="button" class="good" id="analyzeNutritionBtn">Analizar comida</button>
+                <button type="button" class="secondary" id="speakNutritionBtn">Hablar</button>
+                <button type="button" class="secondary" id="clearNutritionAssistantBtn">Limpiar</button>
+              </div>
+              <div class="assistantResult" id="nutritionAssistantResult"></div>
+              <div class="assistantPreview" id="nutritionAssistantPreview"></div>
+              </details>
+            </div>
+
             <div class="moduleCard" id="nutritionRecipesCard" data-nutrition-panel="registrar">
               <details class="advancedDetails" id="nutritionRecipesDetails">
-                <summary>Recetas y platos compuestos</summary>
+                <summary>Mis recetas y platos compuestos</summary>
                 <p class="muted small">Calculá una vez el plato y después registrá una porción o los gramos consumidos. Los días anteriores conservan su snapshot.</p>
                 <div class="foodQuickActions" aria-label="Ejemplos de recetas" id="recipeTemplateButtons"></div>
                 <div class="formGrid recipeFormFields">
@@ -445,16 +447,6 @@
               </details>
             </div>
 
-            <div class="moduleCard" id="fdcSearchCard" data-nutrition-panel="registrar">
-              <details class="advancedDetails"><summary>Buscar también en USDA</summary>
-              <div class="sectionIntro"><div><strong>Primero</strong>La búsqueda usa la base local curada y alimentos ya guardados.</div><div><strong>Después</strong>Solo consulta FDC al pulsar el botón y si configuraste acceso.</div><div><strong>Offline</strong>Los alimentos importados quedan en caché local y se pueden editar.</div></div>
-              <div class="buttons"><button type="button" class="secondary" id="searchFdcBtn">Buscar también en USDA</button><button type="button" class="secondary" id="fdcPrevPageBtn">Página anterior</button><button type="button" class="secondary" id="fdcNextPageBtn">Página siguiente</button></div>
-              <div class="auditItem" id="fdcSearchStatus">Buscá primero por nombre o alias. La consulta remota es opcional.</div>
-              <div class="fdcResultGrid" id="fdcSearchResults"></div>
-              <div class="sourceNote">Datos nutricionales ampliados basados en USDA FoodData Central: U.S. Department of Agriculture, Agricultural Research Service. FoodData Central.</div>
-              </details>
-            </div>
-
             <div class="moduleCard" id="nutritionDiagnosisCard" data-nutrition-panel="coverage">
               <h3>Lectura orientativa de la cobertura</h3>
               <div class="sectionIntro"><div><strong>Qué mide</strong>Cobertura del día según alimentos registrados.</div><div><strong>Qué hacer</strong>Priorizá una o dos palancas, no todo a la vez.</div><div><strong>Objetivo</strong>Convertir faltantes aparentes en opciones concretas.</div></div>
@@ -473,13 +465,14 @@
             </div>
 
             <div class="moduleCard" id="customFoodsCard" data-nutrition-settings-card>
-              <h3>Alimentos personalizados</h3>
-              <div class="muted small">Los alimentos propios quedan en tu dispositivo. Podés editarlos o eliminarlos.</div>
+              <h3>Mis alimentos</h3>
+              <div class="muted small">Administrá alimentos propios y recetas fuera del registro cotidiano.</div>
               <div class="entryList" id="customFoodsList"></div>
             </div>
 
             <div class="moduleCard" id="fdcSettingsCard" data-nutrition-settings-card>
-              <h3>FoodData Central opcional</h3>
+              <details class="advancedDetails"><summary>Diagnóstico avanzado de fuentes</summary>
+              <p class="muted small">La búsqueda cotidiana combina resultados sin pedirte elegir una fuente. Esta sección técnica no es necesaria para registrar alimentos.</p>
               <div class="formGrid">
                 <div class="field"><label>API key FDC personal</label><input type="password" id="fdcApiKey" autocomplete="off" placeholder="No incluida en el código público"></div>
                 <div class="field"><label>URL de backend/proxy futuro</label><input type="url" id="fdcBackendUrl" placeholder="Ej. https://api.ejemplo.com/fdc"></div>
@@ -496,6 +489,7 @@
               <h3 style="margin-top:14px">Alimentos FDC guardados</h3>
               <div class="entryList" id="fdcCachedFoodsList"></div>
               <div class="sourceNote">Fuente: USDA FoodData Central. Las marcas, preparación, cocción y porciones pueden variar; revisá y editá los datos cuando corresponda.</div>
+              </details>
             </div>
 
             <div class="moduleCard" id="nutritionHistoryCard" data-nutrition-panel="tendencias">
@@ -839,6 +833,8 @@
 <script src="nutrition/nutrition-confidence.js"></script>
 <script src="nutrition/nutrition-view.js"></script>
 <script src="fdc-client.js"></script>
+<script src="nutrition/food-provider.js"></script>
+<script src="nutrition/food-search-service.js"></script>
 <script src="ui/router.js"></script>
 <script src="ui/navigation.js"></script>
 <script src="ui/notifications.js"></script>
@@ -1225,6 +1221,8 @@ function allFoods(){ return [...FOOD_CATALOG,...(window.NUTRITION_STORE?.customF
 function availableFoods(){ return allFoods().slice(1); }
 let nutritionEntryFlow=window.NUTRITION_ENTRY_FLOW.create({date:todayStr(),meal:window.NUTRITION_PORTIONS.suggestedMeal()});
 let lastNutritionEntriesSnapshot=null,nutritionEntryDialogState=null;
+let nutritionSearchResult=null,nutritionSearchController=null;
+const nutritionExternalChoices=new Map();
 let recipeEditorState={id:'',ingredients:[]};
 const restoredDraftNotices=new Set();
 const nutritionCustomDraftFields=['customFoodName','foodPortionGrams','foodCalories','foodProtein','foodCarbs','foodFat','foodFiber','foodSodium','foodPotassium','foodCalcium','foodIron','foodMagnesium','foodZinc','foodVitaminA','foodVitaminC','foodVitaminD','foodB12','foodFolate','foodSource','foodConfidence','foodAliases'];
@@ -1266,11 +1264,21 @@ function foodIndexForProfile(profile,foods=allFoods()){
   const byId=profile?.foodId&&foods.findIndex(food=>food.id===profile.foodId);if(byId>0)return byId;
   return foods.findIndex(food=>normalizeFoodText(food.name)===normalizeFoodText(profile?.name));
 }
+function unifiedFoodSearchService(){
+  if(!window.__nutritionUnifiedSearch)window.__nutritionUnifiedSearch=window.NUTRITION_FOOD_SEARCH_SERVICE.create({provider:window.NUTRITION_EXTERNAL_PROVIDER,getFoods:availableFoods});
+  return window.__nutritionUnifiedSearch;
+}
+function foodResultMeta(food){
+  const parts=[];if(food.recipeId)parts.push('Receta personal');else if(food.brandOwner)parts.push(food.brandOwner);
+  if(Number.isFinite(Number(food.calories)))parts.push(`≈ ${Math.round(Number(food.calories)||0)} kcal / 100 g`);
+  if(Number(food.protein)>0)parts.push(`P ${Math.round(Number(food.protein)*10)/10} g`);
+  return parts.join(' · ')||'Ajustá la cantidad antes de guardar';
+}
 function renderFoodSearchSuggestions(){
   const box=document.getElementById('nutritionFoodSuggestions');if(!box)return;
-  const foods=allFoods(),query=document.getElementById('nutritionFoodSearch')?.value||'',entries=window.NUTRITION_STORE.entries(),profiles=window.NUTRITION_STORE.portions(),seen=new Set(),groups=[],special=[];
+  const foods=allFoods(),rawQuery=document.getElementById('nutritionFoodSearch')?.value||'',query=window.NUTRITION_FOOD_SEARCH_SERVICE.parseQuery(rawQuery).query,entries=window.NUTRITION_STORE.entries(),profiles=window.NUTRITION_STORE.portions(),seen=new Set(),groups=[],special=[],status=document.getElementById('nutritionFoodSearchStatus');
   const addGroup=(title,indexes)=>{const unique=indexes.filter(index=>index>0&&foods[index]&&!seen.has(foods[index].id||normalizeFoodText(foods[index].name))).slice(0,6);unique.forEach(index=>seen.add(foods[index].id||normalizeFoodText(foods[index].name)));if(unique.length)groups.push({title,indexes:unique});};
-  if(!query.trim()){
+  if(!rawQuery.trim()){
     const recentProfile=Object.values(profiles).filter(item=>item.lastUsedAt).sort((a,b)=>String(b.lastUsedAt).localeCompare(String(a.lastUsedAt)))[0],recentIndex=foodIndexForProfile(recentProfile,foods);
     if(recentIndex>0){seen.add(foods[recentIndex].id||normalizeFoodText(foods[recentIndex].name));special.push(`<section class="nutritionSuggestionGroup"><strong>Agregar igual que la última vez</strong><div class="nutritionSuggestionList"><button type="button" class="nutritionSuggestion" data-food-flow-repeat="${recentIndex}"><span>${escapeHtml(foods[recentIndex].name)}</span><small>${escapeHtml(`${recentProfile.lastAmount} ${recentProfile.lastUnit} · ${recentProfile.lastMeal}`)}</small></button></div></section>`);}
     addGroup('Favoritos',window.NUTRITION_PORTIONS.favorites(profiles).map(profile=>foodIndexForProfile(profile,foods)));
@@ -1278,11 +1286,27 @@ function renderFoodSearchSuggestions(){
     addGroup('Frecuentes',window.NUTRITION_PORTIONS.frequent(profiles).map(profile=>foodIndexForProfile(profile,foods)));
     addGroup('Recetas',foods.map((food,index)=>food.recipeId?index:-1));
     const savedMeals=window.NUTRITION_STORE.savedMeals().slice(0,4);if(savedMeals.length)special.push(`<section class="nutritionSuggestionGroup"><strong>Comidas frecuentes</strong><div class="nutritionSuggestionList">${savedMeals.map(meal=>`<button type="button" class="nutritionSuggestion" data-saved-meal-repeat="${escapeHtml(meal.id)}"><span>${escapeHtml(meal.name)}</span><small>${meal.items?.length||0} alimento(s)</small></button>`).join('')}</div></section>`);
+    const ranked=window.NUTRITION_FOOD_SEARCH.rank(foods.slice(1),'').map(item=>foods.indexOf(item.food));addGroup('Todos',ranked);
+    const groupHtml=groups.map(group=>`<section class="nutritionSuggestionGroup"><strong>${escapeHtml(group.title)}</strong><div class="nutritionSuggestionList">${group.indexes.map(index=>`<button type="button" class="nutritionSuggestion" data-food-flow-select="${index}"><span>${escapeHtml(foods[index].name)}</span><small>${escapeHtml(foodResultMeta(foods[index]))}</small></button>`).join('')}</div></section>`).join('');
+    box.innerHTML=special.join('')+groupHtml;if(status)status.textContent='Elegí un habitual o escribí para buscar.';return;
   }
-  const ranked=window.NUTRITION_FOOD_SEARCH.rank(foods.slice(1),query).map(item=>foods.indexOf(item.food));
-  addGroup(query.trim()?'Resultados':'Base local',ranked);
-  const groupHtml=groups.map(group=>`<section class="nutritionSuggestionGroup"><strong>${escapeHtml(group.title)}</strong><div class="nutritionSuggestionList">${group.indexes.map(index=>`<button type="button" class="nutritionSuggestion" data-food-flow-select="${index}"><span>${escapeHtml(foods[index].name)}</span><small>${escapeHtml(foods[index].category||'Alimento')}</small></button>`).join('')}</div></section>`).join('');
-  box.innerHTML=special.join('')+groupHtml||'<div class="emptyState">No encontré coincidencias locales. Podés crear un alimento personalizado o buscar en USDA.</div>';
+  const current=nutritionSearchResult?.raw===rawQuery.trim()?nutritionSearchResult:null,local=current?.local||window.NUTRITION_FOOD_SEARCH_SERVICE.localResults(foods.slice(1),query),results=current?.results||local;nutritionExternalChoices.clear();
+  const rows=results.slice(0,12).map(item=>{const food=item.food;if(item.kind==='external'){nutritionExternalChoices.set(item.id,item);return`<button type="button" class="nutritionSuggestion" data-food-flow-external="${escapeHtml(item.id)}"><span>${escapeHtml(food.name)}</span><small>${escapeHtml(foodResultMeta(food))}</small></button>`;}const index=foods.findIndex(candidate=>candidate.id===food.id||candidate===food);if(index<1)return'';return`<button type="button" class="nutritionSuggestion" data-food-flow-select="${index}"><span>${escapeHtml(food.name)}</span><small>${escapeHtml(foodResultMeta(food))}</small></button>`;}).join('');
+  box.innerHTML=rows?`<section class="nutritionSuggestionGroup"><strong>Resultados</strong><div class="nutritionSuggestionList">${rows}</div></section>`:`<div class="emptyState"><strong>No encontramos coincidencias.</strong><span>Podés crear este alimento con sus datos básicos.</span><button type="button" class="secondary" data-open-custom-food>Crear este alimento</button></div>`;
+  if(!status)return;const state=current?.externalState;
+  if(query.length<3)status.textContent='Escribí al menos tres letras para buscar más opciones.';
+  else if(state==='pending')status.textContent='Buscando más opciones…';
+  else if(state==='offline')status.textContent='Sin conexión. Podés usar alimentos guardados o crear uno nuevo.';
+  else if(['error','empty','unavailable'].includes(state)&&!rows)status.textContent='No encontramos más coincidencias.';
+  else if(state==='loaded')status.textContent='Encontramos más opciones. Elegí una para continuar.';
+  else status.textContent=`${results.length} coincidencia${results.length===1?'':'s'} disponible${results.length===1?'':'s'}.`;
+}
+function scheduleUnifiedFoodSearch(){
+  const input=document.getElementById('nutritionFoodSearch'),raw=input?.value||'',service=unifiedFoodSearchService(),parsed=window.NUTRITION_FOOD_SEARCH_SERVICE.parseQuery(raw),local=window.NUTRITION_FOOD_SEARCH_SERVICE.localResults(availableFoods(),parsed.query),shouldExpand=window.NUTRITION_FOOD_SEARCH_SERVICE.needsExternal(parsed,local);
+  nutritionSearchResult={...parsed,raw:raw.trim(),local,results:local,external:[],externalState:shouldExpand?'pending':'not-needed'};renderFoodSearchSuggestions();
+  nutritionSearchController?.cancel();if(!shouldExpand)return;
+  nutritionSearchController=window.NUTRITION_FOOD_SEARCH_SERVICE.createController({service,onResult:result=>{if(!result||document.getElementById('nutritionFoodSearch')?.value.trim()!==result.raw)return;nutritionSearchResult=result;renderFoodSearchSuggestions();},onError:()=>{nutritionSearchResult={...nutritionSearchResult,externalState:'error'};renderFoodSearchSuggestions();}});
+  nutritionSearchController.schedule(raw);
 }
 function renderFoodHabitualHint(food){
   const hint=document.getElementById('foodHabitualHint'),text=document.getElementById('foodHabitualText'),button=document.getElementById('useLastFoodPortionBtn'),favorite=document.getElementById('toggleFoodFavoriteBtn');if(!hint||!text||!button||!favorite)return;
@@ -1308,8 +1332,17 @@ function renderNutritionFoodFlow({focus=false}={}){
 function chooseFoodForFlow(index){
   const foods=allFoods(),food=foods[Number(index)];if(!food||Number(index)===0)return;
   document.getElementById('nutritionFood').value=String(index);applySelectedFood(false);
-  const suggestion=window.NUTRITION_PORTIONS.suggestion(window.NUTRITION_STORE.portions(),food),amount=Math.max(.1,Number(suggestion.amount)||100),unit=suggestion.unit||'g',meal=suggestion.meal||'Almuerzo';document.getElementById('foodQuantity').value=String(amount);document.getElementById('foodUnit').value=unit;document.getElementById('nutritionMeal').value=meal;
+  const suggestion=window.NUTRITION_PORTIONS.suggestion(window.NUTRITION_STORE.portions(),food),parsed=window.NUTRITION_FOOD_SEARCH_SERVICE.parseQuery(document.getElementById('nutritionFoodSearch')?.value||''),amount=parsed.amount>0?parsed.amount:Math.max(.1,Number(suggestion.amount)||100),unit=parsed.amount>0&&parsed.unit?parsed.unit:(suggestion.unit||'g'),meal=suggestion.meal||'Almuerzo';document.getElementById('foodQuantity').value=String(amount);document.getElementById('foodUnit').value=unit;document.getElementById('nutritionMeal').value=meal;
   nutritionEntryFlow.set({food,amount,unit,meal,date:document.getElementById('nutritionDate').value||todayStr()}).go('amount');captureNutritionFoodDraft();renderNutritionFoodFlow({focus:true});
+}
+async function chooseExternalFoodForFlow(id){
+  const choice=nutritionExternalChoices.get(id),status=document.getElementById('nutritionFoodSearchStatus');if(!choice)return;
+  if(status)status.textContent='Preparando el alimento…';
+  try{
+    let food=await window.NUTRITION_EXTERNAL_PROVIDER.getFood(choice.providerFoodId,{raw:choice.raw});const query=window.NUTRITION_FOOD_SEARCH_SERVICE.parseQuery(document.getElementById('nutritionFoodSearch')?.value||'').query;
+    if(query&&!food.aliases?.some(alias=>normalizeFoodText(alias)===normalizeFoodText(query))){food={...food,aliases:[...(food.aliases||[]),query]};window.FDC_CLIENT?.upsertCachedFood?.(food);}
+    populateFoods();const index=allFoods().findIndex(item=>item.id===food.id);if(index<1)throw new Error('FOOD_CACHE_WRITE_FAILED');chooseFoodForFlow(index);
+  }catch(error){if(status)status.textContent='No pudimos abrir esa opción. Tus alimentos guardados siguen disponibles.';flash('No se pudo preparar ese alimento.',{tone:'warning'});}
 }
 function repeatLastFoodForFlow(index){
   const food=allFoods()[Number(index)];if(!food)return;const suggestion=window.NUTRITION_PORTIONS.suggestion(window.NUTRITION_STORE.portions(),food);
@@ -1332,6 +1365,7 @@ function useCustomFoodForFlow(){
 }
 function resetNutritionFoodFlow({openToday=false,discard=false}={}){
   const id=nutritionFoodDraftId();if(discard)window.APP_DRAFTS?.remove?.(id);
+  nutritionSearchController?.cancel();nutritionSearchResult=null;nutritionExternalChoices.clear();
   const suggestedMeal=window.NUTRITION_PORTIONS.suggestedMeal();document.getElementById('nutritionMeal').value=suggestedMeal;nutritionEntryFlow=window.NUTRITION_ENTRY_FLOW.create({date:document.getElementById('nutritionDate').value||todayStr(),meal:suggestedMeal});
   document.getElementById('nutritionFoodSearch').value='';document.getElementById('nutritionFood').value='0';nutritionCustomDraftFields.forEach(fieldId=>{const field=document.getElementById(fieldId);if(field)field.value=fieldId==='foodPortionGrams'?'100':fieldId==='foodConfidence'?'aproximado':'';});const optional=document.getElementById('customFoodOptionalFields');if(optional)optional.open=false;const customDetails=document.getElementById('customFoodDetails');customDetails.dataset.suppressDraft='1';customDetails.open=false;queueMicrotask(()=>delete customDetails.dataset.suppressDraft);renderNutritionFoodFlow();
   if(openToday)window.setNutritionView?.('resumen',{focus:true});
@@ -1591,7 +1625,9 @@ function createAssistantCustomFood(id,row){
   renderNutritionAssistantPreview();
   document.getElementById('nutritionAssistantResult').innerHTML='<div class="auditItem good">Alimento propio creado. Quedará disponible para próximas comidas.</div>';
 }
+let activeNutritionVoiceTarget='assistant';
 function startNutritionVoice(){
+  activeNutritionVoiceTarget='assistant';
   const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
   const result=document.getElementById('nutritionAssistantResult');
   if(window.AndroidSpeechBridge && typeof window.AndroidSpeechBridge.startRecognition==='function'){
@@ -1607,8 +1643,19 @@ function startNutritionVoice(){
   recognition.onerror=()=>{result.innerHTML='<div class="auditItem warn">No pude reconocer la voz. Revisá el permiso del micrófono o escribí la comida.</div>';};
   recognition.start();
 }
-window.onAndroidSpeechResult=text=>{ document.getElementById('nutritionAssistantInput').value=text||''; analyzeNutritionText(); };
-window.onAndroidSpeechError=message=>{ document.getElementById('nutritionAssistantResult').innerHTML=`<div class="auditItem warn">${escapeHtml(message||'No pude reconocer la voz.')}</div>`; };
+function startNutritionFoodVoice(){
+  activeNutritionVoiceTarget='search';const status=document.getElementById('nutritionFoodSearchStatus'),Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(window.AndroidSpeechBridge&&typeof window.AndroidSpeechBridge.startRecognition==='function'){if(status)status.textContent='Escuchando…';window.AndroidSpeechBridge.startRecognition();return;}
+  if(!Recognition){if(status)status.textContent='La búsqueda por voz no está disponible. Podés escribir el alimento.';return;}
+  const recognition=new Recognition();recognition.lang='es-PY';recognition.interimResults=false;recognition.maxAlternatives=1;if(status)status.textContent='Escuchando…';
+  recognition.onresult=event=>applyNutritionVoiceResult(event.results[0][0].transcript);recognition.onerror=()=>{if(status)status.textContent='No pudimos reconocer la voz. Podés escribir el alimento.';};recognition.start();
+}
+function applyNutritionVoiceResult(text){
+  if(activeNutritionVoiceTarget==='search'){const input=document.getElementById('nutritionFoodSearch');input.value=text||'';input.dispatchEvent(new Event('input',{bubbles:true}));input.focus();return;}
+  document.getElementById('nutritionAssistantInput').value=text||'';analyzeNutritionText();
+}
+window.onAndroidSpeechResult=applyNutritionVoiceResult;
+window.onAndroidSpeechError=message=>{if(activeNutritionVoiceTarget==='search'){const status=document.getElementById('nutritionFoodSearchStatus');if(status)status.textContent=message||'No pudimos reconocer la voz. Podés escribir el alimento.';return;}document.getElementById('nutritionAssistantResult').innerHTML=`<div class="auditItem warn">${escapeHtml(message||'No pude reconocer la voz.')}</div>`; };
 function scaleNutritionEntry(entry,grams){
   const nextGrams=Math.max(.1,Number(grams)||0),previousGrams=Math.max(.1,Number(entry.grams)||100),factor=nextGrams/previousGrams,scaled={...entry,grams:nextGrams};
   ['calories','protein','carbs','fat'].forEach(key=>{scaled[key]=Math.round((Number(entry[key])||0)*factor*10)/10;});
@@ -2857,7 +2904,8 @@ document.getElementById('addGymExerciseBtn').addEventListener('click', addGymExe
 document.getElementById('saveGymSessionBtn').addEventListener('click', saveGymSession);
 document.getElementById('clearGymSessionBtn').addEventListener('click', clearGymSession);
 document.getElementById('nutritionFood').addEventListener('change', ()=>applySelectedFood(true));
-document.getElementById('nutritionFoodSearch').addEventListener('input', ()=>{nutritionEntryFlow.set({query:document.getElementById('nutritionFoodSearch').value});captureNutritionFoodDraft();renderFoodSearchSuggestions();});
+document.getElementById('nutritionFoodSearch').addEventListener('input', ()=>{nutritionEntryFlow.set({query:document.getElementById('nutritionFoodSearch').value});captureNutritionFoodDraft();scheduleUnifiedFoodSearch();});
+document.getElementById('nutritionFoodVoiceBtn')?.addEventListener('click',startNutritionFoodVoice);
 document.getElementById('useCustomFoodBtn').addEventListener('click', useCustomFoodForFlow);
 document.getElementById('foodAmountNextBtn').addEventListener('click', advanceFoodAmount);
 document.getElementById('foodMealNextBtn').addEventListener('click', advanceFoodMeal);
@@ -2944,6 +2992,8 @@ document.addEventListener('click', e=>{
   if(nutritionView&&typeof window.setNutritionView==='function'){window.setNutritionView(nutritionView.dataset.openNutritionView,{focus:true});return;}
   const foodChoice=e.target.closest('[data-food-flow-select]');
   if(foodChoice){chooseFoodForFlow(foodChoice.dataset.foodFlowSelect);return;}
+  const externalFood=e.target.closest('[data-food-flow-external]');if(externalFood){chooseExternalFoodForFlow(externalFood.dataset.foodFlowExternal);return;}
+  if(e.target.closest('[data-open-custom-food]')){const details=document.getElementById('customFoodDetails');details.open=true;document.getElementById('customFoodName').value=document.getElementById('nutritionFoodSearch').value.trim();document.getElementById('customFoodName').focus();captureNutritionFoodDraft();return;}
   const repeatFood=e.target.closest('[data-food-flow-repeat]');if(repeatFood){repeatLastFoodForFlow(repeatFood.dataset.foodFlowRepeat);return;}
   const repeatMeal=e.target.closest('[data-saved-meal-repeat]');if(repeatMeal){addSavedMealFromSearch(repeatMeal.dataset.savedMealRepeat);return;}
   const portion=e.target.closest('[data-food-portion]');if(portion){document.getElementById('foodQuantity').value=portion.dataset.foodPortion;document.getElementById('foodUnit').value='g';nutritionEntryFlow.set({amount:portion.dataset.foodPortion,unit:'g'});captureNutritionFoodDraft();return;}

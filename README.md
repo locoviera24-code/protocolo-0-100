@@ -8,14 +8,14 @@ PWA y APK Android para medir habitos, atencion, actividad fisica y nutricion con
 - **Gym:** rutinas, ejercicios por musculo, series, repeticiones, peso, RIR, volumen e historial.
 - **Widget Android de gimnasio:** widget nativo de pantalla de inicio con rutina del dia, progreso y registro directo incremental de series.
 - **Gym Party:** sala privada opcional para compartir entrenamientos, comparar progreso semanal/mensual y probar graficas en modo demo.
-- **Nutricion:** portada simple Hoy/Agregar/Progreso, comidas agrupadas, agua independiente, busqueda por alias, recetas, porciones habituales, alimentos propios y metas editables.
-- **USDA FoodData Central opcional:** busqueda paginada, detalle por `fdcId`, normalizacion por 100 g, cache offline e importador JSON.
+- **Nutricion:** portada simple Hoy/Agregar/Progreso, comidas agrupadas, agua independiente, buscador unico, recetas, porciones habituales, alimentos propios y metas editables.
+- **Fuentes nutricionales opcionales:** la busqueda prioriza datos guardados y, si no encuentra una coincidencia suficiente, puede consultar automaticamente un proveedor externo configurado de forma segura.
 - **Progreso integral:** scores separados e integral, Focus Coins no financieros, recompensas, rankings mensuales opcionales y referidos simulados.
 - **Telefono Android:** importacion opcional de estadisticas de uso con permiso explicito.
 
 ## Navegacion y diseno
 
-La version actual `v2.7.0` (build web `78`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
+La version actual `v2.7.0` (build web `79`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
 **Gym**, **Nutricion**, **Progreso** y **Mas**. En escritorio usa una barra
 lateral compacta. Gym Party se abre desde **Gym > Grupo**, desde un acceso
 discreto en Inicio o mediante un enlace `gymPartyCode`; ya no ocupa un boton
@@ -45,12 +45,26 @@ contextual: editar cantidad, mover de comida, duplicar, copiar a otra fecha,
 guardar como frecuente o eliminar. Los cambios sobre entradas ofrecen
 `Deshacer` y no modifican retroactivamente la definicion del alimento.
 
-La busqueda prioriza **Agregar igual que la ultima vez**, favoritos, recientes,
-frecuentes y recetas, sin duplicar el mismo alimento en varios grupos visibles.
+La pantalla **Registrar alimento** presenta un solo buscador para habituales,
+favoritos, recientes, recetas, alimentos propios e incluidos. La busqueda
+prioriza **Agregar igual que la ultima vez** y combina los resultados sin
+duplicar el mismo alimento ni pedir que se elija una base de datos. Si la
+coincidencia interna es debil o inexistente, consulta automaticamente el
+proveedor externo disponible; seleccionar un resultado lo normaliza, lo guarda
+para uso offline y continua directamente a cantidad, comida y revision.
 Cada alimento recuerda cantidad, unidad, comida habitual y las ultimas tres
 combinaciones. La comida sugerida por horario es solo un valor inicial editable.
 Las recetas calculan nutrientes desde snapshots de ingredientes y permiten
 registrar una porcion o gramos. Editarlas no cambia registros historicos.
+
+La app no necesita un proveedor externo para funcionar. Sin conexion o sin un
+backend configurado conserva alimentos incluidos, personales, recetas y datos
+guardados. El flujo cotidiano no muestra USDA, FDC, endpoints ni API keys. La
+configuracion tecnica permanece plegada en **Mas > Ajustes > Nutricion >
+Diagnostico avanzado de fuentes**. Una clave configurada directamente en el
+navegador queda expuesta al JavaScript del origen, por lo que se reserva para
+desarrollo, puede borrarse y nunca entra en backups; produccion debe usar un
+proxy o backend con su secreto del lado servidor.
 
 Los campos numericos de registro aceptan coma o punto decimal y separadores de
 miles (`7,5`, `7.5`, `1.000,5` o `1,000.5`). La app guarda numeros neutrales y
@@ -112,6 +126,8 @@ nutrition/nutrition-model.js Totales, porciones, comidas y entradas puras
 nutrition/recipes.js         Recetas, ingredientes snapshot y nutricion por porcion
 nutrition/portions.js        Porciones habituales, favoritos y accion Agregar igual
 nutrition/food-search.js    Ranking tolerante a aliases, tildes y plurales
+nutrition/food-provider.js  Contrato opcional de proveedor y normalizacion externa
+nutrition/food-search-service.js Busqueda unificada, debounce, cache y cancelacion
 nutrition/food-entry-flow.js Estado del futuro flujo guiado de alta
 nutrition/meal-history.js   Recientes, frecuentes y copia de comidas
 nutrition/nutrition-confidence.js Cobertura conocida, estimada y desconocida
@@ -135,7 +151,7 @@ gym-party-metrics.js        Agregados semanales compartidos y fuerza/peso corpor
 gym-party-ui.js             Componentes pequenos y estado de sincronizacion
 gym-party.js                Orquestador de sala, demo, privacidad y comparativas
 nutrition-data.js           Base local estructurada de alimentos y nutrientes
-fdc-client.js               Cliente opcional USDA FDC, normalizacion y cache
+fdc-client.js               Transporte tecnico opcional, normalizacion y cache
 advanced-features.js        Cobertura, diagnostico, tendencias, backup y gamificacion
 manifest.webmanifest        Configuracion instalable
 sw.js                       Cache y funcionamiento offline

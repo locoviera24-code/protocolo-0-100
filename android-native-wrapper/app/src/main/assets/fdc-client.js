@@ -183,9 +183,10 @@
   function requestKey(type,value){return `${type}:${value}`}
   async function request(type,path,options={}){
     const cfg=config(),key=requestKey(type,path+JSON.stringify(options.body||{}));
-    if(pendingRequests.has(key))return pendingRequests.get(key);
+    if(!options.signal&&pendingRequests.has(key))return pendingRequests.get(key);
     const operation=(async()=>{
-      let url,requestOptions={method:options.method||'GET',headers:{'Content-Type':'application/json'}};
+      const controller=new AbortController(),timeout=Math.max(1000,Number(options.timeout)||8000),timer=setTimeout(()=>controller.abort(),timeout),abort=()=>controller.abort();options.signal?.addEventListener('abort',abort,{once:true});if(options.signal?.aborted)controller.abort();
+      let url,requestOptions={method:options.method||'GET',headers:{'Content-Type':'application/json'},signal:controller.signal};
       if(cfg.backendUrl){
         // Future backend contract: expose the same /foods/search and /food/{fdcId} paths without returning the USDA key.
         url=`${cfg.backendUrl}${path}`;
@@ -194,15 +195,11 @@
         url=`${cfg.apiBase}${path}${path.includes('?')?'&':'?'}api_key=${encodeURIComponent(cfg.apiKey)}`;
       }
       if(options.body)requestOptions.body=JSON.stringify(options.body);
-      const response=await fetch(url,requestOptions);
-      if(!response.ok){
-        const error=new Error(response.status===429?'FDC_RATE_LIMIT':`FDC_HTTP_${response.status}`);
-        error.status=response.status;throw error;
-      }
-      return response.json();
+      try{const response=await fetch(url,requestOptions);if(!response.ok){const error=new Error(response.status===429?'FDC_RATE_LIMIT':`FDC_HTTP_${response.status}`);error.status=response.status;throw error;}return response.json();}
+      finally{clearTimeout(timer);options.signal?.removeEventListener('abort',abort);}
     })();
-    pendingRequests.set(key,operation);
-    try{return await operation}finally{pendingRequests.delete(key)}
+    if(!options.signal)pendingRequests.set(key,operation);
+    try{return await operation}finally{if(!options.signal)pendingRequests.delete(key)}
   }
   function summary(food){
     return {
@@ -212,14 +209,14 @@
       foodNutrients:food.foodNutrients||[]
     };
   }
-  async function searchFoods(query,{pageNumber=1,pageSize}={}){
+  async function searchFoods(query,{pageNumber=1,pageSize,signal,timeout}={}){
     const text=String(query||'').trim();
     if(text.length<2)return {foods:[],totalHits:0,currentPage:1,totalPages:0,source:'empty'};
     const size=Math.min(30,Math.max(10,Number(pageSize)||config().pageSize||20));
     const page=Math.max(1,Number(pageNumber)||1),cacheKey=`${normalizeText(text)}|${page}|${size}`;
     const cached=searchCache()[cacheKey];
     if(cached&&Date.now()-cached.cachedAt<SEARCH_TTL_MS)return {...cached,source:'request-cache'};
-    const result=await request('search','/foods/search',{method:'POST',body:{query:text,pageSize:size,pageNumber:page}});
+    const result=await request('search','/foods/search',{method:'POST',body:{query:text,pageSize:size,pageNumber:page},signal,timeout});
     const value={foods:(result.foods||[]).slice(0,size).map(summary),totalHits:Number(result.totalHits)||0,currentPage:Number(result.currentPage)||page,totalPages:Number(result.totalPages)||0};
     cacheSearch(cacheKey,value);
     return {...value,source:'remote'};
@@ -237,19 +234,19 @@
     if(hasRemoteAccess())remote=await searchFoods(query,{pageNumber,pageSize});
     return {local,cached,remote};
   }
-  async function getFoodDetails(fdcId){
+  async function getFoodDetails(fdcId,options={}){
     const cached=cachedFoods().find(food=>String(food.fdcId)===String(fdcId));
     if(cached)return cached;
-    const data=await request('detail',`/food/${encodeURIComponent(fdcId)}`);
+    const data=await request('detail',`/food/${encodeURIComponent(fdcId)}`,options);
     return normalizeFood(data);
   }
-  async function importFood(foodOrId){
+  async function importFood(foodOrId,options={}){
     const fdcId=typeof foodOrId==='object'?foodOrId.fdcId:foodOrId;
     const cached=cachedFoods().find(food=>String(food.fdcId)===String(fdcId));
     if(cached)return cached;
     let food=null;
     if(hasRemoteAccess()){
-      try{food=await getFoodDetails(fdcId)}catch(error){if(typeof foodOrId!=='object')throw error}
+      try{food=await getFoodDetails(fdcId,options)}catch(error){if(typeof foodOrId!=='object')throw error}
     }
     food=food||normalizeFood(foodOrId);
     if(!food)throw new Error('FDC_INVALID_FOOD');

@@ -22,6 +22,8 @@ $appNumbers = Read-Utf8 'app/numbers.js'
 $nutrition = Read-Utf8 'nutrition-data.js'
 $nutritionRecipes = Read-Utf8 'nutrition/recipes.js'
 $nutritionPortions = Read-Utf8 'nutrition/portions.js'
+$nutritionFoodProvider = Read-Utf8 'nutrition/food-provider.js'
+$nutritionSearchService = Read-Utf8 'nutrition/food-search-service.js'
 $fdc = Read-Utf8 'fdc-client.js'
 $workoutStore = Read-Utf8 'workout-store.js'
 $workoutPlan = Read-Utf8 'workout-plan.js'
@@ -108,7 +110,7 @@ $duplicates = $staticIds | Group-Object | Where-Object Count -gt 1 | Select-Obje
 Assert-True ($duplicates.Count -eq 0) "Hay IDs HTML duplicados: $($duplicates -join ', ')"
 
 $requiredFiles = @(
-    'nutrition/nutrition-store.js', 'nutrition/nutrition-model.js', 'nutrition/recipes.js', 'nutrition/portions.js', 'nutrition/food-search.js', 'nutrition/food-entry-flow.js', 'nutrition/meal-history.js', 'nutrition/nutrition-confidence.js', 'nutrition/nutrition-view.js', 'scripts/test-nutrition-modules.mjs', 'scripts/test-fdc-confidence.mjs', 'tests/e2e/nutrition-domain.spec.mjs', 'tests/e2e/nutrition-today.spec.mjs', 'tests/e2e/nutrition-recipes-portions.spec.mjs', 'tests/e2e/nutrition-numbers-targets.spec.mjs',
+    'nutrition/nutrition-store.js', 'nutrition/nutrition-model.js', 'nutrition/recipes.js', 'nutrition/portions.js', 'nutrition/food-search.js', 'nutrition/food-provider.js', 'nutrition/food-search-service.js', 'nutrition/food-entry-flow.js', 'nutrition/meal-history.js', 'nutrition/nutrition-confidence.js', 'nutrition/nutrition-view.js', 'scripts/test-nutrition-modules.mjs', 'scripts/test-food-search-service.mjs', 'scripts/test-fdc-confidence.mjs', 'tests/e2e/nutrition-domain.spec.mjs', 'tests/e2e/nutrition-today.spec.mjs', 'tests/e2e/nutrition-recipes-portions.spec.mjs', 'tests/e2e/nutrition-numbers-targets.spec.mjs', 'tests/e2e/nutrition-unified-search.spec.mjs',
     'data/schema-registry.js', 'data/backup-service.js', 'scripts/test-schema-registry.mjs', 'scripts/test-data-integrity.mjs', 'scripts/test-backup-service.mjs', 'tests/e2e/backup-import.spec.mjs', 'tests/e2e/data-integrity.spec.mjs', 'tests/e2e/indexeddb-primary.spec.mjs',
     'ui/confirmation-dialog.js',
     'app-version.json', 'app-version.js', 'app/numbers.js', 'scripts/test-numbers.mjs', 'data/indexeddb.js', 'data/repositories.js', 'nutrition-data.js', 'fdc-client.js', 'workout-store.js', 'workout-plan.js', 'gym/equipment.js', 'gym/set-model.js', 'gym/anomaly-detector.js', 'gym/progression-engine.js', 'workout-metrics.js', 'workout-ranking.js', 'workout-ui.js', 'workout-features.js', 'advanced-features.js', 'ui/router.js', 'ui/navigation.js', 'ui/notifications.js', 'ui/form-dialog.js', 'ui/error-boundary.js', 'ui/recovery-view.js', 'progress/muscle-taxonomy.js', 'progress/progress-data-model.js', 'progress/gym-progress-model.js', 'progress/muscle-progress.js', 'progress/exercise-progress.js', 'progress/personal-records.js', 'progress/progress-view.js',
@@ -146,7 +148,7 @@ Assert-True ($serviceWorker.Contains("'./app/numbers.js'")) 'sw.js no cachea app
 foreach ($contract in @('Intl.NumberFormat', 'parseOr', 'neutral', 'es-PY')) {
     Assert-True ($appNumbers.Contains($contract)) "Falta contrato numerico localizado: $contract"
 }
-foreach ($script in @('nutrition/nutrition-store.js', 'nutrition/nutrition-model.js', 'nutrition/recipes.js', 'nutrition/portions.js', 'nutrition/food-search.js', 'nutrition/food-entry-flow.js', 'nutrition/meal-history.js', 'nutrition/nutrition-confidence.js', 'nutrition/nutrition-view.js')) {
+foreach ($script in @('nutrition/nutrition-store.js', 'nutrition/nutrition-model.js', 'nutrition/recipes.js', 'nutrition/portions.js', 'nutrition/food-search.js', 'nutrition/food-entry-flow.js', 'nutrition/meal-history.js', 'nutrition/nutrition-confidence.js', 'nutrition/nutrition-view.js', 'nutrition/food-provider.js', 'nutrition/food-search-service.js')) {
     Assert-True ($html.Contains("<script src=`"$script`"></script>")) "index.html no carga $script"
     Assert-True ($serviceWorker.Contains("'./$script'")) "sw.js no cachea $script"
 }
@@ -157,6 +159,10 @@ foreach ($contract in @('lastAmount','lastUnit','lastMeal','combinations','favor
     Assert-True ($nutritionPortions.Contains($contract)) "Falta contrato de porciones habituales: $contract"
 }
 Assert-True ($html.IndexOf('<script src="nutrition/nutrition-store.js"></script>') -lt $html.IndexOf('<script src="fdc-client.js"></script>')) 'El dominio Nutricion debe cargar antes del cliente FDC'
+Assert-True ($html.IndexOf('<script src="fdc-client.js"></script>') -lt $html.IndexOf('<script src="nutrition/food-provider.js"></script>')) 'El proveedor nutricional debe adaptar al cliente despues de cargarlo'
+Assert-True ($html.IndexOf('<script src="nutrition/food-provider.js"></script>') -lt $html.IndexOf('<script src="nutrition/food-search-service.js"></script>')) 'El servicio de busqueda debe cargar despues del proveedor'
+foreach ($contract in @('isAvailable','search(query','getFood','normalize(rawFood)','health()')) { Assert-True ($nutritionFoodProvider.Contains($contract)) "Falta contrato de proveedor nutricional: $contract" }
+foreach ($contract in @('needsExternal','dedupe','createController','AbortController','externalState')) { Assert-True ($nutritionSearchService.Contains($contract)) "Falta contrato de busqueda nutricional: $contract" }
 Assert-True ($html.IndexOf('<script src="data/schema-registry.js"></script>') -lt $html.IndexOf('<script src="data/indexeddb.js"></script>')) 'El registro de schemas debe cargar antes de IndexedDB'
 Assert-True ($html.IndexOf('<script src="data/indexeddb.js"></script>') -lt $html.IndexOf('<script src="fdc-client.js"></script>')) 'La capa IndexedDB debe cargar antes de FDC y los modulos de datos'
 foreach ($contract in @('equipmentProfiles','backupField','sensitive','mirrorEnabled','legacyKeys','fdcSearchCache')) {
@@ -573,7 +579,7 @@ Assert-True ($html.Contains('data-open-gym-party')) 'Faltan tarjetas/accesos rap
 foreach ($contract in @('data-gym-section="train"','data-gym-section="routine"','data-gym-section="progress"','gymLegacyDetails')) {
     Assert-True ($html.Contains($contract)) "Falta jerarquia Gym: $contract"
 }
-foreach ($contract in @('id="nutritionTodayCard"','id="nutritionScoreSummary"','id="nutritionWaterAdd250"','data-open-nutrition-view="registrar"','nutritionAssistantDetails','id="fdcSearchCard"','progressRewardsDetails','progressSecondaryDetails')) {
+foreach ($contract in @('id="nutritionTodayCard"','id="nutritionScoreSummary"','id="nutritionWaterAdd250"','data-open-nutrition-view="registrar"','nutritionAssistantDetails','id="nutritionFoodSearchStatus"','id="nutritionFoodVoiceBtn"','progressRewardsDetails','progressSecondaryDetails')) {
     Assert-True ($html.Contains($contract)) "Falta jerarquia progresiva: $contract"
 }
 Assert-True ($html.Contains('function maybeAutoShowActionModal(){ renderActionCard(); }')) 'La accion diaria no debe abrir un modal automatico'
@@ -699,7 +705,12 @@ foreach ($fdcContract in @('cachedFdcFoods', 'hybridSearch', 'searchFoods', 'get
 }
 $demoToken = 'DEMO' + '_KEY'
 Assert-True (-not $fdc.Contains($demoToken)) 'No se debe publicar una API key de demostracion ni otra API key en fdc-client.js'
-Assert-True ($html.Contains('Datos nutricionales ampliados basados en USDA FoodData Central')) 'Falta atribucion visible de USDA FoodData Central'
+Assert-True ($html.Contains('Fuente: USDA FoodData Central')) 'Falta atribucion de USDA FoodData Central en diagnostico avanzado'
+$nutritionEveryday = [regex]::Match($html, '<div class="moduleCard" id="nutritionBuilderCard"[\s\S]*?<div class="moduleCard" id="nutritionDiagnosisCard"').Value
+Assert-True ($nutritionEveryday.Length -gt 0) 'No se pudo aislar el flujo cotidiano de Nutricion'
+foreach ($technicalTerm in @('USDA','FoodData Central','FDC','API key','dataset','base local','base externa','Importar detalle')) {
+    Assert-True (-not $nutritionEveryday.Contains($technicalTerm)) "El flujo cotidiano de Nutricion expone un termino tecnico: $technicalTerm"
+}
 
 Assert-True ($deployWorkflow.Contains('./scripts/validate-app.ps1')) 'El despliegue Pages debe validar la app antes de publicar'
 Assert-True ($deployWorkflow.Contains('gym-party.js')) 'El despliegue Pages debe publicar gym-party.js'

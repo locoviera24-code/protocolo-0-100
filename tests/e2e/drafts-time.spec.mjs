@@ -22,8 +22,8 @@ test('registro diario restaura el borrador y lo borra al guardar',async({page})=
 test('alimento sin guardar conserva paso, porcion y comida',async({page})=>{
   await reset(page,'/index.html?module=nutrition&view=meals');
   await page.locator('[data-open-nutrition-view="registrar"]').first().click();
-  await page.locator('.nutritionFoodFallback summary').click();
-  await page.locator('#nutritionFood').selectOption({index:1});
+  await page.locator('#nutritionFoodSearch').fill('mandioca');
+  await page.locator('[data-food-flow-select]').first().click();
   await page.locator('#foodQuantity').fill('175');
   await page.locator('#foodAmountNextBtn').click();
   await page.locator('#nutritionMeal').selectOption('Cena');
