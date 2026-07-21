@@ -2929,7 +2929,16 @@ reemplazar controles durante una interaccion. Tras corregir ambos contratos:
 - validacion, datos, version, precache, artifact web y APK debug volvieron a
   finalizar correctamente.
 
-Pendiente al cerrar el commit correctivo: confirmar el nuevo quality gate remoto y
-registrar su corrida/artifacts. La siguiente promocion prevista sigue siendo un
-unico dominio por bloque; no activar Gym Party o Protocolo como primarios
-simultaneamente.
+Resultado remoto definitivo: `Validar aplicacion` #80, commit `8d39c6a`,
+finalizo **Success** en 12m 9s. El job unico
+`Quality gate beta / Web, Firebase y Android` aprobo la matriz completa, incluidas
+las reglas Firestore, el artifact web servido, Playwright multiplataforma y los
+builds Android de prueba. Artifacts producidos:
+
+- `protocolo-android-debug-beta`, 1.571.913 bytes;
+- `protocolo-web-beta`, 323.183 bytes.
+
+El bloque de `WorkoutRepository` primario queda cerrado en build 83. La siguiente
+promocion debe seguir siendo un unico dominio por bloque. Segun el orden acordado,
+corresponde disenar primero la retencion y reconciliacion de la cache nutricional
+externa; no activar Gym Party o Protocolo como primarios simultaneamente.
