@@ -2846,3 +2846,13 @@ La advertencia final de Node 20 se cerro actualizando
 en el gate y en release. El proximo bloque estructural puede comenzar desde
 build 82; no hace falta volver a tocar la PWA atomica ni el gate reusable salvo
 una regresion comprobada.
+
+Verificacion posterior: `Validar aplicacion` #78, commit `7200b86`, finalizo
+**Success** en 12m 0s y ya no muestra la advertencia Node 20. Volvieron a pasar
+247 E2E con 14 omisiones y la prueba de artifact servido. Artifacts definitivos
+del HEAD funcional:
+
+- `protocolo-android-debug-beta`, 1.5 MB, SHA-256
+  `8ae82de2e7bb0052bc706714772c70749204d954dfd22d5470f976309c2cbf4c`;
+- `protocolo-web-beta`, 315 KB, SHA-256
+  `06d25fba2f567605accb495fa55f6d7b67e0ca7942fa6dace85f36264f06d4f4`.
