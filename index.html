@@ -985,6 +985,7 @@ function uiPreferences(){
   return {appearance:'dark',density:'comfortable',experienceMode:'guided',unit:'kg',showRir:true,nutritionGuidance:true,notifications:false,autoSync:true,...getLocalData(UI_PREFERENCES_KEY,{})};
 }
 let systemThemeQuery=null,systemThemeBound=false;
+let settingsFormDirty=false;
 function resolvedTheme(appearance){return appearance==='system'&&systemThemeQuery?.matches?'light':'dark';}
 function applyResolvedTheme(preferences=uiPreferences()){
   const theme=resolvedTheme(preferences.appearance);
@@ -997,13 +998,13 @@ function bindSystemTheme(){
   systemThemeBound=true;systemThemeQuery=window.matchMedia('(prefers-color-scheme: light)');
   systemThemeQuery.addEventListener?.('change',()=>{if(uiPreferences().appearance==='system')applyResolvedTheme();});
 }
-function applyUiPreferences(){
+function applyUiPreferences({syncControls=true}={}){
   const preferences=uiPreferences();
   bindSystemTheme();applyResolvedTheme(preferences);document.body.dataset.density=preferences.density;document.body.dataset.experienceMode=preferences.experienceMode;
   const values={settingsAppearance:preferences.appearance,settingsDensity:preferences.density,settingsExperienceMode:preferences.experienceMode,settingsUnit:preferences.unit};
-  Object.entries(values).forEach(([id,value])=>{const element=document.getElementById(id);if(element)element.value=value;});
+  if(syncControls)Object.entries(values).forEach(([id,value])=>{const element=document.getElementById(id);if(element)element.value=value;});
   const checks={settingsShowRir:preferences.showRir,settingsNutritionGuidance:preferences.nutritionGuidance,settingsNotifications:preferences.notifications,settingsAutoSync:preferences.autoSync};
-  Object.entries(checks).forEach(([id,value])=>{const element=document.getElementById(id);if(element)element.checked=!!value;});
+  if(syncControls)Object.entries(checks).forEach(([id,value])=>{const element=document.getElementById(id);if(element)element.checked=!!value;});
   document.getElementById('nutritionDiagnosisCard')?.classList.toggle('preferenceHidden',!preferences.nutritionGuidance);
   const nutritionWeightUnit=document.getElementById('nutritionWeightUnit');if(nutritionWeightUnit)nutritionWeightUnit.textContent=preferences.unit;
   if(document.getElementById('nutritionDate')?.value)loadBodyMetricsForDate();
@@ -1013,6 +1014,7 @@ function saveUiSettings(){
   const preferences={appearance:document.getElementById('settingsAppearance').value,density:document.getElementById('settingsDensity').value,experienceMode:document.getElementById('settingsExperienceMode').value,unit:document.getElementById('settingsUnit').value,showRir:document.getElementById('settingsShowRir').checked,nutritionGuidance:document.getElementById('settingsNutritionGuidance').checked,notifications:document.getElementById('settingsNotifications').checked,autoSync:document.getElementById('settingsAutoSync').checked,updatedAt:new Date().toISOString()};
   setLocalData(UI_PREFERENCES_KEY,preferences);
   window.WORKOUT_FEATURES?.updateGymSettings?.({...window.WORKOUT_FEATURES.getGymSettings?.(),unit:preferences.unit,showRir:preferences.showRir});
+  settingsFormDirty=false;
   applyUiPreferences();window.dispatchEvent(new CustomEvent('app-settings-change',{detail:preferences}));flash('Ajustes guardados.');
 }
 function maybeShowInternalReminder(){
@@ -1061,7 +1063,7 @@ async function setNutritionPrimaryMode(enabled){
   finally{if(button)button.disabled=false;renderSettingsData();}
 }
 function renderSettingsData(){
-  applyUiPreferences();const meta=getLocalData(BACKUP_META_KEY,{});
+  applyUiPreferences({syncControls:!settingsFormDirty});const meta=getLocalData(BACKUP_META_KEY,{});
   const last=document.getElementById('lastBackupAt');if(last)last.textContent=meta.lastExportAt?new Intl.DateTimeFormat('es-PY',{dateStyle:'short',timeStyle:'short'}).format(new Date(meta.lastExportAt)):'Nunca';
   const storage=document.getElementById('localStorageEstimate');if(storage)storage.textContent=formatStorage(estimatedLocalStorage());
   const count=document.getElementById('localStorageKeyCount');if(count)count.textContent=String(localStorage.length);
@@ -2869,6 +2871,7 @@ const installBtn=document.getElementById('installPwaBtn'); if(installBtn) instal
 const copyPhoneBtn=document.getElementById('copyPhoneToFormBtn'); if(copyPhoneBtn) copyPhoneBtn.addEventListener('click', copyPhoneMetricsToForm);
 document.getElementById('homeCompactActionBtn')?.addEventListener('click',runHomeCompactAction);
 document.getElementById('saveUiSettingsBtn')?.addEventListener('click',saveUiSettings);
+['settingsAppearance','settingsDensity','settingsExperienceMode','settingsUnit','settingsShowRir','settingsNutritionGuidance','settingsNotifications','settingsAutoSync'].forEach(id=>document.getElementById(id)?.addEventListener('change',()=>{settingsFormDirty=true;}));
 document.getElementById('resetAllDataBtn')?.addEventListener('click',resetAllAppData);
 document.getElementById('reopenOnboardingBtn')?.addEventListener('click',()=>{localStorage.removeItem('protocolo_0_100_onboarding_complete_v1');window.APP_ROUTER?.navigate({module:'more',view:'help'});});
 document.querySelectorAll('[data-reset-scope]').forEach(button=>button.addEventListener('click',()=>resetDataScope(button.dataset.resetScope)));

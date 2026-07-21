@@ -372,12 +372,13 @@
   async function replaceMany(changes,{reason='transaction',rawKeys=[]}={}){
     const entries=Object.entries(changes||{});
     const keys=entries.map(([key])=>key);
-    keys.forEach(recordForKey);
-    const rawSet=new Set(rawKeys);
-    const rawEntries=entries.map(([key,value])=>[key,value===undefined?null:rawSet.has(key)?String(value):recordForKey(key).serialization==='raw'?String(value):JSON.stringify(value)]);
-    rawEntries.forEach(([key,raw])=>{if(raw===null)return;const result=inspectRaw(key,raw);if(!['valid','legacy'].includes(result.status))throw new Error(`Datos invalidos para ${key}: ${result.error||result.status}`);});
-    const snapshot=await createRecoverySnapshot(keys,reason);
+    let snapshot=null;
     try{
+      keys.forEach(recordForKey);
+      const rawSet=new Set(rawKeys);
+      const rawEntries=entries.map(([key,value])=>[key,value===undefined?null:rawSet.has(key)?String(value):recordForKey(key).serialization==='raw'?String(value):JSON.stringify(value)]);
+      rawEntries.forEach(([key,raw])=>{if(raw===null)return;const result=inspectRaw(key,raw);if(!['valid','legacy'].includes(result.status))throw new Error(`Datos invalidos para ${key}: ${result.error||result.status}`);});
+      snapshot=await createRecoverySnapshot(keys,reason);
       rawEntries.forEach(([key,raw])=>{
         if(raw===null)localStorage.removeItem(key);
         else localStorage.setItem(key,raw);
@@ -397,9 +398,9 @@
       keys.forEach(key=>notifyChange(key));
       return {ok:true,snapshotId:snapshot.id,keys};
     }catch(error){
-      restoreLocalSnapshot(snapshot);
+      if(snapshot)restoreLocalSnapshot(snapshot);
       reportError(error,'replace-many');
-      return {ok:false,snapshotId:snapshot.id,error:classifyError(error),keys};
+      return {ok:false,snapshotId:snapshot?.id||null,error:classifyError(error),keys};
     }
   }
   async function restoreRecovery(snapshotId){

@@ -2820,3 +2820,13 @@ dentro de `sw.js`. El contrato correcto se valida ahora contra
 misma deuda se retiro de `test-data-layer.mjs` y `test-progress-view.mjs`; el
 workflow Pages se valida como consumidor del gate reusable y ya no como lugar
 donde se reconstruye manualmente el artifact.
+
+La corrida beta #76 avanzo hasta los E2E: 239 pasaron y 14 quedaron omitidos,
+pero expuso dos defectos reales. `APP_DATA.replaceMany()` serializaba fuera del
+bloque recuperable y un valor circular escapaba sin devolver rollback. Ademas,
+el evento tardio `app-data-primary-ready` podia ejecutar `renderSettingsData()`
+mientras se editaba Ajustes y reponer los controles con los valores anteriores.
+El build 82 protege toda la preparacion de `replaceMany()` y preserva controles
+de Ajustes marcados como modificados hasta guardar; los renders de fondo ya no
+pisan elecciones de tema, densidad, modo o unidad. Estado preparado: version
+`2.7.0`, Android `33`, cache `protocolo-0-100-pwa-2.7.0-b82`.
