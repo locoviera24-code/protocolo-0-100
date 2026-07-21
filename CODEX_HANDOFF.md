@@ -1,10 +1,10 @@
 # CODEX_HANDOFF - Protocolo 0->100
 
-Ultima actualizacion: 2026-07-12
+Ultima actualizacion: 2026-07-21
 Rama esperada: `main`
 Version actual: `2.7.0` (fuente unica: `app-version.json`)
 Android: `versionCode 33`, `versionName "2.7.0"`
-Service worker cache: `protocolo-0-100-pwa-2.7.0-b58`
+Service worker cache: `protocolo-0-100-pwa-2.7.0-b83`
 Backup consolidado: `schemaVersion: 3`
 
 Leer primero este archivo y luego `README.md`, `index.html`,
@@ -24,7 +24,7 @@ Estado actual:
 - Gym Party implementado como modulo web/PWA opcional.
 - Nutricion local/FDC opcional.
 - Backups JSON `schemaVersion: 3`.
-- PWA offline con cache derivada `protocolo-0-100-pwa-2.7.0-b58` y
+- PWA offline con cache derivada `protocolo-0-100-pwa-2.7.0-b83` y
   actualizacion consentida desde el aviso visible.
 - APK con widget Android y permiso `INTERNET` para Firebase/Gym Party.
 
@@ -2856,3 +2856,58 @@ del HEAD funcional:
   `8ae82de2e7bb0052bc706714772c70749204d954dfd22d5470f976309c2cbf4c`;
 - `protocolo-web-beta`, 315 KB, SHA-256
   `06d25fba2f567605accb495fa55f6d7b67e0ca7942fa6dace85f36264f06d4f4`.
+
+## 65. WorkoutRepository como fuente primaria controlada
+
+El build 83 promueve el dominio `workout` a lectura primaria desde IndexedDB,
+manteniendo todas sus claves en `localStorage` como copia compatible de
+escritura anticipada. La configuracion por dominio queda en
+`protocolo_0_100_data_layer_v1`; tanto `nutrition` como `workout` estan activos
+por defecto y pueden volver independientemente a modo compatible sin borrar
+ninguna copia.
+
+Cambios principales:
+
+- `data/indexeddb.js` incluye `workout:true` en `primaryDomains` y expone
+  `APP_DATA.isPrimaryReady(domain)` para coordinar consumidores sin asumir que
+  abrir IndexedDB es sincrono.
+- `workout-features.js` espera `APP_DATA.ready()` antes de crear rutina,
+  biblioteca, historial, sesiones, perfiles de equipo, ajustes o estado del
+  widget. Esto evita que valores predeterminados vacios sustituyan una copia
+  recuperable cuando falta `localStorage` durante el arranque.
+- `WORKOUT_FEATURES.ready()` es el contrato explicito para pruebas y clientes
+  que necesiten operar inmediatamente despues de cargar la pagina.
+- `workout-store.js` valida existencia mediante `APP_DATA.readResult()` cuando
+  la capa de datos esta disponible, en lugar de decidir solo por presencia
+  fisica en `localStorage`.
+- **Mas > Datos y copias** muestra estado, divergencias y recuperaciones de Gym;
+  permite rollback a lectura compatible, reactivacion y comprobacion manual.
+- La reconciliacion conserva la regla local write-ahead: si existe una copia
+  local valida mas reciente, se copia a IndexedDB; si falta localStorage, se
+  recupera la copia valida de IndexedDB. Las dos copias se mantienen.
+
+Pruebas locales del bloque antes del gate completo:
+
+- `npm run test:data`: registro de 53 claves, integridad, repositorios,
+  transacciones, backups y cuarentena aprobados.
+- `tests/e2e/indexeddb-primary.spec.mjs`: 27/27 aprobadas en Android Chromium,
+  iPhone WebKit y escritorio; cubre recuperacion antes de defaults,
+  divergencia, rollback, reactivacion, coordinacion entre pestanas y fallback
+  local cuando IndexedDB no esta disponible.
+- `npm run test:progress`: modelos de Progreso, taxonomia muscular y progreso
+  por ejercicio aprobados.
+- La primera matriz amplia de Gym detecto que `gym-canonical.spec.mjs` esperaba
+  un objeto global, no la hidratacion. Se agrego `WORKOUT_FEATURES.ready()` y la
+  prueba ahora usa ese contrato. Tras regenerar el precache, la matriz
+  `gym-canonical` + `gym-flow` aprobo 14 pruebas en las tres plataformas; la
+  unica omision fue el service worker en WebKit, donde la UI iPhone si se probo.
+- `validate-app.ps1`, versionado, precache, guard de build, artifact web y
+  contrato Android aprobaron. El artifact contiene 70 recursos con hashes y
+  rutas servibles sin 404.
+- Los assets web se sincronizaron con `scripts/sync-web-assets.ps1` y
+  `:app:assembleDebug` finalizo `BUILD SUCCESSFUL` con Gradle 8.10.2/JDK 17.
+
+Pendiente al cerrar el commit funcional: confirmar el quality gate remoto y
+registrar su corrida/artifacts. La siguiente promocion prevista sigue siendo un
+unico dominio por bloque; no activar Gym Party o Protocolo como primarios
+simultaneamente.

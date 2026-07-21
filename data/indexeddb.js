@@ -19,7 +19,7 @@
     enabled:true,
     mode:'shadow',
     domains:Object.freeze(Object.fromEntries(Object.keys(DOMAIN_KEYS).map(domain=>[domain,true]))),
-    primaryDomains:Object.freeze({nutrition:true})
+    primaryDomains:Object.freeze({nutrition:true,workout:true})
   });
 
   let databasePromise=null;
@@ -53,6 +53,7 @@
   }
   function domainForKey(key){return registry.get(key)?.domain||'';}
   function isPrimaryDomain(domain,current=config()){return !!(current.enabled&&current.primaryDomains?.[domain]&&PRIMARY_KEYS[domain]);}
+  function isPrimaryReady(domain){return primaryReadyDomains.has(domain);}
   function shouldMirror(key){
     const record=registry.get(key),domain=record?.domain,current=config();
     return !!(record?.mirrorEnabled&&domain&&current.enabled&&(current.mode==='shadow'||isPrimaryDomain(domain,current))&&current.domains[domain]!==false);
@@ -531,7 +532,7 @@
   }
 
   global.APP_DATA=Object.freeze({
-    DB_NAME,DB_VERSION,CONFIG_KEY,DOMAIN_KEYS,PRIMARY_KEYS,domainForKey,config,saveConfig,isPrimaryDomain,read,write,writeRaw,remove,
+    DB_NAME,DB_VERSION,CONFIG_KEY,DOMAIN_KEYS,PRIMARY_KEYS,domainForKey,config,saveConfig,isPrimaryDomain,isPrimaryReady,read,write,writeRaw,remove,
     readResult,readIndexed,readIndexedResult,inspectRaw,migrateDomain,migrateAll,initialize,ready:initialize,flush,replaceMany,
     createRecoverySnapshot,restoreRecovery,purgeKeys,clearAllData,diagnostics,
     hydratePrimaryDomain,setPrimaryDomain,primaryDomainStatus,requestPersistentStorage,

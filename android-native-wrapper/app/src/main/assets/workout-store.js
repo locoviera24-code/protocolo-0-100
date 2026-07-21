@@ -7,7 +7,12 @@
   }
   function write(key,value){if(window.APP_DATA)return window.APP_DATA.write(key,value);localStorage.setItem(key,JSON.stringify(value));return value;}
   function update(key,fallback,updater){const current=read(key,fallback),next=updater(clone(current));return write(key,next===undefined?current:next);}
-  function ensure(key,defaults){if(localStorage.getItem(key)===null)write(key,clone(defaults));return read(key,defaults);}
+  function ensure(key,defaults){
+    const result=window.APP_DATA?.readResult?.(key);
+    if(result){if(result.status==='missing')write(key,clone(defaults));return ['valid','legacy'].includes(result.status)?clone(result.value):clone(defaults);}
+    if(localStorage.getItem(key)===null)write(key,clone(defaults));
+    return read(key,defaults);
+  }
   function migrate({key,metaKey,version,defaults,merge}){
     const current=read(key,defaults),meta=read(metaKey,{version:0});
     if(Number(meta.version)>=Number(version))return current;

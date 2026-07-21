@@ -1,6 +1,7 @@
 import {test,expect} from '@playwright/test';
 
 const NUTRITION_KEY='protocolo_0_100_nutrition_entries_v1';
+const WORKOUT_KEY='protocolo_0_100_workout_sessions_v1';
 
 async function clean(page){
   await page.goto('/index.html');
@@ -9,7 +10,7 @@ async function clean(page){
   await page.evaluate(()=>window.APP_DATA.ready());
 }
 
-test('promueve solo Nutrición y conserva localStorage como respaldo',async ({page})=>{
+test('promueve Nutrición y conserva localStorage como respaldo',async ({page})=>{
   await clean(page);
   const result=await page.evaluate(async key=>{
     const entries=[{id:'nutrition-primary-1',date:'2026-07-19',name:'Mandioca',grams:180}];
@@ -27,6 +28,68 @@ test('promueve solo Nutrición y conserva localStorage como respaldo',async ({pa
   expect(result.diagnostics.domains.nutrition.primaryStatus).toBe('ready');
   expect(result.primaryKeys).not.toContain('protocolo_0_100_cached_fdc_foods_v1');
   expect(result.primaryKeys).not.toContain('protocolo_0_100_fdc_search_cache_v1');
+});
+
+test('Workout es primario y recupera una sesión antes de inicializar valores por defecto',async ({page})=>{
+  await clean(page);
+  await page.evaluate(async key=>{
+    window.APP_DATA.write(key,[{id:'workout-primary-1',date:'2026-07-20',status:'finalizado',routine:{name:'Torso A'},exercises:[]}]);
+    await window.APP_DATA.flush();
+    localStorage.removeItem(key);
+  },WORKOUT_KEY);
+  await page.reload();
+  await page.evaluate(()=>window.APP_DATA.ready());
+  const result=await page.evaluate(async key=>({
+    read:window.APP_DATA.readResult(key),
+    indexed:await window.APP_DATA.readIndexedResult(key),
+    local:JSON.parse(localStorage.getItem(key)),
+    status:await window.APP_DATA.primaryDomainStatus('workout'),
+    config:window.APP_DATA.config()
+  }),WORKOUT_KEY);
+  expect(result.config.primaryDomains.workout).toBe(true);
+  expect(result.read.source).toBe('indexeddb');
+  expect(result.read.value[0].id).toBe('workout-primary-1');
+  expect(result.indexed.value[0].id).toBe('workout-primary-1');
+  expect(result.local[0].id).toBe('workout-primary-1');
+  expect(result.status.storageMode).toBe('primary');
+  expect(result.status.recoveredCount).toBeGreaterThanOrEqual(1);
+});
+
+test('Workout reconcilia una escritura compatible pendiente y permite rollback',async ({page})=>{
+  await clean(page);
+  await page.evaluate(async key=>{
+    window.APP_DATA.write(key,[{id:'indexed-workout',date:'2026-07-19',status:'finalizado',exercises:[]}]);
+    await window.APP_DATA.flush();
+    localStorage.setItem(key,JSON.stringify([{id:'pending-workout',date:'2026-07-20',status:'en progreso',exercises:[]}]))
+  },WORKOUT_KEY);
+  await page.reload();
+  await page.evaluate(()=>window.APP_DATA.ready());
+  const reconciled=await page.evaluate(async key=>({read:window.APP_DATA.readResult(key),indexed:await window.APP_DATA.readIndexedResult(key),status:await window.APP_DATA.primaryDomainStatus('workout')}),WORKOUT_KEY);
+  expect(reconciled.read.value[0].id).toBe('pending-workout');
+  expect(reconciled.indexed.value[0].id).toBe('pending-workout');
+  expect(reconciled.status.divergenceCount).toBeGreaterThanOrEqual(1);
+  const rolledBack=await page.evaluate(async key=>{
+    await window.APP_DATA.setPrimaryDomain('workout',false);
+    localStorage.setItem(key,JSON.stringify([{id:'compatible-workout',date:'2026-07-20',status:'finalizado',exercises:[]}]))
+    return{read:window.APP_DATA.readResult(key),config:window.APP_DATA.config()};
+  },WORKOUT_KEY);
+  expect(rolledBack.read.source).toBe('localStorage');
+  expect(rolledBack.read.value[0].id).toBe('compatible-workout');
+  expect(rolledBack.config.primaryDomains.workout).toBe(false);
+});
+
+test('Gym conserva el modo local cuando IndexedDB no esta disponible',async ({browser})=>{
+  const context=await browser.newContext();
+  await context.addInitScript(()=>Object.defineProperty(window,'indexedDB',{configurable:true,value:undefined}));
+  const page=await context.newPage();
+  await page.goto('/index.html?module=gym&view=train');
+  await expect.poll(()=>page.evaluate(()=>Boolean(window.WORKOUT_FEATURES))).toBe(true);
+  await page.evaluate(()=>window.WORKOUT_FEATURES.ready());
+  await expect(page.locator('#todayWorkoutPanel')).toBeVisible();
+  const status=await page.evaluate(()=>({indexedDB:window.APP_DATA.config().primaryDomains.workout,source:window.APP_DATA.readResult(window.WORKOUT_FEATURES.keys.workoutSessions).source}));
+  expect(status.indexedDB).toBe(true);
+  expect(status.source).toBe('localStorage');
+  await context.close();
 });
 
 test('reconcilia una escritura local pendiente y permite rollback',async ({page})=>{
@@ -64,6 +127,14 @@ test('coordina la lectura primaria entre dos pestañas',async ({page,context})=>
   await second.close();
 });
 
+test('coordina sesiones de Workout entre dos pestañas',async ({page,context})=>{
+  await clean(page);
+  const second=await context.newPage();await second.goto('/index.html');await second.evaluate(()=>window.APP_DATA.ready());
+  await page.evaluate(async key=>{window.APP_DATA.write(key,[{id:'cross-tab-workout',date:'2026-07-20',status:'en progreso',exercises:[]}]);await window.APP_DATA.flush();},WORKOUT_KEY);
+  await expect.poll(()=>second.evaluate(key=>window.APP_DATA.readResult(key).value?.[0]?.id||'',WORKOUT_KEY)).toBe('cross-tab-workout');
+  await second.close();
+});
+
 test('Datos y copias permite rollback y reactivación visibles',async ({page})=>{
   await clean(page);await page.goto('/index.html?module=more&view=data');
   await expect(page.locator('#nutritionStorageStatus')).toContainText('IndexedDB');
@@ -76,4 +147,14 @@ test('Datos y copias permite rollback y reactivación visibles',async ({page})=>
   await page.locator('#toggleNutritionPrimaryBtn').click();
   await expect(page.locator('#nutritionStorageStatus')).toContainText('IndexedDB verificada');
   expect(await page.evaluate(()=>window.APP_DATA.config().primaryDomains.nutrition)).toBe(true);
+  await expect(page.locator('#workoutStorageStatus')).toContainText('IndexedDB');
+  await expect(page.locator('#toggleWorkoutPrimaryBtn')).toHaveText('Usar modo compatible');
+  await page.locator('#toggleWorkoutPrimaryBtn').click();
+  await expect(page.locator('#workoutStorageStatus')).toContainText('Modo compatible');
+  expect(await page.evaluate(()=>window.APP_DATA.config().primaryDomains.workout)).toBe(false);
+  await page.reload();await page.evaluate(()=>window.APP_DATA.ready());
+  await expect(page.locator('#toggleWorkoutPrimaryBtn')).toHaveText('Reactivar IndexedDB');
+  await page.locator('#toggleWorkoutPrimaryBtn').click();
+  await expect(page.locator('#workoutStorageStatus')).toContainText('IndexedDB verificada');
+  expect(await page.evaluate(()=>window.APP_DATA.config().primaryDomains.workout)).toBe(true);
 });

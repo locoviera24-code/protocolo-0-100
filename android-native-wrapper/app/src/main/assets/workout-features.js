@@ -782,6 +782,10 @@
   }
   function renderWorkoutDashboard(){
     injectWorkoutUi();
+    if(window.APP_DATA?.isPrimaryDomain?.('workout')&&!window.APP_DATA.isPrimaryReady?.('workout')&&!workoutStorageInitialized){
+      initializeWorkoutFeatures();
+      return;
+    }
     ensureWorkoutData();
     maybeImportWidgetStateFromAndroid();
     renderTodayWorkout();
@@ -1907,7 +1911,7 @@
     else if(action===actionWidgetSaveSet){syncWorkoutWidget();openGymToday();}
   }
 
-  window.WORKOUT_FEATURES={keys,dayOrder,defaultWeeklyPlan:clone(defaultWeeklyPlan),exerciseLibrary:clone(exerciseLibrary),EXERCISE_LIBRARY_VERSION,getExerciseLibrary:()=>clone(libraryData()),getPendingMuscleClassifications:()=>clone(pendingMuscleClassifications()),confirmExerciseClassificationPayload,previewHistoricalClassificationMigration,applyHistoricalClassificationMigration,undoHistoricalClassificationMigration,getWeeklyWorkoutPlan:()=>clone(weeklyPlan()),getEquipmentProfiles:()=>clone(equipmentProfiles()),getGymSettings:()=>clone(settings()),updateGymSettings:next=>{saveSettings(next||{});return clone(settings());},displayWeight,canonicalWeight,displayVolume,migrateExerciseLibrary,migrateLegacyGymSessions,dayKeyForDate,planForDate,rankExercisesForContext,getQuickWorkoutState,addManualExercisePayload,saveQuickSetPayload,updateQuickSetPayload,reviewAnomalousSetResult,deleteQuickSetPayload,undoDeleteQuickSetPayload,canUndoQuickSetDelete:()=>!!lastDeletedQuickSet,replaceSessionPayload,completeQuickExercisePayload,finishWorkoutPayload,buildWorkoutWidgetState,syncWorkoutWidget,importWidgetStateFromAndroid};
+  window.WORKOUT_FEATURES={keys,dayOrder,defaultWeeklyPlan:clone(defaultWeeklyPlan),exerciseLibrary:clone(exerciseLibrary),EXERCISE_LIBRARY_VERSION,ready:()=>initializeWorkoutFeatures(),getExerciseLibrary:()=>clone(libraryData()),getPendingMuscleClassifications:()=>clone(pendingMuscleClassifications()),confirmExerciseClassificationPayload,previewHistoricalClassificationMigration,applyHistoricalClassificationMigration,undoHistoricalClassificationMigration,getWeeklyWorkoutPlan:()=>clone(weeklyPlan()),getEquipmentProfiles:()=>clone(equipmentProfiles()),getGymSettings:()=>clone(settings()),updateGymSettings:next=>{saveSettings(next||{});return clone(settings());},displayWeight,canonicalWeight,displayVolume,migrateExerciseLibrary,migrateLegacyGymSessions,dayKeyForDate,planForDate,rankExercisesForContext,getQuickWorkoutState,addManualExercisePayload,saveQuickSetPayload,updateQuickSetPayload,reviewAnomalousSetResult,deleteQuickSetPayload,undoDeleteQuickSetPayload,canUndoQuickSetDelete:()=>!!lastDeletedQuickSet,replaceSessionPayload,completeQuickExercisePayload,finishWorkoutPayload,buildWorkoutWidgetState,syncWorkoutWidget,importWidgetStateFromAndroid};
   window.openGymToday=openGymToday;
   window.openQuickSetLogger=openQuickSetLogger;
   window.handleAndroidWidgetIntent=(action,payload)=>handleAndroidWidgetIntent(action,payload||{});
@@ -1916,10 +1920,28 @@
   renderGym=function(){ originalRenderGym(); renderWorkoutDashboard(); };
   window.renderGym=renderGym;
 
-  ensureWorkoutData();
-  migrateLegacyGymSessions();
-  const uiPreferences=readStore('protocolo_0_100_ui_preferences_v1',{});
-  if(['kg','lb'].includes(uiPreferences.unit))saveSettings({unit:uiPreferences.unit,showRir:uiPreferences.showRir!==false});
-  injectWorkoutUi();
-  renderWorkoutDashboard();
+  let workoutInitializationPromise=null;
+  let workoutStorageInitialized=false;
+  function initializeWorkoutFeatures(){
+    if(workoutInitializationPromise)return workoutInitializationPromise;
+    workoutInitializationPromise=(async()=>{
+      if(window.APP_DATA?.isPrimaryDomain?.('workout'))await window.APP_DATA.ready();
+      ensureWorkoutData();
+      migrateLegacyGymSessions();
+      const uiPreferences=readStore('protocolo_0_100_ui_preferences_v1',{});
+      if(['kg','lb'].includes(uiPreferences.unit))saveSettings({unit:uiPreferences.unit,showRir:uiPreferences.showRir!==false});
+      workoutStorageInitialized=true;
+      injectWorkoutUi();
+      renderWorkoutDashboard();
+      return true;
+    })().catch(error=>{
+      workoutInitializationPromise=null;
+      workoutStorageInitialized=true;
+      window.APP_ERROR_BOUNDARY?.record?.(error,{area:'workout-initialization'});
+      try{ensureWorkoutData();injectWorkoutUi();renderWorkoutDashboard();}catch(fallbackError){window.APP_ERROR_BOUNDARY?.record?.(fallbackError,{area:'workout-local-fallback'});}
+      return false;
+    });
+    return workoutInitializationPromise;
+  }
+  initializeWorkoutFeatures();
 })();

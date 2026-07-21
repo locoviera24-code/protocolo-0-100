@@ -699,7 +699,7 @@
               <div class="auditItem hidden" id="importUndoPanel"><span id="importUndoText">Importación aplicada.</span><button type="button" class="secondary" id="undoImportBtn">Deshacer importación</button></div>
             </div>
             <div class="quickStats dataStats"><div class="quickStat"><span>Última copia</span><strong id="lastBackupAt">Nunca</strong></div><div class="quickStat"><span>Almacenamiento local</span><strong id="localStorageEstimate">0 KB</strong></div><div class="quickStat"><span>Schema</span><strong id="dataSchemaVersion">3</strong></div><div class="quickStat"><span>Claves locales</span><strong id="localStorageKeyCount">0</strong></div></div>
-            <div class="moduleCard"><div class="sectionHeading"><div><h3>Copia interna recuperable</h3><p class="muted small" id="dataLayerDescription">Las claves históricas siguen activas mientras se crea una copia transaccional local para historiales crecientes.</p></div><strong id="indexedDbStatus">Preparando</strong></div><div class="auditItem"><div><strong>Nutrición</strong><span class="muted small" id="nutritionStorageStatus">Comprobando almacenamiento…</span></div><div class="buttons"><button type="button" class="secondary" id="toggleNutritionPrimaryBtn">Cambiar modo</button><button type="button" class="secondary" id="retryNutritionPrimaryBtn">Comprobar de nuevo</button></div></div></div>
+            <div class="moduleCard"><div class="sectionHeading"><div><h3>Copia interna recuperable</h3><p class="muted small" id="dataLayerDescription">Las claves históricas siguen activas mientras se crea una copia transaccional local para historiales crecientes.</p></div><strong id="indexedDbStatus">Preparando</strong></div><div class="auditItem"><div><strong>Nutrición</strong><span class="muted small" id="nutritionStorageStatus">Comprobando almacenamiento…</span></div><div class="buttons"><button type="button" class="secondary" id="toggleNutritionPrimaryBtn">Cambiar modo</button><button type="button" class="secondary" id="retryNutritionPrimaryBtn">Comprobar de nuevo</button></div></div><div class="auditItem"><div><strong>Gym</strong><span class="muted small" id="workoutStorageStatus">Comprobando almacenamiento…</span></div><div class="buttons"><button type="button" class="secondary" id="toggleWorkoutPrimaryBtn">Cambiar modo</button><button type="button" class="secondary" id="retryWorkoutPrimaryBtn">Comprobar de nuevo</button></div></div></div>
             <div class="moduleCard hidden" id="dataIntegrityCard"><div class="sectionHeading"><div><h3>Datos que necesitan revisión</h3><p class="muted small">La app apartó una copia que no pudo interpretar. No la reemplazó por datos vacíos.</p></div><strong id="dataIntegrityCount">0</strong></div><div class="auditList" id="dataIntegrityList"></div><div class="buttons"><button type="button" class="secondary" id="exportQuarantineBtn">Exportar copias para revisar</button></div></div>
             <div class="moduleCard"><h3>Restablecimiento selectivo</h3><p class="muted small">Borra solo el área elegida. Las demás permanecen intactas.</p><div class="buttons"><button type="button" class="secondary" data-reset-scope="protocol">Protocolo diario</button><button type="button" class="secondary" data-reset-scope="gym">Gym local</button><button type="button" class="secondary" data-reset-scope="nutrition">Nutrición</button><button type="button" class="secondary" data-reset-scope="ui">Preferencias visuales</button></div></div>
             <details class="moduleCard dangerZone"><summary>Zona de peligro</summary><p>Esta acción borra todos los datos locales de Protocolo 0→100 en este navegador.</p><button type="button" class="danger" id="resetAllDataBtn">Borrar todos los datos locales</button></details>
@@ -1062,6 +1062,15 @@ async function setNutritionPrimaryMode(enabled){
   }catch(error){flash('No se pudo cambiar el almacenamiento de Nutrición. Se conservó el modo anterior.',{tone:'error'});return null;}
   finally{if(button)button.disabled=false;renderSettingsData();}
 }
+async function setWorkoutPrimaryMode(enabled){
+  const button=document.getElementById('toggleWorkoutPrimaryBtn');if(button)button.disabled=true;
+  try{
+    const result=await window.APP_DATA.setPrimaryDomain('workout',enabled);await window.APP_DATA.flush();
+    flash(enabled?'Gym usa la copia IndexedDB verificada. localStorage permanece como respaldo compatible.':'Gym volvió al modo compatible. No se borró ninguna copia.',{tone:'success'});
+    window.renderGym?.();window.renderAdvancedProgress?.();return result;
+  }catch(error){flash('No se pudo cambiar el almacenamiento de Gym. Se conservó el modo anterior.',{tone:'error'});return null;}
+  finally{if(button)button.disabled=false;renderSettingsData();}
+}
 function renderSettingsData(){
   applyUiPreferences({syncControls:!settingsFormDirty});const meta=getLocalData(BACKUP_META_KEY,{});
   const last=document.getElementById('lastBackupAt');if(last)last.textContent=meta.lastExportAt?new Intl.DateTimeFormat('es-PY',{dateStyle:'short',timeStyle:'short'}).format(new Date(meta.lastExportAt)):'Nunca';
@@ -1084,6 +1093,14 @@ function renderSettingsData(){
       }
       if(toggle){const primary=nutrition?.storageMode==='primary';toggle.textContent=primary?'Usar modo compatible':'Reactivar IndexedDB';toggle.dataset.enablePrimary=primary?'false':'true';}
       if(retry)retry.classList.toggle('hidden',nutrition?.storageMode!=='primary');
+      const workout=diagnostics.domains?.workout,workoutStatus=document.getElementById('workoutStorageStatus'),workoutToggle=document.getElementById('toggleWorkoutPrimaryBtn'),workoutRetry=document.getElementById('retryWorkoutPrimaryBtn');
+      if(workoutStatus){
+        if(workout?.storageMode==='primary'&&workout.primaryStatus==='ready')workoutStatus.textContent=`IndexedDB verificada · ${workout.divergenceCount||0} diferencia(s) reconciliada(s) · ${workout.recoveredCount||0} recuperación(es).`;
+        else if(workout?.storageMode==='primary')workoutStatus.textContent='Preparando lectura primaria; localStorage sigue activo como respaldo.';
+        else workoutStatus.textContent='Modo compatible con lectura localStorage y copia IndexedDB en shadow.';
+      }
+      if(workoutToggle){const primary=workout?.storageMode==='primary';workoutToggle.textContent=primary?'Usar modo compatible':'Reactivar IndexedDB';workoutToggle.dataset.enablePrimary=primary?'false':'true';}
+      if(workoutRetry)workoutRetry.classList.toggle('hidden',workout?.storageMode!=='primary');
     }).catch(()=>{indexedStatus.textContent='No disponible';});
   }
   const latestImport=window.BACKUP_SERVICE?.history?.()?.[0],undoPanel=document.getElementById('importUndoPanel');
@@ -2890,6 +2907,8 @@ window.addEventListener('app-data-quarantine-change',renderDataIntegrity);
 window.addEventListener('app-data-primary-ready',renderSettingsData);
 document.getElementById('toggleNutritionPrimaryBtn')?.addEventListener('click',event=>setNutritionPrimaryMode(event.currentTarget.dataset.enablePrimary==='true'));
 document.getElementById('retryNutritionPrimaryBtn')?.addEventListener('click',async()=>{try{await window.APP_DATA.hydratePrimaryDomain('nutrition');flash('Almacenamiento de Nutrición comprobado.');}catch(error){flash('No se pudo comprobar IndexedDB. Los datos locales permanecen disponibles.',{tone:'warning'});}renderSettingsData();});
+document.getElementById('toggleWorkoutPrimaryBtn')?.addEventListener('click',event=>setWorkoutPrimaryMode(event.currentTarget.dataset.enablePrimary==='true'));
+document.getElementById('retryWorkoutPrimaryBtn')?.addEventListener('click',async()=>{try{await window.APP_DATA.hydratePrimaryDomain('workout');flash('Almacenamiento de Gym comprobado.');window.renderGym?.();}catch(error){flash('No se pudo comprobar IndexedDB. Los datos de Gym permanecen disponibles.',{tone:'warning'});}renderSettingsData();});
 document.getElementById('openDrawerBtn').addEventListener('click', openDrawer);
 document.getElementById('openGymPartyTopBtn').addEventListener('click', ()=>setModule('gym-party'));
 document.getElementById('routeBackBtn').addEventListener('click',()=>window.APP_ROUTER?.back());

@@ -15,7 +15,7 @@ PWA y APK Android para medir habitos, atencion, actividad fisica y nutricion con
 
 ## Navegacion y diseno
 
-La version actual `v2.7.0` (build web `82`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
+La version actual `v2.7.0` (build web `83`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
 **Gym**, **Nutricion**, **Progreso** y **Mas**. En escritorio usa una barra
 lateral compacta. Gym Party se abre desde **Gym > Grupo**, desde un acceso
 discreto en Inicio o mediante un enlace `gymPartyCode`; ya no ocupa un boton
@@ -187,11 +187,13 @@ valor inicial, validador, migracion, campo de backup, sensibilidad, modo de
 almacenamiento, reset y retencion. IndexedDB, repositorios, exportacion,
 importacion, restablecimientos y diagnosticos derivan sus contratos de ese
 registro. La configuracion FDC permanece local y excluida; la configuracion
-Firebase embebida en Gym Party se elimina al exportar. Nutricion usa IndexedDB
-como fuente primaria mediante un feature flag, con comparacion de checksums,
-recuperacion y rollback visibles. `localStorage` se conserva como copia
-compatible de escritura anticipada: esta transicion no borra claves legacy.
-Workout, Gym Party, Protocolo y las caches externas con TTL siguen en `shadow`.
+Firebase embebida en Gym Party se elimina al exportar. Nutricion y Workout usan
+IndexedDB como fuente primaria mediante flags por dominio, con comparacion de
+checksums, recuperacion y rollback visibles. La inicializacion de Gym espera la
+hidratacion antes de crear valores predeterminados, por lo que una copia valida
+no puede sustituirse por una sesion vacia durante el arranque. `localStorage`
+se conserva como copia compatible de escritura anticipada y no se borran claves
+legacy. Gym Party, Protocolo y las caches externas con TTL siguen en `shadow`.
 
 Las lecturas de repositorio distinguen `missing`, `valid`, `legacy`, `corrupt`
 y `unsupported`. Si una clave conocida contiene JSON roto o una estructura no
