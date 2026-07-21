@@ -8,7 +8,10 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 $assetRoot = Join-Path $repoRoot 'android-native-wrapper/app/src/main/assets'
 $relativeFiles = @(
     'index.html',
+    'offline.html',
     'app-version.js',
+    'precache-manifest.js',
+    'app/build-guard.js',
     'app/numbers.js',
     'app/drafts.js',
     'app/dates.js',

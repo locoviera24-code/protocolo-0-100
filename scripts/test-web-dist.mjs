@@ -10,7 +10,10 @@ const discovered=await discoverWebAssets();
 await assert.rejects(()=>discoverWebAssets(['recurso-requerido-ausente.js']),/Falta el recurso web requerido/,'El build debe fallar ante una dependencia ausente');
 const inventoryPaths=manifest.assets.map(asset=>asset.path).sort();
 assert.deepEqual(inventoryPaths,discovered,'El inventario debe coincidir con las dependencias descubiertas');
-for(const required of ['app/numbers.js','app/drafts.js','app/dates.js','data/schema-registry.js','data/backup-service.js','gym/set-model.js','progress/progress-view.js','firebase-config.js'])assert.ok(inventoryPaths.includes(required),`Falta ${required} en el artifact`);
+for(const required of ['app/numbers.js','app/drafts.js','app/dates.js','data/schema-registry.js','data/backup-service.js','gym/set-model.js','progress/progress-view.js','firebase-config.js','offline.html','precache-manifest.js'])assert.ok(inventoryPaths.includes(required),`Falta ${required} en el artifact`);
+assert.equal(manifest.schemaVersion,2,'El inventario debe declarar el contrato atomico');
+assert.equal(manifest.cacheName,`protocolo-0-100-pwa-${manifest.version}-b${manifest.build}`);
+assert.ok(manifest.precache.required>0&&manifest.precache.optional>0,'El precache debe separar recursos obligatorios y opcionales');
 
 for(const asset of manifest.assets){
   const data=await readFile(resolve(distRoot,asset.path));
@@ -22,6 +25,7 @@ const workflow=await readFile(resolve(repoRoot,'.github/workflows/deploy-pages.y
 assert.match(workflow,/\n\s+- app\/\*\*/,'Cambios en app/** deben disparar Pages');
 assert.match(workflow,/npm run build:web/,'Pages debe usar el constructor unico');
 assert.match(workflow,/npm run test:web-dist/,'Pages debe validar el artifact');
+assert.match(workflow,/scripts\/generate-precache-manifest\.mjs/,'Pages debe regenerar el precache al construir');
 assert.doesNotMatch(workflow,/cp index\.html .*dist-pages/,'Pages no debe mantener otra lista manual de archivos');
 
 const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.json':'application/json; charset=utf-8','.webmanifest':'application/manifest+json; charset=utf-8','.css':'text/css; charset=utf-8','.png':'image/png','.svg':'image/svg+xml'};

@@ -18,6 +18,7 @@ function Assert-True([bool]$condition, [string]$message) {
 $html = Read-Utf8 'index.html'
 $appVersionText = Read-Utf8 'app-version.json'
 $appVersionScript = Read-Utf8 'app-version.js'
+$buildGuard = Read-Utf8 'app/build-guard.js'
 $appNumbers = Read-Utf8 'app/numbers.js'
 $nutrition = Read-Utf8 'nutrition-data.js'
 $nutritionRecipes = Read-Utf8 'nutrition/recipes.js'
@@ -55,6 +56,7 @@ $gymPartyUi = Read-Utf8 'gym-party-ui.js'
 $gymParty = Read-Utf8 'gym-party.js'
 $advanced = Read-Utf8 'advanced-features.js'
 $serviceWorker = Read-Utf8 'sw.js'
+$precacheManifest = Read-Utf8 'precache-manifest.js'
 $styleTokens = Read-Utf8 'styles/tokens.css'
 $styleBase = Read-Utf8 'styles/base.css'
 $styleComponents = Read-Utf8 'styles/components.css'
@@ -92,6 +94,8 @@ $moduleBoundaryTest = Read-Utf8 'scripts/test-module-boundaries.mjs'
 $designSystemTest = Read-Utf8 'scripts/test-design-system.mjs'
 $playwrightConfig = Read-Utf8 'playwright.config.mjs'
 $webDistBuilder = Read-Utf8 'scripts/build-web-dist.mjs'
+$precacheBuilder = Read-Utf8 'scripts/precache-manifest.mjs'
+$precacheGenerator = Read-Utf8 'scripts/generate-precache-manifest.mjs'
 $webDistTest = Read-Utf8 'scripts/test-web-dist.mjs'
 $webDistPlaywright = Read-Utf8 'tests/web-dist/web-dist.spec.mjs'
 $playwrightGymTest = Read-Utf8 'tests/e2e/gym-flow.spec.mjs'
@@ -113,7 +117,7 @@ $requiredFiles = @(
     'nutrition/nutrition-store.js', 'nutrition/nutrition-model.js', 'nutrition/recipes.js', 'nutrition/portions.js', 'nutrition/food-search.js', 'nutrition/food-provider.js', 'nutrition/food-search-service.js', 'nutrition/food-entry-flow.js', 'nutrition/meal-history.js', 'nutrition/nutrition-confidence.js', 'nutrition/nutrition-view.js', 'scripts/test-nutrition-modules.mjs', 'scripts/test-food-search-service.mjs', 'scripts/test-fdc-confidence.mjs', 'tests/e2e/nutrition-domain.spec.mjs', 'tests/e2e/nutrition-today.spec.mjs', 'tests/e2e/nutrition-recipes-portions.spec.mjs', 'tests/e2e/nutrition-numbers-targets.spec.mjs', 'tests/e2e/nutrition-unified-search.spec.mjs',
     'data/schema-registry.js', 'data/backup-service.js', 'scripts/test-schema-registry.mjs', 'scripts/test-data-integrity.mjs', 'scripts/test-backup-service.mjs', 'tests/e2e/backup-import.spec.mjs', 'tests/e2e/data-integrity.spec.mjs', 'tests/e2e/indexeddb-primary.spec.mjs',
     'ui/confirmation-dialog.js',
-    'app-version.json', 'app-version.js', 'app/numbers.js', 'scripts/test-numbers.mjs', 'data/indexeddb.js', 'data/repositories.js', 'nutrition-data.js', 'fdc-client.js', 'workout-store.js', 'workout-plan.js', 'gym/equipment.js', 'gym/set-model.js', 'gym/anomaly-detector.js', 'gym/progression-engine.js', 'workout-metrics.js', 'workout-ranking.js', 'workout-ui.js', 'workout-features.js', 'advanced-features.js', 'ui/router.js', 'ui/navigation.js', 'ui/notifications.js', 'ui/form-dialog.js', 'ui/error-boundary.js', 'ui/recovery-view.js', 'progress/muscle-taxonomy.js', 'progress/progress-data-model.js', 'progress/gym-progress-model.js', 'progress/muscle-progress.js', 'progress/exercise-progress.js', 'progress/personal-records.js', 'progress/progress-view.js',
+    'app-version.json', 'app-version.js', 'app/build-guard.js', 'precache-manifest.js', 'offline.html', 'scripts/precache-manifest.mjs', 'scripts/generate-precache-manifest.mjs', 'scripts/test-build-guard.mjs', 'app/numbers.js', 'scripts/test-numbers.mjs', 'data/indexeddb.js', 'data/repositories.js', 'nutrition-data.js', 'fdc-client.js', 'workout-store.js', 'workout-plan.js', 'gym/equipment.js', 'gym/set-model.js', 'gym/anomaly-detector.js', 'gym/progression-engine.js', 'workout-metrics.js', 'workout-ranking.js', 'workout-ui.js', 'workout-features.js', 'advanced-features.js', 'ui/router.js', 'ui/navigation.js', 'ui/notifications.js', 'ui/form-dialog.js', 'ui/error-boundary.js', 'ui/recovery-view.js', 'progress/muscle-taxonomy.js', 'progress/progress-data-model.js', 'progress/gym-progress-model.js', 'progress/muscle-progress.js', 'progress/exercise-progress.js', 'progress/personal-records.js', 'progress/progress-view.js',
     'firebase-config.js', 'firebase-service.js', 'gym-party-sync.js', 'gym-party-metrics.js', 'gym-party-ui.js', 'gym-party.js',
     'scripts/test-android-webview-security.mjs',
     'scripts/test-android-release.mjs',
@@ -137,20 +141,23 @@ foreach ($file in $requiredFiles) {
 
 foreach ($script in @('nutrition-data.js', 'fdc-client.js', 'workout-store.js', 'workout-plan.js', 'workout-metrics.js', 'workout-ranking.js', 'workout-ui.js', 'workout-features.js', 'firebase-service.js', 'gym-party-sync.js', 'gym-party-metrics.js', 'gym-party-ui.js', 'gym-party.js', 'advanced-features.js')) {
     Assert-True ($html.Contains("<script src=`"$script`"></script>")) "index.html no carga $script"
-    Assert-True ($serviceWorker.Contains("'./$script'")) "sw.js no cachea $script"
+    Assert-True ($precacheManifest.Contains('"url": "./' + $script + '"')) "precache-manifest.js no cachea $script"
 }
 foreach ($script in @('data/schema-registry.js', 'data/indexeddb.js', 'data/repositories.js', 'data/backup-service.js')) {
     Assert-True ($html.Contains("<script src=`"$script`"></script>")) "index.html no carga $script"
-    Assert-True ($serviceWorker.Contains("'./$script'")) "sw.js no cachea $script"
+    Assert-True ($precacheManifest.Contains('"url": "./' + $script + '"')) "precache-manifest.js no cachea $script"
 }
 Assert-True ($html.Contains('<script src="app/numbers.js"></script>')) 'index.html no carga app/numbers.js'
-Assert-True ($serviceWorker.Contains("'./app/numbers.js'")) 'sw.js no cachea app/numbers.js'
+Assert-True ($html.IndexOf('<script src="app-version.js"></script>') -lt $html.IndexOf('<script src="app/build-guard.js"></script>')) 'El guard de build debe cargar despues de la version'
+Assert-True ($html.IndexOf('<script src="app/build-guard.js"></script>') -lt $html.IndexOf('<script src="app/numbers.js"></script>')) 'El guard de build debe cargar antes de los modulos'
+foreach ($contract in @('__PWA_BUILD_MISMATCH','expectedBuild','SKIP_WAITING','root.stop')) { Assert-True ($buildGuard.Contains($contract)) "Falta contrato del guard de build: $contract" }
+Assert-True ($precacheManifest.Contains('"url": "./app/numbers.js"')) 'precache-manifest.js no cachea app/numbers.js'
 foreach ($contract in @('Intl.NumberFormat', 'parseOr', 'neutral', 'es-PY')) {
     Assert-True ($appNumbers.Contains($contract)) "Falta contrato numerico localizado: $contract"
 }
 foreach ($script in @('nutrition/nutrition-store.js', 'nutrition/nutrition-model.js', 'nutrition/recipes.js', 'nutrition/portions.js', 'nutrition/food-search.js', 'nutrition/food-entry-flow.js', 'nutrition/meal-history.js', 'nutrition/nutrition-confidence.js', 'nutrition/nutrition-view.js', 'nutrition/food-provider.js', 'nutrition/food-search-service.js')) {
     Assert-True ($html.Contains("<script src=`"$script`"></script>")) "index.html no carga $script"
-    Assert-True ($serviceWorker.Contains("'./$script'")) "sw.js no cachea $script"
+    Assert-True ($precacheManifest.Contains('"url": "./' + $script + '"')) "precache-manifest.js no cachea $script"
 }
 foreach ($contract in @('ingredients','nutritionPerServing','recipeSnapshot','duplicate')) {
     Assert-True ($nutritionRecipes.Contains($contract)) "Falta contrato de recetas: $contract"
@@ -178,12 +185,12 @@ foreach ($contract in @('MAX_FILE_BYTES','sanitize','prepareFile','prepareText',
     Assert-True ($backupService.Contains($contract)) "Falta contrato de importacion segura: $contract"
 }
 Assert-True ($html.Contains('<script src="ui/router.js"></script>')) 'index.html no carga ui/router.js'
-Assert-True ($serviceWorker.Contains("'./ui/router.js'")) 'sw.js no cachea ui/router.js'
+Assert-True ($precacheManifest.Contains('"url": "./ui/router.js"')) 'precache-manifest.js no cachea ui/router.js'
 Assert-True ($html.Contains('<script src="ui/navigation.js"></script>')) 'index.html no carga ui/navigation.js'
-Assert-True ($serviceWorker.Contains("'./ui/navigation.js'")) 'sw.js no cachea ui/navigation.js'
+Assert-True ($precacheManifest.Contains('"url": "./ui/navigation.js"')) 'precache-manifest.js no cachea ui/navigation.js'
 foreach ($uiModule in @('notifications', 'inline-validation', 'confirmation-dialog', 'form-dialog', 'error-boundary', 'recovery-view')) {
     Assert-True ($html.Contains('<script src="ui/' + $uiModule + '.js"></script>')) "index.html no carga ui/$uiModule.js"
-    Assert-True ($serviceWorker.Contains("'./ui/$uiModule.js'")) "sw.js no cachea ui/$uiModule.js"
+    Assert-True ($precacheManifest.Contains('"url": "./ui/' + $uiModule + '.js"')) "precache-manifest.js no cachea ui/$uiModule.js"
 }
 $nativeDialogPattern = '(?<![\w.])(alert|confirm|prompt)\s*\('
 foreach ($sourcePath in @('index.html', 'advanced-features.js', 'workout-features.js', 'gym-party.js', 'fdc-client.js')) {
@@ -191,12 +198,12 @@ foreach ($sourcePath in @('index.html', 'advanced-features.js', 'workout-feature
     Assert-True (-not ($sourceText -match $nativeDialogPattern)) "Queda un dialogo nativo en $sourcePath"
 }
 Assert-True ($html.Contains('<script src="app-version.js"></script>')) 'index.html no carga app-version.js'
-Assert-True ($serviceWorker.Contains("'./app-version.js'")) 'sw.js no cachea app-version.js'
+Assert-True ($precacheManifest.Contains('"url": "./app-version.js"')) 'precache-manifest.js no cachea app-version.js'
 Assert-True ($html.Contains('<script src="progress/progress-view.js"></script>')) 'index.html no carga progress/progress-view.js'
-Assert-True ($serviceWorker.Contains("'./progress/progress-view.js'")) 'sw.js no cachea progress/progress-view.js'
+Assert-True ($precacheManifest.Contains('"url": "./progress/progress-view.js"')) 'precache-manifest.js no cachea progress/progress-view.js'
 foreach ($script in @('progress/muscle-taxonomy.js','progress/progress-data-model.js','progress/gym-progress-model.js','progress/muscle-progress.js','progress/exercise-progress.js','progress/personal-records.js')) {
     Assert-True ($html.Contains("<script src=`"$script`"></script>")) "index.html no carga $script"
-    Assert-True ($serviceWorker.Contains("'./$script'")) "sw.js no cachea $script"
+    Assert-True ($precacheManifest.Contains('"url": "./' + $script + '"')) "precache-manifest.js no cachea $script"
 }
 foreach ($contract in @('chest','lats','upper-back','front-delts','side-delts','rear-delts','brachialis','lower-back','hamstrings','abductors','tibialis','resolveExercise')) {
     Assert-True ($muscleTaxonomy.Contains($contract)) "Falta contrato de taxonomia muscular: $contract"
@@ -221,7 +228,7 @@ foreach ($contract in @('routeBackBtn','applyAppRoute','APP_VIEW_META','data-mor
 Assert-True (-not $html.Contains("addEventListener('touchstart'")) 'No debe reactivarse el drawer oculto con gesto lateral'
 foreach ($style in @('styles/tokens.css', 'styles/base.css', 'styles/components.css', 'styles/features.css', 'styles/gym.css', 'styles/gym-party.css', 'styles/modules.css', 'styles/responsive.css')) {
     Assert-True ($html.Contains("<link rel=`"stylesheet`" href=`"$style`"")) "index.html no carga $style"
-    Assert-True ($serviceWorker.Contains("'./$style'")) "sw.js no cachea $style"
+    Assert-True ($precacheManifest.Contains('"url": "./' + $style + '"')) "precache-manifest.js no cachea $style"
     Assert-True ($deployWorkflow.Contains($style.Split('/')[0] + '/**')) "Pages no observa cambios de estilos"
 }
 Assert-True (-not $html.Contains('<style')) 'index.html no debe contener CSS inline en bloques <style>'
@@ -294,7 +301,7 @@ Assert-True (($manifest.shortcuts.url -contains './index.html?module=gym&view=gr
 Assert-True (($manifest.shortcuts.url -contains './index.html?module=gym&view=train&quickLog=1')) 'Falta shortcut PWA a registro rapido'
 foreach ($icon in @('icons/icon-192.png', 'icons/icon-512.png')) {
     Assert-True (($manifest.icons.src -contains $icon)) "El manifest no declara $icon"
-    Assert-True ($serviceWorker.Contains("'./$icon'")) "sw.js no cachea $icon"
+    Assert-True ($precacheManifest.Contains('"url": "./' + $icon + '"')) "precache-manifest.js no cachea $icon"
 }
 
 try { $appVersionManifest = $appVersionText | ConvertFrom-Json } catch { throw 'app-version.json no contiene JSON valido' }
@@ -303,7 +310,7 @@ $cacheName = "protocolo-0-100-pwa-$appVersion-b$($appVersionManifest.build)"
 Assert-True ($appVersionScript.Contains("version:'$appVersion'")) 'app-version.js no coincide con app-version.json'
 Assert-True ($advanced.Contains('window.APP_VERSION_INFO')) 'advanced-features.js no consume la fuente unica de version'
 Assert-True ($androidBuild.Contains("new groovy.json.JsonSlurper().parse(rootProject.file('../app-version.json'))")) 'Gradle no consume app-version.json'
-Assert-True ($serviceWorker.Contains('CACHE_NAME = APP_VERSION_INFO.cacheName')) 'El cache PWA no deriva de app-version.json'
+Assert-True ($serviceWorker.Contains('CACHE_NAME=APP_VERSION_INFO.cacheName')) 'El cache PWA no deriva de app-version.json'
 Assert-True ($releaseWorkflow.Contains('VERSION_NAME')) 'El workflow release debe obtener versionName dinamicamente'
 Assert-True ($releaseWorkflow.Contains("require('./app-version.json').version")) 'El workflow release no consume app-version.json'
 Assert-True ($releaseWorkflow.Contains('protocolo-0-100-v${VERSION_NAME}-release.apk')) 'El APK release debe llevar la version en el nombre'
@@ -313,15 +320,18 @@ Assert-True ($handoff.Contains($cacheName)) "CODEX_HANDOFF.md no menciona el cac
 
 $pwaSafetyContracts = @(
     'key.startsWith(CACHE_PREFIX)',
-    'url.origin !== self.location.origin',
-    "event.request.mode === 'navigate'",
-    'CORE_URLS.has(canonicalUrl(event.request.url))',
-    'response.ok'
+    'url.origin!==self.location.origin',
+    "event.request.mode==='navigate'",
+    'PRECACHE_BY_URL.get(canonicalUrl(event.request.url))',
+    'responseHash',
+    'STAGING_CACHE_NAME',
+    'validateRequiredCache',
+    'cachedShellNavigation'
 )
 foreach ($contract in $pwaSafetyContracts) {
     Assert-True ($serviceWorker.Contains($contract)) "Falta contrato seguro del service worker: $contract"
 }
-foreach ($contract in @("event.data?.type === 'SKIP_WAITING'",'firebaseConfigResponse',"cache: 'no-store'",'GYM_PARTY_FIREBASE_CONFIG=window.GYM_PARTY_FIREBASE_CONFIG||{}')) {
+foreach ($contract in @("event.data?.type==='SKIP_WAITING'",'firebaseConfigResponse',"cache:'no-store'",'GYM_PARTY_FIREBASE_CONFIG=window.GYM_PARTY_FIREBASE_CONFIG||{}','PWA_CACHE_DIAGNOSTIC')) {
     Assert-True ($serviceWorker.Contains($contract)) "Falta contrato de actualizacion/config PWA: $contract"
 }
 Assert-True (-not $serviceWorker.Contains('then(() => self.skipWaiting())')) 'El service worker no debe activarse antes de que el usuario acepte'
@@ -725,6 +735,9 @@ Assert-True (-not $deployWorkflow.Contains('cp index.html')) 'Pages no debe mant
 foreach ($contract in @('discoverWebAssets','asset-manifest.json','sha256','WEB_FIREBASE_CONFIG_PATH','app-version.json')) {
     Assert-True ($webDistBuilder.Contains($contract)) "Falta contrato del constructor web: $contract"
 }
+foreach ($contract in @('createPrecacheManifest','required','optional','cacheName','sha256')) {
+    Assert-True (($precacheBuilder + $precacheGenerator).Contains($contract)) "Falta contrato de precache generado: $contract"
+}
 foreach ($contract in @('app/numbers.js','app/drafts.js','app/dates.js','asset-ausente.js','debe responder 200')) {
     Assert-True ($webDistTest.Contains($contract)) "Falta cobertura HTTP del artifact: $contract"
 }
@@ -746,6 +759,9 @@ Assert-True ($serviceWorkerTest.Contains('api.nal.usda.gov')) 'La prueba del ser
 Assert-True ($serviceWorkerTest.Contains('otra-app-cache')) 'La prueba del service worker debe proteger caches ajenos'
 Assert-True ($serviceWorkerTest.Contains('SKIP_WAITING')) 'La prueba del service worker debe cubrir activacion consentida'
 Assert-True ($serviceWorkerTest.Contains('firebase-config.js')) 'La prueba del service worker debe cubrir configuracion Firebase online/offline'
+foreach ($contract in @('failUrls','corruptUrls','missingOptional','deploy incompleto','version anterior')) {
+    Assert-True ($serviceWorkerTest.Contains($contract)) "Falta cobertura atomica del service worker: $contract"
+}
 foreach ($contract in @('32 reps de peso corporal','addedLoadVolume','percentChange(100,0),null','estimatedOneRepMax')) {
     Assert-True ($workoutMetricsTest.Contains($contract)) "Falta prueba de metricas de gym: $contract"
 }
@@ -760,10 +776,10 @@ Assert-True ($html.IndexOf('gym/equipment.js') -lt $html.IndexOf('gym/set-model.
 Assert-True ($html.IndexOf('workout-metrics.js') -lt $html.IndexOf('gym/anomaly-detector.js')) 'Las metricas deben cargar antes del detector de anomalias'
 Assert-True ($html.IndexOf('gym/anomaly-detector.js') -lt $html.IndexOf('gym/progression-engine.js')) 'El detector de anomalias debe cargar antes del motor de progresion'
 Assert-True ($html.IndexOf('workout-metrics.js') -lt $html.IndexOf('gym/progression-engine.js')) 'Las metricas deben cargar antes del motor de progresion'
-Assert-True ($serviceWorker.Contains('./gym/set-model.js')) 'El service worker debe cachear el modelo de tipos de serie'
-Assert-True ($serviceWorker.Contains('./gym/equipment.js')) 'El service worker debe cachear el modelo de equipo'
-Assert-True ($serviceWorker.Contains('./gym/anomaly-detector.js')) 'El service worker debe cachear el detector de anomalias'
-Assert-True ($serviceWorker.Contains('./gym/progression-engine.js')) 'El service worker debe cachear el motor de progresion'
+Assert-True ($precacheManifest.Contains('./gym/set-model.js')) 'El precache debe incluir el modelo de tipos de serie'
+Assert-True ($precacheManifest.Contains('./gym/equipment.js')) 'El precache debe incluir el modelo de equipo'
+Assert-True ($precacheManifest.Contains('./gym/anomaly-detector.js')) 'El precache debe incluir el detector de anomalias'
+Assert-True ($precacheManifest.Contains('./gym/progression-engine.js')) 'El precache debe incluir el motor de progresion'
 foreach ($term in @('perHand','perSide','addedLoad','assistance','durationSeconds','distanceMeters','normalizedTotalKg')) {
     Assert-True ($workoutEquipment.Contains($term)) "Falta semantica de equipo/modalidad: $term"
     Assert-True ($workoutEquipmentTest.Contains($term)) "Falta prueba de equipo/modalidad: $term"

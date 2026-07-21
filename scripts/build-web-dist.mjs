@@ -1,11 +1,11 @@
-import {createHash} from 'node:crypto';
 import {cp,mkdir,readFile,rm,stat,writeFile} from 'node:fs/promises';
 import {dirname,extname,relative,resolve,sep} from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {PRECACHE_FILE,createPrecacheManifest,renderPrecacheManifest,sha256} from './precache-manifest.mjs';
 
 export const repoRoot=resolve(fileURLToPath(new URL('../',import.meta.url)));
 export const distRoot=resolve(repoRoot,process.env.WEB_DIST_DIR||'dist-pages');
-const entryAssets=['index.html','manifest.webmanifest','sw.js','app-version.json'];
+const entryAssets=['index.html','offline.html','manifest.webmanifest','sw.js','app-version.json',PRECACHE_FILE];
 
 function insideRoot(target,root=repoRoot){
   return target===root||target.startsWith(`${root}${sep}`);
@@ -88,9 +88,7 @@ export async function discoverWebAssets(entries=entryAssets){
   return [...discovered].sort((a,b)=>a.localeCompare(b));
 }
 
-function sha256(buffer){return createHash('sha256').update(buffer).digest('hex');}
-
-function sourceFor(asset){
+export function sourceFor(asset){
   if(asset==='firebase-config.js'&&process.env.WEB_FIREBASE_CONFIG_PATH)return resolve(process.env.WEB_FIREBASE_CONFIG_PATH);
   return resolve(repoRoot,asset);
 }
@@ -101,7 +99,7 @@ export async function buildWebDist(){
   await rm(distRoot,{recursive:true,force:true});
   await mkdir(distRoot,{recursive:true});
   const inventory=[];
-  for(const asset of assets){
+  for(const asset of assets.filter(asset=>asset!==PRECACHE_FILE)){
     const source=sourceFor(asset),target=resolve(distRoot,asset);
     if(!insideRoot(target,distRoot))throw new Error(`Destino fuera del artifact: ${asset}`);
     try{if(!(await stat(source)).isFile())throw new Error();}catch{throw new Error(`Falta la fuente de build para ${asset}: ${source}`);}
@@ -110,9 +108,15 @@ export async function buildWebDist(){
     const data=await readFile(target);
     inventory.push({path:asset,bytes:data.byteLength,sha256:sha256(data),required:true});
   }
-  await writeFile(resolve(distRoot,'.nojekyll'),'','utf8');
   const version=JSON.parse(await readFile(resolve(repoRoot,'app-version.json'),'utf8'));
-  const manifest={schemaVersion:1,version:version.version,build:version.build,assets:inventory};
+  const precache=createPrecacheManifest({version,assets:inventory});
+  const precacheContent=renderPrecacheManifest(precache),precacheTarget=resolve(distRoot,PRECACHE_FILE);
+  await writeFile(precacheTarget,precacheContent,'utf8');
+  const precacheData=await readFile(precacheTarget);
+  inventory.push({path:PRECACHE_FILE,bytes:precacheData.byteLength,sha256:sha256(precacheData),required:true});
+  inventory.sort((a,b)=>a.path.localeCompare(b.path));
+  await writeFile(resolve(distRoot,'.nojekyll'),'','utf8');
+  const manifest={schemaVersion:2,version:version.version,build:version.build,cacheName:precache.cacheName,assets:inventory,precache:{required:precache.required.length,optional:precache.optional.length}};
   await writeFile(resolve(distRoot,'asset-manifest.json'),`${JSON.stringify(manifest,null,2)}\n`,'utf8');
   return manifest;
 }

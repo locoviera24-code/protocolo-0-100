@@ -3,6 +3,7 @@ import {readFile,writeFile} from 'node:fs/promises';
 const root=new URL('../',import.meta.url);
 const manifest=JSON.parse(await readFile(new URL('../app-version.json',import.meta.url),'utf8'));
 const generated=`(function(root){\n  'use strict';\n  const info={version:'${manifest.version}',versionCode:${manifest.versionCode},build:${manifest.build},updatedAt:'${manifest.updatedAt}'};\n  info.cacheLabel=\`${'${info.version}'}+${'${info.build}'}\`;\n  info.cacheName=\`protocolo-0-100-pwa-${'${info.version}'}-b${'${info.build}'}\`;\n  info.apkName=\`protocolo-0-100-v${'${info.version}'}-release.apk\`;\n  root.APP_VERSION_INFO=Object.freeze(info);\n})(globalThis);\n`;
+const buildGuard=`(function(root){\n  'use strict';\n  const expectedBuild=${manifest.build},currentBuild=Number(root.APP_VERSION_INFO?.build)||0;\n  if(!currentBuild||currentBuild===expectedBuild)return;\n  root.__PWA_BUILD_MISMATCH=Object.freeze({expectedBuild,currentBuild});\n  const render=()=>{\n    document.documentElement.dataset.buildMismatch='true';\n    document.body.innerHTML='<main class="mainContent" aria-labelledby="buildMismatchTitle"><section class="moduleCard emptyState"><h1 id="buildMismatchTitle">Actualizacion pendiente</h1><p>Hay una version nueva, pero el navegador todavia conserva archivos anteriores. Actualiza para abrir la app de forma consistente.</p><button type="button" class="primary" id="activateCompatibleBuild" disabled>Preparando actualizacion...</button></section></main>';\n    const button=document.getElementById('activateCompatibleBuild');\n    if(!('serviceWorker'in navigator)){button.disabled=false;button.textContent='Recargar';button.addEventListener('click',()=>location.reload());return;}\n    let waiting=null;\n    navigator.serviceWorker.addEventListener('controllerchange',()=>location.reload(),{once:true});\n    const ready=worker=>{if(!worker)return;waiting=worker;button.disabled=false;button.textContent='Actualizar ahora';};\n    navigator.serviceWorker.register('./sw.js').then(async registration=>{await registration.update();if(registration.waiting)return ready(registration.waiting);const worker=registration.installing;if(!worker)return;worker.addEventListener('statechange',()=>{if(worker.state==='installed')ready(registration.waiting||worker);});}).catch(()=>{button.disabled=false;button.textContent='Reintentar';});\n    button.addEventListener('click',()=>{if(waiting)waiting.postMessage({type:'SKIP_WAITING'});else location.reload();});\n  };\n  render();\n  root.stop?.();\n})(window);\n`;
 const check=process.argv.includes('--check');
 
 async function ensure(url,expected,label){
@@ -12,6 +13,7 @@ async function ensure(url,expected,label){
 }
 
 await ensure(new URL('../app-version.js',import.meta.url),generated,'app-version.js');
+await ensure(new URL('../app/build-guard.js',import.meta.url),buildGuard,'app/build-guard.js');
 
 if(!check){
   for(const name of ['package.json','package-lock.json']){

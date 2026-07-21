@@ -15,7 +15,7 @@ PWA y APK Android para medir habitos, atencion, actividad fisica y nutricion con
 
 ## Navegacion y diseno
 
-La version actual `v2.7.0` (build web `79`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
+La version actual `v2.7.0` (build web `80`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
 **Gym**, **Nutricion**, **Progreso** y **Mas**. En escritorio usa una barra
 lateral compacta. Gym Party se abre desde **Gym > Grupo**, desde un acceso
 discreto en Inicio o mediante un enlace `gymPartyCode`; ya no ocupa un boton
@@ -117,6 +117,7 @@ ui/error-boundary.js        Log circular sanitizado y captura de fallos
 ui/recovery-view.js         Reintento, reinicio, modo seguro y diagnostico local
 app/drafts.js               Borradores versionados, expiracion y coordinacion entre pestanas
 app/dates.js                Medianoche, zona horaria, background y fechas manuales
+app/build-guard.js          Impide arrancar con HTML y modulos de builds distintos
 data/schema-registry.js     Fuente unica de claves, schemas, backup, reset y retencion
 data/indexeddb.js           Espejo transaccional, migraciones y recuperacion local
 data/repositories.js        Repositorios por dominio sobre claves compatibles
@@ -154,7 +155,11 @@ nutrition-data.js           Base local estructurada de alimentos y nutrientes
 fdc-client.js               Transporte tecnico opcional, normalizacion y cache
 advanced-features.js        Cobertura, diagnostico, tendencias, backup y gamificacion
 manifest.webmanifest        Configuracion instalable
-sw.js                       Cache y funcionamiento offline
+precache-manifest.js        Inventario generado de recursos, bytes y SHA-256
+offline.html                Recuperacion minima cuando no existe shell disponible
+sw.js                       Instalacion atomica, cache por build y funcionamiento offline
+scripts/precache-manifest.mjs Clasificacion obligatoria/opcional del shell
+scripts/generate-precache-manifest.mjs Generador reproducible para web y Android
 scripts/validate-app.ps1    Validaciones estructurales
 scripts/test-service-worker.mjs Prueba de cache/offline/FDC
 scripts/test-workout-features.mjs Prueba de rutina, widget e importacion directa
@@ -167,7 +172,15 @@ firebase/                   Reglas, esquema y configuracion ejemplo para Gym Par
 .github/workflows/          Publicacion Pages, validacion y compilacion APK
 ```
 
-`advanced-features.js` mantiene un estado consolidado con `schemaVersion: 3`. No se incluyen API keys en backups. El service worker usa navegacion `network-first`, conserva offline los assets principales y no intercepta llamadas FDC ni otros origenes.
+`advanced-features.js` mantiene un estado consolidado con `schemaVersion: 3`.
+No se incluyen API keys en backups. El service worker instala cada build en una
+cache temporal, verifica bytes y SHA-256 de todos los recursos obligatorios y
+solo prepara la cache activa cuando el conjunto esta completo. Los iconos y el
+manifest son opcionales durante el precache: un fallo transitorio suyo no
+bloquea la app. La navegacion controlada usa el `index.html` del mismo build y
+evita mezclar HTML nuevo con JavaScript o CSS anterior. La version previa se
+conserva hasta activar la nueva y las llamadas FDC u otros origenes no se
+interceptan.
 
 `data/schema-registry.js` registra cada clave persistida con dominio, version,
 valor inicial, validador, migracion, campo de backup, sensibilidad, modo de

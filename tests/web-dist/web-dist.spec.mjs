@@ -32,7 +32,7 @@ test('artifact publicado carga modulos, rutas y service worker sin errores',asyn
     routeStates.push({name,state});
   }
 
-  for(const asset of ['/app/numbers.js','/app/drafts.js','/app/dates.js','/gym/set-model.js','/manifest.webmanifest','/icons/icon-192.png']){
+  for(const asset of ['/app/numbers.js','/app/drafts.js','/app/dates.js','/gym/set-model.js','/manifest.webmanifest','/icons/icon-192.png','/offline.html','/precache-manifest.js']){
     const response=await request.get(asset);
     expect(response.status(),`${asset} debe responder 200`).toBe(200);
   }
@@ -42,6 +42,12 @@ test('artifact publicado carga modulos, rutas y service worker sin errores',asyn
     return registration.active?.scriptURL||registration.waiting?.scriptURL||registration.installing?.scriptURL||'';
   });
   expect(worker).toContain('/sw.js');
+  const cacheDiagnostic=await page.evaluate(async()=>{
+    const registration=await navigator.serviceWorker.ready,worker=registration.active;
+    return new Promise((resolve,reject)=>{const channel=new MessageChannel(),timer=setTimeout(()=>reject(new Error('cache diagnostic timeout')),5000);channel.port1.onmessage=event=>{clearTimeout(timer);resolve(event.data);};worker.postMessage({type:'PWA_CACHE_DIAGNOSTIC'},[channel.port2]);});
+  });
+  expect(cacheDiagnostic.missingRequired).toEqual([]);
+  expect(cacheDiagnostic.build).toBe(await page.evaluate(()=>window.APP_VERSION_INFO.build));
   expect(consoleErrors).toEqual([]);
   expect(pageErrors).toEqual([]);
   expect(failedRequests).toEqual([]);

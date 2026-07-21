@@ -2688,3 +2688,55 @@ Estado publicable: version `2.7.0`, Android `33`, build/cache `79`
 (`protocolo-0-100-pwa-2.7.0-b79`). Siguiente fase estructural recomendada:
 hacer atomica la instalacion PWA y despues crear un quality gate unico. No
 promover Workout a IndexedDB en paralelo.
+
+## 62. Instalacion PWA atomica
+
+Bloque iniciado despues de `416da8f` y preparado como build 80:
+
+- `scripts/precache-manifest.mjs` define el contrato unico de precache y
+  clasifica recursos obligatorios/opcionales. `scripts/generate-precache-manifest.mjs`
+  genera `precache-manifest.js` con version, build, cache, bytes y SHA-256.
+- `scripts/build-web-dist.mjs` genera el manifiesto final desde las fuentes
+  reales del artifact, incluida la configuracion Firebase temporal inyectada
+  por Actions. `asset-manifest.json` sube a schema 2 e informa las cantidades
+  obligatorias y opcionales; no mantiene otra lista manual.
+- `sw.js` ya no usa `CORE_ASSETS` ni `cache.addAll`. Descarga primero a una
+  cache staging, verifica todos los hashes obligatorios, copia el conjunto
+  validado a la cache del build y limpia staging. Un 404 o hash incorrecto
+  aborta la instalacion, elimina el build parcial y conserva la cache anterior.
+- Iconos, manifest y `app-version.json` son opcionales durante la instalacion;
+  sus fallos transitorios no invalidan el shell. JavaScript, CSS, HTML,
+  configuracion publica y datos incluidos siguen siendo obligatorios.
+- La navegacion controlada es cache-first para `index.html`: el worker activo
+  no sustituye el HTML por una version cuyo JavaScript todavia no activo. Un
+  asset ausente solo puede recuperarse de red si coincide con el hash esperado.
+- `app/build-guard.js`, generado desde `app-version.json` y cargado antes de los
+  demas modulos, cubre la transicion desde el antiguo worker build 79. Si recibe
+  HTML y `app-version.js` de builds distintos, detiene el arranque, registra el
+  worker correcto y ofrece **Actualizar ahora** en lugar de ejecutar una mezcla.
+- `offline.html` ofrece recuperacion minima si la cache no dispone del shell.
+  El mensaje `PWA_CACHE_DIAGNOSTIC` informa version, cache y recursos ausentes
+  sin datos personales.
+- El constructor Pages, workflow, validadores, prueba HTTP y sincronizador
+  Android incluyen los nuevos recursos. Firebase sigue siendo network-only con
+  stub local si no hay conexion y no se cachean llamadas de otros origenes.
+
+Pruebas del bloque antes de preparar artefactos finales:
+
+- service worker: instalacion completa, fallo opcional, 404 obligatorio, hash
+  corrupto, rollback, cache anterior, consentimiento, Firebase, origen externo,
+  navegacion coherente y diagnostico: correctos;
+- guard de build: arranque alineado y bloqueo recuperable ante mezcla: correcto;
+- generador reproducible, version unica y validacion estatica: correctos;
+- artifact servido build 80: 70 recursos con inventario y hashes, sin 404,
+  errores de pagina ni consola; service worker instalado y diagnostico sin
+  faltantes obligatorios;
+- `validate-app.ps1 -CheckAndroidAssets` confirmo build 80, 449 IDs estaticos
+  unicos y paridad exacta web/Android;
+- Gradle 8.10.2 con Java 17 completo `clean assembleDebug`. El APK debug mide
+  1.611.706 bytes y su SHA-256 es
+  `78F11347C1FF2ED1F9FF938FA313F41ACB2DAA76A700B586864DFA672F750E7A`.
+
+Estado preparado: version `2.7.0`, Android `33`, build/cache `80`
+(`protocolo-0-100-pwa-2.7.0-b80`). Siguiente fase recomendada: quality gate
+unico para Pages/APK; no promover Workout a IndexedDB en el mismo commit.

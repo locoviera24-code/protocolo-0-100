@@ -1,150 +1,119 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
+import {resolve} from 'node:path';
+import {webcrypto} from 'node:crypto';
+import {fileURLToPath} from 'node:url';
 import vm from 'node:vm';
 
-const source = await readFile(new URL('../sw.js', import.meta.url), 'utf8');
-const versionSource = await readFile(new URL('../app-version.js', import.meta.url), 'utf8');
-const versionManifest = JSON.parse(await readFile(new URL('../app-version.json', import.meta.url), 'utf8'));
-const currentCacheName = `protocolo-0-100-pwa-${versionManifest.version}-b${versionManifest.build}`;
-const previousCacheName = `protocolo-0-100-pwa-${versionManifest.version}-b${versionManifest.build-1}`;
-const handlers = {};
-const deletedCaches = [];
-const cacheStores = new Map();
-let skipWaitingCalls = 0;
-let fetchImpl = async () => {
-  throw new Error('offline');
-};
-
-function requestKey(request) {
-  return typeof request === 'string'
-    ? new URL(request, 'https://app.test/protocolo/sw.js').href
-    : request.url;
+const repoRoot=resolve(fileURLToPath(new URL('../',import.meta.url)));
+const source=await readFile(new URL('../sw.js',import.meta.url),'utf8');
+const versionSource=await readFile(new URL('../app-version.js',import.meta.url),'utf8');
+const manifestSource=await readFile(new URL('../precache-manifest.js',import.meta.url),'utf8');
+const versionManifest=JSON.parse(await readFile(new URL('../app-version.json',import.meta.url),'utf8'));
+const manifestScope={};vm.runInNewContext(manifestSource,manifestScope);
+const manifest=manifestScope.PRECACHE_MANIFEST;
+const currentCacheName=`protocolo-0-100-pwa-${versionManifest.version}-b${versionManifest.build}`;
+const previousCacheName=`protocolo-0-100-pwa-${versionManifest.version}-b${versionManifest.build-1}`;
+const baseUrl='https://app.test/protocolo/';
+const assetBodies=new Map();
+for(const asset of [...manifest.required,...manifest.optional]){
+  const path=asset.url.replace(/^\.\//,'');
+  assetBodies.set(new URL(asset.url,baseUrl).href,await readFile(resolve(repoRoot,path)));
 }
 
-function withoutSearch(value) {
-  const url = new URL(value, 'https://app.test/protocolo/');
-  url.search = '';
-  url.hash = '';
-  return url.href;
+function requestKey(request){return typeof request==='string'?new URL(request,baseUrl).href:request.url;}
+function withoutSearch(value){const url=new URL(value,baseUrl);url.search='';url.hash='';return url.href;}
+
+class MockCache{
+  constructor(){this.entries=new Map();}
+  async match(request,options={}){
+    const key=requestKey(request);if(this.entries.has(key))return this.entries.get(key).clone();
+    if(!options.ignoreSearch)return undefined;
+    const canonical=withoutSearch(key);for(const [candidate,response] of this.entries)if(withoutSearch(candidate)===canonical)return response.clone();
+  }
+  async put(request,response){this.entries.set(requestKey(request),response.clone());}
+  async keys(){return [...this.entries.keys()].map(url=>new Request(url));}
+  async delete(request){return this.entries.delete(requestKey(request));}
 }
 
-class MockCache {
-  constructor() {
-    this.entries = new Map();
-  }
-
-  async addAll(assets) {
-    for (const asset of assets) {
-      this.entries.set(new URL(asset, 'https://app.test/protocolo/sw.js').href, new Response(asset));
-    }
-  }
-
-  async match(request, options = {}) {
-    const key = requestKey(request);
-    if (this.entries.has(key)) return this.entries.get(key).clone();
-    if (!options.ignoreSearch) return undefined;
-    const canonical = withoutSearch(key);
-    for (const [candidate, response] of this.entries) {
-      if (withoutSearch(candidate) === canonical) return response.clone();
-    }
-    return undefined;
-  }
-
-  async put(request, response) {
-    this.entries.set(requestKey(request), response.clone());
-  }
+function createHarness({failUrls=[],corruptUrls=[]}={}){
+  const handlers={},deletedCaches=[],cacheStores=new Map(),fetchCalls=[];
+  let skipWaitingCalls=0,customFetch=null;
+  const fail=new Set(failUrls.map(url=>new URL(url,baseUrl).href)),corrupt=new Set(corruptUrls.map(url=>new URL(url,baseUrl).href));
+  const caches={
+    async open(name){if(!cacheStores.has(name))cacheStores.set(name,new MockCache());return cacheStores.get(name);},
+    async keys(){return[...cacheStores.keys()];},
+    async delete(name){deletedCaches.push(name);return cacheStores.delete(name);}
+  };
+  const defaultFetch=async request=>{
+    const url=requestKey(request);fetchCalls.push(url);
+    if(customFetch)return customFetch(request);
+    if(fail.has(url))return new Response('missing',{status:404});
+    if(!assetBodies.has(url))throw new Error(`unexpected network request: ${url}`);
+    return new Response(corrupt.has(url)?Buffer.from('corrupt'):assetBodies.get(url),{status:200});
+  };
+  const self={location:{href:`${baseUrl}sw.js`,origin:'https://app.test'},clients:{claim:async()=>undefined},skipWaiting:async()=>{skipWaitingCalls+=1;},addEventListener(type,handler){handlers[type]=handler;}};
+  const context=vm.createContext({self,caches,fetch:defaultFetch,URL,Map,Set,Response,Request,Uint8Array,crypto:webcrypto,console});
+  context.importScripts=(...urls)=>{for(const url of urls)vm.runInContext(url.includes('app-version')?versionSource:manifestSource,context,{filename:url});};
+  vm.runInContext(source,context,{filename:'sw.js'});
+  async function install(){let pending;handlers.install({waitUntil(value){pending=Promise.resolve(value);}});return pending;}
+  async function activate(){let pending;handlers.activate({waitUntil(value){pending=Promise.resolve(value);}});return pending;}
+  function dispatchFetch(request){let responsePromise;const waits=[];handlers.fetch({request,respondWith(value){responsePromise=Promise.resolve(value);},waitUntil(value){waits.push(Promise.resolve(value));}});return{responsePromise,waits};}
+  async function diagnostic(){let result,pending;handlers.message({data:{type:'PWA_CACHE_DIAGNOSTIC'},ports:[{postMessage(value){result=value;}}],waitUntil(value){pending=Promise.resolve(value);}});await pending;return result;}
+  return{handlers,caches,cacheStores,deletedCaches,fetchCalls,install,activate,dispatchFetch,diagnostic,setCustomFetch(value){customFetch=value;},skipWaitingCalls:()=>skipWaitingCalls};
 }
 
-const caches = {
-  async open(name) {
-    if (!cacheStores.has(name)) cacheStores.set(name, new MockCache());
-    return cacheStores.get(name);
-  },
-  async keys() {
-    return [...cacheStores.keys()];
-  },
-  async delete(name) {
-    deletedCaches.push(name);
-    return cacheStores.delete(name);
-  }
-};
+assert.equal(manifest.cacheName,currentCacheName,'El manifiesto debe corresponder a la version activa');
+assert.ok(manifest.required.some(asset=>asset.url==='./index.html'));
+assert.ok(manifest.required.some(asset=>asset.url==='./offline.html'));
+assert.ok(manifest.optional.length>0,'Debe existir al menos un asset opcional');
 
-const self = {
-  location: {href: 'https://app.test/protocolo/sw.js', origin: 'https://app.test'},
-  clients: {claim: async () => undefined},
-  skipWaiting: async () => { skipWaitingCalls += 1; },
-  addEventListener(type, handler) {
-    handlers[type] = handler;
-  }
-};
+const normal=createHarness();
+normal.cacheStores.set(previousCacheName,new MockCache());
+normal.cacheStores.set('otra-app-cache',new MockCache());
+await normal.install();
+assert.equal(normal.cacheStores.has(previousCacheName),true,'Instalar no debe retirar la version activa anterior');
+assert.equal(normal.cacheStores.has(currentCacheName),true,'El build validado debe quedar preparado');
+assert.equal(normal.cacheStores.has(`${currentCacheName}-staging`),false,'La cache temporal debe retirarse al validar');
+normal.handlers.message({data:{type:'SKIP_WAITING'}});
+assert.equal(normal.skipWaitingCalls(),1,'La actualizacion debe seguir requiriendo consentimiento');
+await normal.activate();
+assert.equal(normal.cacheStores.has(previousCacheName),false,'Activar debe retirar la version anterior');
+assert.equal(normal.cacheStores.has('otra-app-cache'),true,'No debe borrar caches de otras aplicaciones');
+const diagnostic=await normal.diagnostic();
+assert.deepEqual([...diagnostic.missingRequired],[]);
+assert.deepEqual([...diagnostic.missingOptional],[]);
 
-const context=vm.createContext({
-  self,
-  caches,
-  fetch: request => fetchImpl(request),
-  URL,
-  Set,
-  Response,
-  console
-});
-context.importScripts=()=>vm.runInContext(versionSource,context,{filename:'app-version.js'});
-vm.runInContext(source,context,{filename:'sw.js'});
+const beforeNavigationFetches=normal.fetchCalls.length;
+const navigation=normal.dispatchFetch({method:'GET',mode:'navigate',url:`${baseUrl}?v=next`});
+assert.match(await(await navigation.responsePromise).text(),/<title>Protocolo/);
+assert.equal(normal.fetchCalls.length,beforeNavigationFetches,'La navegacion controlada no debe mezclar un index de otro build');
+const core=normal.dispatchFetch({method:'GET',mode:'cors',url:`${baseUrl}workout-features.js?v=next`});
+assert.match(await(await core.responsePromise).text(),/WORKOUT_FEATURES/);
+const unknown=normal.dispatchFetch({method:'GET',mode:'cors',url:`${baseUrl}otro.json`});
+assert.equal(unknown.responsePromise,undefined);
+const external=normal.dispatchFetch({method:'GET',mode:'cors',url:'https://api.nal.usda.gov/fdc/v1/foods/search'});
+assert.equal(external.responsePromise,undefined);
 
-let installation;
-handlers.install({waitUntil(value) { installation = Promise.resolve(value); }});
-await installation;
-assert.equal(skipWaitingCalls, 0, 'La instalacion no debe activar una actualizacion sin permiso');
-handlers.message({data: {type: 'SKIP_WAITING'}});
-assert.equal(skipWaitingCalls, 1, 'El boton de actualizar debe poder activar el worker en espera');
+normal.setCustomFetch(async()=>new Response('window.GYM_PARTY_FIREBASE_CONFIG={projectId:"real"};'));
+const firebaseOnline=normal.dispatchFetch({method:'GET',mode:'cors',url:`${baseUrl}firebase-config.js?v=1`});
+assert.match(await(await firebaseOnline.responsePromise).text(),/projectId:"real"/);
+normal.setCustomFetch(async()=>{throw new Error('offline');});
+const firebaseOffline=normal.dispatchFetch({method:'GET',mode:'cors',url:`${baseUrl}firebase-config.js`});
+assert.match(await(await firebaseOffline.responsePromise).text(),/GYM_PARTY_FIREBASE_CONFIG/);
 
-function dispatchFetch(request) {
-  let responsePromise;
-  const waits = [];
-  handlers.fetch({
-    request,
-    respondWith(value) {
-      responsePromise = Promise.resolve(value);
-    },
-    waitUntil(value) {
-      waits.push(Promise.resolve(value));
-    }
-  });
-  return {responsePromise, waits};
+const optionalUrl=manifest.optional[0].url,optionalFailure=createHarness({failUrls:[optionalUrl]});
+await optionalFailure.install();
+assert.equal(optionalFailure.cacheStores.has(currentCacheName),true,'Un asset opcional ausente no debe bloquear la actualizacion');
+assert.deepEqual([...(await optionalFailure.diagnostic()).missingOptional],[optionalUrl]);
+
+const requiredUrl=manifest.required.find(asset=>asset.url!=='./index.html').url;
+for(const harness of [createHarness({failUrls:[requiredUrl]}),createHarness({corruptUrls:[requiredUrl]})]){
+  harness.cacheStores.set(previousCacheName,new MockCache());
+  await assert.rejects(harness.install(),/PRECACHE_(?:HTTP|INTEGRITY)/);
+  assert.equal(harness.cacheStores.has(previousCacheName),true,'Un deploy incompleto debe conservar la version anterior');
+  assert.equal(harness.cacheStores.has(currentCacheName),false,'Un build incompleto no debe quedar disponible');
+  assert.equal(harness.cacheStores.has(`${currentCacheName}-staging`),false,'El rollback debe limpiar la cache temporal');
 }
 
-cacheStores.set('protocolo-0-100-pwa-legacy', new MockCache());
-cacheStores.set(previousCacheName, new MockCache());
-cacheStores.set(currentCacheName, new MockCache());
-cacheStores.set('otra-app-cache', new MockCache());
-let activation;
-handlers.activate({waitUntil(value) { activation = Promise.resolve(value); }});
-await activation;
-assert.deepEqual(deletedCaches.sort(), ['protocolo-0-100-pwa-legacy', previousCacheName].sort());
-assert.equal(cacheStores.has('otra-app-cache'), true);
-
-const fdc = dispatchFetch({method: 'GET', mode: 'cors', url: 'https://api.nal.usda.gov/fdc/v1/foods/search'});
-assert.equal(fdc.responsePromise, undefined);
-
-const unknown = dispatchFetch({method: 'GET', mode: 'cors', url: 'https://app.test/protocolo/otro.json'});
-assert.equal(unknown.responsePromise, undefined);
-
-fetchImpl = async () => new Response('window.GYM_PARTY_FIREBASE_CONFIG={projectId:"real"};');
-const firebaseOnline = dispatchFetch({method: 'GET', mode: 'cors', url: 'https://app.test/protocolo/firebase-config.js?v=34'});
-assert.match(await (await firebaseOnline.responsePromise).text(), /projectId:"real"/);
-fetchImpl = async () => { throw new Error('offline'); };
-const firebaseOffline = dispatchFetch({method: 'GET', mode: 'cors', url: 'https://app.test/protocolo/firebase-config.js'});
-const firebaseFallback = await firebaseOffline.responsePromise;
-assert.equal(firebaseFallback.status, 200);
-assert.match(await firebaseFallback.text(), /GYM_PARTY_FIREBASE_CONFIG/);
-
-const currentCache = await caches.open(currentCacheName);
-currentCache.entries.set('https://app.test/protocolo/index.html', new Response('offline-index'));
-const navigation = dispatchFetch({method: 'GET', mode: 'navigate', url: 'https://app.test/protocolo/?v=211'});
-assert.equal(await (await navigation.responsePromise).text(), 'offline-index');
-
-currentCache.entries.set('https://app.test/protocolo/workout-features.js', new Response('cached-core'));
-const core = dispatchFetch({method: 'GET', mode: 'cors', url: 'https://app.test/protocolo/workout-features.js?v=220'});
-assert.equal(await (await core.responsePromise).text(), 'cached-core');
-await Promise.all(core.waits);
-
-console.log('Service worker correcto: actualizacion consentida, Firebase no cacheado, cache acotada y navegacion offline.');
+console.log(`Service worker atomico correcto: ${manifest.required.length} obligatorios, ${manifest.optional.length} opcionales, hashes, rollback y navegacion coherente.`);

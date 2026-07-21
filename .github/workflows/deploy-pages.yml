@@ -10,6 +10,8 @@ on:
       - index.html
       - app-version.json
       - app-version.js
+      - precache-manifest.js
+      - offline.html
       - app/**
       - data/**
       - nutrition-data.js
@@ -38,6 +40,9 @@ on:
       - firebase/**
       - scripts/write-firebase-config.ps1
       - scripts/build-web-dist.mjs
+      - scripts/generate-precache-manifest.mjs
+      - scripts/precache-manifest.mjs
+      - scripts/test-build-guard.mjs
       - scripts/test-web-dist.mjs
       - scripts/serve-static.mjs
       - playwright.web-dist.config.mjs
