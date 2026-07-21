@@ -16,7 +16,7 @@ for(const command of [
   'node ./scripts/test-gym-party.mjs','node ./scripts/test-accessibility.mjs','npm run test:web-dist:e2e',
   'gradle :app:assembleDebug :app:assembleRelease'
 ])assert.ok(gate.includes(command),`El quality gate no ejecuta ${command}`);
-for(const contract of ['workflow_call:','channel:','beta','stable','actions/upload-artifact@v7','protocolo-web-','protocolo-android-debug-','-CheckAndroidAssets','test-release.jks'])assert.ok(gate.includes(contract),`Falta contrato del quality gate: ${contract}`);
+for(const contract of ['workflow_call:','channel:','beta','stable','actions/upload-artifact@v7','android-actions/setup-android@v4','gradle/actions/setup-gradle@v6','protocolo-web-','protocolo-android-debug-','-CheckAndroidAssets','test-release.jks'])assert.ok(gate.includes(contract),`Falta contrato del quality gate: ${contract}`);
 
 assert.match(validate,/push:[\s\S]*branches:/,'main y PR deben ejecutar el gate beta');
 assert.doesNotMatch(pages,/\n  push:/,'Pages estable no debe publicarse automaticamente por cada commit');

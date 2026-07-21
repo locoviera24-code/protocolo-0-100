@@ -2830,3 +2830,19 @@ El build 82 protege toda la preparacion de `replaceMany()` y preserva controles
 de Ajustes marcados como modificados hasta guardar; los renders de fondo ya no
 pisan elecciones de tema, densidad, modo o unidad. Estado preparado: version
 `2.7.0`, Android `33`, cache `protocolo-0-100-pwa-2.7.0-b82`.
+
+Resultado remoto definitivo del bloque funcional: `Validar aplicacion` #77,
+commit `e6a8cc2`, finalizo **Success** en 12m 11s. La matriz E2E registro 247
+pruebas aprobadas y 14 omisiones conocidas; tambien pasaron reglas Firestore,
+artifact web servido, service worker y APK debug/release de prueba. Artifacts:
+
+- `protocolo-android-debug-beta`, 1.5 MB, SHA-256
+  `1494b707ea2ddf443dbaa158d894424226ccf3aa5518cd99b79414f6943af3aa`;
+- `protocolo-web-beta`, 315 KB, SHA-256
+  `5761fbc1d7984c2056b020f489af16864324749546dab50703551980bc354c6a`.
+
+La advertencia final de Node 20 se cerro actualizando
+`android-actions/setup-android` a `v4` y `gradle/actions/setup-gradle` a `v6`
+en el gate y en release. El proximo bloque estructural puede comenzar desde
+build 82; no hace falta volver a tocar la PWA atomica ni el gate reusable salvo
+una regresion comprobada.

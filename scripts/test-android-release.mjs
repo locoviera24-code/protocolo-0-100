@@ -16,6 +16,8 @@ assert.match(gate,/actions\/upload-artifact@v7/);
 assert.doesNotMatch(debug,/gh release/);
 assert.doesNotMatch(debug,/contents: write/);
 assert.match(release,/assembleRelease/);
+assert.match(release,/android-actions\/setup-android@v4/);
+assert.match(release,/gradle\/actions\/setup-gradle@v6/);
 assert.match(release,/ANDROID_KEYSTORE_BASE64/);
 assert.match(release,/ANDROID_KEYSTORE_PASSWORD/);
 assert.match(release,/ANDROID_KEY_ALIAS/);
