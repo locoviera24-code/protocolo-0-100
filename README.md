@@ -15,7 +15,7 @@ PWA y APK Android para medir habitos, atencion, actividad fisica y nutricion con
 
 ## Navegacion y diseno
 
-La version actual `v2.7.0` (build web `77`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
+La version actual `v2.7.0` (build web `78`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
 **Gym**, **Nutricion**, **Progreso** y **Mas**. En escritorio usa una barra
 lateral compacta. Gym Party se abre desde **Gym > Grupo**, desde un acceso
 discreto en Inicio o mediante un enlace `gymPartyCode`; ya no ocupa un boton
@@ -158,8 +158,11 @@ valor inicial, validador, migracion, campo de backup, sensibilidad, modo de
 almacenamiento, reset y retencion. IndexedDB, repositorios, exportacion,
 importacion, restablecimientos y diagnosticos derivan sus contratos de ese
 registro. La configuracion FDC permanece local y excluida; la configuracion
-Firebase embebida en Gym Party se elimina al exportar. IndexedDB sigue en modo
-`shadow` en este build: todavia no se borran ni se sustituyen las claves legacy.
+Firebase embebida en Gym Party se elimina al exportar. Nutricion usa IndexedDB
+como fuente primaria mediante un feature flag, con comparacion de checksums,
+recuperacion y rollback visibles. `localStorage` se conserva como copia
+compatible de escritura anticipada: esta transicion no borra claves legacy.
+Workout, Gym Party, Protocolo y las caches externas con TTL siguen en `shadow`.
 
 Las lecturas de repositorio distinguen `missing`, `valid`, `legacy`, `corrupt`
 y `unsupported`. Si una clave conocida contiene JSON roto o una estructura no
@@ -171,8 +174,11 @@ cuarentena. Una migracion shadow no copia registros que necesiten revision.
 
 Nutricion mantiene por compatibilidad sus APIs globales actuales, pero el
 nucleo ya se divide en `nutrition/*.js`. Las lecturas y escrituras pasan por
-`NutritionRepository` cuando existe y continúan en modo shadow: IndexedDB aún
-no es la fuente primaria. La vista normal tiene solo **Hoy**, **Agregar** y
+`NutritionRepository`; las claves duraderas se hidratan y leen desde IndexedDB
+despues de validarlas. Si falta la copia de `localStorage`, se recupera desde
+IndexedDB; si ambas divergen, la copia local pendiente se reconcilia sin perder
+datos. **Mas > Datos y copias** permite volver al modo compatible o reactivar
+la lectura primaria. La vista normal tiene solo **Hoy**, **Agregar** y
 **Progreso**. Hoy agrupa alimentos por comida y separa el agua; peso corporal,
 objetivos, alimentos propios y FDC viven en **Mas > Ajustes > Nutricion**. Los
 backups schema 3 incorporan las claves opcionales `recipes` y `foodPortions`;

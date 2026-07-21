@@ -18,7 +18,7 @@ const registry=window.APP_SCHEMA_REGISTRY,records=registry.all();
 assert.ok(records.length>=50,'El registro debe cubrir todos los dominios persistidos actuales');
 assert.equal(new Set(records.map(record=>record.key)).size,records.length,'Cada clave debe pertenecer a un solo registro');
 for(const record of records){
-  for(const property of ['key','name','domain','schemaVersion','defaultValue','validator','migration','backup','sensitive','storageMode','mirrorEnabled','resetGroup','retention','legacyKeys'])assert.ok(Object.hasOwn(record,property),`Falta ${property} en ${record.key}`);
+  for(const property of ['key','name','domain','schemaVersion','defaultValue','validator','migration','backup','sensitive','storageMode','mirrorEnabled','primaryEligible','resetGroup','retention','legacyKeys'])assert.ok(Object.hasOwn(record,property),`Falta ${property} en ${record.key}`);
   if(record.backup&&!record.sensitive)assert.ok(record.backupField,`Falta backupField en ${record.key}`);
   if(record.sensitive)assert.equal(record.backup,false,`Una clave sensible no puede entrar en backup: ${record.key}`);
 }
@@ -30,6 +30,9 @@ assert.equal(registry.get('protocolo_0_100_recipes_v1').domain,'nutrition');
 assert.equal(registry.get('protocolo_0_100_food_portions_v1').domain,'nutrition');
 assert.notEqual(registry.get('protocolo_0_100_cached_fdc_foods_v1').retention,'indefinite');
 assert.notEqual(registry.get('protocolo_0_100_fdc_search_cache_v1').retention,'indefinite');
+assert.equal(registry.get('protocolo_0_100_cached_fdc_foods_v1').primaryEligible,false);
+assert.equal(registry.get('protocolo_0_100_fdc_search_cache_v1').primaryEligible,false);
+assert.ok(registry.domainKeys({primaryOnly:true}).nutrition.includes('protocolo_0_100_nutrition_entries_v1'));
 assert.ok(registry.get('protocolo_0_100_workout_sessions_v1').legacyKeys.includes('protocolo_0_100_gym_sessions_v1'));
 assert.equal(registry.validate('protocolo_0_100_workout_sessions_v1',[]).status,'valid');
 assert.equal(registry.validate('protocolo_0_100_workout_sessions_v1',{}).status,'corrupt');

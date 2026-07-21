@@ -2563,3 +2563,52 @@ completo `clean assembleDebug`; el APK mide 1.599.154 bytes y su SHA-256 es
 Siguiente fase exacta: promocion controlada de **NutritionRepository** desde
 shadow a lectura primaria con feature flag, comparacion, divergencia visible y
 rollback; no promover Workout en el mismo commit.
+
+## 60. NutritionRepository como fuente primaria controlada
+
+Bloque iniciado despues de `3b2019a` y preparado como build 78:
+
+- `data/schema-registry.js` declara `primaryEligible` como parte del contrato
+  persistido. Solo las claves duraderas, espejables y no legacy pueden ser
+  candidatas a lectura primaria. Las caches FDC y de busqueda, que tienen TTL,
+  quedan expresamente fuera de esta promocion.
+- `data/indexeddb.js` promociona exclusivamente el dominio `nutrition` mediante
+  `primaryDomains.nutrition`. Workout, Gym Party y Protocol permanecen en
+  `shadow`; no se abrio una segunda migracion estructural.
+- Al iniciar, Nutricion hidrata sus claves desde IndexedDB despues de validar
+  ambos lados. Una escritura local pendiente prevalece como write-ahead y se
+  reconcilia hacia IndexedDB. Si falta la copia compatible, se recupera desde
+  IndexedDB. Los checksums, divergencias y recuperaciones quedan en metadatos.
+- `localStorage` no se borra: sigue como copia compatible y permite rollback
+  inmediato. Escrituras, borrados, importaciones, restauraciones, cuarentena y
+  resets actualizan de forma coordinada la cache primaria y el espejo.
+- `BroadcastChannel` y el evento `storage` actualizan otras pestanas. Al activar
+  lectura primaria se solicita almacenamiento persistente cuando el navegador
+  lo soporta, sin bloquear si la plataforma lo rechaza.
+- **Mas > Datos y copias** muestra el modo real, diferencias reconciliadas y
+  recuperaciones. Permite volver a lectura `localStorage`, reactivar IndexedDB
+  y comprobar nuevamente sin eliminar ninguna copia.
+- `tests/e2e/indexeddb-primary.spec.mjs` cubre promocion, exclusion de caches,
+  divergencia local, rollback, recuperacion, coordinacion entre dos pestanas y
+  controles visibles. La matriz completa paso 15/15 en Android Chromium,
+  iPhone WebKit y escritorio Chromium.
+- La regresion funcional de `nutrition-domain.spec.mjs` y
+  `nutrition-recipes-portions.spec.mjs` paso 12/12 en las mismas tres
+  plataformas con la lectura primaria activa. `test:data`, `test:nutrition` y
+  `test:modules` tambien aprobaron antes de preparar los artefactos.
+- La matriz final conjunta paso 27/27 sin omisiones en Android Chromium, iPhone
+  WebKit y escritorio Chromium. `test:fdc` confirmo que la cache externa sigue
+  distinguiendo nutrientes ausentes de ceros confirmados.
+- El artifact web contiene 65 recursos con inventario y hashes. La prueba
+  servida abrio rutas profundas, modulos y service worker sin 404, errores de
+  pagina ni consola. La validacion encontro 453 IDs estaticos unicos y confirmo
+  paridad exacta entre assets web y Android.
+- Gradle 8.10.2 con Java 17 completo `clean assembleDebug`. El APK debug mide
+  1.601.985 bytes y su SHA-256 es
+  `6E2E5C4BECBDB5F44CDA2E2913E09D5FFD8D389E23A3ABBAA87256F30C3A15DA`.
+
+Estado preparado: version `2.7.0`, Android `33`, build/cache `78`
+(`protocolo-0-100-pwa-2.7.0-b78`). No se promovieron caches FDC ni otros
+dominios. La siguiente fase debe ser un bloque aislado: simplificar la busqueda
+nutricional mediante un servicio unificado y proveedor externo opcional, o
+hacer atomica la PWA; no promover Workout en paralelo con ninguna de ellas.

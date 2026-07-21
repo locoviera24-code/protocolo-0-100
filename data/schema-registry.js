@@ -17,6 +17,8 @@
   });
   function entry(name,key,domain,options={}){
     const storageMode=options.storageMode||'shadow';
+    const retention=options.retention||'indefinite';
+    const mirrorEnabled=options.mirrorEnabled===undefined?storageMode==='shadow':!!options.mirrorEnabled;
     return Object.freeze({
       key,name,domain,
       schemaVersion:Number(options.schemaVersion)||1,
@@ -29,9 +31,10 @@
       backupAliases:Object.freeze([...(options.backupAliases||[])]),
       sensitive:!!options.sensitive,
       storageMode,
-      mirrorEnabled:options.mirrorEnabled===undefined?storageMode==='shadow':!!options.mirrorEnabled,
+      mirrorEnabled,
+      primaryEligible:options.primaryEligible===undefined?mirrorEnabled&&storageMode!=='legacy'&&retention==='indefinite':!!options.primaryEligible,
       resetGroup:options.resetGroup||domain,
-      retention:options.retention||'indefinite',
+      retention,
       legacyKeys:Object.freeze([...(options.legacyKeys||[])]),
       serialization:options.serialization||'json',
       redaction:options.redaction||''
@@ -111,12 +114,12 @@
   });
   function get(key){return BY_KEY.get(String(key||''))||null;}
   function getByName(domain,name){return BY_DOMAIN_NAME.get(`${domain}:${name}`)||null;}
-  function records({domain='',mirrorOnly=false,backupOnly=false}={}){
-    return ENTRIES.filter(record=>(!domain||record.domain===domain)&&(!mirrorOnly||record.mirrorEnabled)&&(!backupOnly||record.backup&&!record.sensitive));
+  function records({domain='',mirrorOnly=false,primaryOnly=false,backupOnly=false}={}){
+    return ENTRIES.filter(record=>(!domain||record.domain===domain)&&(!mirrorOnly||record.mirrorEnabled)&&(!primaryOnly||record.primaryEligible)&&(!backupOnly||record.backup&&!record.sensitive));
   }
   function domains(){return[...new Set(ENTRIES.map(record=>record.domain))];}
-  function domainKeys({mirrorOnly=false}={}){
-    return Object.freeze(Object.fromEntries(domains().map(domain=>[domain,Object.freeze(records({domain,mirrorOnly}).map(record=>record.key))]).filter(([,keys])=>keys.length)));
+  function domainKeys({mirrorOnly=false,primaryOnly=false}={}){
+    return Object.freeze(Object.fromEntries(domains().map(domain=>[domain,Object.freeze(records({domain,mirrorOnly,primaryOnly}).map(record=>record.key))]).filter(([,keys])=>keys.length)));
   }
   function backupFieldMap(){
     const output={};records({backupOnly:true}).forEach(record=>{

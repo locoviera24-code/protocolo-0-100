@@ -10,7 +10,7 @@ const sw=fs.readFileSync('sw.js','utf8');
 const sync=fs.readFileSync('scripts/sync-web-assets.ps1','utf8');
 const deploy=fs.readFileSync('.github/workflows/deploy-pages.yml','utf8');
 
-for(const contract of ['protocolo_0_100_data',"mode:'shadow'",'createRecoverySnapshot','restoreRecovery','replaceMany','purgeKeys','clearAllData','sanitizeRawForMirror','QuotaExceededError','BroadcastChannel','app-data-change','app-data-error']){
+for(const contract of ['protocolo_0_100_data',"mode:'shadow'",'PRIMARY_KEYS','hydratePrimaryDomain','setPrimaryDomain','primaryRawCache','divergenceCount','createRecoverySnapshot','restoreRecovery','replaceMany','purgeKeys','clearAllData','sanitizeRawForMirror','QuotaExceededError','BroadcastChannel','app-data-change','app-data-error']){
   assert.ok(indexed.includes(contract),`Falta contrato de datos: ${contract}`);
 }
 for(const repository of ['ProtocolRepository','WorkoutRepository','NutritionRepository','GymPartyLocalRepository','SettingsRepository','BackupRepository']){

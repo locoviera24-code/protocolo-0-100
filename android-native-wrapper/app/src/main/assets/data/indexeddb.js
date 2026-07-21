@@ -13,11 +13,13 @@
   const CHANNEL_NAME='protocolo_0_100_data_changes_v1';
   const MAX_RECOVERY_SNAPSHOTS=5;
   const DOMAIN_KEYS=registry.domainKeys({mirrorOnly:true});
+  const PRIMARY_KEYS=registry.domainKeys({primaryOnly:true});
   const DEFAULT_CONFIG=Object.freeze({
     schemaVersion:1,
     enabled:true,
     mode:'shadow',
-    domains:Object.freeze(Object.fromEntries(Object.keys(DOMAIN_KEYS).map(domain=>[domain,true])))
+    domains:Object.freeze(Object.fromEntries(Object.keys(DOMAIN_KEYS).map(domain=>[domain,true]))),
+    primaryDomains:Object.freeze({nutrition:true})
   });
 
   let databasePromise=null;
@@ -26,6 +28,8 @@
   let quarantineQueue=Promise.resolve();
   let channel=null;
   let lastError=null;
+  const primaryRawCache=new Map();
+  const primaryReadyDomains=new Set();
 
   function clone(value){
     if(value===undefined)return undefined;
@@ -35,8 +39,12 @@
   function config(){
     try{
       const stored=JSON.parse(localStorage.getItem(CONFIG_KEY)||'{}')||{};
-      return {...DEFAULT_CONFIG,...stored,domains:{...DEFAULT_CONFIG.domains,...(stored.domains||{})}};
-    }catch(error){return {...DEFAULT_CONFIG,domains:{...DEFAULT_CONFIG.domains}};}
+      return {...DEFAULT_CONFIG,...stored,domains:{...DEFAULT_CONFIG.domains,...(stored.domains||{})},primaryDomains:{...DEFAULT_CONFIG.primaryDomains,...(stored.primaryDomains||{})}};
+    }catch(error){return {...DEFAULT_CONFIG,domains:{...DEFAULT_CONFIG.domains},primaryDomains:{...DEFAULT_CONFIG.primaryDomains}};}
+  }
+  function saveConfig(next){
+    const current=config(),value={...current,...next,domains:{...current.domains,...(next.domains||{})},primaryDomains:{...current.primaryDomains,...(next.primaryDomains||{})}};
+    localStorage.setItem(CONFIG_KEY,JSON.stringify(value));emit('app-data-config-change',{mode:value.mode,primaryDomains:{...value.primaryDomains}});return value;
   }
   function recordForKey(key){
     const record=registry.get(key);
@@ -44,9 +52,10 @@
     return record;
   }
   function domainForKey(key){return registry.get(key)?.domain||'';}
+  function isPrimaryDomain(domain,current=config()){return !!(current.enabled&&current.primaryDomains?.[domain]&&PRIMARY_KEYS[domain]);}
   function shouldMirror(key){
     const record=registry.get(key),domain=record?.domain,current=config();
-    return !!(record?.mirrorEnabled&&domain&&current.enabled&&current.mode==='shadow'&&current.domains[domain]!==false);
+    return !!(record?.mirrorEnabled&&domain&&current.enabled&&(current.mode==='shadow'||isPrimaryDomain(domain,current))&&current.domains[domain]!==false);
   }
   function sanitizeRawForMirror(key,raw){
     const record=recordForKey(key);
@@ -133,9 +142,9 @@
   async function captureQuarantine(result){
     if(!global.indexedDB||!result?.record||!['corrupt','unsupported'].includes(result.status))return null;
     const safeRaw=rawForQuarantine(result.record,result.raw),fingerprint=hashRaw(`${result.key}:${result.raw}`),id=`quarantine_${fingerprint}`;
-    const database=await openDatabase(),transaction=database.transaction([QUARANTINE_STORE,RECORDS_STORE],'readwrite'),done=transactionDone(transaction),store=transaction.objectStore(QUARANTINE_STORE),existing=await requestResult(store.get(id)),now=new Date().toISOString();
+    const database=await openDatabase(),transaction=database.transaction([QUARANTINE_STORE,RECORDS_STORE],'readwrite'),done=transactionDone(transaction),store=transaction.objectStore(QUARANTINE_STORE),records=transaction.objectStore(RECORDS_STORE),existing=await requestResult(store.get(id)),indexedRecord=await requestResult(records.get(result.key)),now=new Date().toISOString();
     const entry={id,key:result.key,name:result.record.name,domain:result.record.domain,status:result.status,error:result.error||'schema-validation',schemaVersion:result.record.schemaVersion,storedVersion:result.storedVersion||null,createdAt:existing?.createdAt||now,lastSeenAt:now,occurrences:Number(existing?.occurrences||0)+1,raw:safeRaw,redacted:safeRaw===null};
-    store.put(entry);transaction.objectStore(RECORDS_STORE).delete(result.key);await done;
+    store.put(entry);if(!indexedRecord||!['valid','legacy'].includes(inspectRaw(result.key,indexedRecord.raw).status))records.delete(result.key);await done;
     if(localStorage.getItem(result.key)===result.raw)localStorage.removeItem(result.key);
     notifyChange(result.key,'quarantine');
     emit('app-data-quarantined',{id,key:entry.key,domain:entry.domain,status:entry.status,error:entry.error,redacted:entry.redacted});
@@ -147,6 +156,10 @@
   }
   function notifyChange(key,source='local'){
     const detail={key,domain:domainForKey(key),source,at:new Date().toISOString()};
+    if(source!=='local'&&primaryReadyDomains.has(detail.domain)&&PRIMARY_KEYS[detail.domain]?.includes(key)){
+      const result=inspectRaw(key,localStorage.getItem(key));
+      if(['valid','legacy'].includes(result.status))primaryRawCache.set(key,result.raw);else primaryRawCache.delete(key);
+    }
     emit('app-data-change',detail);
     if(source==='local'){
       try{channel?.postMessage(detail);}catch(error){/* Storage event remains as fallback. */}
@@ -154,7 +167,7 @@
   }
   function readResult(key,{quarantine=true}={}){
     recordForKey(key);
-    const result=inspectRaw(key,localStorage.getItem(key));
+    const domain=domainForKey(key),usePrimary=isPrimaryDomain(domain)&&primaryReadyDomains.has(domain),raw=usePrimary?(primaryRawCache.has(key)?primaryRawCache.get(key):null):localStorage.getItem(key),result={...inspectRaw(key,raw),source:usePrimary?'indexeddb':'localStorage'};
     if(quarantine&&['corrupt','unsupported'].includes(result.status))scheduleQuarantine(result);
     return result;
   }
@@ -184,6 +197,7 @@
     try{localStorage.setItem(key,String(raw));}
     catch(error){reportError(error,'local-write',key);throw error;}
     if(notify)notifyChange(key);
+    if(isPrimaryDomain(domainForKey(key))){primaryRawCache.set(key,String(raw));}
     if(mirror&&shouldMirror(key))enqueueMirror(()=>putRawRecord(key,String(raw)),'mirror-write',key);
     return raw;
   }
@@ -199,6 +213,7 @@
     try{localStorage.removeItem(key);}
     catch(error){reportError(error,'local-remove',key);throw error;}
     if(notify)notifyChange(key);
+    primaryRawCache.delete(key);
     if(mirror&&shouldMirror(key))enqueueMirror(()=>deleteRecord(key),'mirror-remove',key);
   }
   async function readIndexedResult(key,{quarantine=true}={}){
@@ -227,6 +242,48 @@
     await done;
     return value||null;
   }
+  async function putMeta(value){
+    const database=await openDatabase(),transaction=database.transaction(META_STORE,'readwrite');transaction.objectStore(META_STORE).put(value);await transactionDone(transaction);return value;
+  }
+  async function hydratePrimaryDomain(domain){
+    if(!isPrimaryDomain(domain))return{domain,status:'disabled',storageMode:'shadow'};
+    const keys=PRIMARY_KEYS[domain];if(!keys)throw new Error(`Dominio primario desconocido: ${domain}`);
+    const database=await openDatabase(),readTransaction=database.transaction(RECORDS_STORE,'readonly'),readDone=transactionDone(readTransaction),stored=await requestResult(readTransaction.objectStore(RECORDS_STORE).getAll());await readDone;
+    const indexedByKey=new Map(stored.filter(item=>keys.includes(item.key)).map(item=>[item.key,item])),writes=[],divergences=[],recovered=[];keys.forEach(key=>primaryRawCache.delete(key));
+    for(const key of keys){
+      const localRaw=localStorage.getItem(key),localResult=inspectRaw(key,localRaw),indexedRecord=indexedByKey.get(key),indexedResult=inspectRaw(key,indexedRecord?.raw??null);
+      if(['corrupt','unsupported'].includes(localResult.status))await captureQuarantine(localResult);
+      if(['corrupt','unsupported'].includes(indexedResult.status))await captureQuarantine(indexedResult);
+      const localValid=['valid','legacy'].includes(localResult.status),indexedValid=['valid','legacy'].includes(indexedResult.status);let selectedRaw=null;
+      if(localValid){
+        selectedRaw=localResult.raw;
+        if(!indexedValid||hashRaw(localResult.raw)!==hashRaw(indexedResult.raw)){
+          if(indexedValid)divergences.push({key,name:recordForKey(key).name,localChecksum:hashRaw(localResult.raw),indexedChecksum:hashRaw(indexedResult.raw),resolution:'local-write-ahead'});
+          writes.push({key,domain,raw:sanitizeRawForMirror(key,localResult.raw),updatedAt:new Date().toISOString()});
+        }
+      }else if(indexedValid){
+        selectedRaw=indexedResult.raw;localStorage.setItem(key,indexedResult.raw);recovered.push({key,name:recordForKey(key).name,source:'indexeddb'});notifyChange(key,'primary-recovery');
+      }
+      if(selectedRaw===null)primaryRawCache.delete(key);else primaryRawCache.set(key,selectedRaw);
+    }
+    if(writes.length){const transaction=database.transaction(RECORDS_STORE,'readwrite'),store=transaction.objectStore(RECORDS_STORE);writes.forEach(item=>store.put(item));await transactionDone(transaction);}
+    primaryReadyDomains.add(domain);
+    const result={id:`primary:${domain}`,domain,status:'ready',storageMode:'primary',keyCount:keys.length,cachedKeys:keys.filter(key=>primaryRawCache.has(key)).length,divergenceCount:divergences.length,divergences,recoveredCount:recovered.length,recovered,hydratedAt:new Date().toISOString()};await putMeta(result);emit('app-data-primary-ready',result);return result;
+  }
+  async function setPrimaryDomain(domain,enabled){
+    if(!PRIMARY_KEYS[domain])throw new Error(`Dominio primario desconocido: ${domain}`);
+    saveConfig({primaryDomains:{[domain]:!!enabled}});
+    if(enabled){await requestPersistentStorage({request:true});await migrateDomain(domain);return hydratePrimaryDomain(domain);}
+    PRIMARY_KEYS[domain].forEach(key=>primaryRawCache.delete(key));primaryReadyDomains.delete(domain);
+    const result={id:`primary:${domain}`,domain,status:'rolled-back',storageMode:'shadow',rolledBackAt:new Date().toISOString()};await putMeta(result);emit('app-data-primary-ready',result);return result;
+  }
+  async function primaryDomainStatus(domain){return getMeta(`primary:${domain}`);}
+  async function requestPersistentStorage({request=false}={}){
+    if(!global.navigator?.storage)return{supported:false,persisted:false};
+    let persisted=false;try{persisted=typeof global.navigator.storage.persisted==='function'&&await global.navigator.storage.persisted();if(request&&!persisted&&typeof global.navigator.storage.persist==='function')persisted=await global.navigator.storage.persist();}
+    catch(error){return{supported:true,persisted:false,error:'unavailable'};}
+    return{supported:typeof global.navigator.storage.persist==='function',persisted:!!persisted};
+  }
   async function trimRecoverySnapshots(database){
     const transaction=database.transaction(RECOVERY_STORE,'readwrite');
     const done=transactionDone(transaction);
@@ -251,6 +308,7 @@
     Object.entries(snapshot?.rawByKey||{}).forEach(([key,raw])=>{
       if(raw===null)localStorage.removeItem(key);
       else localStorage.setItem(key,raw);
+      if(isPrimaryDomain(domainForKey(key))){if(raw===null)primaryRawCache.delete(key);else primaryRawCache.set(key,raw);}
     });
   }
   async function migrateDomain(domain){
@@ -301,7 +359,11 @@
     if(initializationPromise)return initializationPromise;
     initializationPromise=new Promise(resolve=>schedule(async()=>{
       if(!global.indexedDB||!config().enabled){resolve([]);return;}
-      try{resolve(await migrateAll());}
+      try{
+        const results=await migrateAll();
+        for(const domain of Object.keys(config().primaryDomains||{}))if(isPrimaryDomain(domain))await hydratePrimaryDomain(domain);
+        resolve(results);
+      }
       catch(error){reportError(error,'initialize');resolve([]);}
     }));
     return initializationPromise;
@@ -319,6 +381,7 @@
       rawEntries.forEach(([key,raw])=>{
         if(raw===null)localStorage.removeItem(key);
         else localStorage.setItem(key,raw);
+        if(isPrimaryDomain(domainForKey(key))){if(raw===null)primaryRawCache.delete(key);else primaryRawCache.set(key,raw);}
       });
       const mirrored=rawEntries.filter(([key])=>shouldMirror(key));
       if(mirrored.length){
@@ -372,6 +435,7 @@
     const selected=[...new Set((keys||[]).filter(Boolean))];
     selected.forEach(key=>{if(registry.get(key))return;throw new Error(`Clave persistida no registrada: ${key}`);});
     selected.forEach(key=>localStorage.removeItem(key));
+    selected.forEach(key=>primaryRawCache.delete(key));
     if(global.indexedDB&&selected.length){
       const database=await openDatabase();
       const transaction=database.transaction([RECORDS_STORE,RECOVERY_STORE,QUARANTINE_STORE],'readwrite');
@@ -399,6 +463,7 @@
       if(key?.startsWith('protocolo_0_100_'))localKeys.push(key);
     }
     localKeys.forEach(key=>localStorage.removeItem(key));
+    primaryRawCache.clear();primaryReadyDomains.clear();
     if(global.indexedDB){
       const database=await openDatabase();
       const transaction=database.transaction([RECORDS_STORE,META_STORE,RECOVERY_STORE,QUARANTINE_STORE],'readwrite');
@@ -421,12 +486,16 @@
     if(!global.indexedDB)return output;
     try{output.quarantine.count=(await quarantineList()).length;}catch(error){output.quarantine={count:0,status:'unavailable'};}
     for(const domain of Object.keys(DOMAIN_KEYS)){
-      try{const meta=await getMeta(`domain:${domain}`);output.domains[domain]=meta?{status:meta.status,version:meta.version,keyCount:meta.keyCount,completedAt:meta.completedAt}:{status:'pending'};}
+      try{
+        const meta=await getMeta(`domain:${domain}`),primary=await getMeta(`primary:${domain}`),storageMode=isPrimaryDomain(domain)?'primary':'shadow';
+        output.domains[domain]=meta?{status:meta.status,version:meta.version,keyCount:meta.keyCount,completedAt:meta.completedAt,storageMode,primaryStatus:primary?.status||'pending',divergenceCount:primary?.divergenceCount||0,recoveredCount:primary?.recoveredCount||0,hydratedAt:primary?.hydratedAt||null}:{status:'pending',storageMode};
+      }
       catch(error){output.domains[domain]={status:'unavailable'};}
     }
     if(global.navigator?.storage?.estimate){
       try{const estimate=await global.navigator.storage.estimate();output.storage={usage:estimate.usage||0,quota:estimate.quota||0};}catch(error){/* Optional browser API. */}
     }
+    if(global.navigator?.storage)output.persistence=await requestPersistentStorage();
     return output;
   }
   async function quarantineList({includeRaw=false}={}){
@@ -461,9 +530,10 @@
   }
 
   global.APP_DATA=Object.freeze({
-    DB_NAME,DB_VERSION,CONFIG_KEY,DOMAIN_KEYS,domainForKey,config,read,write,writeRaw,remove,
+    DB_NAME,DB_VERSION,CONFIG_KEY,DOMAIN_KEYS,PRIMARY_KEYS,domainForKey,config,saveConfig,isPrimaryDomain,read,write,writeRaw,remove,
     readResult,readIndexed,readIndexedResult,inspectRaw,migrateDomain,migrateAll,initialize,ready:initialize,flush,replaceMany,
     createRecoverySnapshot,restoreRecovery,purgeKeys,clearAllData,diagnostics,
+    hydratePrimaryDomain,setPrimaryDomain,primaryDomainStatus,requestPersistentStorage,
     quarantineList,quarantineGet,quarantineDelete,quarantineRestore,quarantineExport
   });
   setupCrossTabChannel();
