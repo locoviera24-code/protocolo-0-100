@@ -2885,15 +2885,23 @@ Cambios principales:
 - La reconciliacion conserva la regla local write-ahead: si existe una copia
   local valida mas reciente, se copia a IndexedDB; si falta localStorage, se
   recupera la copia valida de IndexedDB. Las dos copias se mantienen.
+- Mientras quedan adaptadores legacy, una escritura directa valida en
+  `localStorage` se detecta al leer, se adopta como write-ahead y se replica a
+  IndexedDB sin exigir recarga. Una escritura corrupta se reporta y va a
+  cuarentena antes de recuperar la copia primaria valida.
+- El shell de Gym se inyecta sincronicamente, pero sus controles quedan
+  `aria-busy`, `inert` y deshabilitados hasta finalizar hidratacion o fallback.
+  Un render de arranque no puede sustituir valores que el usuario ya edito.
 
 Pruebas locales del bloque antes del gate completo:
 
 - `npm run test:data`: registro de 53 claves, integridad, repositorios,
   transacciones, backups y cuarentena aprobados.
-- `tests/e2e/indexeddb-primary.spec.mjs`: 27/27 aprobadas en Android Chromium,
+- `tests/e2e/indexeddb-primary.spec.mjs`: 30/30 aprobadas en Android Chromium,
   iPhone WebKit y escritorio; cubre recuperacion antes de defaults,
-  divergencia, rollback, reactivacion, coordinacion entre pestanas y fallback
-  local cuando IndexedDB no esta disponible.
+  divergencia, write-ahead legacy sin recarga, rollback, reactivacion,
+  coordinacion entre pestanas y fallback local cuando IndexedDB no esta
+  disponible.
 - `npm run test:progress`: modelos de Progreso, taxonomia muscular y progreso
   por ejercicio aprobados.
 - La primera matriz amplia de Gym detecto que `gym-canonical.spec.mjs` esperaba
@@ -2907,7 +2915,21 @@ Pruebas locales del bloque antes del gate completo:
 - Los assets web se sincronizaron con `scripts/sync-web-assets.ps1` y
   `:app:assembleDebug` finalizo `BUILD SUCCESSFUL` con Gradle 8.10.2/JDK 17.
 
-Pendiente al cerrar el commit funcional: confirmar el quality gate remoto y
+El primer gate remoto del commit `6c6bce3`, corrida #79, llego a 254 E2E
+aprobados y 14 omitidos, pero fallo en cinco pruebas dependientes del tiempo.
+La causa fue doble: lecturas primarias que no advertian escrituras legacy
+directas posteriores a la hidratacion y un render tardio de Gym que podia
+reemplazar controles durante una interaccion. Tras corregir ambos contratos:
+
+- el conjunto completo que habia fallado (`data-integrity`, `drafts-time`,
+  `gym-anomalies` y `layout-sticky`) aprobo 36 pruebas y mantuvo seis omisiones
+  previstas en las tres plataformas;
+- el caso de cancelar una anomalia aprobo cinco repeticiones consecutivas en
+  iPhone WebKit;
+- validacion, datos, version, precache, artifact web y APK debug volvieron a
+  finalizar correctamente.
+
+Pendiente al cerrar el commit correctivo: confirmar el nuevo quality gate remoto y
 registrar su corrida/artifacts. La siguiente promocion prevista sigue siendo un
 unico dominio por bloque; no activar Gym Party o Protocolo como primarios
 simultaneamente.

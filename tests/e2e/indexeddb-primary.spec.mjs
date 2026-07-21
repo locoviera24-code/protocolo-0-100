@@ -78,6 +78,20 @@ test('Workout reconcilia una escritura compatible pendiente y permite rollback',
   expect(rolledBack.config.primaryDomains.workout).toBe(false);
 });
 
+test('Workout adopta escrituras legacy directas sin exigir recarga',async ({page})=>{
+  await clean(page);
+  const result=await page.evaluate(async key=>{
+    localStorage.setItem(key,JSON.stringify([{id:'same-tab-legacy',date:'2026-07-20',status:'en progreso',exercises:[]}]))
+    const read=window.APP_DATA.readResult(key);
+    await window.APP_DATA.flush();
+    const indexed=await window.APP_DATA.readIndexedResult(key);
+    return{read,indexed};
+  },WORKOUT_KEY);
+  expect(result.read.source).toBe('localStorage-write-ahead');
+  expect(result.read.value[0].id).toBe('same-tab-legacy');
+  expect(result.indexed.value[0].id).toBe('same-tab-legacy');
+});
+
 test('Gym conserva el modo local cuando IndexedDB no esta disponible',async ({browser})=>{
   const context=await browser.newContext();
   await context.addInitScript(()=>Object.defineProperty(window,'indexedDB',{configurable:true,value:undefined}));

@@ -168,7 +168,21 @@
   }
   function readResult(key,{quarantine=true}={}){
     recordForKey(key);
-    const domain=domainForKey(key),usePrimary=isPrimaryDomain(domain)&&primaryReadyDomains.has(domain),raw=usePrimary?(primaryRawCache.has(key)?primaryRawCache.get(key):null):localStorage.getItem(key),result={...inspectRaw(key,raw),source:usePrimary?'indexeddb':'localStorage'};
+    const domain=domainForKey(key),usePrimary=isPrimaryDomain(domain)&&primaryReadyDomains.has(domain);let raw=usePrimary?(primaryRawCache.has(key)?primaryRawCache.get(key):null):localStorage.getItem(key),source=usePrimary?'indexeddb':'localStorage';
+    if(usePrimary){
+      const localRaw=localStorage.getItem(key);
+      if(localRaw!==null&&localRaw!==raw){
+        const localResult=inspectRaw(key,localRaw);
+        if(['valid','legacy'].includes(localResult.status)){
+          raw=localRaw;source='localStorage-write-ahead';primaryRawCache.set(key,localRaw);
+          if(shouldMirror(key))enqueueMirror(()=>putRawRecord(key,localRaw),'write-ahead-reconcile',key);
+        }else{
+          raw=localRaw;source='localStorage-write-ahead';
+          if(quarantine)scheduleQuarantine(localResult);
+        }
+      }
+    }
+    const result={...inspectRaw(key,raw),source};
     if(quarantine&&['corrupt','unsupported'].includes(result.status))scheduleQuarantine(result);
     return result;
   }
