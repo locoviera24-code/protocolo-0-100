@@ -60,8 +60,8 @@ for(const repository of Object.values(window.APP_REPOSITORIES).filter(value=>val
 assert.throws(()=>window.APP_DATA.write('protocolo_0_100_unknown_v1',{}),/no registrada/);
 assert.equal(window.APP_REPOSITORIES.workout.keys.equipmentProfiles,'protocolo_0_100_equipment_profiles_v1');
 
-const html=fs.readFileSync('index.html','utf8'),sync=fs.readFileSync('scripts/sync-web-assets.ps1','utf8'),sw=fs.readFileSync('sw.js','utf8');
+const html=fs.readFileSync('index.html','utf8'),sync=fs.readFileSync('scripts/sync-web-assets.ps1','utf8'),precache=fs.readFileSync('precache-manifest.js','utf8');
 assert.ok(html.indexOf('data/schema-registry.js')<html.indexOf('data/indexeddb.js'));
 assert.ok(sync.includes("'data/schema-registry.js'"));
-assert.ok(sw.includes("'./data/schema-registry.js'"));
+assert.ok(precache.includes('"url": "./data/schema-registry.js"'));
 console.log(`Registro de schemas correcto: ${records.length} claves con dominio, backup, sensibilidad, retencion y storage definidos.`);

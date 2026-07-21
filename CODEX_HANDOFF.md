@@ -2811,3 +2811,12 @@ Estado de version: `2.7.0`, Android `33`, build/cache `81`
 (`protocolo-0-100-pwa-2.7.0-b81`). La corrida beta remota del commit que incluya
 esta correccion debe quedar en verde antes de publicar manualmente `stable` o
 abrir la promocion de otro dominio a IndexedDB.
+
+La corrida beta #75 del commit `6f7a265` confirmo que **Probar PWA atomica y
+versionado** ya pasa en Linux. El siguiente paso encontro una prueba heredada en
+`scripts/test-schema-registry.mjs`: todavia buscaba la lista manual de assets
+dentro de `sw.js`. El contrato correcto se valida ahora contra
+`precache-manifest.js`, que es la fuente generada consumida por el worker. La
+misma deuda se retiro de `test-data-layer.mjs` y `test-progress-view.mjs`; el
+workflow Pages se valida como consumidor del gate reusable y ya no como lugar
+donde se reconstruye manualmente el artifact.
