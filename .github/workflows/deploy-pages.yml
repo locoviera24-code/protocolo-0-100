@@ -2,54 +2,15 @@ name: Publicar PWA en GitHub Pages
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-      - master
-    paths:
-      - index.html
-      - app-version.json
-      - app-version.js
-      - precache-manifest.js
-      - offline.html
-      - app/**
-      - data/**
-      - nutrition-data.js
-      - nutrition/**
-      - fdc-client.js
-      - workout-features.js
-      - workout-ranking.js
-      - workout-metrics.js
-      - workout-store.js
-      - workout-plan.js
-      - workout-ui.js
-      - gym/**
-      - firebase-service.js
-      - gym-party.js
-      - gym-party-sync.js
-      - gym-party-metrics.js
-      - gym-party-ui.js
-      - firebase-config.js
-      - advanced-features.js
-      - manifest.webmanifest
-      - sw.js
-      - ui/**
-      - progress/**
-      - styles/**
-      - icons/**
-      - firebase/**
-      - scripts/write-firebase-config.ps1
-      - scripts/build-web-dist.mjs
-      - scripts/generate-precache-manifest.mjs
-      - scripts/precache-manifest.mjs
-      - scripts/test-build-guard.mjs
-      - scripts/test-web-dist.mjs
-      - scripts/serve-static.mjs
-      - playwright.web-dist.config.mjs
-      - tests/web-dist/**
-      - package.json
-      - package-lock.json
-      - .github/workflows/deploy-pages.yml
+    inputs:
+      channel:
+        description: Beta solo genera artifacts; stable publica GitHub Pages
+        required: true
+        default: beta
+        type: choice
+        options:
+          - beta
+          - stable
 
 permissions:
   contents: read
@@ -57,129 +18,36 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
-  cancel-in-progress: true
+  group: pages-${{ inputs.channel }}
+  cancel-in-progress: false
 
 jobs:
+  quality:
+    name: Quality gate previo a Pages
+    uses: ./.github/workflows/quality-gate.yml
+    with:
+      channel: ${{ inputs.channel }}
+    secrets: inherit
+
   deploy:
-    name: Publicar aplicacion web
+    name: Publicar canal estable
+    needs: quality
+    if: inputs.channel == 'stable'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-
     steps:
-      - name: Descargar repositorio
-        uses: actions/checkout@v4
-
-      - name: Configurar Node
-        uses: actions/setup-node@v4
+      - name: Descargar artifact web validado
+        uses: actions/download-artifact@v4
         with:
-          node-version: '22'
-          cache: npm
-
-      - name: Instalar dependencias de validacion
-        run: npm ci
-
-      - name: Instalar Chromium para validar el artifact
-        run: npx playwright install --with-deps chromium
-
-      - name: Validar contratos web
-        shell: pwsh
-        run: ./scripts/validate-app.ps1
-
-      - name: Probar estrategia del service worker
-        run: node ./scripts/test-service-worker.mjs
-
-      - name: Probar rutina semanal y estado widget
-        run: node ./scripts/test-workout-features.mjs
-
-      - name: Probar metricas de gimnasio
-        run: node ./scripts/test-workout-metrics.mjs
-
-      - name: Probar equipo y modalidades de gimnasio
-        run: node ./scripts/test-workout-equipment.mjs
-
-      - name: Probar motor de progresion
-        run: node ./scripts/test-progression-engine.mjs
-
-      - name: Probar deteccion de anomalias Gym
-        run: node ./scripts/test-workout-anomalies.mjs
-
-      - name: Probar Gym Party
-        run: node ./scripts/test-gym-party.mjs
-
-      - name: Probar sincronizacion incremental
-        run: node ./scripts/test-gym-party-sync.mjs
-
-      - name: Probar limites modulares
-        run: npm run test:modules
-
-      - name: Probar presupuestos del sistema visual
-        run: npm run test:design
-
-      - name: Verificar version unica
-        run: npm run test:version
-
-      - name: Probar router y deep links
-        run: npm run test:router
-
-      - name: Probar presupuesto sticky y teclado
-        run: npm run test:layout
-
-      - name: Probar Inicio y Ajustes
-        run: npm run test:home-settings
-
-      - name: Probar contratos funcionales de Ajustes
-        run: npm run test:settings
-
-      - name: Probar repositorios e IndexedDB
-        run: npm run test:data
-
-      - name: Probar Progreso consolidado
-        run: npm run test:progress
-
-      - name: Probar dominio Nutricion
-        run: npm run test:nutrition
-
-      - name: Probar seguridad del WebView Android
-        run: node ./scripts/test-android-webview-security.mjs
-
-      - name: Probar contratos de release Android
-        run: node ./scripts/test-android-release.mjs
-
-      - name: Probar accesibilidad web y movil
-        run: node ./scripts/test-accessibility.mjs
-
-      - name: Construir artifact web desde dependencias
-        run: npm run build:web
-
-      - name: Verificar inventario, hashes y recursos HTTP
-        run: npm run test:web-dist
-
-      - name: Abrir rutas publicables sin 404 ni errores de consola
-        run: npm run test:web-dist:e2e
-
-      - name: Generar configuracion Firebase opcional temporal
-        shell: pwsh
-        env:
-          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
-          FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
-          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
-          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
-          FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
-          FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
-        run: ./scripts/write-firebase-config.ps1 -OutputPath "${{ runner.temp }}/firebase-config.js"
-
-      - name: Construir artifact final con configuracion publica
-        env:
-          WEB_FIREBASE_CONFIG_PATH: ${{ runner.temp }}/firebase-config.js
-        run: npm run build:web && npm run test:web-dist
+          name: ${{ needs.quality.outputs.web_artifact }}
+          path: dist-pages
 
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Subir sitio
+      - name: Preparar artifact de Pages
         uses: actions/upload-pages-artifact@v3
         with:
           path: dist-pages

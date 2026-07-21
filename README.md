@@ -545,6 +545,8 @@ node ./scripts/test-module-boundaries.mjs
 node ./scripts/test-android-webview-security.mjs
 node ./scripts/test-android-release.mjs
 node ./scripts/test-accessibility.mjs
+npm run test:precache
+npm run test:quality-gate
 npm run test:design
 npm run test:router
 npm run test:layout
@@ -578,13 +580,29 @@ keystore codificado en `ANDROID_KEYSTORE_BASE64` y nunca lo guarda en el repo.
 
 ## Publicacion
 
-- **PWA:** `scripts/build-web-dist.mjs` descubre las dependencias declaradas en
-  HTML, manifest, service worker y CSS, conserva su estructura en `dist-pages`
-  y genera `asset-manifest.json` con SHA-256. El workflow `Publicar PWA en
-  GitHub Pages` prueba por HTTP y Chromium todas las rutas principales antes de
-  subir el artifact; un recurso ausente o un error de consola impide publicar.
-- **APK debug:** el workflow `Construir APK Android` publica un artifact temporal para pruebas.
-- **APK release:** el workflow `Publicar APK Android release` compila `v2.7.0` con firma privada desde GitHub Secrets, publica el APK versionado y adjunta su checksum SHA-256.
+`.github/workflows/quality-gate.yml` es la unica matriz publicable. Ejecuta
+contratos, datos/backups, PWA atomica, Nutricion, Progreso, Gym, Gym Party,
+Playwright en Android/iPhone/escritorio, Firestore Emulator, accesibilidad y
+compilacion Android debug/release con firma efimera. Solo despues sube el
+artifact web y el APK debug del canal seleccionado.
+
+- **Beta automatica:** `Validar aplicacion` se ejecuta en `main`, `master` y pull
+  requests. Produce `protocolo-web-beta` y `protocolo-android-debug-beta`; no
+  reemplaza la web estable.
+- **PWA estable:** ejecutar manualmente `Publicar PWA en GitHub Pages` con canal
+  `stable`. El job descarga exactamente el artifact aprobado por el gate; un
+  recurso ausente, error de consola, E2E, reglas o Android fallido impide
+  publicar. El canal `beta` solo genera artifacts descargables.
+- **APK debug:** `Construir APK Android validado` es manual y reutiliza el mismo
+  gate; no recompila desde una matriz mas debil.
+- **APK release:** `Publicar APK Android release` espera el mismo gate y luego
+  compila `v2.7.0` con la firma privada de GitHub Secrets, publica el APK
+  versionado y adjunta su checksum SHA-256.
+
+`scripts/build-web-dist.mjs` descubre las dependencias declaradas en HTML,
+manifest, service worker y CSS, conserva su estructura en `dist-pages` y genera
+`asset-manifest.json` con SHA-256. No existe una segunda lista de archivos en
+los workflows consumidores.
 
 La PWA no activa una nueva version a mitad de un registro: muestra aviso y solo
 envia `SKIP_WAITING` cuando el usuario toca **Actualizar ahora**. El APK release

@@ -2740,3 +2740,42 @@ Pruebas del bloque antes de preparar artefactos finales:
 Estado preparado: version `2.7.0`, Android `33`, build/cache `80`
 (`protocolo-0-100-pwa-2.7.0-b80`). Siguiente fase recomendada: quality gate
 unico para Pages/APK; no promover Workout a IndexedDB en el mismo commit.
+
+## 63. Quality gate unico y canales de publicacion
+
+Bloque iniciado despues de `ed66188`, sin cambiar el build 80 porque no modifica
+assets de la aplicacion:
+
+- `.github/workflows/quality-gate.yml` es reusable mediante `workflow_call` y
+  tambien ejecutable manualmente. Acepta solo `beta` o `stable` y produce dos
+  artifacts con nombre de canal: web completo y APK debug.
+- El gate instala Node, Java, Playwright y Firestore Emulator; ejecuta PWA,
+  version, Gym/widget, equipo, progresion, anomalias, Gym Party/sync, modulos,
+  diseno, router, layout, Ajustes, datos/backups, Progreso, Nutricion/FDC,
+  seguridad Android, accesibilidad, los 261 E2E y reglas Firestore.
+- Despues de las pruebas genera la configuracion Firebase publica opcional,
+  regenera sus hashes, sincroniza Android, vuelve a validar el artifact final y
+  compila en el mismo job APK debug y release con una firma efimera.
+- `.github/workflows/validate-app.yml` es el unico disparador automatico de la
+  matriz en push/PR y usa canal beta. El APK debug manual, Pages y release llaman
+  al mismo workflow; ya no mantienen copias divergentes de los pasos.
+- Pages estable no se sobrescribe por cada commit. `deploy-pages.yml` es manual:
+  `beta` solo conserva artifacts y `stable` descarga el artifact web que aprobo
+  el gate y lo publica sin reconstruirlo.
+- El release firmado espera el gate y conserva el flujo separado de keystore,
+  APK versionado y SHA-256. Al inyectar Firebase vuelve a generar el precache
+  antes de sincronizar assets.
+- `scripts/test-quality-gate.mjs` comprueba consumidores, canales, ausencia de
+  matrices duplicadas, E2E, Firestore, artifact web y builds Android. Las
+  validaciones existentes derivan ahora sus expectativas del gate comun.
+
+Verificacion local del bloque:
+
+- `npm run test:quality-gate`: correcto;
+- `node scripts/test-android-release.mjs`: correcto;
+- `validate-app.ps1`: correcto sobre build/cache 80.
+
+La ejecucion remota completa del reusable workflow queda a cargo de GitHub
+Actions, porque incluye Firestore Emulator, los 261 E2E y Android release. El
+siguiente paso exacto es observar la primera corrida beta y corregir cualquier
+diferencia exclusiva del runner antes de publicar manualmente `stable`.

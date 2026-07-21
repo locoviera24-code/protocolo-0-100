@@ -76,6 +76,8 @@ $deployWorkflow = Read-Utf8 '.github/workflows/deploy-pages.yml'
 $apkWorkflow = Read-Utf8 '.github/workflows/build-debug-apk.yml'
 $validationWorkflow = Read-Utf8 '.github/workflows/validate-app.yml'
 $releaseWorkflow = Read-Utf8 '.github/workflows/build-release-apk.yml'
+$qualityWorkflow = Read-Utf8 '.github/workflows/quality-gate.yml'
+$qualityGateTest = Read-Utf8 'scripts/test-quality-gate.mjs'
 $serviceWorkerTest = Read-Utf8 'scripts/test-service-worker.mjs'
 $workoutTest = Read-Utf8 'scripts/test-workout-features.mjs'
 $gymPartyTest = Read-Utf8 'scripts/test-gym-party.mjs'
@@ -117,7 +119,7 @@ $requiredFiles = @(
     'nutrition/nutrition-store.js', 'nutrition/nutrition-model.js', 'nutrition/recipes.js', 'nutrition/portions.js', 'nutrition/food-search.js', 'nutrition/food-provider.js', 'nutrition/food-search-service.js', 'nutrition/food-entry-flow.js', 'nutrition/meal-history.js', 'nutrition/nutrition-confidence.js', 'nutrition/nutrition-view.js', 'scripts/test-nutrition-modules.mjs', 'scripts/test-food-search-service.mjs', 'scripts/test-fdc-confidence.mjs', 'tests/e2e/nutrition-domain.spec.mjs', 'tests/e2e/nutrition-today.spec.mjs', 'tests/e2e/nutrition-recipes-portions.spec.mjs', 'tests/e2e/nutrition-numbers-targets.spec.mjs', 'tests/e2e/nutrition-unified-search.spec.mjs',
     'data/schema-registry.js', 'data/backup-service.js', 'scripts/test-schema-registry.mjs', 'scripts/test-data-integrity.mjs', 'scripts/test-backup-service.mjs', 'tests/e2e/backup-import.spec.mjs', 'tests/e2e/data-integrity.spec.mjs', 'tests/e2e/indexeddb-primary.spec.mjs',
     'ui/confirmation-dialog.js',
-    'app-version.json', 'app-version.js', 'app/build-guard.js', 'precache-manifest.js', 'offline.html', 'scripts/precache-manifest.mjs', 'scripts/generate-precache-manifest.mjs', 'scripts/test-build-guard.mjs', 'app/numbers.js', 'scripts/test-numbers.mjs', 'data/indexeddb.js', 'data/repositories.js', 'nutrition-data.js', 'fdc-client.js', 'workout-store.js', 'workout-plan.js', 'gym/equipment.js', 'gym/set-model.js', 'gym/anomaly-detector.js', 'gym/progression-engine.js', 'workout-metrics.js', 'workout-ranking.js', 'workout-ui.js', 'workout-features.js', 'advanced-features.js', 'ui/router.js', 'ui/navigation.js', 'ui/notifications.js', 'ui/form-dialog.js', 'ui/error-boundary.js', 'ui/recovery-view.js', 'progress/muscle-taxonomy.js', 'progress/progress-data-model.js', 'progress/gym-progress-model.js', 'progress/muscle-progress.js', 'progress/exercise-progress.js', 'progress/personal-records.js', 'progress/progress-view.js',
+    'app-version.json', 'app-version.js', 'app/build-guard.js', 'precache-manifest.js', 'offline.html', 'scripts/precache-manifest.mjs', 'scripts/generate-precache-manifest.mjs', 'scripts/test-build-guard.mjs', 'scripts/test-quality-gate.mjs', '.github/workflows/quality-gate.yml', 'app/numbers.js', 'scripts/test-numbers.mjs', 'data/indexeddb.js', 'data/repositories.js', 'nutrition-data.js', 'fdc-client.js', 'workout-store.js', 'workout-plan.js', 'gym/equipment.js', 'gym/set-model.js', 'gym/anomaly-detector.js', 'gym/progression-engine.js', 'workout-metrics.js', 'workout-ranking.js', 'workout-ui.js', 'workout-features.js', 'advanced-features.js', 'ui/router.js', 'ui/navigation.js', 'ui/notifications.js', 'ui/form-dialog.js', 'ui/error-boundary.js', 'ui/recovery-view.js', 'progress/muscle-taxonomy.js', 'progress/progress-data-model.js', 'progress/gym-progress-model.js', 'progress/muscle-progress.js', 'progress/exercise-progress.js', 'progress/personal-records.js', 'progress/progress-view.js',
     'firebase-config.js', 'firebase-service.js', 'gym-party-sync.js', 'gym-party-metrics.js', 'gym-party-ui.js', 'gym-party.js',
     'scripts/test-android-webview-security.mjs',
     'scripts/test-android-release.mjs',
@@ -229,7 +231,7 @@ Assert-True (-not $html.Contains("addEventListener('touchstart'")) 'No debe reac
 foreach ($style in @('styles/tokens.css', 'styles/base.css', 'styles/components.css', 'styles/features.css', 'styles/gym.css', 'styles/gym-party.css', 'styles/modules.css', 'styles/responsive.css')) {
     Assert-True ($html.Contains("<link rel=`"stylesheet`" href=`"$style`"")) "index.html no carga $style"
     Assert-True ($precacheManifest.Contains('"url": "./' + $style + '"')) "precache-manifest.js no cachea $style"
-    Assert-True ($deployWorkflow.Contains($style.Split('/')[0] + '/**')) "Pages no observa cambios de estilos"
+    Assert-True ($qualityWorkflow.Contains('npm run test:design')) 'El quality gate debe validar el sistema visual'
 }
 Assert-True (-not $html.Contains('<style')) 'index.html no debe contener CSS inline en bloques <style>'
 Assert-True (-not ($workout + $gymParty).Contains('style.textContent')) 'Gym y Gym Party no deben inyectar hojas CSS'
@@ -397,7 +399,7 @@ foreach ($contract in @(
 foreach ($contract in @('assertFails','role:''owner''','EVIL10','wrong_document_id','negative_set','getDoc(doc(outsiderDb','deactivationReason:''removed''','operation:''remove''','Promise.allSettled')) {
     Assert-True ($firestoreRulesTest.Contains($contract)) "Falta prueba negativa de Firestore Rules: $contract"
 }
-Assert-True ($validationWorkflow.Contains('npm run test:rules')) 'El workflow de validacion debe ejecutar Firebase Emulator'
+Assert-True ($qualityWorkflow.Contains('npm run test:rules')) 'El quality gate debe ejecutar Firebase Emulator'
 
 foreach ($contract in @(
     'protocolo_0_100_exercise_preferences_v1',
@@ -551,7 +553,7 @@ foreach ($contract in @('globalLiveRegion',':focus-visible','prefers-reduced-mot
     Assert-True ($accessibilitySource.Contains($contract)) "Falta contrato de accesibilidad: $contract"
 }
 Assert-True ($accessibilityTest.Contains('Accesibilidad correcta')) 'Falta prueba automatica de accesibilidad'
-Assert-True ($releaseWorkflow.Contains('node ./scripts/test-accessibility.mjs')) 'El release Android debe probar accesibilidad web'
+Assert-True ($qualityWorkflow.Contains('node ./scripts/test-accessibility.mjs')) 'El quality gate debe probar accesibilidad web'
 foreach ($contract in @('android-chromium','iphone-webkit','Pixel 7','iPhone 13','browserName','serviceWorkers')) {
     Assert-True ($playwrightConfig.Contains($contract)) "Falta configuracion Playwright: $contract"
 }
@@ -565,7 +567,7 @@ foreach ($contract in @('Face pull','partyManualRememberWeekday','2026-07-13','E
     Assert-True ($playwrightGymTest.Contains($contract)) "Falta cobertura E2E: $contract"
 }
 foreach ($contract in @('npm run test:e2e','playwright install --with-deps chromium webkit',':app:assembleRelease','test-release.jks','ANDROID_KEYSTORE_PATH')) {
-    Assert-True ($validationWorkflow.Contains($contract)) "Falta validacion real en CI: $contract"
+    Assert-True ($qualityWorkflow.Contains($contract)) "Falta validacion real en el quality gate: $contract"
 }
 Assert-True (-not $gymParty.Contains('members: undefined')) 'Gym Party no debe enviar members: undefined a Firestore'
 Assert-True ($gymParty.Contains('delete partyDoc.members')) 'Gym Party debe eliminar members antes de crear gym_parties en Firestore'
@@ -722,15 +724,18 @@ foreach ($technicalTerm in @('USDA','FoodData Central','FDC','API key','dataset'
     Assert-True (-not $nutritionEveryday.Contains($technicalTerm)) "El flujo cotidiano de Nutricion expone un termino tecnico: $technicalTerm"
 }
 
-Assert-True ($deployWorkflow.Contains('./scripts/validate-app.ps1')) 'El despliegue Pages debe validar la app antes de publicar'
-Assert-True ($deployWorkflow.Contains('gym-party.js')) 'El despliegue Pages debe publicar gym-party.js'
-Assert-True ($deployWorkflow.Contains('firebase-config.js')) 'El despliegue Pages debe publicar firebase-config.js'
-Assert-True ($deployWorkflow.Contains('write-firebase-config.ps1')) 'El despliegue Pages debe generar firebase-config.js desde secrets si existen'
-Assert-True ($deployWorkflow.Contains('workout-features.js')) 'El despliegue Pages debe publicar workout-features.js'
-Assert-True ($deployWorkflow.Contains('- app/**')) 'Cambios dentro de app/ deben disparar el despliegue Pages'
-Assert-True ($deployWorkflow.Contains('npm run build:web')) 'Pages debe construir un artifact unico'
-Assert-True ($deployWorkflow.Contains('npm run test:web-dist')) 'Pages debe validar recursos y hashes del artifact'
-Assert-True ($deployWorkflow.Contains('npm run test:web-dist:e2e')) 'Pages debe abrir el artifact en Chromium antes de publicar'
+foreach ($workflow in @($deployWorkflow,$apkWorkflow,$validationWorkflow,$releaseWorkflow)) {
+    Assert-True ($workflow.Contains('uses: ./.github/workflows/quality-gate.yml')) 'Todo canal debe depender del quality gate unico'
+}
+Assert-True ($qualityWorkflow.Contains('./scripts/validate-app.ps1 -CheckAndroidAssets')) 'El gate debe validar paridad web/Android'
+Assert-True ($qualityWorkflow.Contains('write-firebase-config.ps1')) 'El gate debe generar Firebase desde secrets si existen'
+Assert-True ($qualityWorkflow.Contains('npm run build:web')) 'El gate debe construir el artifact unico'
+Assert-True ($qualityWorkflow.Contains('npm run test:web-dist')) 'El gate debe validar recursos y hashes'
+Assert-True ($qualityWorkflow.Contains('npm run test:web-dist:e2e')) 'El gate debe abrir el artifact sin errores'
+Assert-True ($qualityWorkflow.Contains('npm run test:quality-gate')) 'El gate debe validar su propio contrato'
+Assert-True ($deployWorkflow.Contains("if: inputs.channel == 'stable'")) 'Pages solo debe publicar el canal estable'
+Assert-True (-not $deployWorkflow.Contains("`n  push:")) 'Pages estable no debe sobrescribirse por cada commit'
+Assert-True ($validationWorkflow.Contains('channel: beta')) 'main y PR deben producir artifacts beta'
 Assert-True (-not $deployWorkflow.Contains('cp index.html')) 'Pages no debe mantener una lista manual paralela de archivos'
 foreach ($contract in @('discoverWebAssets','asset-manifest.json','sha256','WEB_FIREBASE_CONFIG_PATH','app-version.json')) {
     Assert-True ($webDistBuilder.Contains($contract)) "Falta contrato del constructor web: $contract"
@@ -744,17 +749,8 @@ foreach ($contract in @('app/numbers.js','app/drafts.js','app/dates.js','asset-a
 foreach ($contract in @('requestfailed','pageerror','serviceWorker.ready','module=nutrition','module=progress','module=more')) {
     Assert-True ($webDistPlaywright.Contains($contract)) "Falta cobertura navegador del artifact: $contract"
 }
-foreach ($module in @('workout-store.js','workout-plan.js','workout-ui.js','firebase-service.js','gym-party-metrics.js','gym-party-ui.js')) {
-    Assert-True ($deployWorkflow.Contains($module)) "El despliegue Pages debe publicar $module"
-}
-Assert-True ($apkWorkflow.Contains('write-firebase-config.ps1')) 'El build APK debe generar firebase-config.js desde secrets si existen'
-Assert-True ($apkWorkflow.Contains('./scripts/validate-app.ps1 -CheckAndroidAssets')) 'El build APK debe validar los assets sincronizados'
-Assert-True ($validationWorkflow.Contains('./scripts/validate-app.ps1 -CheckAndroidAssets')) 'Falta validacion automatica de web y Android'
-Assert-True ($validationWorkflow.Contains('npm run test:web-dist')) 'El workflow general debe validar el artifact web'
-Assert-True ($validationWorkflow.Contains('npm run test:web-dist:e2e')) 'El workflow general debe abrir el artifact web en Chromium'
-foreach ($workflow in @($deployWorkflow, $apkWorkflow, $validationWorkflow)) {
-    Assert-True ($workflow.Contains('node ./scripts/test-service-worker.mjs')) 'Cada workflow debe probar la estrategia del service worker'
-}
+Assert-True ($qualityWorkflow.Contains('node ./scripts/test-service-worker.mjs')) 'El gate debe probar la estrategia del service worker'
+Assert-True ($qualityGateTest.Contains('Quality gate unico correcto')) 'Falta prueba estructural del quality gate'
 Assert-True ($serviceWorkerTest.Contains('api.nal.usda.gov')) 'La prueba del service worker debe cubrir llamadas FDC'
 Assert-True ($serviceWorkerTest.Contains('otra-app-cache')) 'La prueba del service worker debe proteger caches ajenos'
 Assert-True ($serviceWorkerTest.Contains('SKIP_WAITING')) 'La prueba del service worker debe cubrir activacion consentida'
@@ -794,24 +790,9 @@ foreach ($term in @('possible-unit-error','load-jump','reps-improbable','load-mo
 }
 Assert-True ($html.Contains('progressSuspiciousList')) 'Progreso debe mostrar registros inusuales revisados'
 Assert-True ($html.Contains('appConfirmationChoices')) 'El dialogo interno debe admitir decisiones de anomalias'
-Assert-True ($deployWorkflow.Contains('- gym/**')) 'Cambios en modulos Gym deben disparar Pages'
-foreach ($workflow in @($deployWorkflow, $apkWorkflow, $validationWorkflow)) {
-    Assert-True ($workflow.Contains('node ./scripts/test-workout-features.mjs')) 'Cada workflow debe probar rutina semanal y estado widget'
-    Assert-True ($workflow.Contains('node ./scripts/test-workout-metrics.mjs')) 'Cada workflow debe probar metricas de gimnasio'
-    Assert-True ($workflow.Contains('node ./scripts/test-workout-equipment.mjs')) 'Cada workflow debe probar equipo y modalidades'
-    Assert-True ($workflow.Contains('node ./scripts/test-progression-engine.mjs')) 'Cada workflow debe probar el motor de progresion'
-    Assert-True ($workflow.Contains('node ./scripts/test-workout-anomalies.mjs')) 'Cada workflow debe probar anomalias de Gym'
-    Assert-True ($workflow.Contains('node ./scripts/test-gym-party.mjs')) 'Cada workflow debe probar Gym Party'
-    Assert-True ($workflow.Contains('node ./scripts/test-gym-party-sync.mjs')) 'Cada workflow debe probar sync incremental'
-    Assert-True ($workflow.Contains('node ./scripts/test-android-webview-security.mjs')) 'Cada workflow debe probar seguridad WebView Android'
-    Assert-True ($workflow.Contains('node ./scripts/test-android-release.mjs')) 'Cada workflow debe probar contratos de release Android'
-    Assert-True ($workflow.Contains('node ./scripts/test-accessibility.mjs')) 'Cada workflow debe probar accesibilidad web y movil'
-    Assert-True ($workflow.Contains('npm run test:modules')) 'Cada workflow debe probar limites modulares'
-    Assert-True ($workflow.Contains('npm run test:version')) 'Cada workflow debe verificar la fuente unica de version'
+foreach ($contract in @('node ./scripts/test-workout-features.mjs','node ./scripts/test-workout-metrics.mjs','node ./scripts/test-workout-equipment.mjs','node ./scripts/test-progression-engine.mjs','node ./scripts/test-workout-anomalies.mjs','node ./scripts/test-gym-party.mjs','node ./scripts/test-gym-party-sync.mjs','node ./scripts/test-android-webview-security.mjs','node ./scripts/test-android-release.mjs','node ./scripts/test-accessibility.mjs','npm run test:modules','npm run test:version')) {
+    Assert-True ($qualityWorkflow.Contains($contract)) "El quality gate omite: $contract"
 }
-Assert-True ($releaseWorkflow.Contains('npm run test:modules')) 'El release Android debe probar limites modulares'
-Assert-True ($releaseWorkflow.Contains('node ./scripts/test-progression-engine.mjs')) 'El release Android debe probar el motor de progresion'
-Assert-True ($releaseWorkflow.Contains('node ./scripts/test-workout-anomalies.mjs')) 'El release Android debe probar anomalias de Gym'
 foreach ($contract in @('WORKOUT_STORE','WORKOUT_PLAN','WORKOUT_UI','FIREBASE_SERVICE','GYM_PARTY_METRICS','GYM_PARTY_UI','aggregate.bodyweightReps','aggregate.addedLoadVolume')) {
     Assert-True ($moduleBoundaryTest.Contains($contract)) "Falta cobertura modular: $contract"
 }

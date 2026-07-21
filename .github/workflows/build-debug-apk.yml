@@ -1,135 +1,24 @@
-name: Construir APK Android
+name: Construir APK Android validado
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-      - master
+    inputs:
+      channel:
+        description: Canal del APK
+        required: true
+        default: beta
+        type: choice
+        options:
+          - beta
+          - stable
 
 permissions:
   contents: read
 
 jobs:
-  build-apk:
-    name: Generar APK instalable
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Descargar repositorio
-        uses: actions/checkout@v4
-
-      - name: Configurar Java 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-
-      - name: Configurar Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Instalar plataforma Android necesaria
-        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
-
-      - name: Generar configuracion Firebase opcional
-        shell: pwsh
-        env:
-          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
-          FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
-          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
-          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
-          FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
-          FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
-        run: ./scripts/write-firebase-config.ps1 -OutputPath firebase-config.js
-
-      - name: Sincronizar app web dentro del APK
-        shell: pwsh
-        run: ./scripts/sync-web-assets.ps1
-
-      - name: Validar contratos y assets Android
-        shell: pwsh
-        run: ./scripts/validate-app.ps1 -CheckAndroidAssets
-
-      - name: Probar estrategia del service worker
-        run: node ./scripts/test-service-worker.mjs
-
-      - name: Probar rutina semanal y estado widget
-        run: node ./scripts/test-workout-features.mjs
-
-      - name: Probar metricas de gimnasio
-        run: node ./scripts/test-workout-metrics.mjs
-
-      - name: Probar equipo y modalidades de gimnasio
-        run: node ./scripts/test-workout-equipment.mjs
-
-      - name: Probar motor de progresion
-        run: node ./scripts/test-progression-engine.mjs
-
-      - name: Probar deteccion de anomalias Gym
-        run: node ./scripts/test-workout-anomalies.mjs
-
-      - name: Probar Gym Party
-        run: node ./scripts/test-gym-party.mjs
-
-      - name: Probar sincronizacion incremental
-        run: node ./scripts/test-gym-party-sync.mjs
-
-      - name: Probar limites modulares
-        run: npm run test:modules
-
-      - name: Probar presupuestos del sistema visual
-        run: npm run test:design
-
-      - name: Verificar version unica
-        run: npm run test:version
-
-      - name: Probar router y deep links
-        run: npm run test:router
-
-      - name: Probar presupuesto sticky y teclado
-        run: npm run test:layout
-
-      - name: Probar Inicio y Ajustes
-        run: npm run test:home-settings
-
-      - name: Probar contratos funcionales de Ajustes
-        run: npm run test:settings
-
-      - name: Probar repositorios e IndexedDB
-        run: npm run test:data
-
-      - name: Probar Progreso consolidado
-        run: npm run test:progress
-
-      - name: Probar dominio Nutricion
-        run: npm run test:nutrition
-
-      - name: Probar seguridad del WebView Android
-        run: node ./scripts/test-android-webview-security.mjs
-
-      - name: Probar contratos de release Android
-        run: node ./scripts/test-android-release.mjs
-
-      - name: Probar accesibilidad web y movil
-        run: node ./scripts/test-accessibility.mjs
-
-      - name: Configurar Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.10.2'
-
-      - name: Compilar APK debug
-        working-directory: android-native-wrapper
-        run: gradle :app:assembleDebug --stacktrace
-
-      - name: Preparar archivo APK
-        run: |
-          mkdir -p dist
-          cp android-native-wrapper/app/build/outputs/apk/debug/app-debug.apk dist/protocolo-0-100-debug.apk
-
-      - name: Subir APK como artifact descargable
-        uses: actions/upload-artifact@v4
-        with:
-          name: protocolo-0-100-apk
-          path: dist/protocolo-0-100-debug.apk
-          retention-days: 30
+  quality:
+    name: Quality gate y APK descargable
+    uses: ./.github/workflows/quality-gate.yml
+    with:
+      channel: ${{ inputs.channel }}
+    secrets: inherit

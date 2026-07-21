@@ -1,0 +1,198 @@
+name: Quality gate reutilizable
+
+on:
+  workflow_call:
+    inputs:
+      channel:
+        description: Canal del artifact validado
+        required: false
+        default: beta
+        type: string
+    outputs:
+      web_artifact:
+        description: Nombre del artifact web validado
+        value: ${{ jobs.quality.outputs.web_artifact }}
+      debug_apk_artifact:
+        description: Nombre del APK debug validado
+        value: ${{ jobs.quality.outputs.debug_apk_artifact }}
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: Canal del artifact validado
+        required: true
+        default: beta
+        type: choice
+        options:
+          - beta
+          - stable
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Web, Firebase y Android
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    outputs:
+      web_artifact: ${{ steps.metadata.outputs.web_artifact }}
+      debug_apk_artifact: ${{ steps.metadata.outputs.debug_apk_artifact }}
+    env:
+      QUALITY_CHANNEL: ${{ inputs.channel || 'beta' }}
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Validar canal
+        shell: bash
+        run: |
+          case "$QUALITY_CHANNEL" in beta|stable) ;; *) echo "Canal invalido: $QUALITY_CHANNEL"; exit 1;; esac
+
+      - name: Configurar Java 21 para Firestore Emulator
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Configurar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Instalar navegadores Playwright
+        run: npx playwright install --with-deps chromium webkit
+
+      - name: Sincronizar shell seguro para pruebas
+        shell: pwsh
+        run: ./scripts/sync-web-assets.ps1
+
+      - name: Validar estructura y paridad inicial
+        shell: pwsh
+        run: ./scripts/validate-app.ps1 -CheckAndroidAssets
+
+      - name: Validar el quality gate y sus consumidores
+        run: npm run test:quality-gate
+
+      - name: Probar PWA atomica y versionado
+        run: |
+          npm run test:precache
+          node ./scripts/test-service-worker.mjs
+          npm run test:version
+
+      - name: Probar contratos de aplicacion
+        run: |
+          node ./scripts/test-workout-features.mjs
+          node ./scripts/test-workout-metrics.mjs
+          node ./scripts/test-workout-equipment.mjs
+          node ./scripts/test-progression-engine.mjs
+          node ./scripts/test-workout-anomalies.mjs
+          node ./scripts/test-gym-party.mjs
+          node ./scripts/test-gym-party-sync.mjs
+          npm run test:modules
+          npm run test:design
+          npm run test:router
+          npm run test:layout
+          npm run test:home-settings
+          npm run test:settings
+          npm run test:data
+          npm run test:progress
+          npm run test:nutrition
+          npm run test:fdc
+          node ./scripts/test-android-webview-security.mjs
+          node ./scripts/test-android-release.mjs
+          node ./scripts/test-accessibility.mjs
+
+      - name: Probar flujos Android, iPhone y escritorio
+        run: npm run test:e2e
+
+      - name: Probar reglas Firestore en Emulator
+        run: npm run test:rules
+
+      - name: Generar configuracion Firebase publica opcional
+        shell: pwsh
+        env:
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+          FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
+          FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
+        run: ./scripts/write-firebase-config.ps1 -OutputPath firebase-config.js
+
+      - name: Regenerar precache y sincronizar Android
+        shell: pwsh
+        run: |
+          npm run build:precache
+          ./scripts/sync-web-assets.ps1
+          ./scripts/validate-app.ps1 -CheckAndroidAssets
+
+      - name: Construir y probar artifact web final
+        run: |
+          npm run build:web
+          npm run test:web-dist
+          npm run test:web-dist:e2e
+
+      - name: Configurar Java 17 para Android
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Configurar Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Instalar plataforma Android necesaria
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Crear firma efimera para validar release
+        shell: bash
+        run: |
+          keytool -genkeypair -v -keystore "$RUNNER_TEMP/test-release.jks" -storepass test-password -alias test-key -keypass test-password -keyalg RSA -keysize 2048 -validity 2 -dname "CN=CI Test,OU=CI,O=Protocolo,L=Asuncion,C=PY"
+          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/test-release.jks" >> "$GITHUB_ENV"
+          echo "ANDROID_KEYSTORE_PASSWORD=test-password" >> "$GITHUB_ENV"
+          echo "ANDROID_KEY_ALIAS=test-key" >> "$GITHUB_ENV"
+          echo "ANDROID_KEY_PASSWORD=test-password" >> "$GITHUB_ENV"
+
+      - name: Configurar Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+
+      - name: Compilar APK debug y release de prueba
+        working-directory: android-native-wrapper
+        run: gradle :app:assembleDebug :app:assembleRelease --stacktrace
+
+      - name: Verificar APKs y preparar artifacts
+        id: metadata
+        shell: bash
+        run: |
+          test -s android-native-wrapper/app/build/outputs/apk/debug/app-debug.apk
+          test -s android-native-wrapper/app/build/outputs/apk/release/app-release.apk
+          mkdir -p quality-output/android
+          cp android-native-wrapper/app/build/outputs/apk/debug/app-debug.apk quality-output/android/protocolo-0-100-debug.apk
+          echo "web_artifact=protocolo-web-$QUALITY_CHANNEL" >> "$GITHUB_OUTPUT"
+          echo "debug_apk_artifact=protocolo-android-debug-$QUALITY_CHANNEL" >> "$GITHUB_OUTPUT"
+
+      - name: Subir artifact web validado
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.metadata.outputs.web_artifact }}
+          path: dist-pages
+          include-hidden-files: true
+          retention-days: ${{ env.QUALITY_CHANNEL == 'stable' && 90 || 30 }}
+
+      - name: Subir APK debug validado
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.metadata.outputs.debug_apk_artifact }}
+          path: quality-output/android/protocolo-0-100-debug.apk
+          retention-days: ${{ env.QUALITY_CHANNEL == 'stable' && 90 || 30 }}
+
+      - name: Eliminar firma efimera
+        if: always()
+        run: rm -f "$RUNNER_TEMP/test-release.jks"
