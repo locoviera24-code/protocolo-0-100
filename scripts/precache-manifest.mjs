@@ -1,7 +1,10 @@
 import {createHash} from 'node:crypto';
+import {Buffer} from 'node:buffer';
+import {extname} from 'node:path';
 
 export const PRECACHE_SCHEMA_VERSION=1;
 export const PRECACHE_FILE='precache-manifest.js';
+const TEXT_ASSET_EXTENSIONS=new Set(['.css','.html','.js','.json','.mjs','.svg','.txt','.webmanifest','.xml']);
 
 export function isPrecacheCandidate(path){
   return !['sw.js',PRECACHE_FILE,'asset-manifest.json'].includes(path);
@@ -13,6 +16,17 @@ export function isOptionalPrecacheAsset(path){
 
 export function sha256(data){
   return createHash('sha256').update(data).digest('hex');
+}
+
+export function normalizePrecacheData(path,data){
+  const buffer=Buffer.isBuffer(data)?data:Buffer.from(data);
+  if(!TEXT_ASSET_EXTENSIONS.has(extname(path).toLowerCase()))return buffer;
+  return Buffer.from(buffer.toString('utf8').replace(/\r\n?/g,'\n'),'utf8');
+}
+
+export function precacheFingerprint(path,data){
+  const normalized=normalizePrecacheData(path,data);
+  return{bytes:normalized.byteLength,sha256:sha256(normalized)};
 }
 
 export function createPrecacheManifest({version,assets}){

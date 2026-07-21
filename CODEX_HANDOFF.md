@@ -2779,3 +2779,35 @@ La ejecucion remota completa del reusable workflow queda a cargo de GitHub
 Actions, porque incluye Firestore Emulator, los 261 E2E y Android release. El
 siguiente paso exacto es observar la primera corrida beta y corregir cualquier
 diferencia exclusiva del runner antes de publicar manualmente `stable`.
+
+## 64. Correccion multiplataforma del precache y primera corrida remota
+
+La primera ejecucion beta real del gate (`Validar aplicacion` #74, commit
+`34f2a3d`) termino con error en **Probar PWA atomica y versionado**. Los pasos
+de checkout, dependencias, Playwright, sincronizacion, validacion estructural y
+contrato del quality gate habian pasado. La reproduccion sobre un checkout
+limpio desde los blobs Git confirmo la causa: `precache-manifest.js` se habia
+generado con bytes CRLF de Windows, mientras el runner Linux recibia LF. Esto
+cambiaba bytes y SHA-256 aunque el contenido logico fuera identico.
+
+Correccion preparada como build 81:
+
+- `scripts/precache-manifest.mjs` normaliza finales de linea de recursos de
+  texto antes de calcular bytes y SHA-256. Binarios conservan verificacion byte
+  a byte.
+- `scripts/generate-precache-manifest.mjs` y `scripts/build-web-dist.mjs` usan
+  la misma huella canonica. El artifact web escribe texto LF para ser
+  reproducible entre Windows y Linux.
+- `sw.js` aplica la misma normalizacion al verificar respuestas; por ello un
+  asset Android CRLF y el mismo asset Pages LF se validan contra un unico hash
+  sin relajar la integridad del contenido.
+- La prueba del service worker guarda cuerpos independientes en su cache mock,
+  evitando que el comportamiento de streams de Undici oculte errores reales.
+- Actions oficiales se actualizaron a las generaciones basadas en Node 24:
+  checkout/setup-node `v7`, setup-java `v5`, upload-artifact `v7` y
+  download-artifact `v8`.
+
+Estado de version: `2.7.0`, Android `33`, build/cache `81`
+(`protocolo-0-100-pwa-2.7.0-b81`). La corrida beta remota del commit que incluya
+esta correccion debe quedar en verde antes de publicar manualmente `stable` o
+abrir la promocion de otro dominio a IndexedDB.

@@ -34,16 +34,16 @@ jobs:
 
     steps:
       - name: Descargar repositorio
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Configurar Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
 
       - name: Configurar Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '22'
 
@@ -115,7 +115,7 @@ jobs:
           echo "checksum=${APK}.sha256" >> "$GITHUB_OUTPUT"
 
       - name: Subir artifact release verificable
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: protocolo-0-100-v${{ steps.package.outputs.version }}-release
           path: |

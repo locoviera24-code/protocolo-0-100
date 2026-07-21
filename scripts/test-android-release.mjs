@@ -12,7 +12,7 @@ const widget=await readFile(new URL('../android-native-wrapper/app/src/main/java
 
 assert.match(debug,/uses: \.\/\.github\/workflows\/quality-gate\.yml/);
 assert.match(gate,/assembleDebug/);
-assert.match(gate,/actions\/upload-artifact@v4/);
+assert.match(gate,/actions\/upload-artifact@v7/);
 assert.doesNotMatch(debug,/gh release/);
 assert.doesNotMatch(debug,/contents: write/);
 assert.match(release,/assembleRelease/);

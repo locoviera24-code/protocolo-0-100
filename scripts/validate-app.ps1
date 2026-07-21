@@ -325,7 +325,7 @@ $pwaSafetyContracts = @(
     'url.origin!==self.location.origin',
     "event.request.mode==='navigate'",
     'PRECACHE_BY_URL.get(canonicalUrl(event.request.url))',
-    'responseHash',
+    'responseFingerprint',
     'STAGING_CACHE_NAME',
     'validateRequiredCache',
     'cachedShellNavigation'

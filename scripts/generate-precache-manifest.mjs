@@ -2,7 +2,7 @@ import {readFile,stat,writeFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {discoverWebAssets,repoRoot,sourceFor} from './build-web-dist.mjs';
-import {PRECACHE_FILE,createPrecacheManifest,renderPrecacheManifest,sha256} from './precache-manifest.mjs';
+import {PRECACHE_FILE,createPrecacheManifest,precacheFingerprint,renderPrecacheManifest} from './precache-manifest.mjs';
 
 const output=resolve(repoRoot,PRECACHE_FILE);
 const assets=[];
@@ -11,7 +11,7 @@ for(const path of await discoverWebAssets()){
   const source=sourceFor(path);
   if(!(await stat(source)).isFile())throw new Error(`Falta la fuente de precache para ${path}`);
   const data=await readFile(source);
-  assets.push({path,bytes:data.byteLength,sha256:sha256(data)});
+  assets.push({path,...precacheFingerprint(path,data)});
 }
 const version=JSON.parse(await readFile(resolve(repoRoot,'app-version.json'),'utf8'));
 const content=renderPrecacheManifest(createPrecacheManifest({version,assets}));

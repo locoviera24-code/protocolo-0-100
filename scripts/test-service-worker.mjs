@@ -27,11 +27,12 @@ function withoutSearch(value){const url=new URL(value,baseUrl);url.search='';url
 class MockCache{
   constructor(){this.entries=new Map();}
   async match(request,options={}){
-    const key=requestKey(request);if(this.entries.has(key))return this.entries.get(key).clone();
+    const restore=entry=>entry?new Response(entry.body.slice(0),{status:entry.status,headers:entry.headers}):undefined;
+    const key=requestKey(request);if(this.entries.has(key))return restore(this.entries.get(key));
     if(!options.ignoreSearch)return undefined;
-    const canonical=withoutSearch(key);for(const [candidate,response] of this.entries)if(withoutSearch(candidate)===canonical)return response.clone();
+    const canonical=withoutSearch(key);for(const [candidate,response] of this.entries)if(withoutSearch(candidate)===canonical)return restore(response);
   }
-  async put(request,response){this.entries.set(requestKey(request),response.clone());}
+  async put(request,response){this.entries.set(requestKey(request),{body:new Uint8Array(await response.clone().arrayBuffer()),status:response.status,headers:[...response.headers.entries()]});}
   async keys(){return [...this.entries.keys()].map(url=>new Request(url));}
   async delete(request){return this.entries.delete(requestKey(request));}
 }
@@ -53,7 +54,7 @@ function createHarness({failUrls=[],corruptUrls=[]}={}){
     return new Response(corrupt.has(url)?Buffer.from('corrupt'):assetBodies.get(url),{status:200});
   };
   const self={location:{href:`${baseUrl}sw.js`,origin:'https://app.test'},clients:{claim:async()=>undefined},skipWaiting:async()=>{skipWaitingCalls+=1;},addEventListener(type,handler){handlers[type]=handler;}};
-  const context=vm.createContext({self,caches,fetch:defaultFetch,URL,Map,Set,Response,Request,Uint8Array,crypto:webcrypto,console});
+  const context=vm.createContext({self,caches,fetch:defaultFetch,URL,Map,Set,Response,Request,Uint8Array,TextDecoder,TextEncoder,crypto:webcrypto,console});
   context.importScripts=(...urls)=>{for(const url of urls)vm.runInContext(url.includes('app-version')?versionSource:manifestSource,context,{filename:url});};
   vm.runInContext(source,context,{filename:'sw.js'});
   async function install(){let pending;handlers.install({waitUntil(value){pending=Promise.resolve(value);}});return pending;}

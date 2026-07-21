@@ -1,7 +1,7 @@
 import {cp,mkdir,readFile,rm,stat,writeFile} from 'node:fs/promises';
 import {dirname,extname,relative,resolve,sep} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {PRECACHE_FILE,createPrecacheManifest,renderPrecacheManifest,sha256} from './precache-manifest.mjs';
+import {PRECACHE_FILE,createPrecacheManifest,normalizePrecacheData,renderPrecacheManifest,sha256} from './precache-manifest.mjs';
 
 export const repoRoot=resolve(fileURLToPath(new URL('../',import.meta.url)));
 export const distRoot=resolve(repoRoot,process.env.WEB_DIST_DIR||'dist-pages');
@@ -105,7 +105,8 @@ export async function buildWebDist(){
     try{if(!(await stat(source)).isFile())throw new Error();}catch{throw new Error(`Falta la fuente de build para ${asset}: ${source}`);}
     await mkdir(dirname(target),{recursive:true});
     await cp(source,target);
-    const data=await readFile(target);
+    const copiedData=await readFile(target),data=normalizePrecacheData(asset,copiedData);
+    if(!data.equals(copiedData))await writeFile(target,data);
     inventory.push({path:asset,bytes:data.byteLength,sha256:sha256(data),required:true});
   }
   const version=JSON.parse(await readFile(resolve(repoRoot,'app-version.json'),'utf8'));

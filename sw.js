@@ -29,17 +29,23 @@ function isCacheable(response){
   return !!response&&response.ok&&['basic','cors','default'].includes(response.type);
 }
 
-async function responseHash(response){
-  const digest=await crypto.subtle.digest('SHA-256',await response.clone().arrayBuffer());
-  return [...new Uint8Array(digest)].map(value=>value.toString(16).padStart(2,'0')).join('');
+function isTextAsset(url){
+  return /\.(?:css|html|js|json|mjs|svg|txt|webmanifest|xml)$/i.test(new URL(url,self.location.href).pathname);
+}
+
+async function responseFingerprint(response,url){
+  const raw=new Uint8Array(await response.clone().arrayBuffer());
+  const bytes=isTextAsset(url)?new TextEncoder().encode(new TextDecoder().decode(raw).replace(/\r\n?/g,'\n')):raw;
+  const digest=await crypto.subtle.digest('SHA-256',bytes);
+  return{bytes:bytes.byteLength,sha256:[...new Uint8Array(digest)].map(value=>value.toString(16).padStart(2,'0')).join('')};
 }
 
 async function verifiedResponse(asset){
   const url=new URL(asset.url,self.location.href);
   const response=await fetch(new Request(url,{cache:'reload',credentials:'same-origin'}));
   if(!isCacheable(response))throw new Error(`PRECACHE_HTTP_${response?.status||0}`);
-  const bytes=(await response.clone().arrayBuffer()).byteLength;
-  if(bytes!==asset.bytes||await responseHash(response)!==asset.sha256)throw new Error(`PRECACHE_INTEGRITY_${asset.url}`);
+  const fingerprint=await responseFingerprint(response,asset.url);
+  if(fingerprint.bytes!==asset.bytes||fingerprint.sha256!==asset.sha256)throw new Error(`PRECACHE_INTEGRITY_${asset.url}`);
   return response;
 }
 
@@ -56,7 +62,7 @@ async function validateRequiredCache(name){
   const cache=await caches.open(name);
   for(const asset of PRECACHE.required){
     const response=await cache.match(canonicalUrl(new URL(asset.url,self.location.href)));
-    if(!response||response.status!==200||await responseHash(response)!==asset.sha256)throw new Error(`PRECACHE_INCOMPLETE_${asset.url}`);
+    if(!response||response.status!==200||(await responseFingerprint(response,asset.url)).sha256!==asset.sha256)throw new Error(`PRECACHE_INCOMPLETE_${asset.url}`);
   }
 }
 

@@ -21,12 +21,16 @@ for(const asset of manifest.assets){
   assert.equal(createHash('sha256').update(data).digest('hex'),asset.sha256,`Hash incorrecto para ${asset.path}`);
 }
 
-const workflow=await readFile(resolve(repoRoot,'.github/workflows/deploy-pages.yml'),'utf8');
-assert.match(workflow,/\n\s+- app\/\*\*/,'Cambios en app/** deben disparar Pages');
-assert.match(workflow,/npm run build:web/,'Pages debe usar el constructor unico');
-assert.match(workflow,/npm run test:web-dist/,'Pages debe validar el artifact');
-assert.match(workflow,/scripts\/generate-precache-manifest\.mjs/,'Pages debe regenerar el precache al construir');
-assert.doesNotMatch(workflow,/cp index\.html .*dist-pages/,'Pages no debe mantener otra lista manual de archivos');
+const pagesWorkflow=await readFile(resolve(repoRoot,'.github/workflows/deploy-pages.yml'),'utf8');
+const validationWorkflow=await readFile(resolve(repoRoot,'.github/workflows/validate-app.yml'),'utf8');
+const qualityWorkflow=await readFile(resolve(repoRoot,'.github/workflows/quality-gate.yml'),'utf8');
+assert.match(validationWorkflow,/push:[\s\S]*branches:/,'Todo cambio en main, incluido app/**, debe disparar el gate');
+assert.doesNotMatch(validationWorkflow,/paths-ignore:/,'El gate no debe omitir cambios dentro de app/**');
+assert.match(pagesWorkflow,/uses: \.\/\.github\/workflows\/quality-gate\.yml/,'Pages debe consumir el gate unico');
+assert.match(qualityWorkflow,/npm run build:web/,'El gate debe usar el constructor unico');
+assert.match(qualityWorkflow,/npm run test:web-dist/,'El gate debe validar el artifact');
+assert.match(qualityWorkflow,/npm run build:precache/,'El gate debe regenerar el precache antes de construir');
+assert.doesNotMatch(pagesWorkflow,/cp index\.html .*dist-pages/,'Pages no debe mantener otra lista manual de archivos');
 
 const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.json':'application/json; charset=utf-8','.webmanifest':'application/manifest+json; charset=utf-8','.css':'text/css; charset=utf-8','.png':'image/png','.svg':'image/svg+xml'};
 const server=http.createServer(async(request,response)=>{
