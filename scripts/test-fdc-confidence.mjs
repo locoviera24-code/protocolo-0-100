@@ -21,4 +21,9 @@ assert.ok(!food.reportedNutrients.includes('iron'),'Un nutriente ausente no se i
 window.FDC_CLIENT.upsertCachedFood(food);
 const edited=window.FDC_CLIENT.updateCachedFood(food.id,{iron:0});
 assert.ok(edited.reportedNutrients.includes('iron'),'Una edicion explicita a cero queda confirmada');
-console.log('FDC conserva compatibilidad numerica y distingue ausente de cero confirmado.');
+window.FDC_CLIENT.upsertCachedFood({...food,fdcId:456,id:'fdc-456',name:'Segundo alimento'});
+window.FDC_CLIENT.upsertCachedFood(food);
+const cached=window.FDC_CLIENT.cachedFoods();
+assert.deepEqual(cached.map(item=>item.fdcId),[456,123],'Volver a usar un alimento debe moverlo al final de la cola LRU');
+assert.ok(cached.at(-1).lastAccessedAt,'La cache conserva la fecha de ultimo acceso');
+console.log('FDC conserva confianza nutricional y una cache LRU acotada.');

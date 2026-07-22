@@ -10,7 +10,7 @@ const precache=fs.readFileSync('precache-manifest.js','utf8');
 const sync=fs.readFileSync('scripts/sync-web-assets.ps1','utf8');
 const qualityGate=fs.readFileSync('.github/workflows/quality-gate.yml','utf8');
 
-for(const contract of ['protocolo_0_100_data',"mode:'shadow'",'PRIMARY_KEYS','hydratePrimaryDomain','setPrimaryDomain','primaryRawCache','divergenceCount','createRecoverySnapshot','restoreRecovery','replaceMany','purgeKeys','clearAllData','sanitizeRawForMirror','QuotaExceededError','BroadcastChannel','app-data-change','app-data-error']){
+for(const contract of ['protocolo_0_100_data',"mode:'shadow'",'PRIMARY_KEYS','primaryGroupForKey','hydratePrimaryDomain','setPrimaryDomain','primaryRawCache','applyRetention','retentionPrunedCount','divergenceCount','createRecoverySnapshot','restoreRecovery','replaceMany','purgeKeys','clearAllData','sanitizeRawForMirror','QuotaExceededError','BroadcastChannel','app-data-change','app-data-error']){
   assert.ok(indexed.includes(contract),`Falta contrato de datos: ${contract}`);
 }
 for(const repository of ['ProtocolRepository','WorkoutRepository','NutritionRepository','GymPartyLocalRepository','SettingsRepository','BackupRepository']){
@@ -24,6 +24,7 @@ const indexedWithoutCoordinationIds=indexed.replaceAll('protocolo_0_100_data_cha
 assert.ok(!/protocolo_0_100_[a-z0-9_]+_v\d+/.test(indexedWithoutCoordinationIds),'IndexedDB debe derivar claves persistidas del registro.');
 assert.ok(!/protocolo_0_100_[a-z0-9_]+_v\d+/.test(backup),'BackupService debe derivar claves del registro.');
 assert.ok(indexed.includes("registry.domainKeys({mirrorOnly:true})"));
+assert.ok(indexed.includes('registry.primaryGroupKeys()'));
 assert.ok(backup.includes('registry.backupFieldMap()'));
 assert.ok(html.indexOf('data/schema-registry.js')<html.indexOf('data/indexeddb.js'),'El registro debe cargar antes de IndexedDB.');
 assert.ok(html.indexOf('data/indexeddb.js')<html.indexOf('fdc-client.js'),'La capa de datos debe cargar antes de los consumidores.');

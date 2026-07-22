@@ -1,8 +1,8 @@
 globalThis.PRECACHE_MANIFEST=Object.freeze({
   "schemaVersion": 1,
   "version": "2.7.0",
-  "build": 83,
-  "cacheName": "protocolo-0-100-pwa-2.7.0-b83",
+  "build": 84,
+  "cacheName": "protocolo-0-100-pwa-2.7.0-b84",
   "required": [
     {
       "url": "./advanced-features.js",
@@ -12,12 +12,12 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     {
       "url": "./app-version.js",
       "bytes": 358,
-      "sha256": "7b351f7bf2a52e22079f215215d9e96354435f90fde3fdfa247720e06d59f099"
+      "sha256": "344ecfe75053278f245b0e223457dd3bc38dfe542e5f06ee33f1d04a59cd733c"
     },
     {
       "url": "./app/build-guard.js",
       "bytes": 1811,
-      "sha256": "260fa4cd7b2dd1f09f17412973d3034bce6511abfa19cbdcf26199079bd16683"
+      "sha256": "6af140525f1df828b1d3683504fe3248ed6db48225f44ccead25688c6512fd61"
     },
     {
       "url": "./app/dates.js",
@@ -41,8 +41,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     },
     {
       "url": "./data/indexeddb.js",
-      "bytes": 32710,
-      "sha256": "445e435a94b2d490e9e22e7d51cdfc848c9f9f953ab9130600ea96ebabd137bf"
+      "bytes": 37229,
+      "sha256": "0632ded3b74a838f9e004d6a99f05ddd42f8c2c3db59d3e9977378a33ed13459"
     },
     {
       "url": "./data/repositories.js",
@@ -51,13 +51,13 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     },
     {
       "url": "./data/schema-registry.js",
-      "bytes": 14476,
-      "sha256": "903a983b48794ae84e34e510d06cd58c8943b175a799f8227b33088099c89373"
+      "bytes": 14948,
+      "sha256": "93919afd8367a3bdaf0fc482170b2d7224dc897544f527a78c8e161b9b814677"
     },
     {
       "url": "./fdc-client.js",
-      "bytes": 16119,
-      "sha256": "e703d997d30b43ffa8162ba4e554ee66fb61c647aa4c205d60fe776a540bcd20"
+      "bytes": 16625,
+      "sha256": "a50aa843ab3bf8a1243eff5fc01933adfe423eafe46bfeacd0a840e882174964"
     },
     {
       "url": "./firebase-config.js",
@@ -111,8 +111,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     },
     {
       "url": "./index.html",
-      "bytes": 288111,
-      "sha256": "a4d01bb8d0ffe73de136950f675dd8ecae0a625b39d18ce2817d682fcf541ef7"
+      "bytes": 291127,
+      "sha256": "9d60207148a55ca716fd250db8273f85a10540576e740fe56d7fb455f150a663"
     },
     {
       "url": "./nutrition-data.js",
@@ -329,7 +329,7 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     {
       "url": "./app-version.json",
       "bytes": 90,
-      "sha256": "a41f162c85f1c3ed60472d56b14e1193bb05fc354114dfb453b395e0295a2773"
+      "sha256": "d9d31abb7cd5b3307140e05c4cce7b864678ce53f4ffd818d16da1c1b833d6b1"
     },
     {
       "url": "./icons/icon-192.png",

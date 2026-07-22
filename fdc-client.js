@@ -51,6 +51,7 @@
     if(window.APP_DATA){window.APP_DATA.write(key,value);return true}
     try{localStorage.setItem(key,JSON.stringify(value));return true}catch(e){return false}
   }
+  function ready(){return window.APP_DATA?.ready?.()||Promise.resolve([]);}
   function normalizeText(value){
     return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
   }
@@ -84,8 +85,8 @@
     return read(CACHE_KEY,[]).filter(food=>food&&food.fdcId);
   }
   function replaceCache(foods){
-    const unique=new Map();
-    (Array.isArray(foods)?foods:[]).forEach(food=>{if(food?.fdcId)unique.set(String(food.fdcId),food)});
+    const unique=new Map(),now=new Date().toISOString();
+    (Array.isArray(foods)?foods:[]).forEach(food=>{if(food?.fdcId){const key=String(food.fdcId);if(unique.has(key))unique.delete(key);unique.set(key,{...food,cachedAt:food.cachedAt||food.fetchedAt||food.importedAt||now});}});
     const values=[...unique.values()].slice(-MAX_CACHED_FOODS);
     write(CACHE_KEY,values);
     return values;
@@ -93,9 +94,9 @@
   function upsertCachedFood(food){
     if(!food?.fdcId)return null;
     const foods=cachedFoods(),index=foods.findIndex(item=>String(item.fdcId)===String(food.fdcId));
-    if(index>=0)foods[index]={...foods[index],...food};else foods.push(food);
+    const existing=index>=0?foods.splice(index,1)[0]:{},updated={...existing,...food,cachedAt:existing.cachedAt||food.cachedAt||food.fetchedAt||food.importedAt||new Date().toISOString(),lastAccessedAt:new Date().toISOString()};foods.push(updated);
     replaceCache(foods);
-    return food;
+    return updated;
   }
   function updateCachedFood(id,updates){
     const foods=cachedFoods(),index=foods.findIndex(food=>food.id===id||String(food.fdcId)===String(id));
@@ -236,14 +237,14 @@
   }
   async function getFoodDetails(fdcId,options={}){
     const cached=cachedFoods().find(food=>String(food.fdcId)===String(fdcId));
-    if(cached)return cached;
+    if(cached)return upsertCachedFood(cached);
     const data=await request('detail',`/food/${encodeURIComponent(fdcId)}`,options);
     return normalizeFood(data);
   }
   async function importFood(foodOrId,options={}){
     const fdcId=typeof foodOrId==='object'?foodOrId.fdcId:foodOrId;
     const cached=cachedFoods().find(food=>String(food.fdcId)===String(fdcId));
-    if(cached)return cached;
+    if(cached)return upsertCachedFood(cached);
     let food=null;
     if(hasRemoteAccess()){
       try{food=await getFoodDetails(fdcId,options)}catch(error){if(typeof foodOrId!=='object')throw error}
@@ -280,7 +281,7 @@
   }
 
   window.FDC_CLIENT={
-    CACHE_KEY,CONFIG_KEY,SOURCE,CITATION,NUTRIENT_MAP,config,publicConfig,saveConfig,hasRemoteAccess,
+    CACHE_KEY,SEARCH_CACHE_KEY,CONFIG_KEY,SOURCE,CITATION,NUTRIENT_MAP,MAX_CACHED_FOODS,MAX_SEARCH_CACHE,SEARCH_TTL_MS,ready,config,publicConfig,saveConfig,hasRemoteAccess,
     cachedFoods,cachedFdcFoods:cachedFoods,replaceCache,upsertCachedFood,updateCachedFood,removeCachedFood,normalizeFood,
     findCachedByQuery,hybridSearch,searchFoods,getFoodDetails,importFood,importDataset
   };

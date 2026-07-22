@@ -15,7 +15,7 @@ PWA y APK Android para medir habitos, atencion, actividad fisica y nutricion con
 
 ## Navegacion y diseno
 
-La version actual `v2.7.0` (build web `83`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
+La version actual `v2.7.0` (build web `84`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
 **Gym**, **Nutricion**, **Progreso** y **Mas**. En escritorio usa una barra
 lateral compacta. Gym Party se abre desde **Gym > Grupo**, desde un acceso
 discreto en Inicio o mediante un enlace `gymPartyCode`; ya no ocupa un boton
@@ -187,13 +187,16 @@ valor inicial, validador, migracion, campo de backup, sensibilidad, modo de
 almacenamiento, reset y retencion. IndexedDB, repositorios, exportacion,
 importacion, restablecimientos y diagnosticos derivan sus contratos de ese
 registro. La configuracion FDC permanece local y excluida; la configuracion
-Firebase embebida en Gym Party se elimina al exportar. Nutricion y Workout usan
-IndexedDB como fuente primaria mediante flags por dominio, con comparacion de
-checksums, recuperacion y rollback visibles. La inicializacion de Gym espera la
+  Firebase embebida en Gym Party se elimina al exportar. Nutricion, Workout y el
+  grupo independiente de cache nutricional usan IndexedDB como fuente primaria,
+  con comparacion de checksums, recuperacion y rollback visibles. La cache de
+  busquedas elimina resultados despues de 24 horas y los alimentos externos se
+  limitan a los 750 usados mas recientemente; la poda se aplica a IndexedDB y a
+  su copia compatible sin tocar comidas, recetas ni historiales. La inicializacion de Gym espera la
 hidratacion antes de crear valores predeterminados, por lo que una copia valida
 no puede sustituirse por una sesion vacia durante el arranque. `localStorage`
 se conserva como copia compatible de escritura anticipada y no se borran claves
-legacy. Gym Party, Protocolo y las caches externas con TTL siguen en `shadow`.
+  legacy. Gym Party y Protocolo siguen en `shadow`.
 
 Las lecturas de repositorio distinguen `missing`, `valid`, `legacy`, `corrupt`
 y `unsupported`. Si una clave conocida contiene JSON roto o una estructura no

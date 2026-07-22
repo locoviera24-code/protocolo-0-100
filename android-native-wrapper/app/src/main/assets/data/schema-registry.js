@@ -33,6 +33,7 @@
       storageMode,
       mirrorEnabled,
       primaryEligible:options.primaryEligible===undefined?mirrorEnabled&&storageMode!=='legacy'&&retention==='indefinite':!!options.primaryEligible,
+      primaryGroup:options.primaryGroup||domain,
       resetGroup:options.resetGroup||domain,
       retention,
       legacyKeys:Object.freeze([...(options.legacyKeys||[])]),
@@ -67,8 +68,8 @@
     entry('savedMeals','protocolo_0_100_saved_meals_v1','nutrition',{defaultValue:[],validator:validators.recordArray,backupField:'savedMeals'}),
     entry('recipes','protocolo_0_100_recipes_v1','nutrition',{defaultValue:[],validator:validators.recordArray,backupField:'recipes'}),
     entry('portions','protocolo_0_100_food_portions_v1','nutrition',{defaultValue:{},validator:validators.object,backupField:'foodPortions'}),
-    entry('cachedFdcFoods','protocolo_0_100_cached_fdc_foods_v1','nutrition',{defaultValue:[],validator:validators.array,backupField:'cachedFdcFoods',retention:'least-recently-used:750'}),
-    entry('fdcSearchCache','protocolo_0_100_fdc_search_cache_v1','nutrition',{defaultValue:{},validator:validators.object,backup:false,retention:'ttl:24h'}),
+    entry('cachedFdcFoods','protocolo_0_100_cached_fdc_foods_v1','nutrition',{defaultValue:[],validator:validators.array,backupField:'cachedFdcFoods',retention:'least-recently-used:750',primaryEligible:true,primaryGroup:'nutritionCache'}),
+    entry('fdcSearchCache','protocolo_0_100_fdc_search_cache_v1','nutrition',{defaultValue:{},validator:validators.object,backup:false,retention:'ttl:24h',primaryEligible:true,primaryGroup:'nutritionCache'}),
     entry('fdcConfig','protocolo_0_100_fdc_config_v1','nutrition',{defaultValue:{},validator:validators.object,backup:false,sensitive:true,storageMode:'local',mirrorEnabled:false,resetGroup:'developer',retention:'until-user-removes'}),
 
     entry('settings','protocolo_0_100_gym_party_settings_v1','gymParty',{defaultValue:{},validator:validators.object,backupField:'gymPartySettings',redaction:'firebase-config'}),
@@ -121,6 +122,10 @@
   function domainKeys({mirrorOnly=false,primaryOnly=false}={}){
     return Object.freeze(Object.fromEntries(domains().map(domain=>[domain,Object.freeze(records({domain,mirrorOnly,primaryOnly}).map(record=>record.key))]).filter(([,keys])=>keys.length)));
   }
+  function primaryGroupKeys(){
+    const groups={};records({primaryOnly:true}).forEach(record=>{(groups[record.primaryGroup]||(groups[record.primaryGroup]=[])).push(record.key);});
+    return Object.freeze(Object.fromEntries(Object.entries(groups).map(([group,keys])=>[group,Object.freeze(keys)])));
+  }
   function backupFieldMap(){
     const output={};records({backupOnly:true}).forEach(record=>{
       if(!record.backupField)throw new Error(`Falta backupField para ${record.key}`);
@@ -141,5 +146,5 @@
     catch(error){return{status:'corrupt',key,record,error:String(error?.message||error)};}
   }
 
-  global.APP_SCHEMA_REGISTRY=Object.freeze({REGISTRY_VERSION,validators,get,getByName,records,domains,domainKeys,backupFieldMap,validate,all:()=>ENTRIES.slice()});
+  global.APP_SCHEMA_REGISTRY=Object.freeze({REGISTRY_VERSION,validators,get,getByName,records,domains,domainKeys,primaryGroupKeys,backupFieldMap,validate,all:()=>ENTRIES.slice()});
 })(window);

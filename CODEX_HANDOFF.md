@@ -4,7 +4,7 @@ Ultima actualizacion: 2026-07-21
 Rama esperada: `main`
 Version actual: `2.7.0` (fuente unica: `app-version.json`)
 Android: `versionCode 33`, `versionName "2.7.0"`
-Service worker cache: `protocolo-0-100-pwa-2.7.0-b83`
+Service worker cache: `protocolo-0-100-pwa-2.7.0-b84`
 Backup consolidado: `schemaVersion: 3`
 
 Leer primero este archivo y luego `README.md`, `index.html`,
@@ -24,7 +24,7 @@ Estado actual:
 - Gym Party implementado como modulo web/PWA opcional.
 - Nutricion local/FDC opcional.
 - Backups JSON `schemaVersion: 3`.
-- PWA offline con cache derivada `protocolo-0-100-pwa-2.7.0-b83` y
+- PWA offline con cache derivada `protocolo-0-100-pwa-2.7.0-b84` y
   actualizacion consentida desde el aviso visible.
 - APK con widget Android y permiso `INTERNET` para Firebase/Gym Party.
 
@@ -2942,3 +2942,69 @@ El bloque de `WorkoutRepository` primario queda cerrado en build 83. La siguient
 promocion debe seguir siendo un unico dominio por bloque. Segun el orden acordado,
 corresponde disenar primero la retencion y reconciliacion de la cache nutricional
 externa; no activar Gym Party o Protocolo como primarios simultaneamente.
+
+## 66. Cache nutricional primaria con retencion controlada
+
+El build 84 completa la promocion aislada de las dos caches nutricionales. No se
+volvio a promover el historial completo de Nutricion: el registro de schemas
+introduce `primaryGroup` y agrupa `cachedFdcFoods` y `fdcSearchCache` bajo
+`nutritionCache`, manteniendo ambas claves dentro del dominio logico
+`nutrition` para backup, reset y compatibilidad.
+
+Contratos implementados:
+
+- `APP_SCHEMA_REGISTRY.primaryGroupKeys()` es la fuente de los grupos primarios.
+  `nutrition`, `workout` y `nutritionCache` se activan independientemente.
+- La cache de busquedas aplica `ttl:24h`. Una entrada sin `cachedAt` valido o
+  vencida se elimina de la copia activa y del espejo; no se interpreta como un
+  resultado vigente.
+- Los alimentos externos aplican `least-recently-used:750`. `fdc-client.js`
+  conserva `cachedAt` y `lastAccessedAt`, mueve al final un alimento reutilizado
+  y evita duplicados por `fdcId`.
+- La retencion se ejecuta al leer, escribir e hidratar. El estado primario guarda
+  `retentionPrunedCount`, divergencias y recuperaciones sin incluir contenido
+  nutricional en diagnosticos.
+- Activar un grupo crea snapshot previo. Si IndexedDB falla, se restaura
+  `localStorage`, el flag anterior y la cache en memoria. El rollback visible no
+  elimina ninguna copia.
+- **Mas > Datos y copias** muestra una fila independiente **Cache nutricional**
+  con estado, resultados vencidos depurados, rollback, reactivacion y reintento.
+  Desactivarla no modifica comidas, recetas, objetivos ni historial.
+- `FDC_CLIENT.ready()` permite a futuros consumidores esperar la hidratacion. El
+  evento `app-data-primary-ready` repuebla Nutricion cuando una cache recuperada
+  aparece despues del primer render.
+- `fdcConfig` sigue exclusivamente en `localStorage`, marcado sensible y fuera
+  de IndexedDB, backups, cuarentena exportada y diagnosticos.
+
+Archivos funcionales principales:
+
+- `data/schema-registry.js`;
+- `data/indexeddb.js`;
+- `fdc-client.js`;
+- `index.html`;
+- `tests/e2e/indexeddb-primary.spec.mjs`;
+- `scripts/test-schema-registry.mjs`, `scripts/test-data-layer.mjs` y
+  `scripts/test-fdc-confidence.mjs`;
+- assets equivalentes de `android-native-wrapper/app/src/main/assets/`.
+
+Verificacion local real:
+
+- `npm run test:data`, `test:fdc`, `test:nutrition`, `test:version`,
+  `test:precache` y `test:web-dist`: correctos;
+- `indexeddb-primary.spec.mjs`: 36/36 en Android Chromium, iPhone WebKit y
+  escritorio Chromium; incluye TTL, LRU, recuperacion, rollback independiente,
+  UI, Nutricion duradera, Workout y coordinacion entre pestanas;
+- `data-integrity`, `nutrition-domain` y `nutrition-unified-search`: 21/21 en
+  las tres plataformas;
+- artifact publicado local: 70 recursos con hash y ninguna ruta ausente;
+- `web-dist.spec.mjs`: 1/1, sin 404 ni errores de pagina/consola y con service
+  worker instalable;
+- `validate-app.ps1 -CheckAndroidAssets`: version `2.7.0`, Android `33`, cache
+  `protocolo-0-100-pwa-2.7.0-b84` y paridad web/Android correctas;
+- `:app:assembleDebug`: correcto con Gradle 8.10.2/JDK 17; APK debug de
+  1.746.537 bytes.
+
+Pendiente al cerrar localmente este bloque: confirmar el quality gate beta del
+commit funcional. La siguiente promocion estructural debe auditar primero
+`GymPartyLocalRepository` y su cola offline; no activar Gym Party y Protocolo a
+la vez ni retirar aun las claves compatibles de `localStorage`.

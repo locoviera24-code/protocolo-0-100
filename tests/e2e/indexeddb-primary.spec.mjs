@@ -2,6 +2,8 @@ import {test,expect} from '@playwright/test';
 
 const NUTRITION_KEY='protocolo_0_100_nutrition_entries_v1';
 const WORKOUT_KEY='protocolo_0_100_workout_sessions_v1';
+const FDC_FOODS_KEY='protocolo_0_100_cached_fdc_foods_v1';
+const FDC_SEARCH_KEY='protocolo_0_100_fdc_search_cache_v1';
 
 async function clean(page){
   await page.goto('/index.html');
@@ -28,6 +30,53 @@ test('promueve Nutrición y conserva localStorage como respaldo',async ({page})=
   expect(result.diagnostics.domains.nutrition.primaryStatus).toBe('ready');
   expect(result.primaryKeys).not.toContain('protocolo_0_100_cached_fdc_foods_v1');
   expect(result.primaryKeys).not.toContain('protocolo_0_100_fdc_search_cache_v1');
+});
+
+test('la cache nutricional aplica TTL y LRU antes de quedar primaria',async ({page})=>{
+  await clean(page);
+  const result=await page.evaluate(async ({foodsKey,searchKey})=>{
+    const now=Date.now(),foods=Array.from({length:752},(_,index)=>({id:`fdc-${index+1}`,fdcId:index+1,name:`Alimento ${index+1}`}));
+    localStorage.setItem(foodsKey,JSON.stringify(foods));
+    localStorage.setItem(searchKey,JSON.stringify({expired:{foods:[{fdcId:1}],cachedAt:now-25*60*60*1000},fresh:{foods:[{fdcId:752}],cachedAt:now-60*1000}}));
+    const status=await window.APP_DATA.setPrimaryDomain('nutritionCache',true);await window.APP_DATA.flush();
+    const cached=window.APP_DATA.readResult(foodsKey),search=window.APP_DATA.readResult(searchKey),indexedFoods=await window.APP_DATA.readIndexedResult(foodsKey),indexedSearch=await window.APP_DATA.readIndexedResult(searchKey),diagnostics=await window.APP_DATA.diagnostics();
+    return{cached,search,indexedFoods,indexedSearch,status,diagnostics,config:window.APP_DATA.config(),keys:window.APP_DATA.PRIMARY_KEYS.nutritionCache};
+  },{foodsKey:FDC_FOODS_KEY,searchKey:FDC_SEARCH_KEY});
+  expect(result.config.primaryDomains.nutritionCache).toBe(true);
+  expect(result.keys).toEqual([FDC_FOODS_KEY,FDC_SEARCH_KEY]);
+  expect(result.cached.source).toBe('indexeddb');
+  expect(result.cached.value).toHaveLength(750);
+  expect(result.cached.value[0].fdcId).toBe(3);
+  expect(Object.keys(result.search.value)).toEqual(['fresh']);
+  expect(result.indexedFoods.value).toHaveLength(750);
+  expect(Object.keys(result.indexedSearch.value)).toEqual(['fresh']);
+  expect(result.status.retentionPrunedCount).toBeGreaterThanOrEqual(3);
+  expect(result.diagnostics.primaryGroups.nutritionCache.storageMode).toBe('primary');
+  expect(result.diagnostics.primaryGroups.nutritionCache.status).toBe('ready');
+});
+
+test('la cache nutricional se recupera y permite rollback sin tocar historiales',async ({page})=>{
+  await clean(page);
+  await page.evaluate(async ({foodsKey,nutritionKey})=>{
+    window.APP_DATA.write(nutritionKey,[{id:'meal-kept',date:'2026-07-20',name:'Arroz'}]);
+    window.APP_DATA.write(foodsKey,[{id:'fdc-44',fdcId:44,name:'Cache recuperable',cachedAt:new Date().toISOString()}]);
+    await window.APP_DATA.flush();localStorage.removeItem(foodsKey);
+  },{foodsKey:FDC_FOODS_KEY,nutritionKey:NUTRITION_KEY});
+  await page.reload();await page.evaluate(()=>window.APP_DATA.ready());
+  const recovered=await page.evaluate(async ({foodsKey,nutritionKey})=>({foods:window.APP_DATA.readResult(foodsKey),local:JSON.parse(localStorage.getItem(foodsKey)),nutrition:window.APP_DATA.readResult(nutritionKey),status:await window.APP_DATA.primaryDomainStatus('nutritionCache')}),{foodsKey:FDC_FOODS_KEY,nutritionKey:NUTRITION_KEY});
+  expect(recovered.foods.value[0].fdcId).toBe(44);
+  expect(recovered.local[0].fdcId).toBe(44);
+  expect(recovered.nutrition.value[0].id).toBe('meal-kept');
+  expect(recovered.status.recoveredCount).toBeGreaterThanOrEqual(1);
+  const rolledBack=await page.evaluate(async ({foodsKey,nutritionKey})=>{
+    await window.APP_DATA.setPrimaryDomain('nutritionCache',false);
+    localStorage.setItem(foodsKey,JSON.stringify([{id:'fdc-55',fdcId:55,name:'Compatible'}]));
+    return{foods:window.APP_DATA.readResult(foodsKey),nutrition:window.APP_DATA.readResult(nutritionKey),config:window.APP_DATA.config()};
+  },{foodsKey:FDC_FOODS_KEY,nutritionKey:NUTRITION_KEY});
+  expect(rolledBack.foods.source).toBe('localStorage');
+  expect(rolledBack.foods.value[0].fdcId).toBe(55);
+  expect(rolledBack.nutrition.value[0].id).toBe('meal-kept');
+  expect(rolledBack.config.primaryDomains.nutritionCache).toBe(false);
 });
 
 test('Workout es primario y recupera una sesión antes de inicializar valores por defecto',async ({page})=>{
@@ -153,6 +202,14 @@ test('Datos y copias permite rollback y reactivación visibles',async ({page})=>
   await clean(page);await page.goto('/index.html?module=more&view=data');
   await expect(page.locator('#nutritionStorageStatus')).toContainText('IndexedDB');
   await expect(page.locator('#toggleNutritionPrimaryBtn')).toHaveText('Usar modo compatible');
+  await expect(page.locator('#nutritionCacheStorageStatus')).toContainText('IndexedDB');
+  await expect(page.locator('#toggleNutritionCachePrimaryBtn')).toHaveText('Usar modo compatible');
+  await page.locator('#toggleNutritionCachePrimaryBtn').click();
+  await expect(page.locator('#nutritionCacheStorageStatus')).toContainText('Modo compatible');
+  expect(await page.evaluate(()=>window.APP_DATA.config().primaryDomains.nutritionCache)).toBe(false);
+  await page.locator('#toggleNutritionCachePrimaryBtn').click();
+  await expect(page.locator('#nutritionCacheStorageStatus')).toContainText('IndexedDB verificada');
+  expect(await page.evaluate(()=>window.APP_DATA.config().primaryDomains.nutritionCache)).toBe(true);
   await page.locator('#toggleNutritionPrimaryBtn').click();
   await expect(page.locator('#nutritionStorageStatus')).toContainText('Modo compatible');
   expect(await page.evaluate(()=>window.APP_DATA.config().primaryDomains.nutrition)).toBe(false);
