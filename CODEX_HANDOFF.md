@@ -3004,7 +3004,16 @@ Verificacion local real:
 - `:app:assembleDebug`: correcto con Gradle 8.10.2/JDK 17; APK debug de
   1.746.537 bytes.
 
-Pendiente al cerrar localmente este bloque: confirmar el quality gate beta del
-commit funcional. La siguiente promocion estructural debe auditar primero
+Resultado remoto definitivo: `Validar aplicacion` #81, commit `3a16e8c`,
+finalizo **Success** en 14m 9s. El gate registro 268 E2E aprobadas y 14 omisiones
+conocidas; tambien pasaron Firestore Emulator, artifact servido, service worker
+y Android debug/release de prueba. Artifacts:
+
+- `protocolo-android-debug-beta`, 1.5 MB, SHA-256
+  `5eeb389e412afe24819e90522dd740d1f8897d4655eaf6fab68e233a2cef09d6`;
+- `protocolo-web-beta`, 317 KB, SHA-256
+  `785400e05800187b81cb91e2d71677152b8a6e02c514a251fd4855a048ad48f8`.
+
+La siguiente promocion estructural debe auditar primero
 `GymPartyLocalRepository` y su cola offline; no activar Gym Party y Protocolo a
 la vez ni retirar aun las claves compatibles de `localStorage`.
