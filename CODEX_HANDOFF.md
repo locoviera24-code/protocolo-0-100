@@ -3157,7 +3157,19 @@ Verificación local real:
 - `validate-app.ps1 -CheckAndroidAssets`: paridad web/Android correcta;
 - `:app:assembleDebug`: `BUILD SUCCESSFUL` con Gradle 8.10.2/JDK 17; APK debug
   de 1.746.537 bytes, SHA-256
-  `7B2AAD4A1C008788AFCABE514CAEE7A7D65686F31A0371247B1EEE59E165943D`.
+  `FDC6D19EA1E5317C4D47B7D44B49C3877C88A2D9CE07610829528F8EAF45723C`.
+
+La primera corrida remota del commit `0addaf8`, `Validar aplicacion` #84,
+aprobó 300 E2E y omitió 14, pero falló el menú contextual de Nutrición en
+Android Chromium porque el evento de hidratación de Protocolo ejecutaba
+`renderAll()` y podía reemplazar un menú abierto. La persistencia primaria no
+falló. Se separó `renderProtocol()` del render global: hidratación, rollback y
+cambios entre pestañas actualizan únicamente Inicio, historial y Progreso, sin
+volver a montar Nutrición, Gym o Gym Party. El caso que falló aprobó diez
+repeticiones consecutivas y luego 3/3 plataformas; además ahora verifica de
+forma determinista que un evento `app-data-primary-ready` de Protocolo no
+desconecta el menú nutricional abierto. Las 15 pruebas específicas de
+Protocolo continuaron en verde después de la corrección.
 
 Pendiente antes de declarar cerrado el bloque: commit, push y resultado del
 quality gate remoto. Después no debe promoverse otro dominio de inmediato: los

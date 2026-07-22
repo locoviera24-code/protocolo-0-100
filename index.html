@@ -1057,7 +1057,7 @@ async function setProtocolPrimaryMode(enabled){
   const button=document.getElementById('toggleProtocolPrimaryBtn');if(button)button.disabled=true;
   try{
     const result=await window.APP_DATA.setPrimaryDomain('protocol',enabled);await window.APP_DATA.flush();
-    loadEntryForDate();renderAll();
+    refreshProtocolViews();
     flash(enabled?'El registro diario usa la copia IndexedDB verificada. localStorage permanece como respaldo compatible.':'El registro diario volvió al modo compatible. No se borró ningún registro.',{tone:'success'});
     return result;
   }catch(error){flash('No se pudo cambiar el almacenamiento del registro diario. Se conservó el modo anterior.',{tone:'error'});return null;}
@@ -2728,7 +2728,9 @@ function drawChart(){
   }
 }
 function updateUI(){ updateHomeHeader(); updatePlanUI(); updateScorePreview(); renderHomeStatus(); }
-function renderAll(){ updateUI(); renderStats(); renderPeriodMetrics(); renderInsights(); renderBadges(); renderHistory(); renderPlanTable(); drawChart(); updatePhonePanel(); renderGym(); renderNutrition(); renderSettingsData(); }
+function renderProtocol(){ updateUI(); renderStats(); renderPeriodMetrics(); renderInsights(); renderBadges(); renderHistory(); renderPlanTable(); drawChart(); updatePhonePanel(); }
+function refreshProtocolViews({reloadForm=true}={}){if(reloadForm)loadEntryForDate();renderProtocol();window.renderAdvancedProgress?.();}
+function renderAll(){ renderProtocol(); renderGym(); renderNutrition(); renderSettingsData(); }
 
 function exportJson(){
   if(!window.buildCompleteBackup){flash('No se pudo preparar una copia completa. Tus datos no fueron modificados.',{tone:'error'});return;}
@@ -2956,10 +2958,10 @@ document.getElementById('dataIntegrityList')?.addEventListener('click',event=>{c
 document.getElementById('exportQuarantineBtn')?.addEventListener('click',async()=>downloadQuarantinePayload(await window.APP_DATA.quarantineExport()));
 window.addEventListener('app-data-quarantined',()=>{renderDataIntegrity();flash('Se apartó una copia local que necesita revisión.',{tone:'warning'});});
 window.addEventListener('app-data-quarantine-change',renderDataIntegrity);
-window.addEventListener('app-data-primary-ready',event=>{renderSettingsData();if(event.detail?.domain==='nutritionCache'){populateFoods();renderAdvancedNutrition();}if(event.detail?.domain==='protocol'){loadEntryForDate();renderAll();}});
-window.addEventListener('app-data-change',event=>{if(event.detail?.domain==='protocol'&&event.detail?.source!=='local')renderAll();});
+window.addEventListener('app-data-primary-ready',event=>{renderSettingsData();if(event.detail?.domain==='nutritionCache'){populateFoods();renderAdvancedNutrition();}if(event.detail?.domain==='protocol')refreshProtocolViews();});
+window.addEventListener('app-data-change',event=>{if(event.detail?.domain==='protocol'&&event.detail?.source!=='local')refreshProtocolViews({reloadForm:false});});
 document.getElementById('toggleProtocolPrimaryBtn')?.addEventListener('click',event=>setProtocolPrimaryMode(event.currentTarget.dataset.enablePrimary==='true'));
-document.getElementById('retryProtocolPrimaryBtn')?.addEventListener('click',async()=>{try{await window.APP_DATA.hydratePrimaryDomain('protocol');loadEntryForDate();renderAll();flash('Almacenamiento del registro diario comprobado.');}catch(error){flash('No se pudo comprobar IndexedDB. Los registros compatibles permanecen disponibles.',{tone:'warning'});}renderSettingsData();});
+document.getElementById('retryProtocolPrimaryBtn')?.addEventListener('click',async()=>{try{await window.APP_DATA.hydratePrimaryDomain('protocol');refreshProtocolViews();flash('Almacenamiento del registro diario comprobado.');}catch(error){flash('No se pudo comprobar IndexedDB. Los registros compatibles permanecen disponibles.',{tone:'warning'});}renderSettingsData();});
 document.getElementById('toggleNutritionPrimaryBtn')?.addEventListener('click',event=>setNutritionPrimaryMode(event.currentTarget.dataset.enablePrimary==='true'));
 document.getElementById('retryNutritionPrimaryBtn')?.addEventListener('click',async()=>{try{await window.APP_DATA.hydratePrimaryDomain('nutrition');flash('Almacenamiento de Nutrición comprobado.');}catch(error){flash('No se pudo comprobar IndexedDB. Los datos locales permanecen disponibles.',{tone:'warning'});}renderSettingsData();});
 document.getElementById('toggleNutritionCachePrimaryBtn')?.addEventListener('click',event=>setNutritionCachePrimaryMode(event.currentTarget.dataset.enablePrimary==='true'));
@@ -3134,14 +3136,14 @@ const protocolReadyPromise=(async()=>{
   if(window.APP_DATA?.isPrimaryDomain?.('protocol'))root?.setAttribute('aria-busy','true');
   try{
     await window.APP_DATA?.ready?.();
-    loadEntryForDate();renderAll();
+    refreshProtocolViews();
     return{entries:getEntries(),source:window.APP_DATA?.readResult?.(STORAGE_KEY)?.source||'localStorage'};
   }finally{root?.removeAttribute('aria-busy');}
 })();
 window.PROTOCOL_FEATURES=Object.freeze({
   keys:Object.freeze({dailyLogs:STORAGE_KEY,startDate:START_KEY,actionDismissed:ACTION_DISMISS_KEY}),
   ready:()=>protocolReadyPromise,
-  refresh:()=>{loadEntryForDate();renderAll();return getEntries();}
+  refresh:()=>{refreshProtocolViews();return getEntries();}
 });
 const initialRouteParams=window.APP_ROUTER.fromLocation();
 window.APP_ROUTER.start(applyAppRoute,routeForLegacyModule(localStorage.getItem(ACTIVE_MODULE_KEY)||'protocolo'));

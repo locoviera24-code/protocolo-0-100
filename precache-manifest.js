@@ -111,8 +111,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     },
     {
       "url": "./index.html",
-      "bytes": 297723,
-      "sha256": "ebc3443b15cf675865aba7239434c6ed50232a24e74968bc1e1c331355943f51"
+      "bytes": 297895,
+      "sha256": "357491f0a794f3579d9546ebac93dfa89639509646e710550048cdd49592194c"
     },
     {
       "url": "./nutrition-data.js",

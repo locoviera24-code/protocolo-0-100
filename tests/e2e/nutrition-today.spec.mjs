@@ -128,7 +128,10 @@ test('El menu de alimento permite editar, mover, eliminar y Deshacer',async({pag
   await page.evaluate(date=>{window.NUTRITION_STORE.saveEntries([{id:'food-editable',foodId:'test-food',date,meal:'Almuerzo',name:'Alimento editable',grams:100,calories:120,protein:10,carbs:15,fat:2,nutrients:{fiber:3},nutrientStatus:{fiber:'known'},savedAt:new Date().toISOString()}]);window.renderNutrition();},date);
 
   await page.locator('.nutritionFoodMenu summary').click();
-  await page.getByRole('menuitem',{name:'Editar cantidad'}).click();
+  const editItem=page.getByRole('menuitem',{name:'Editar cantidad'}),openItem=await editItem.elementHandle();
+  await page.evaluate(()=>window.dispatchEvent(new CustomEvent('app-data-primary-ready',{detail:{domain:'protocol'}})));
+  expect(await openItem.evaluate(element=>element.isConnected)).toBe(true);
+  await editItem.click();
   await expect(page.locator('#nutritionEntryGrams')).toBeFocused();
   await page.locator('#nutritionEntryGrams').fill('200');
   await page.locator('#saveNutritionEntryEditBtn').click();
