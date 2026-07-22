@@ -4,7 +4,7 @@ Ultima actualizacion: 2026-07-21
 Rama esperada: `main`
 Version actual: `2.7.0` (fuente unica: `app-version.json`)
 Android: `versionCode 33`, `versionName "2.7.0"`
-Service worker cache: `protocolo-0-100-pwa-2.7.0-b85`
+Service worker cache: `protocolo-0-100-pwa-2.7.0-b86`
 Backup consolidado: `schemaVersion: 3`
 
 Leer primero este archivo y luego `README.md`, `index.html`,
@@ -24,7 +24,7 @@ Estado actual:
 - Gym Party implementado como modulo web/PWA opcional.
 - Nutricion local/FDC opcional.
 - Backups JSON `schemaVersion: 3`.
-- PWA offline con cache derivada `protocolo-0-100-pwa-2.7.0-b85` y
+- PWA offline con cache derivada `protocolo-0-100-pwa-2.7.0-b86` y
   actualizacion consentida desde el aviso visible.
 - APK con widget Android y permiso `INTERNET` para Firebase/Gym Party.
 
@@ -3097,3 +3097,70 @@ El bloque de `GymPartyLocalRepository` primario queda cerrado en build 85. La
 siguiente promocion estructural es `ProtocolRepository`; debe hacerse en otro
 bloque, con rollback propio, sin retirar las claves legacy y sin mezclarla con
 cambios de Firebase o Nutricion.
+
+## 68. ProtocolRepository primario sin retirar compatibilidad
+
+El build 86 promueve exclusivamente `protocolo_0_100_tracker_v1` a lectura
+primaria desde IndexedDB. Con esto quedan activados los cinco grupos previstos:
+`protocol`, `nutrition`, `nutritionCache`, `workout` y `gymParty`. No se borró
+ninguna clave de `localStorage` y el modo global continúa identificado como
+`shadow` durante el período de compatibilidad.
+
+Contratos implementados:
+
+- `APP_DATA.DEFAULT_CONFIG.primaryDomains.protocol` queda activo por defecto y
+  conserva merge compatible para configuraciones anteriores que no tenían ese
+  flag.
+- `APP_SCHEMA_REGISTRY.primaryGroupKeys().protocol` contiene solamente el
+  historial `dailyLogs`. `startDate`, `actionDismissed` y
+  `legacyGymSessions` permanecen fuera del grupo primario por ser configuración
+  local o formato de migración.
+- `PROTOCOL_FEATURES.ready()` espera la hidratación, vuelve a cargar el registro
+  de la fecha seleccionada y elimina `aria-busy` solo cuando Inicio puede leer
+  la copia reconciliada. Si IndexedDB no existe, resuelve en modo compatible y
+  la interfaz continúa funcionando con `localStorage`.
+- Una copia local válida sigue teniendo semántica write-ahead: se reconcilia
+  hacia IndexedDB y la divergencia queda en metadatos. Si falta la copia local,
+  la versión válida de IndexedDB se restaura también a `localStorage`.
+- Cambios recibidos por `BroadcastChannel` o `storage` actualizan las métricas
+  visibles sin reemplazar los campos que el usuario está editando.
+- **Más > Datos y copias** muestra una fila **Registro diario** con estado,
+  divergencias, recuperaciones, reintento, rollback y reactivación. Cambiar el
+  modo no toca Gym, Nutrición, cache nutricional ni Gym Party.
+- Reset selectivo, importación schema 3, Deshacer y backups antiguos conservan
+  sus contratos; `localStorage` sigue siendo una copia compatible exportable.
+
+Archivos funcionales principales:
+
+- `data/indexeddb.js`;
+- `index.html`;
+- `scripts/test-schema-registry.mjs`;
+- `tests/e2e/indexeddb-primary.spec.mjs`;
+- `app-version.json`, `app-version.js`, `precache-manifest.js` y assets
+  equivalentes de `android-native-wrapper/app/src/main/assets/`.
+
+Verificación local real:
+
+- contratos de versión, precache, módulos, diseño, router, layout, Inicio,
+  Ajustes, datos, backups, Nutrición, FDC, Progreso y quality gate: correctos;
+- 15/15 pruebas específicas de Protocolo primario en Android Chromium, iPhone
+  WebKit y escritorio Chromium;
+- la matriz relacionada de backup, capa de datos, Inicio y Progreso aprobó 49
+  casos y mantuvo dos omisiones previstas por plataforma;
+- la matriz completa de almacenamiento aprobó 62 casos antes de dividir una
+  prueba acumulativa que excedía 45 segundos en WebKit; las dos pruebas
+  resultantes aprobaron después de la división;
+- artifact web: 70 recursos con hash, sin rutas ausentes; prueba servida 1/1,
+  sin errores de página o consola y con service worker instalable;
+- service worker atómico: 64 recursos obligatorios, 4 opcionales y cache
+  `protocolo-0-100-pwa-2.7.0-b86`;
+- `validate-app.ps1 -CheckAndroidAssets`: paridad web/Android correcta;
+- `:app:assembleDebug`: `BUILD SUCCESSFUL` con Gradle 8.10.2/JDK 17; APK debug
+  de 1.746.537 bytes, SHA-256
+  `7B2AAD4A1C008788AFCABE514CAEE7A7D65686F31A0371247B1EEE59E165943D`.
+
+Pendiente antes de declarar cerrado el bloque: commit, push y resultado del
+quality gate remoto. Después no debe promoverse otro dominio de inmediato: los
+grupos previstos ya son primarios. El siguiente trabajo estructural debe ser
+un período de compatibilidad con auditoría de divergencias y pruebas instaladas
+en Safari/iOS y Android real antes de considerar retirar alguna clave legacy.

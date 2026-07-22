@@ -15,7 +15,7 @@ PWA y APK Android para medir habitos, atencion, actividad fisica y nutricion con
 
 ## Navegacion y diseno
 
-La version actual `v2.7.0` (build web `85`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
+La version actual `v2.7.0` (build web `86`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
 **Gym**, **Nutricion**, **Progreso** y **Mas**. En escritorio usa una barra
 lateral compacta. Gym Party se abre desde **Gym > Grupo**, desde un acceso
 discreto en Inicio o mediante un enlace `gymPartyCode`; ya no ocupa un boton
@@ -187,17 +187,20 @@ valor inicial, validador, migracion, campo de backup, sensibilidad, modo de
 almacenamiento, reset y retencion. IndexedDB, repositorios, exportacion,
 importacion, restablecimientos y diagnosticos derivan sus contratos de ese
 registro. La configuracion FDC permanece local y excluida; la configuracion
-Firebase embebida en Gym Party se elimina al exportar. Nutricion, Workout, Gym
-Party y el grupo independiente de cache nutricional usan IndexedDB como fuente
-primaria, con comparacion de checksums, recuperacion y rollback visibles. La
-cache de busquedas elimina resultados despues de 24 horas y los alimentos
+Firebase embebida en Gym Party se elimina al exportar. Protocolo diario,
+Nutricion, Workout, Gym Party y el grupo independiente de cache nutricional
+usan IndexedDB como fuente primaria, con comparacion de checksums, recuperacion
+y rollback visibles. La cache de busquedas elimina resultados despues de 24
+horas y los alimentos
 externos se limitan a los 750 usados mas recientemente; la poda se aplica a
 IndexedDB y a su copia compatible sin tocar comidas, recetas ni historiales.
 La inicializacion de Gym y Gym Party espera la hidratacion antes de crear
 valores o iniciar sincronizacion. En Gym Party esto protege membresia, sala,
 datos compartidos y cola offline. `localStorage` se conserva como copia
 compatible de escritura anticipada, no se borran claves legacy y Protocolo
-continua en `shadow`.
+conserva `startDate`, acciones descartadas y sesiones Gym legacy fuera de su
+grupo primario. `PROTOCOL_FEATURES.ready()` garantiza que Inicio vuelva a leer
+el registro diario recuperado antes de declararse hidratado.
 
 Las lecturas de repositorio distinguen `missing`, `valid`, `legacy`, `corrupt`
 y `unsupported`. Si una clave conocida contiene JSON roto o una estructura no

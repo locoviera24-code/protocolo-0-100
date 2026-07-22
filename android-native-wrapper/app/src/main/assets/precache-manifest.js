@@ -1,8 +1,8 @@
 globalThis.PRECACHE_MANIFEST=Object.freeze({
   "schemaVersion": 1,
   "version": "2.7.0",
-  "build": 85,
-  "cacheName": "protocolo-0-100-pwa-2.7.0-b85",
+  "build": 86,
+  "cacheName": "protocolo-0-100-pwa-2.7.0-b86",
   "required": [
     {
       "url": "./advanced-features.js",
@@ -12,12 +12,12 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     {
       "url": "./app-version.js",
       "bytes": 358,
-      "sha256": "f01fab84052eeee5aef774c388fa3d2f4fd2cc1c916ef5121c77be649e1e0267"
+      "sha256": "441f94aee1b6ed71cf36e6c902b03ba27cb02d03a4ffd3a60a9c912c62dddfac"
     },
     {
       "url": "./app/build-guard.js",
       "bytes": 1811,
-      "sha256": "6d3266839e66621d681ad8051ea6521e2637f0777ba160afd9ec2d7efb3b99b3"
+      "sha256": "d055e8e0b9bc059a7821212a25921b3cf02e3a3b14409762dc74e1c4d0ef0dd2"
     },
     {
       "url": "./app/dates.js",
@@ -41,8 +41,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     },
     {
       "url": "./data/indexeddb.js",
-      "bytes": 37329,
-      "sha256": "2f1c94e21b8e37f1e8f72eb04777b03c8fd9ab54c901f2d47226c8c365ca1e9c"
+      "bytes": 37343,
+      "sha256": "8f2ebc68eaccea65ea7140a25f3e269fdad50b5ac312da603b97cc8d8da762aa"
     },
     {
       "url": "./data/repositories.js",
@@ -111,8 +111,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     },
     {
       "url": "./index.html",
-      "bytes": 294056,
-      "sha256": "250d10a4d6f0dc527fc6199e745f9874f40a908796259d26d1e79ec9dd073d36"
+      "bytes": 297723,
+      "sha256": "ebc3443b15cf675865aba7239434c6ed50232a24e74968bc1e1c331355943f51"
     },
     {
       "url": "./nutrition-data.js",
@@ -329,7 +329,7 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     {
       "url": "./app-version.json",
       "bytes": 90,
-      "sha256": "ebdb0899e833c8c349bb2f54730c0ca0815d5611fefe24b84cc1ba68fce1d92c"
+      "sha256": "d3697b4bf9317cd92a4af86f3dffdb2ab48c711b3f204a99d8f20cb9fef8455e"
     },
     {
       "url": "./icons/icon-192.png",

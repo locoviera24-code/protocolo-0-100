@@ -35,6 +35,10 @@ assert.equal(registry.get('protocolo_0_100_fdc_search_cache_v1').primaryEligible
 assert.equal(registry.get('protocolo_0_100_cached_fdc_foods_v1').primaryGroup,'nutritionCache');
 assert.equal(registry.get('protocolo_0_100_fdc_search_cache_v1').primaryGroup,'nutritionCache');
 assert.deepEqual([...registry.primaryGroupKeys().nutritionCache],['protocolo_0_100_cached_fdc_foods_v1','protocolo_0_100_fdc_search_cache_v1']);
+assert.deepEqual([...registry.primaryGroupKeys().protocol],['protocolo_0_100_tracker_v1']);
+assert.ok(!registry.primaryGroupKeys().protocol.includes('protocolo_0_100_start_date_v1'));
+assert.ok(!registry.primaryGroupKeys().protocol.includes('protocolo_0_100_action_dismissed_v1'));
+assert.ok(!registry.primaryGroupKeys().protocol.includes('protocolo_0_100_gym_sessions_v1'));
 assert.deepEqual([...registry.primaryGroupKeys().gymParty],[
   'protocolo_0_100_gym_party_settings_v1',
   'protocolo_0_100_gym_party_membership_v1',
@@ -74,6 +78,7 @@ assert.throws(()=>window.APP_DATA.write('protocolo_0_100_unknown_v1',{}),/no reg
 assert.equal(window.APP_REPOSITORIES.workout.keys.equipmentProfiles,'protocolo_0_100_equipment_profiles_v1');
 assert.equal(window.APP_REPOSITORIES.gymParty.keys.syncQueue,'protocolo_0_100_gym_party_sync_queue_v1');
 assert.equal(window.APP_DATA.config().primaryDomains.gymParty,true);
+assert.equal(window.APP_DATA.config().primaryDomains.protocol,true);
 
 const html=fs.readFileSync('index.html','utf8'),sync=fs.readFileSync('scripts/sync-web-assets.ps1','utf8'),precache=fs.readFileSync('precache-manifest.js','utf8');
 assert.ok(html.indexOf('data/schema-registry.js')<html.indexOf('data/indexeddb.js'));

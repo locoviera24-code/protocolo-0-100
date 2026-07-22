@@ -699,7 +699,7 @@
               <div class="auditItem hidden" id="importUndoPanel"><span id="importUndoText">Importación aplicada.</span><button type="button" class="secondary" id="undoImportBtn">Deshacer importación</button></div>
             </div>
             <div class="quickStats dataStats"><div class="quickStat"><span>Última copia</span><strong id="lastBackupAt">Nunca</strong></div><div class="quickStat"><span>Almacenamiento local</span><strong id="localStorageEstimate">0 KB</strong></div><div class="quickStat"><span>Schema</span><strong id="dataSchemaVersion">3</strong></div><div class="quickStat"><span>Claves locales</span><strong id="localStorageKeyCount">0</strong></div></div>
-            <div class="moduleCard"><div class="sectionHeading"><div><h3>Copia interna recuperable</h3><p class="muted small" id="dataLayerDescription">Las claves históricas siguen activas mientras se crea una copia transaccional local para historiales crecientes.</p></div><strong id="indexedDbStatus">Preparando</strong></div><div class="auditItem"><div><strong>Nutrición</strong><span class="muted small" id="nutritionStorageStatus">Comprobando almacenamiento…</span></div><div class="buttons"><button type="button" class="secondary" id="toggleNutritionPrimaryBtn">Cambiar modo</button><button type="button" class="secondary" id="retryNutritionPrimaryBtn">Comprobar de nuevo</button></div></div><div class="auditItem"><div><strong>Caché nutricional</strong><span class="muted small" id="nutritionCacheStorageStatus">Resultados guardados con caducidad; no contiene tu historial de comidas.</span></div><div class="buttons"><button type="button" class="secondary" id="toggleNutritionCachePrimaryBtn">Cambiar modo</button><button type="button" class="secondary" id="retryNutritionCachePrimaryBtn">Comprobar de nuevo</button></div></div><div class="auditItem"><div><strong>Gym</strong><span class="muted small" id="workoutStorageStatus">Comprobando almacenamiento…</span></div><div class="buttons"><button type="button" class="secondary" id="toggleWorkoutPrimaryBtn">Cambiar modo</button><button type="button" class="secondary" id="retryWorkoutPrimaryBtn">Comprobar de nuevo</button></div></div><div class="auditItem"><div><strong>Gym Party</strong><span class="muted small" id="gymPartyStorageStatus">Comprobando sala, cola offline y datos compartidos…</span></div><div class="buttons"><button type="button" class="secondary" id="toggleGymPartyPrimaryBtn">Cambiar modo</button><button type="button" class="secondary" id="retryGymPartyPrimaryBtn">Comprobar de nuevo</button></div></div></div>
+            <div class="moduleCard"><div class="sectionHeading"><div><h3>Copia interna recuperable</h3><p class="muted small" id="dataLayerDescription">Las claves históricas siguen activas mientras se crea una copia transaccional local para historiales crecientes.</p></div><strong id="indexedDbStatus">Preparando</strong></div><div class="auditItem"><div><strong>Registro diario</strong><span class="muted small" id="protocolStorageStatus">Comprobando registros del Protocolo…</span></div><div class="buttons"><button type="button" class="secondary" id="toggleProtocolPrimaryBtn">Cambiar modo</button><button type="button" class="secondary" id="retryProtocolPrimaryBtn">Comprobar de nuevo</button></div></div><div class="auditItem"><div><strong>Nutrición</strong><span class="muted small" id="nutritionStorageStatus">Comprobando almacenamiento…</span></div><div class="buttons"><button type="button" class="secondary" id="toggleNutritionPrimaryBtn">Cambiar modo</button><button type="button" class="secondary" id="retryNutritionPrimaryBtn">Comprobar de nuevo</button></div></div><div class="auditItem"><div><strong>Caché nutricional</strong><span class="muted small" id="nutritionCacheStorageStatus">Resultados guardados con caducidad; no contiene tu historial de comidas.</span></div><div class="buttons"><button type="button" class="secondary" id="toggleNutritionCachePrimaryBtn">Cambiar modo</button><button type="button" class="secondary" id="retryNutritionCachePrimaryBtn">Comprobar de nuevo</button></div></div><div class="auditItem"><div><strong>Gym</strong><span class="muted small" id="workoutStorageStatus">Comprobando almacenamiento…</span></div><div class="buttons"><button type="button" class="secondary" id="toggleWorkoutPrimaryBtn">Cambiar modo</button><button type="button" class="secondary" id="retryWorkoutPrimaryBtn">Comprobar de nuevo</button></div></div><div class="auditItem"><div><strong>Gym Party</strong><span class="muted small" id="gymPartyStorageStatus">Comprobando sala, cola offline y datos compartidos…</span></div><div class="buttons"><button type="button" class="secondary" id="toggleGymPartyPrimaryBtn">Cambiar modo</button><button type="button" class="secondary" id="retryGymPartyPrimaryBtn">Comprobar de nuevo</button></div></div></div>
             <div class="moduleCard hidden" id="dataIntegrityCard"><div class="sectionHeading"><div><h3>Datos que necesitan revisión</h3><p class="muted small">La app apartó una copia que no pudo interpretar. No la reemplazó por datos vacíos.</p></div><strong id="dataIntegrityCount">0</strong></div><div class="auditList" id="dataIntegrityList"></div><div class="buttons"><button type="button" class="secondary" id="exportQuarantineBtn">Exportar copias para revisar</button></div></div>
             <div class="moduleCard"><h3>Restablecimiento selectivo</h3><p class="muted small">Borra solo el área elegida. Las demás permanecen intactas.</p><div class="buttons"><button type="button" class="secondary" data-reset-scope="protocol">Protocolo diario</button><button type="button" class="secondary" data-reset-scope="gym">Gym local</button><button type="button" class="secondary" data-reset-scope="nutrition">Nutrición</button><button type="button" class="secondary" data-reset-scope="ui">Preferencias visuales</button></div></div>
             <details class="moduleCard dangerZone"><summary>Zona de peligro</summary><p>Esta acción borra todos los datos locales de Protocolo 0→100 en este navegador.</p><button type="button" class="danger" id="resetAllDataBtn">Borrar todos los datos locales</button></details>
@@ -1053,6 +1053,16 @@ async function handleQuarantineAction(button){
     await window.APP_DATA.quarantineDelete(id);flash('Copia en cuarentena eliminada.');await renderDataIntegrity();
   }
 }
+async function setProtocolPrimaryMode(enabled){
+  const button=document.getElementById('toggleProtocolPrimaryBtn');if(button)button.disabled=true;
+  try{
+    const result=await window.APP_DATA.setPrimaryDomain('protocol',enabled);await window.APP_DATA.flush();
+    loadEntryForDate();renderAll();
+    flash(enabled?'El registro diario usa la copia IndexedDB verificada. localStorage permanece como respaldo compatible.':'El registro diario volvió al modo compatible. No se borró ningún registro.',{tone:'success'});
+    return result;
+  }catch(error){flash('No se pudo cambiar el almacenamiento del registro diario. Se conservó el modo anterior.',{tone:'error'});return null;}
+  finally{if(button)button.disabled=false;renderSettingsData();}
+}
 async function setNutritionPrimaryMode(enabled){
   const button=document.getElementById('toggleNutritionPrimaryBtn');if(button)button.disabled=true;
   try{
@@ -1103,6 +1113,14 @@ function renderSettingsData(){
       const description=document.getElementById('dataLayerDescription');
       if(description&&diagnostics.lastError)description.textContent=diagnostics.lastError.type==='quota'?'No queda espacio suficiente para actualizar la copia interna. Los datos históricos permanecen en sus claves actuales.':'La copia interna tuvo un problema recuperable. Los datos históricos permanecen en sus claves actuales.';
       else if(description&&diagnostics.schemaRegistry?.unknownLocalKeys?.length)description.textContent=`Hay ${diagnostics.schemaRegistry.unknownLocalKeys.length} clave(s) de una versión o extensión no reconocida. Se conservaron intactas y no se migraron.`;
+      const protocol=diagnostics.domains?.protocol,protocolStatus=document.getElementById('protocolStorageStatus'),protocolToggle=document.getElementById('toggleProtocolPrimaryBtn'),protocolRetry=document.getElementById('retryProtocolPrimaryBtn');
+      if(protocolStatus){
+        if(protocol?.storageMode==='primary'&&protocol.primaryStatus==='ready')protocolStatus.textContent=`IndexedDB verificada · ${protocol.divergenceCount||0} diferencia(s) reconciliada(s) · ${protocol.recoveredCount||0} recuperación(es).`;
+        else if(protocol?.storageMode==='primary')protocolStatus.textContent='Preparando registros recuperables; localStorage sigue activo como respaldo.';
+        else protocolStatus.textContent='Modo compatible con lectura localStorage y copia IndexedDB en shadow.';
+      }
+      if(protocolToggle){const primary=protocol?.storageMode==='primary';protocolToggle.textContent=primary?'Usar modo compatible':'Reactivar IndexedDB';protocolToggle.dataset.enablePrimary=primary?'false':'true';}
+      if(protocolRetry)protocolRetry.classList.toggle('hidden',protocol?.storageMode!=='primary');
       const nutrition=diagnostics.domains?.nutrition,status=document.getElementById('nutritionStorageStatus'),toggle=document.getElementById('toggleNutritionPrimaryBtn'),retry=document.getElementById('retryNutritionPrimaryBtn');
       if(status){
         if(nutrition?.storageMode==='primary'&&nutrition.primaryStatus==='ready')status.textContent=`IndexedDB verificada · ${nutrition.divergenceCount||0} diferencia(s) reconciliada(s) · ${nutrition.recoveredCount||0} recuperación(es).`;
@@ -2938,7 +2956,10 @@ document.getElementById('dataIntegrityList')?.addEventListener('click',event=>{c
 document.getElementById('exportQuarantineBtn')?.addEventListener('click',async()=>downloadQuarantinePayload(await window.APP_DATA.quarantineExport()));
 window.addEventListener('app-data-quarantined',()=>{renderDataIntegrity();flash('Se apartó una copia local que necesita revisión.',{tone:'warning'});});
 window.addEventListener('app-data-quarantine-change',renderDataIntegrity);
-window.addEventListener('app-data-primary-ready',event=>{renderSettingsData();if(event.detail?.domain==='nutritionCache'){populateFoods();renderAdvancedNutrition();}});
+window.addEventListener('app-data-primary-ready',event=>{renderSettingsData();if(event.detail?.domain==='nutritionCache'){populateFoods();renderAdvancedNutrition();}if(event.detail?.domain==='protocol'){loadEntryForDate();renderAll();}});
+window.addEventListener('app-data-change',event=>{if(event.detail?.domain==='protocol'&&event.detail?.source!=='local')renderAll();});
+document.getElementById('toggleProtocolPrimaryBtn')?.addEventListener('click',event=>setProtocolPrimaryMode(event.currentTarget.dataset.enablePrimary==='true'));
+document.getElementById('retryProtocolPrimaryBtn')?.addEventListener('click',async()=>{try{await window.APP_DATA.hydratePrimaryDomain('protocol');loadEntryForDate();renderAll();flash('Almacenamiento del registro diario comprobado.');}catch(error){flash('No se pudo comprobar IndexedDB. Los registros compatibles permanecen disponibles.',{tone:'warning'});}renderSettingsData();});
 document.getElementById('toggleNutritionPrimaryBtn')?.addEventListener('click',event=>setNutritionPrimaryMode(event.currentTarget.dataset.enablePrimary==='true'));
 document.getElementById('retryNutritionPrimaryBtn')?.addEventListener('click',async()=>{try{await window.APP_DATA.hydratePrimaryDomain('nutrition');flash('Almacenamiento de Nutrición comprobado.');}catch(error){flash('No se pudo comprobar IndexedDB. Los datos locales permanecen disponibles.',{tone:'warning'});}renderSettingsData();});
 document.getElementById('toggleNutritionCachePrimaryBtn')?.addEventListener('click',event=>setNutritionCachePrimaryMode(event.currentTarget.dataset.enablePrimary==='true'));
@@ -3108,6 +3129,20 @@ applyAccessibilityEnhancements(document);
 if('MutationObserver'in window)new MutationObserver(queueAccessibilityEnhancements).observe(document.body,{childList:true,subtree:true});
 loadEntryForDate();
 renderAll();
+const protocolReadyPromise=(async()=>{
+  const root=document.getElementById('mainContent');
+  if(window.APP_DATA?.isPrimaryDomain?.('protocol'))root?.setAttribute('aria-busy','true');
+  try{
+    await window.APP_DATA?.ready?.();
+    loadEntryForDate();renderAll();
+    return{entries:getEntries(),source:window.APP_DATA?.readResult?.(STORAGE_KEY)?.source||'localStorage'};
+  }finally{root?.removeAttribute('aria-busy');}
+})();
+window.PROTOCOL_FEATURES=Object.freeze({
+  keys:Object.freeze({dailyLogs:STORAGE_KEY,startDate:START_KEY,actionDismissed:ACTION_DISMISS_KEY}),
+  ready:()=>protocolReadyPromise,
+  refresh:()=>{loadEntryForDate();renderAll();return getEntries();}
+});
 const initialRouteParams=window.APP_ROUTER.fromLocation();
 window.APP_ROUTER.start(applyAppRoute,routeForLegacyModule(localStorage.getItem(ACTIVE_MODULE_KEY)||'protocolo'));
 setTimeout(()=>applyAppRoute(window.APP_ROUTER.current(),{source:'hydrate',focus:false,announce:false}),0);

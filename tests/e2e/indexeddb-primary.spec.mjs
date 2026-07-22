@@ -6,6 +6,7 @@ const FDC_FOODS_KEY='protocolo_0_100_cached_fdc_foods_v1';
 const FDC_SEARCH_KEY='protocolo_0_100_fdc_search_cache_v1';
 const GYM_PARTY_MEMBERSHIP_KEY='protocolo_0_100_gym_party_membership_v1';
 const GYM_PARTY_QUEUE_KEY='protocolo_0_100_gym_party_sync_queue_v1';
+const PROTOCOL_KEY='protocolo_0_100_tracker_v1';
 
 async function clean(page){
   await page.goto('/index.html');
@@ -198,6 +199,68 @@ test('coordina sesiones de Workout entre dos pestañas',async ({page,context})=>
   await page.evaluate(async key=>{window.APP_DATA.write(key,[{id:'cross-tab-workout',date:'2026-07-20',status:'en progreso',exercises:[]}]);await window.APP_DATA.flush();},WORKOUT_KEY);
   await expect.poll(()=>second.evaluate(key=>window.APP_DATA.readResult(key).value?.[0]?.id||'',WORKOUT_KEY)).toBe('cross-tab-workout');
   await second.close();
+});
+
+test('Protocolo recupera el registro diario antes de declarar Inicio listo',async ({page})=>{
+  await clean(page);
+  const saved=await page.evaluate(async key=>{
+    const date=document.getElementById('entryDate').value,entry={date,day:1,score:88,parts:[],note:'registro recuperable',savedAt:new Date().toISOString()};
+    window.APP_DATA.write(key,[entry]);await window.APP_DATA.flush();localStorage.removeItem(key);return entry;
+  },PROTOCOL_KEY);
+  await page.reload();
+  const result=await page.evaluate(async key=>{const ready=await window.PROTOCOL_FEATURES.ready();return{ready,read:window.APP_DATA.readResult(key),local:JSON.parse(localStorage.getItem(key)),status:await window.APP_DATA.primaryDomainStatus('protocol'),config:window.APP_DATA.config(),keys:window.APP_DATA.PRIMARY_KEYS.protocol,busy:document.getElementById('mainContent').getAttribute('aria-busy')};},PROTOCOL_KEY);
+  expect(result.config.primaryDomains.protocol).toBe(true);
+  expect(result.read.source).toBe('indexeddb');
+  expect(result.read.value[0]).toMatchObject({date:saved.date,score:88,note:'registro recuperable'});
+  expect(result.ready.entries[0].note).toBe('registro recuperable');
+  expect(result.local[0].note).toBe('registro recuperable');
+  expect(result.status.recoveredCount).toBeGreaterThanOrEqual(1);
+  expect(result.keys).toEqual([PROTOCOL_KEY]);
+  expect(result.busy).toBeNull();
+  await expect(page.locator('#homeCompactState')).toHaveText('Día guardado');
+});
+
+test('Protocolo reconcilia write-ahead y permite rollback independiente',async ({page})=>{
+  await clean(page);
+  await page.evaluate(async key=>{window.APP_DATA.write(key,[{date:'2026-07-18',score:70,note:'anterior'}]);await window.APP_DATA.flush();localStorage.setItem(key,JSON.stringify([{date:'2026-07-19',score:82,note:'pendiente'}]));},PROTOCOL_KEY);
+  await page.reload();await page.evaluate(()=>window.PROTOCOL_FEATURES.ready());
+  const reconciled=await page.evaluate(async key=>({read:window.APP_DATA.readResult(key),indexed:await window.APP_DATA.readIndexedResult(key),status:await window.APP_DATA.primaryDomainStatus('protocol')}),PROTOCOL_KEY);
+  expect(reconciled.read.value[0].note).toBe('pendiente');
+  expect(reconciled.indexed.value[0].note).toBe('pendiente');
+  expect(reconciled.status.divergenceCount).toBeGreaterThanOrEqual(1);
+  const rolledBack=await page.evaluate(async key=>{await window.APP_DATA.setPrimaryDomain('protocol',false);localStorage.setItem(key,JSON.stringify([{date:'2026-07-20',score:75,note:'compatible'}]));return{read:window.APP_DATA.readResult(key),config:window.APP_DATA.config()};},PROTOCOL_KEY);
+  expect(rolledBack.read.source).toBe('localStorage');
+  expect(rolledBack.read.value[0].note).toBe('compatible');
+  expect(rolledBack.config.primaryDomains.protocol).toBe(false);
+  expect(rolledBack.config.primaryDomains.workout).toBe(true);
+});
+
+test('Protocolo conserva fallback local sin IndexedDB',async ({browser})=>{
+  const context=await browser.newContext();
+  await context.addInitScript(()=>Object.defineProperty(window,'indexedDB',{configurable:true,value:undefined}));
+  const page=await context.newPage();await page.goto('/index.html?module=home&view=register');
+  const result=await page.evaluate(async key=>{await window.PROTOCOL_FEATURES.ready();return{enabled:window.APP_DATA.config().primaryDomains.protocol,source:window.APP_DATA.readResult(key).source};},PROTOCOL_KEY);
+  expect(result.enabled).toBe(true);expect(result.source).toBe('localStorage');await expect(page.getByRole('heading',{name:'Protocolo 0→100',level:1})).toBeVisible();await context.close();
+});
+
+test('coordina registros de Protocolo entre dos pestañas',async ({page,context})=>{
+  await clean(page);const second=await context.newPage();await second.goto('/index.html');await second.evaluate(()=>window.PROTOCOL_FEATURES.ready());
+  await page.evaluate(async key=>{window.APP_DATA.write(key,[{date:'2026-07-20',score:79,note:'otra pestaña'}]);await window.APP_DATA.flush();},PROTOCOL_KEY);
+  await expect.poll(()=>second.evaluate(key=>window.APP_DATA.readResult(key).value?.[0]?.note||'',PROTOCOL_KEY)).toBe('otra pestaña');await second.close();
+});
+
+test('Datos y copias permite rollback y reactivación de Protocolo',async ({page})=>{
+  await clean(page);await page.goto('/index.html?module=more&view=data');
+  await expect(page.locator('#protocolStorageStatus')).toContainText('IndexedDB');
+  await expect(page.locator('#toggleProtocolPrimaryBtn')).toHaveText('Usar modo compatible');
+  await page.locator('#toggleProtocolPrimaryBtn').click();
+  await expect(page.locator('#protocolStorageStatus')).toContainText('Modo compatible');
+  expect(await page.evaluate(()=>window.APP_DATA.config().primaryDomains.protocol)).toBe(false);
+  await page.reload();await page.evaluate(()=>window.PROTOCOL_FEATURES.ready());
+  await expect(page.locator('#toggleProtocolPrimaryBtn')).toHaveText('Reactivar IndexedDB');
+  await page.locator('#toggleProtocolPrimaryBtn').click();
+  await expect(page.locator('#protocolStorageStatus')).toContainText('IndexedDB verificada');
+  expect(await page.evaluate(()=>window.APP_DATA.config().primaryDomains.protocol)).toBe(true);
 });
 
 test('Gym Party recupera membresía y cola offline antes de renderizar o sincronizar',async ({page})=>{
