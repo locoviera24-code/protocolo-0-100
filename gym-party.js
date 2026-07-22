@@ -83,6 +83,8 @@
   const partyDraftNotices = new Set();
   let partyRestTimerInterval = null;
   let partyRestTimerEndsAt = 0;
+  let gymPartyInitializationPromise = null;
+  let gymPartyStorageInitialized = false;
 
   function read(key, fallback){
     if(window.APP_DATA) return window.APP_DATA.read(key, fallback);
@@ -199,7 +201,8 @@
   function membership(){ return read(keys.membership, null); }
   function saveMembership(value){ return write(keys.membership, value); }
   function clearMembership(){
-    if(window.APP_DATA) window.APP_DATA.remove(keys.membership);
+    if(window.APP_REPOSITORIES?.gymParty) window.APP_REPOSITORIES.gymParty.removeByName('membership');
+    else if(window.APP_DATA) window.APP_DATA.remove(keys.membership);
     else localStorage.removeItem(keys.membership);
     renderGymParty();
   }
@@ -254,7 +257,7 @@
     return {...defaultPrivacy, ...(m?.privacy || {})};
   }
   function autoSyncEnabled(){
-    try{return JSON.parse(localStorage.getItem('protocolo_0_100_ui_preferences_v1')||'{}').autoSync!==false;}catch(error){return true;}
+    return window.APP_REPOSITORIES?.settings?.getByName?.('uiPreferences',{})?.autoSync!==false;
   }
   const firestoreFieldAllowlist={
     [collections.sessions]:new Set([
@@ -1944,6 +1947,10 @@
   function renderGymParty(){
     const root = document.getElementById('gymPartyRoot');
     if(!root) return;
+    if(window.APP_DATA?.isPrimaryDomain?.('gymParty')&&!window.APP_DATA.isPrimaryReady?.('gymParty')&&!gymPartyStorageInitialized){
+      initializeGymParty();
+      return;
+    }
     syncFromLocalWorkouts({silent: true, queue: false});
     const data = partyData();
     const html=data?.party ? dashboardHtmlSimple(data) : noRoomHtmlSimple();
@@ -2255,6 +2262,19 @@
       renderGymParty();
     }
   }
+
+  function setGymPartyBusy(busy){
+    const tab=document.getElementById('tab-gym-party');
+    if(!tab)return;
+    const root=document.getElementById('gymPartyRoot');
+    if(busy&&root&&!root.firstElementChild)root.innerHTML='<div class="moduleCard emptyState" role="status">Preparando tu Gym Party…</div>';
+    tab.inert=!!busy;
+    if(busy)tab.setAttribute('aria-busy','true');else tab.removeAttribute('aria-busy');
+    tab.querySelectorAll('button,input,select,textarea').forEach(control=>{
+      if(busy&&!control.disabled){control.dataset.gymPartyBusyDisabled='true';control.disabled=true;}
+      else if(!busy&&control.dataset.gymPartyBusyDisabled==='true'){delete control.dataset.gymPartyBusyDisabled;control.disabled=false;}
+    });
+  }
   async function exportCsv(){
     const data = partyData();
     if(!data?.party) return;
@@ -2374,7 +2394,7 @@
         transaction.update(activeInviteRef,{membersCount:nextCount,membershipRevision:revision,updatedAt:timestamp});
       });
     }
-    saveSharedSessions(sharedSessions().filter(row=>row.partyId!==m.partyId)); saveSharedSets(sharedSets().filter(row=>row.partyId!==m.partyId)); localStorage.removeItem(keys.membership); renderGymParty(); flashMessage(owner?'Sala desactivada. Tus entrenamientos locales permanecen.':'Membresia Firebase desactivada. Tus entrenamientos locales permanecen.');
+    saveSharedSessions(sharedSessions().filter(row=>row.partyId!==m.partyId)); saveSharedSets(sharedSets().filter(row=>row.partyId!==m.partyId)); clearMembership(); flashMessage(owner?'Sala desactivada. Tus entrenamientos locales permanecen.':'Membresia Firebase desactivada. Tus entrenamientos locales permanecen.');
   }
   async function tombstoneOwnSharedCollection(runtime,collectionName,extraFields){
     const m=activeMembership(),{db,firestoreMod}=runtime; let cursor=null;
@@ -2897,6 +2917,11 @@
       if(partyPrivacySuffixes.some(suffix=>id===`partyPrivacy${suffix}`))capturePartyFormDraft('privacy');
     });
     if(typeof window.addEventListener === 'function'){
+      window.addEventListener('app-data-change',event=>{
+        if(event.detail?.domain!=='gymParty'||event.detail?.source==='local')return;
+        const tab=document.getElementById('tab-gym-party');
+        if(tab&&!tab.classList.contains('hidden'))renderGymParty();
+      });
       window.addEventListener('online', () => {
         const m = activeMembership();
         if(autoSyncEnabled() && m?.backendMode === 'firebase' && syncQueue().length){
@@ -2962,6 +2987,7 @@
     collections,
     MAX_GYM_PARTY_MEMBERS,
     FIREBASE_SDK_VERSION,
+    ready:()=>initializeGymParty(),
     buildDemoData,
     calculatePartyStats,
     muscleInsightModel,
@@ -2983,9 +3009,27 @@
   };
   window.renderGymParty = renderGymParty;
 
-  setupEvents();
-  installGymHook();
-  applyInviteFromUrl();
-  resumeFirebaseMembership();
-  if(document.getElementById('gymPartyRoot')) renderGymParty();
+  function initializeGymParty(){
+    if(gymPartyInitializationPromise)return gymPartyInitializationPromise;
+    gymPartyInitializationPromise=(async()=>{
+      if(window.APP_DATA?.isPrimaryDomain?.('gymParty'))await window.APP_DATA.ready();
+      gymPartyStorageInitialized=true;
+      setupEvents();
+      installGymHook();
+      applyInviteFromUrl();
+      if(document.getElementById('gymPartyRoot'))renderGymParty();
+      setGymPartyBusy(false);
+      resumeFirebaseMembership();
+      return true;
+    })().catch(error=>{
+      gymPartyInitializationPromise=null;
+      gymPartyStorageInitialized=true;
+      window.APP_ERROR_BOUNDARY?.record?.(error,{area:'gym-party-initialization'});
+      try{setupEvents();installGymHook();applyInviteFromUrl();if(document.getElementById('gymPartyRoot'))renderGymParty();}catch(fallbackError){window.APP_ERROR_BOUNDARY?.record?.(fallbackError,{area:'gym-party-local-fallback'});}finally{setGymPartyBusy(false);}
+      return false;
+    });
+    return gymPartyInitializationPromise;
+  }
+  setGymPartyBusy(window.APP_DATA?.isPrimaryDomain?.('gymParty')&&!window.APP_DATA.isPrimaryReady?.('gymParty'));
+  initializeGymParty();
 })();

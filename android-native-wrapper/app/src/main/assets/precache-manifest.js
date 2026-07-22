@@ -1,8 +1,8 @@
 globalThis.PRECACHE_MANIFEST=Object.freeze({
   "schemaVersion": 1,
   "version": "2.7.0",
-  "build": 84,
-  "cacheName": "protocolo-0-100-pwa-2.7.0-b84",
+  "build": 85,
+  "cacheName": "protocolo-0-100-pwa-2.7.0-b85",
   "required": [
     {
       "url": "./advanced-features.js",
@@ -12,12 +12,12 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     {
       "url": "./app-version.js",
       "bytes": 358,
-      "sha256": "344ecfe75053278f245b0e223457dd3bc38dfe542e5f06ee33f1d04a59cd733c"
+      "sha256": "f01fab84052eeee5aef774c388fa3d2f4fd2cc1c916ef5121c77be649e1e0267"
     },
     {
       "url": "./app/build-guard.js",
       "bytes": 1811,
-      "sha256": "6af140525f1df828b1d3683504fe3248ed6db48225f44ccead25688c6512fd61"
+      "sha256": "6d3266839e66621d681ad8051ea6521e2637f0777ba160afd9ec2d7efb3b99b3"
     },
     {
       "url": "./app/dates.js",
@@ -41,8 +41,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     },
     {
       "url": "./data/indexeddb.js",
-      "bytes": 37229,
-      "sha256": "0632ded3b74a838f9e004d6a99f05ddd42f8c2c3db59d3e9977378a33ed13459"
+      "bytes": 37243,
+      "sha256": "ce6211aaf70bc0a47ebd9b428678b1cec025a1fe8f8b60816f6c1b92baeefd78"
     },
     {
       "url": "./data/repositories.js",
@@ -86,8 +86,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     },
     {
       "url": "./gym-party.js",
-      "bytes": 191177,
-      "sha256": "0d96005c1a93c5af126e92fde0817dfd48a484e0078318b2b5fb42c48c865cfa"
+      "bytes": 193546,
+      "sha256": "83adae2a81df41a259c48e0143606efb07ea9e0dd65cfa3ce4035eb1ebd8f88d"
     },
     {
       "url": "./gym/anomaly-detector.js",
@@ -111,8 +111,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     },
     {
       "url": "./index.html",
-      "bytes": 291127,
-      "sha256": "9d60207148a55ca716fd250db8273f85a10540576e740fe56d7fb455f150a663"
+      "bytes": 294056,
+      "sha256": "250d10a4d6f0dc527fc6199e745f9874f40a908796259d26d1e79ec9dd073d36"
     },
     {
       "url": "./nutrition-data.js",
@@ -329,7 +329,7 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     {
       "url": "./app-version.json",
       "bytes": 90,
-      "sha256": "d9d31abb7cd5b3307140e05c4cce7b864678ce53f4ffd818d16da1c1b833d6b1"
+      "sha256": "ebdb0899e833c8c349bb2f54730c0ca0815d5611fefe24b84cc1ba68fce1d92c"
     },
     {
       "url": "./icons/icon-192.png",

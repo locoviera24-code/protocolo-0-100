@@ -118,12 +118,14 @@ test('codigo de invitacion se limpia y permite unir otro miembro',async ({page})
   const inviteCode=await page.evaluate(()=>JSON.parse(localStorage.getItem('protocolo_0_100_gym_party_membership_v1')).inviteCode);
   expect(inviteCode).toMatch(/^[A-Z0-9]{4,10}$/);
 
-  await page.evaluate(()=>{
+  await page.evaluate(async()=>{
     const key='protocolo_0_100_gym_party_settings_v1';
-    const settings=JSON.parse(localStorage.getItem(key));
+    const membershipKey='protocolo_0_100_gym_party_membership_v1';
+    const settings=window.APP_DATA.read(key,{});
     settings.localUserId='party_friend_e2e';
-    localStorage.setItem(key,JSON.stringify(settings));
-    localStorage.removeItem('protocolo_0_100_gym_party_membership_v1');
+    window.APP_DATA.write(key,settings);
+    window.APP_DATA.remove(membershipKey);
+    await window.APP_DATA.flush();
   });
   const localPartiesBefore=await page.evaluate(()=>Object.values(JSON.parse(localStorage.getItem('protocolo_0_100_gym_party_settings_v1')).localParties||{}).map(party=>party.inviteCode));
   expect(localPartiesBefore).toContain(inviteCode);

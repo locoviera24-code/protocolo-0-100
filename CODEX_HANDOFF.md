@@ -4,7 +4,7 @@ Ultima actualizacion: 2026-07-21
 Rama esperada: `main`
 Version actual: `2.7.0` (fuente unica: `app-version.json`)
 Android: `versionCode 33`, `versionName "2.7.0"`
-Service worker cache: `protocolo-0-100-pwa-2.7.0-b84`
+Service worker cache: `protocolo-0-100-pwa-2.7.0-b85`
 Backup consolidado: `schemaVersion: 3`
 
 Leer primero este archivo y luego `README.md`, `index.html`,
@@ -24,7 +24,7 @@ Estado actual:
 - Gym Party implementado como modulo web/PWA opcional.
 - Nutricion local/FDC opcional.
 - Backups JSON `schemaVersion: 3`.
-- PWA offline con cache derivada `protocolo-0-100-pwa-2.7.0-b84` y
+- PWA offline con cache derivada `protocolo-0-100-pwa-2.7.0-b85` y
   actualizacion consentida desde el aviso visible.
 - APK con widget Android y permiso `INTERNET` para Firebase/Gym Party.
 
@@ -3017,3 +3017,64 @@ y Android debug/release de prueba. Artifacts:
 La siguiente promocion estructural debe auditar primero
 `GymPartyLocalRepository` y su cola offline; no activar Gym Party y Protocolo a
 la vez ni retirar aun las claves compatibles de `localStorage`.
+
+## 67. Gym Party primario con hidratacion y cola recuperable
+
+El build 85 promueve unicamente el grupo `gymParty` a lectura primaria en
+IndexedDB. Protocolo continua en `shadow`; no se retiro ninguna clave compatible
+de `localStorage` ni se modificaron datos remotos de Firebase.
+
+Contratos implementados:
+
+- `APP_DATA.DEFAULT_CONFIG.primaryDomains` activa `gymParty` junto con
+  Nutricion, Workout y `nutritionCache`. Las ocho claves registradas de sala,
+  membresia, sesiones/series compartidas, cola offline, marcas de sincronizacion
+  y demo se hidratan como un unico grupo recuperable.
+- `GYM_PARTY_FEATURES.ready()` espera `APP_DATA.ready()` antes del primer render,
+  de aplicar un codigo de invitacion o de reanudar sincronizacion Firebase. La
+  vista queda `aria-busy` e `inert` y muestra un estado breve mientras espera.
+- Si IndexedDB no esta disponible, la inicializacion termina en modo compatible
+  y conserva la sala y la cola en `localStorage`; el entrenamiento no se bloquea.
+- Salir del dispositivo elimina la membresia mediante
+  `GymPartyLocalRepository.removeByName('membership')`. La copia primaria tambien
+  se elimina, por lo que una membresia abandonada no reaparece al recargar.
+- La preferencia de sincronizacion automatica se lee mediante
+  `SettingsRepository`; Gym Party ya no mantiene una lectura paralela directa.
+- Cambios recibidos mediante `BroadcastChannel` o el evento `storage` refrescan
+  la vista activa de Gym Party. Los cambios locales no crean bucles de render.
+- **Mas > Datos y copias** incorpora una fila independiente **Gym Party** con
+  estado, divergencias, recuperaciones, rollback, reactivacion y comprobacion.
+  El rollback no modifica Nutricion, cache nutricional ni Workout.
+- El test historico que simulaba otro miembro se adapto al contrato canonico
+  `APP_DATA.write/remove`; escribir o borrar directamente en `localStorage` ya
+  no representa una transaccion valida de un dominio primario.
+
+Archivos funcionales principales:
+
+- `data/indexeddb.js`;
+- `gym-party.js`;
+- `index.html`;
+- `scripts/test-schema-registry.mjs`;
+- `tests/e2e/indexeddb-primary.spec.mjs` y `tests/e2e/gym-flow.spec.mjs`;
+- assets equivalentes de `android-native-wrapper/app/src/main/assets/`.
+
+Verificacion local real:
+
+- `test:data`, Gym Party, sync incremental, version, precache atomico, service
+  worker y artifact web: correctos;
+- artifact web: 70 recursos con hash, rutas profundas y ningun recurso ausente;
+- `indexeddb-primary` + `gym-flow`: 62 pruebas aprobadas en Android Chromium,
+  iPhone WebKit y escritorio Chromium; una omision prevista corresponde al
+  service worker en WebKit;
+- la matriz cubre recuperacion previa al render, rollback independiente,
+  fallback sin IndexedDB, eliminacion persistente de membresia, cola offline,
+  dos pestanas, invitacion y UI de Datos y copias;
+- `validate-app.ps1 -CheckAndroidAssets`: version `2.7.0`, Android `33`, cache
+  `protocolo-0-100-pwa-2.7.0-b85` y paridad web/Android correctas;
+- `:app:assembleDebug`: `BUILD SUCCESSFUL` con Gradle 8.10.2/JDK 17; APK debug
+  de 1.746.537 bytes.
+
+Pendiente al redactar esta seccion: ejecutar el quality gate remoto del commit
+publicable y registrar su corrida. La siguiente promocion estructural es
+`ProtocolRepository`; debe hacerse en otro bloque, con rollback propio, sin
+retirar las claves legacy y sin mezclarla con cambios de Firebase o Nutricion.

@@ -19,7 +19,7 @@
     enabled:true,
     mode:'shadow',
     domains:Object.freeze(Object.fromEntries(Object.keys(DOMAIN_KEYS).map(domain=>[domain,true]))),
-    primaryDomains:Object.freeze({nutrition:true,workout:true,nutritionCache:true})
+    primaryDomains:Object.freeze({nutrition:true,workout:true,nutritionCache:true,gymParty:true})
   });
 
   let databasePromise=null;
