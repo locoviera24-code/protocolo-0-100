@@ -3083,7 +3083,17 @@ esperan ahora `initialize()` y `flush()` antes de borrar. Se agrego una prueba
 que escribe y borra sin espera intermedia; integridad y capa de datos aprobaron
 21/21 casos en Android Chromium, iPhone WebKit y escritorio.
 
-Pendiente al redactar esta seccion: confirmar la segunda corrida remota. La
+Resultado remoto definitivo: `Validar aplicacion` #83, commit `00b19fa`,
+finalizo **Success** en 11m 54s. El gate aprobo 286 E2E y mantuvo 14 omisiones
+conocidas; tambien pasaron Firestore Emulator, artifact servido, service worker
+atomico y Android debug/release de prueba. Artifacts:
+
+- `protocolo-android-debug-beta`, 1.5 MB, SHA-256
+  `25c4c34dcafac098b98607958c732f17279a15ef8b7e3b284bcb5db2d84259c6`;
+- `protocolo-web-beta`, 318 KB, SHA-256
+  `c2d76a23eb54cc8ccc823767ce0871521a674adb47260ee925e61a37b83d9f80`.
+
+El bloque de `GymPartyLocalRepository` primario queda cerrado en build 85. La
 siguiente promocion estructural es `ProtocolRepository`; debe hacerse en otro
 bloque, con rollback propio, sin retirar las claves legacy y sin mezclarla con
 cambios de Firebase o Nutricion.
