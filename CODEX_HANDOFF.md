@@ -3171,6 +3171,22 @@ forma determinista que un evento `app-data-primary-ready` de Protocolo no
 desconecta el menú nutricional abierto. Las 15 pruebas específicas de
 Protocolo continuaron en verde después de la corrección.
 
+La segunda corrida remota del commit `c3e3076`, `Validar aplicacion` #85,
+aprobó 299 E2E y omitió 14, pero marcó dos fallos Android Chromium durante la
+preparación de integridad y recuperación de Gym Party. El trace de Playwright
+confirmó que `page.goto()` había finalizado y que el contexto se reemplazó
+mientras la prueba esperaba `APP_DATA.ready()`; no falló ninguna aserción de
+cuarentena, membresía, cola ni recuperación.
+
+`tests/e2e/helpers/app-ready.mjs` centraliza ahora la espera estable de
+`APP_DATA` y de los dominios opcionales tras navegación o recarga. Solo reintenta
+cuando Chromium informa que el documento fue reemplazado; cualquier error de
+inicialización real se sigue propagando. Las preparaciones de integridad e
+IndexedDB usan este contrato, incluidas las recargas de Gym Party y su segunda
+pestaña. Verificación posterior: 60/60 repeticiones de los dos casos que
+fallaron durante 7,2 minutos, y 72/72 casos de integridad/IndexedDB en Android
+Chromium, iPhone WebKit y escritorio Chromium durante 8,2 minutos.
+
 Pendiente antes de declarar cerrado el bloque: commit, push y resultado del
 quality gate remoto. Después no debe promoverse otro dominio de inmediato: los
 grupos previstos ya son primarios. El siguiente trabajo estructural debe ser

@@ -1,4 +1,5 @@
 import {test,expect} from '@playwright/test';
+import {waitForAppReady} from './helpers/app-ready.mjs';
 
 const NUTRITION_KEY='protocolo_0_100_nutrition_entries_v1';
 const WORKOUT_KEY='protocolo_0_100_workout_sessions_v1';
@@ -10,9 +11,10 @@ const PROTOCOL_KEY='protocolo_0_100_tracker_v1';
 
 async function clean(page){
   await page.goto('/index.html');
+  await waitForAppReady(page);
   await page.evaluate(async()=>{localStorage.clear();await window.APP_DATA.clearAllData();});
   await page.reload();
-  await page.evaluate(()=>window.APP_DATA.ready());
+  await waitForAppReady(page);
 }
 
 test('promueve Nutrición y conserva localStorage como respaldo',async ({page})=>{
@@ -274,7 +276,7 @@ test('Gym Party recupera membresía y cola offline antes de renderizar o sincron
     localStorage.removeItem(queueKey);
   },{membershipKey:GYM_PARTY_MEMBERSHIP_KEY,queueKey:GYM_PARTY_QUEUE_KEY});
   await page.reload();
-  await page.evaluate(async()=>{await window.APP_DATA.ready();await window.GYM_PARTY_FEATURES.ready();});
+  await waitForAppReady(page,{features:['GYM_PARTY_FEATURES']});
   const result=await page.evaluate(async ({membershipKey,queueKey})=>({
     membership:window.APP_DATA.readResult(membershipKey),
     queue:window.APP_DATA.readResult(queueKey),
@@ -344,7 +346,7 @@ test('salir del dispositivo elimina también la membresía primaria',async ({pag
   expect(removed.read.status).toBe('missing');
   expect(removed.indexed.status).toBe('missing');
   await page.reload();
-  await page.evaluate(async()=>{await window.APP_DATA.ready();await window.GYM_PARTY_FEATURES.ready();});
+  await waitForAppReady(page,{features:['GYM_PARTY_FEATURES']});
   await expect(page.locator('#gymPartyCreateAlias')).toBeVisible();
 });
 
@@ -352,7 +354,7 @@ test('coordina la cola offline de Gym Party entre dos pestañas',async ({page,co
   await clean(page);
   const second=await context.newPage();
   await second.goto('/index.html');
-  await second.evaluate(async()=>{await window.APP_DATA.ready();await window.GYM_PARTY_FEATURES.ready();});
+  await waitForAppReady(second,{features:['GYM_PARTY_FEATURES']});
   await page.evaluate(async queueKey=>{
     window.APP_DATA.write(queueKey,[{id:'queue-cross-tab',type:'set',payload:{id:'set-cross-tab'},pendingSync:true}]);
     await window.APP_DATA.flush();
