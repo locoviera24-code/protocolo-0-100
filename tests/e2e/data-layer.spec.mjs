@@ -80,3 +80,21 @@ test('excluye Firebase del espejo y purga copias internas al borrar',async ({pag
   expect(result.localAfter).toBeNull();
   expect(result.indexedAfter).toBeNull();
 });
+
+test('borrar todos espera la inicializacion y no permite que una escritura pendiente reaparezca',async ({page})=>{
+  await page.goto('/index.html');
+  const result=await page.evaluate(async()=>{
+    const key=window.APP_SCHEMA_REGISTRY.getByName('gymParty','syncQueue').key;
+    window.APP_DATA.write(key,[{id:'pending-before-clear',pendingSync:true}]);
+    await window.APP_DATA.clearAllData();
+    await window.APP_DATA.flush();
+    return{
+      local:localStorage.getItem(key),
+      active:window.APP_DATA.readResult(key),
+      indexed:await window.APP_DATA.readIndexedResult(key)
+    };
+  });
+  expect(result.local).toBeNull();
+  expect(result.active.status).toBe('missing');
+  expect(result.indexed.status).toBe('missing');
+});

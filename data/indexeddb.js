@@ -490,6 +490,8 @@
     }
   }
   async function purgeKeys(keys){
+    await initialize();
+    await flush();
     const selected=[...new Set((keys||[]).filter(Boolean))];
     selected.forEach(key=>{if(registry.get(key))return;throw new Error(`Clave persistida no registrada: ${key}`);});
     selected.forEach(key=>localStorage.removeItem(key));
@@ -515,6 +517,8 @@
     return selected.length;
   }
   async function clearAllData(){
+    await initialize();
+    await flush();
     const localKeys=[];
     for(let index=0;index<localStorage.length;index++){
       const key=localStorage.key(index);

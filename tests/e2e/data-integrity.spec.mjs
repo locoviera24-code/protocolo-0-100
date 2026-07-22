@@ -2,8 +2,9 @@ import {test,expect} from '@playwright/test';
 
 async function clean(page){
   await page.goto('/index.html');
-  await page.evaluate(async()=>{localStorage.clear();await window.APP_DATA.clearAllData();});
+  await page.evaluate(async()=>{await window.APP_DATA.ready();localStorage.clear();await window.APP_DATA.clearAllData();});
   await page.goto('/index.html?module=more&view=data');
+  await page.evaluate(()=>window.APP_DATA.ready());
 }
 
 test('aparta, muestra y permite reparar datos corruptos sin perder el raw',async ({page})=>{

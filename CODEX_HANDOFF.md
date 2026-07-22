@@ -3074,7 +3074,16 @@ Verificacion local real:
 - `:app:assembleDebug`: `BUILD SUCCESSFUL` con Gradle 8.10.2/JDK 17; APK debug
   de 1.746.537 bytes.
 
-Pendiente al redactar esta seccion: ejecutar el quality gate remoto del commit
-publicable y registrar su corrida. La siguiente promocion estructural es
-`ProtocolRepository`; debe hacerse en otro bloque, con rollback propio, sin
-retirar las claves legacy y sin mezclarla con cambios de Firebase o Nutricion.
+La primera corrida remota del commit `2f5925a`, `Validar aplicacion` #82,
+aprobo 282 E2E y omitio 14, pero fallo una prueba de cuarentena en escritorio.
+La prueba aislada aprobo 20 repeticiones consecutivas. La auditoria encontro la
+carrera subyacente: `clearAllData()` y `purgeKeys()` podian limpiar mientras la
+inicializacion o una escritura espejo seguian pendientes. Ambas operaciones
+esperan ahora `initialize()` y `flush()` antes de borrar. Se agrego una prueba
+que escribe y borra sin espera intermedia; integridad y capa de datos aprobaron
+21/21 casos en Android Chromium, iPhone WebKit y escritorio.
+
+Pendiente al redactar esta seccion: confirmar la segunda corrida remota. La
+siguiente promocion estructural es `ProtocolRepository`; debe hacerse en otro
+bloque, con rollback propio, sin retirar las claves legacy y sin mezclarla con
+cambios de Firebase o Nutricion.

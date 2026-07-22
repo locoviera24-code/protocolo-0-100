@@ -41,8 +41,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     },
     {
       "url": "./data/indexeddb.js",
-      "bytes": 37243,
-      "sha256": "ce6211aaf70bc0a47ebd9b428678b1cec025a1fe8f8b60816f6c1b92baeefd78"
+      "bytes": 37329,
+      "sha256": "2f1c94e21b8e37f1e8f72eb04777b03c8fd9ab54c901f2d47226c8c365ca1e9c"
     },
     {
       "url": "./data/repositories.js",
