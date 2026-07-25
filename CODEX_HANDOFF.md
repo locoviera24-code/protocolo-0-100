@@ -3187,8 +3187,18 @@ pestaña. Verificación posterior: 60/60 repeticiones de los dos casos que
 fallaron durante 7,2 minutos, y 72/72 casos de integridad/IndexedDB en Android
 Chromium, iPhone WebKit y escritorio Chromium durante 8,2 minutos.
 
-Pendiente antes de declarar cerrado el bloque: commit, push y resultado del
-quality gate remoto. Después no debe promoverse otro dominio de inmediato: los
-grupos previstos ya son primarios. El siguiente trabajo estructural debe ser
-un período de compatibilidad con auditoría de divergencias y pruebas instaladas
-en Safari/iOS y Android real antes de considerar retirar alguna clave legacy.
+Resultado remoto definitivo: `Validar aplicacion` #86, commit `cedfaff`,
+finalizó **Success** en 14m 23s. El gate aprobó 301 E2E y mantuvo 14 omisiones
+conocidas; también pasaron Firestore Emulator, artifact servido, service worker
+atómico y Android debug/release de prueba. Artifacts:
+
+- `protocolo-android-debug-beta`, 1,5 MB, SHA-256
+  `03c8692d4c18b07efe8773dd9232b09fff74bcaef20ec805c172cc12118b6681`;
+- `protocolo-web-beta`, 319 KB, SHA-256
+  `efe723c6347556ad6bb6afd695f9afb6a67db1363e1b7fd4278943ea69f603af`.
+
+El bloque de `ProtocolRepository` primario queda cerrado en build 86. No debe
+promoverse otro dominio de inmediato: los cinco grupos previstos ya son
+primarios. El siguiente trabajo estructural debe ser un período de
+compatibilidad con auditoría de divergencias y pruebas instaladas en Safari/iOS
+y Android real antes de considerar retirar alguna clave legacy.
