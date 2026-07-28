@@ -3146,6 +3146,14 @@ document.addEventListener('keydown', e=>{
   else if(!document.getElementById('actionModalBackdrop')?.classList.contains('hidden'))trapOverlayFocus(e,document.getElementById('actionModalBackdrop'));
 });
 document.addEventListener('click', e=>{
+  const nutritionMenuSummary=e.target.closest('details.nutritionFoodMenu > summary');
+  if(nutritionMenuSummary){
+    e.preventDefault();
+    const menu=nutritionMenuSummary.parentElement,willOpen=!menu.open;
+    document.querySelectorAll('details.nutritionFoodMenu[open]').forEach(openMenu=>{if(openMenu!==menu)openMenu.open=false;});
+    menu.open=willOpen;
+    return;
+  }
   const nutritionView=e.target.closest('#nutritionDayList [data-open-nutrition-view]');
   if(nutritionView&&typeof window.setNutritionView==='function'){window.setNutritionView(nutritionView.dataset.openNutritionView,{focus:true});return;}
   const foodChoice=e.target.closest('[data-food-flow-select]');

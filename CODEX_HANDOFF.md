@@ -3359,3 +3359,33 @@ El bloque queda cerrado y publicado en build 88. El período de compatibilidad
 entre IndexedDB y `localStorage` continúa sin cambios; no retirar claves legacy
 antes de observar divergencias reales y completar pruebas en dispositivos
 físicos.
+
+## 71. Línea base real de cierre del build 88
+
+La continuación partió de `main` limpio en `c6b8614`, con versión `2.7.0`,
+Android `versionCode 33`, build/cache 88 y backup schema 3. La verificación
+pública contradijo la frase "publicado" de la sección anterior: al iniciar este
+bloque `https://locoviera24-code.github.io/protocolo-0-100/` y sus recursos
+principales respondían 404. El artifact beta y el quality gate #88 existen, pero
+eso no equivale a un despliegue estable de GitHub Pages. No afirmar que el build
+88 está publicado hasta ejecutar y verificar el workflow estable.
+
+La regresión local completa inició 339 escenarios y produjo 324 aprobados, 14
+omisiones conocidas y un fallo WebKit en la administración de alimentos propios.
+El fallo era reproducible: una hidratación asíncrona volvía a renderizar
+`customFoodsList` y cerraba el menú contextual antes de que WebKit pudiera activar
+su opción. `advanced-features.js` conserva ahora el menú abierto por ID y
+`index.html` controla explícitamente la apertura de un único menú.
+
+Verificación de la corrección:
+
+- 3/3 escenarios del flujo duplicar, archivar, fusionar, eliminar y Deshacer en
+  Android Chromium, iPhone WebKit y escritorio Chromium;
+- validación estructural correcta: versión 2.7.0, cache build 88, 71 alimentos,
+  28 nutrientes y 476 IDs únicos;
+- no se modificaron datos, schemas, claves legacy ni la fuente primaria de ningún
+  dominio.
+
+Siguiente bloque exacto: generar metadatos verificables del artifact, mostrarlos
+en `Más > Acerca de` y añadir una comprobación de actualización sin caché ni
+recarga automática insegura.
