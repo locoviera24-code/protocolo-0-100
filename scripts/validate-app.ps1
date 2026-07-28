@@ -117,7 +117,7 @@ Assert-True ($duplicates.Count -eq 0) "Hay IDs HTML duplicados: $($duplicates -j
 
 $requiredFiles = @(
     'nutrition/nutrition-store.js', 'nutrition/nutrition-model.js', 'nutrition/recipes.js', 'nutrition/portions.js', 'nutrition/food-search.js', 'nutrition/food-provider.js', 'nutrition/food-search-service.js', 'nutrition/food-entry-flow.js', 'nutrition/meal-history.js', 'nutrition/nutrition-confidence.js', 'nutrition/nutrition-view.js', 'scripts/test-nutrition-modules.mjs', 'scripts/test-food-search-service.mjs', 'scripts/test-fdc-confidence.mjs', 'tests/e2e/nutrition-domain.spec.mjs', 'tests/e2e/nutrition-today.spec.mjs', 'tests/e2e/nutrition-recipes-portions.spec.mjs', 'tests/e2e/nutrition-numbers-targets.spec.mjs', 'tests/e2e/nutrition-unified-search.spec.mjs',
-    'data/schema-registry.js', 'data/backup-service.js', 'scripts/test-schema-registry.mjs', 'scripts/test-data-integrity.mjs', 'scripts/test-backup-service.mjs', 'tests/e2e/backup-import.spec.mjs', 'tests/e2e/data-integrity.spec.mjs', 'tests/e2e/indexeddb-primary.spec.mjs',
+    'data/schema-registry.js', 'data/backup-service.js', 'scripts/test-schema-registry.mjs', 'scripts/test-data-integrity.mjs', 'scripts/test-backup-service.mjs', 'tests/e2e/backup-import.spec.mjs', 'tests/e2e/data-integrity.spec.mjs', 'tests/e2e/data-compatibility.spec.mjs', 'tests/e2e/indexeddb-primary.spec.mjs',
     'ui/confirmation-dialog.js',
     'app-version.json', 'app-version.js', 'app/build-guard.js', 'precache-manifest.js', 'offline.html', 'scripts/precache-manifest.mjs', 'scripts/generate-precache-manifest.mjs', 'scripts/test-build-guard.mjs', 'scripts/test-quality-gate.mjs', '.github/workflows/quality-gate.yml', 'app/numbers.js', 'scripts/test-numbers.mjs', 'data/indexeddb.js', 'data/repositories.js', 'nutrition-data.js', 'fdc-client.js', 'workout-store.js', 'workout-plan.js', 'gym/equipment.js', 'gym/set-model.js', 'gym/anomaly-detector.js', 'gym/progression-engine.js', 'workout-metrics.js', 'workout-ranking.js', 'workout-ui.js', 'workout-features.js', 'advanced-features.js', 'ui/router.js', 'ui/navigation.js', 'ui/notifications.js', 'ui/form-dialog.js', 'ui/error-boundary.js', 'ui/recovery-view.js', 'progress/muscle-taxonomy.js', 'progress/progress-data-model.js', 'progress/gym-progress-model.js', 'progress/muscle-progress.js', 'progress/exercise-progress.js', 'progress/personal-records.js', 'progress/progress-view.js',
     'firebase-config.js', 'firebase-service.js', 'gym-party-sync.js', 'gym-party-metrics.js', 'gym-party-ui.js', 'gym-party.js',
@@ -174,6 +174,12 @@ foreach ($contract in @('isAvailable','search(query','getFood','normalize(rawFoo
 foreach ($contract in @('needsExternal','dedupe','createController','AbortController','externalState')) { Assert-True ($nutritionSearchService.Contains($contract)) "Falta contrato de busqueda nutricional: $contract" }
 Assert-True ($html.IndexOf('<script src="data/schema-registry.js"></script>') -lt $html.IndexOf('<script src="data/indexeddb.js"></script>')) 'El registro de schemas debe cargar antes de IndexedDB'
 Assert-True ($html.IndexOf('<script src="data/indexeddb.js"></script>') -lt $html.IndexOf('<script src="fdc-client.js"></script>')) 'La capa IndexedDB debe cargar antes de FDC y los modulos de datos'
+foreach ($contract in @('compatibilityAudit','verifyCompatibility','clearCompatibilityAudit','compatibilityAuditExport','MAX_COMPATIBILITY_AUDIT_EVENTS')) {
+    Assert-True ($indexedData.Contains($contract)) "Falta contrato de auditoria de compatibilidad: $contract"
+}
+foreach ($contract in @('compatibilityAuditCard','compatibilityAuditSummary','verifyCompatibilityBtn','exportCompatibilityAuditBtn','clearCompatibilityAuditBtn')) {
+    Assert-True ($html.Contains($contract)) "Falta UI de auditoria de compatibilidad: $contract"
+}
 foreach ($contract in @('equipmentProfiles','backupField','sensitive','mirrorEnabled','legacyKeys','fdcSearchCache')) {
     Assert-True ($schemaRegistry.Contains($contract)) "Falta contrato del registro de schemas: $contract"
 }

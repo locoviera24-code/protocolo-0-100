@@ -15,7 +15,7 @@ PWA y APK Android para medir habitos, atencion, actividad fisica y nutricion con
 
 ## Navegacion y diseno
 
-La version actual `v2.7.0` (build web `86`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
+La version actual `v2.7.0` (build web `87`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
 **Gym**, **Nutricion**, **Progreso** y **Mas**. En escritorio usa una barra
 lateral compacta. Gym Party se abre desde **Gym > Grupo**, desde un acceso
 discreto en Inicio o mediante un enlace `gymPartyCode`; ya no ocupa un boton
@@ -201,6 +201,16 @@ compatible de escritura anticipada, no se borran claves legacy y Protocolo
 conserva `startDate`, acciones descartadas y sesiones Gym legacy fuera de su
 grupo primario. `PROTOCOL_FEATURES.ready()` garantiza que Inicio vuelva a leer
 el registro diario recuperado antes de declararse hidratado.
+
+Durante el período de compatibilidad, **Más > Datos y copias > Historial
+técnico de compatibilidad** conserva hasta 100 eventos de reconciliación o
+recuperación. Solo registra dominio, clave técnica, resolución y fecha: no
+incluye valores, notas, credenciales, configuración Firebase ni contenido de
+salud. Desde ese panel se pueden comprobar conjuntamente las cinco áreas,
+exportar un diagnóstico técnico o borrar únicamente ese historial. Borrarlo no
+modifica `localStorage`, IndexedDB ni los registros del usuario. Las
+actualizaciones concurrentes desde dos pestañas se serializan mediante
+transacciones IndexedDB.
 
 Las lecturas de repositorio distinguen `missing`, `valid`, `legacy`, `corrupt`
 y `unsupported`. Si una clave conocida contiene JSON roto o una estructura no

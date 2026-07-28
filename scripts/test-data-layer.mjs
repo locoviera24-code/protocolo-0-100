@@ -10,8 +10,12 @@ const precache=fs.readFileSync('precache-manifest.js','utf8');
 const sync=fs.readFileSync('scripts/sync-web-assets.ps1','utf8');
 const qualityGate=fs.readFileSync('.github/workflows/quality-gate.yml','utf8');
 
-for(const contract of ['protocolo_0_100_data',"mode:'shadow'",'PRIMARY_KEYS','primaryGroupForKey','hydratePrimaryDomain','setPrimaryDomain','primaryRawCache','applyRetention','retentionPrunedCount','divergenceCount','createRecoverySnapshot','restoreRecovery','replaceMany','purgeKeys','clearAllData','sanitizeRawForMirror','QuotaExceededError','BroadcastChannel','app-data-change','app-data-error']){
+for(const contract of ['protocolo_0_100_data',"mode:'shadow'",'PRIMARY_KEYS','primaryGroupForKey','hydratePrimaryDomain','setPrimaryDomain','primaryRawCache','applyRetention','retentionPrunedCount','divergenceCount','createRecoverySnapshot','restoreRecovery','replaceMany','purgeKeys','clearAllData','sanitizeRawForMirror','QuotaExceededError','BroadcastChannel','app-data-change','app-data-error','compatibilityAudit','verifyCompatibility','clearCompatibilityAudit','compatibilityAuditExport','MAX_COMPATIBILITY_AUDIT_EVENTS']){
   assert.ok(indexed.includes(contract),`Falta contrato de datos: ${contract}`);
+}
+for(const forbidden of ['localChecksum:','indexedChecksum:','raw:','value:']){
+  const auditExport=indexed.slice(indexed.indexOf('async function compatibilityAuditExport'),indexed.indexOf('async function hydratePrimaryDomain'));
+  assert.ok(!auditExport.includes(forbidden),`El diagnostico de compatibilidad expone contenido tecnico sensible: ${forbidden}`);
 }
 for(const repository of ['ProtocolRepository','WorkoutRepository','NutritionRepository','GymPartyLocalRepository','SettingsRepository','BackupRepository']){
   assert.ok(repositories.includes(`class ${repository}`),`Falta ${repository}`);

@@ -700,6 +700,7 @@
             </div>
             <div class="quickStats dataStats"><div class="quickStat"><span>Última copia</span><strong id="lastBackupAt">Nunca</strong></div><div class="quickStat"><span>Almacenamiento local</span><strong id="localStorageEstimate">0 KB</strong></div><div class="quickStat"><span>Schema</span><strong id="dataSchemaVersion">3</strong></div><div class="quickStat"><span>Claves locales</span><strong id="localStorageKeyCount">0</strong></div></div>
             <div class="moduleCard"><div class="sectionHeading"><div><h3>Copia interna recuperable</h3><p class="muted small" id="dataLayerDescription">Las claves históricas siguen activas mientras se crea una copia transaccional local para historiales crecientes.</p></div><strong id="indexedDbStatus">Preparando</strong></div><div class="auditItem"><div><strong>Registro diario</strong><span class="muted small" id="protocolStorageStatus">Comprobando registros del Protocolo…</span></div><div class="buttons"><button type="button" class="secondary" id="toggleProtocolPrimaryBtn">Cambiar modo</button><button type="button" class="secondary" id="retryProtocolPrimaryBtn">Comprobar de nuevo</button></div></div><div class="auditItem"><div><strong>Nutrición</strong><span class="muted small" id="nutritionStorageStatus">Comprobando almacenamiento…</span></div><div class="buttons"><button type="button" class="secondary" id="toggleNutritionPrimaryBtn">Cambiar modo</button><button type="button" class="secondary" id="retryNutritionPrimaryBtn">Comprobar de nuevo</button></div></div><div class="auditItem"><div><strong>Caché nutricional</strong><span class="muted small" id="nutritionCacheStorageStatus">Resultados guardados con caducidad; no contiene tu historial de comidas.</span></div><div class="buttons"><button type="button" class="secondary" id="toggleNutritionCachePrimaryBtn">Cambiar modo</button><button type="button" class="secondary" id="retryNutritionCachePrimaryBtn">Comprobar de nuevo</button></div></div><div class="auditItem"><div><strong>Gym</strong><span class="muted small" id="workoutStorageStatus">Comprobando almacenamiento…</span></div><div class="buttons"><button type="button" class="secondary" id="toggleWorkoutPrimaryBtn">Cambiar modo</button><button type="button" class="secondary" id="retryWorkoutPrimaryBtn">Comprobar de nuevo</button></div></div><div class="auditItem"><div><strong>Gym Party</strong><span class="muted small" id="gymPartyStorageStatus">Comprobando sala, cola offline y datos compartidos…</span></div><div class="buttons"><button type="button" class="secondary" id="toggleGymPartyPrimaryBtn">Cambiar modo</button><button type="button" class="secondary" id="retryGymPartyPrimaryBtn">Comprobar de nuevo</button></div></div></div>
+            <details class="moduleCard" id="compatibilityAuditCard"><summary><span><strong>Historial técnico de compatibilidad</strong><small class="muted small" id="compatibilityAuditSummary">Preparando comprobación…</small></span></summary><p class="muted small">Registra únicamente cuándo la app reconcilió sus dos copias locales. No guarda valores, notas, credenciales ni contenido de salud.</p><div class="quickStats"><div class="quickStat"><span>Comprobaciones</span><strong id="compatibilityAuditChecks">0</strong></div><div class="quickStat"><span>Diferencias resueltas</span><strong id="compatibilityAuditDivergences">0</strong></div><div class="quickStat"><span>Recuperaciones</span><strong id="compatibilityAuditRecoveries">0</strong></div><div class="quickStat"><span>Última revisión</span><strong id="compatibilityAuditLastCheck">Nunca</strong></div></div><div class="auditList" id="compatibilityAuditList"></div><div class="buttons"><button type="button" class="secondary" id="verifyCompatibilityBtn">Comprobar las cinco áreas</button><button type="button" class="secondary" id="exportCompatibilityAuditBtn">Exportar diagnóstico técnico</button><button type="button" class="textButton" id="clearCompatibilityAuditBtn">Borrar este historial</button></div></details>
             <div class="moduleCard hidden" id="dataIntegrityCard"><div class="sectionHeading"><div><h3>Datos que necesitan revisión</h3><p class="muted small">La app apartó una copia que no pudo interpretar. No la reemplazó por datos vacíos.</p></div><strong id="dataIntegrityCount">0</strong></div><div class="auditList" id="dataIntegrityList"></div><div class="buttons"><button type="button" class="secondary" id="exportQuarantineBtn">Exportar copias para revisar</button></div></div>
             <div class="moduleCard"><h3>Restablecimiento selectivo</h3><p class="muted small">Borra solo el área elegida. Las demás permanecen intactas.</p><div class="buttons"><button type="button" class="secondary" data-reset-scope="protocol">Protocolo diario</button><button type="button" class="secondary" data-reset-scope="gym">Gym local</button><button type="button" class="secondary" data-reset-scope="nutrition">Nutrición</button><button type="button" class="secondary" data-reset-scope="ui">Preferencias visuales</button></div></div>
             <details class="moduleCard dangerZone"><summary>Zona de peligro</summary><p>Esta acción borra todos los datos locales de Protocolo 0→100 en este navegador.</p><button type="button" class="danger" id="resetAllDataBtn">Borrar todos los datos locales</button></details>
@@ -1035,6 +1036,37 @@ async function renderDataIntegrity(){
     list.innerHTML=items.map(item=>`<div class="auditItem"><div><strong>${escapeHtml(item.domain)} · ${escapeHtml(item.name)}</strong><span class="muted small">${escapeHtml(dataIntegrityMessage(item))} Copia: ${escapeHtml(new Intl.DateTimeFormat('es-PY',{dateStyle:'short',timeStyle:'short'}).format(new Date(item.lastSeenAt)))}</span></div><div class="buttons"><button type="button" class="secondary" data-quarantine-action="repair" data-quarantine-id="${escapeHtml(item.id)}" ${item.redacted?'disabled':''}>Reparar y restaurar</button><button type="button" class="secondary" data-quarantine-action="export" data-quarantine-id="${escapeHtml(item.id)}">Exportar</button><button type="button" class="danger" data-quarantine-action="delete" data-quarantine-id="${escapeHtml(item.id)}">Eliminar copia</button></div></div>`).join('');
   }catch(error){card.classList.add('hidden');}
 }
+function compatibilityAuditDate(value){
+  if(!value)return 'Nunca';
+  try{return new Intl.DateTimeFormat('es-PY',{dateStyle:'short',timeStyle:'short'}).format(new Date(value));}catch(error){return 'Fecha no disponible';}
+}
+function renderCompatibilityAudit(audit,diagnostics={}){
+  const summary=document.getElementById('compatibilityAuditSummary'),list=document.getElementById('compatibilityAuditList');if(!summary||!list)return;
+  const available=audit?.available!==false&&diagnostics.indexedDB!==false,checks=Number(audit?.totalChecks)||0,divergences=Number(audit?.totalDivergences)||0,recoveries=Number(audit?.totalRecoveries)||0;
+  document.getElementById('compatibilityAuditChecks').textContent=String(checks);
+  document.getElementById('compatibilityAuditDivergences').textContent=String(divergences);
+  document.getElementById('compatibilityAuditRecoveries').textContent=String(recoveries);
+  document.getElementById('compatibilityAuditLastCheck').textContent=compatibilityAuditDate(audit?.lastCheckedAt);
+  if(!available){summary.textContent='IndexedDB no está disponible; la copia compatible sigue activa.';list.innerHTML='<div class="emptyState">No hay un historial técnico en este navegador.</div>';return;}
+  const incidents=divergences+recoveries;
+  summary.textContent=!checks?'Todavía no se ejecutó una comprobación.':incidents?`${checks} comprobación(es) · ${incidents} ajuste(s) automático(s), sin pérdida de datos.`:`${checks} comprobación(es) · las copias coinciden.`;
+  const labels={protocol:'Registro diario',nutrition:'Nutrición',nutritionCache:'Caché nutricional',workout:'Gym',gymParty:'Gym Party'};
+  const events=(audit?.events||[]).slice(0,10);
+  list.innerHTML=events.length?events.map(item=>`<div class="auditItem good"><div><strong>${escapeHtml(labels[item.domain]||item.domain)} · ${item.type==='recovery'?'Copia recuperada':'Diferencia reconciliada'}</strong><span class="muted small">${item.type==='recovery'?'Se restauró la copia compatible desde IndexedDB.':'Se conservó la escritura compatible más reciente y se actualizó IndexedDB.'} ${escapeHtml(compatibilityAuditDate(item.occurredAt))}</span></div></div>`).join(''):'<div class="emptyState">No hubo diferencias ni recuperaciones. Las dos copias locales coinciden.</div>';
+}
+async function verifyStorageCompatibility(){
+  const button=document.getElementById('verifyCompatibilityBtn');if(button)button.disabled=true;
+  try{const result=await window.APP_DATA.verifyCompatibility();renderCompatibilityAudit(result.audit,await window.APP_DATA.diagnostics());flash('Las cinco áreas locales fueron comprobadas.',{tone:'success'});}
+  catch(error){flash('No se pudo completar la comprobación. Las copias compatibles permanecen intactas.',{tone:'error'});}
+  finally{if(button)button.disabled=false;renderSettingsData();}
+}
+async function exportCompatibilityAudit(){
+  const payload=await window.APP_DATA.compatibilityAuditExport();downloadBlob(JSON.stringify(payload,null,2),'protocolo-diagnostico-compatibilidad.json','application/json');flash('Diagnóstico técnico exportado. No contiene tus registros.',{tone:'success'});
+}
+async function clearCompatibilityAuditHistory(){
+  const accepted=await window.APP_CONFIRMATION.ask({title:'Borrar historial técnico',message:'Se borrarán solo las fechas y eventos técnicos de compatibilidad. Tus registros y sus dos copias locales permanecerán intactos.',confirmLabel:'Borrar historial'});if(!accepted)return;
+  await window.APP_DATA.clearCompatibilityAudit();renderCompatibilityAudit(await window.APP_DATA.compatibilityAudit(),await window.APP_DATA.diagnostics());flash('Historial técnico borrado. Tus datos no cambiaron.',{tone:'success'});
+}
 function downloadQuarantinePayload(payload,name='protocolo-cuarentena.json'){downloadBlob(JSON.stringify(payload,null,2),name,'application/json');}
 async function repairQuarantineEntry(id){
   const item=await window.APP_DATA?.quarantineGet?.(id,{includeRaw:true});if(!item)return;
@@ -1153,6 +1185,7 @@ function renderSettingsData(){
       }
       if(gymPartyToggle){const primary=gymParty?.storageMode==='primary';gymPartyToggle.textContent=primary?'Usar modo compatible':'Reactivar IndexedDB';gymPartyToggle.dataset.enablePrimary=primary?'false':'true';}
       if(gymPartyRetry)gymPartyRetry.classList.toggle('hidden',gymParty?.storageMode!=='primary');
+      renderCompatibilityAudit(diagnostics.compatibility,diagnostics);
     }).catch(()=>{indexedStatus.textContent='No disponible';});
   }
   const latestImport=window.BACKUP_SERVICE?.history?.()?.[0],undoPanel=document.getElementById('importUndoPanel');
@@ -2956,8 +2989,12 @@ document.getElementById('undoImportBtn')?.addEventListener('click',undoLastImpor
 document.getElementById('importPreviewBackdrop')?.addEventListener('click',event=>{if(event.target===event.currentTarget)closeImportPreview();});
 document.getElementById('dataIntegrityList')?.addEventListener('click',event=>{const button=event.target.closest('[data-quarantine-action]');if(button)handleQuarantineAction(button).catch(error=>flash(error.message||'No se pudo revisar la copia.',{tone:'error'}));});
 document.getElementById('exportQuarantineBtn')?.addEventListener('click',async()=>downloadQuarantinePayload(await window.APP_DATA.quarantineExport()));
+document.getElementById('verifyCompatibilityBtn')?.addEventListener('click',verifyStorageCompatibility);
+document.getElementById('exportCompatibilityAuditBtn')?.addEventListener('click',()=>exportCompatibilityAudit().catch(()=>flash('No se pudo exportar el diagnóstico técnico.',{tone:'error'})));
+document.getElementById('clearCompatibilityAuditBtn')?.addEventListener('click',()=>clearCompatibilityAuditHistory().catch(()=>flash('No se pudo borrar el historial técnico.',{tone:'error'})));
 window.addEventListener('app-data-quarantined',()=>{renderDataIntegrity();flash('Se apartó una copia local que necesita revisión.',{tone:'warning'});});
 window.addEventListener('app-data-quarantine-change',renderDataIntegrity);
+window.addEventListener('app-data-compatibility-audit',()=>{const route=window.APP_ROUTER?.current?.();if(route?.module==='more'&&route?.view==='data')renderSettingsData();});
 window.addEventListener('app-data-primary-ready',event=>{renderSettingsData();if(event.detail?.domain==='nutritionCache'){populateFoods();renderAdvancedNutrition();}if(event.detail?.domain==='protocol')refreshProtocolViews();});
 window.addEventListener('app-data-change',event=>{if(event.detail?.domain==='protocol'&&event.detail?.source!=='local')refreshProtocolViews({reloadForm:false});});
 document.getElementById('toggleProtocolPrimaryBtn')?.addEventListener('click',event=>setProtocolPrimaryMode(event.currentTarget.dataset.enablePrimary==='true'));

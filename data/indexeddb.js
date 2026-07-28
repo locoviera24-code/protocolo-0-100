@@ -12,6 +12,8 @@
   const CONFIG_KEY=registry.getByName('diagnostics','dataLayerConfig').key;
   const CHANNEL_NAME='protocolo_0_100_data_changes_v1';
   const MAX_RECOVERY_SNAPSHOTS=5;
+  const COMPATIBILITY_AUDIT_META_ID='compatibility:audit';
+  const MAX_COMPATIBILITY_AUDIT_EVENTS=100;
   const DOMAIN_KEYS=registry.domainKeys({mirrorOnly:true});
   const PRIMARY_KEYS=registry.primaryGroupKeys();
   const DEFAULT_CONFIG=Object.freeze({
@@ -26,6 +28,7 @@
   let initializationPromise=null;
   let mirrorQueue=Promise.resolve();
   let quarantineQueue=Promise.resolve();
+  let compatibilityAuditQueue=Promise.resolve();
   let channel=null;
   let lastError=null;
   const primaryRawCache=new Map();
@@ -290,6 +293,88 @@
   async function putMeta(value){
     const database=await openDatabase(),transaction=database.transaction(META_STORE,'readwrite');transaction.objectStore(META_STORE).put(value);await transactionDone(transaction);return value;
   }
+  async function deleteMeta(id){
+    const database=await openDatabase(),transaction=database.transaction(META_STORE,'readwrite');transaction.objectStore(META_STORE).delete(id);await transactionDone(transaction);
+  }
+  function emptyCompatibilityAudit(){
+    return{id:COMPATIBILITY_AUDIT_META_ID,schemaVersion:1,totalChecks:0,totalDivergences:0,totalRecoveries:0,lastCheckedAt:null,lastIncidentAt:null,domains:{},events:[]};
+  }
+  function compatibilityAuditEvent(domain,type,item,occurredAt,index){
+    return{
+      id:`compat_${occurredAt}_${domain}_${type}_${index}`,
+      domain,
+      key:item.key,
+      name:item.name||recordForKey(item.key).name,
+      type,
+      resolution:type==='divergence'?(item.resolution||'local-write-ahead'):'indexeddb-recovery',
+      occurredAt
+    };
+  }
+  function recordCompatibilityAudit(result){
+    const task=async()=>{
+      const occurredAt=result.hydratedAt||new Date().toISOString();
+      const database=await openDatabase(),transaction=database.transaction(META_STORE,'readwrite'),store=transaction.objectStore(META_STORE);
+      const previous=await requestResult(store.get(COMPATIBILITY_AUDIT_META_ID))||emptyCompatibilityAudit();
+      const incidents=[
+        ...(result.divergences||[]).map((item,index)=>compatibilityAuditEvent(result.domain,'divergence',item,occurredAt,index)),
+        ...(result.recovered||[]).map((item,index)=>compatibilityAuditEvent(result.domain,'recovery',item,occurredAt,index))
+      ];
+      const previousDomain=previous.domains?.[result.domain]||{checks:0,divergences:0,recoveries:0};
+      const audit={
+        ...emptyCompatibilityAudit(),
+        ...previous,
+        totalChecks:(previous.totalChecks||0)+1,
+        totalDivergences:(previous.totalDivergences||0)+(result.divergenceCount||0),
+        totalRecoveries:(previous.totalRecoveries||0)+(result.recoveredCount||0),
+        lastCheckedAt:occurredAt,
+        lastIncidentAt:incidents.length?occurredAt:(previous.lastIncidentAt||null),
+        domains:{...(previous.domains||{}),[result.domain]:{
+          checks:(previousDomain.checks||0)+1,
+          divergences:(previousDomain.divergences||0)+(result.divergenceCount||0),
+          recoveries:(previousDomain.recoveries||0)+(result.recoveredCount||0),
+          lastDivergenceCount:result.divergenceCount||0,
+          lastRecoveryCount:result.recoveredCount||0,
+          lastCheckedAt:occurredAt
+        }},
+        events:[...incidents,...(previous.events||[])].slice(0,MAX_COMPATIBILITY_AUDIT_EVENTS)
+      };
+      store.put(audit);await transactionDone(transaction);
+      emit('app-data-compatibility-audit',{totalChecks:audit.totalChecks,incidentCount:audit.events.length,lastCheckedAt:audit.lastCheckedAt});
+      return clone(audit);
+    };
+    compatibilityAuditQueue=compatibilityAuditQueue.then(task,task);
+    return compatibilityAuditQueue;
+  }
+  async function compatibilityAudit(){
+    if(!global.indexedDB)return{...emptyCompatibilityAudit(),available:false};
+    await compatibilityAuditQueue;
+    return{...(await getMeta(COMPATIBILITY_AUDIT_META_ID)||emptyCompatibilityAudit()),available:true};
+  }
+  async function verifyCompatibility(){
+    await initialize();await flush();
+    const results=[];
+    for(const domain of Object.keys(PRIMARY_KEYS))results.push(isPrimaryDomain(domain)?await hydratePrimaryDomain(domain):{domain,status:'disabled',storageMode:'shadow'});
+    return{results,audit:await compatibilityAudit()};
+  }
+  async function clearCompatibilityAudit(){
+    if(!global.indexedDB)return false;
+    await compatibilityAuditQueue;await deleteMeta(COMPATIBILITY_AUDIT_META_ID);
+    emit('app-data-compatibility-audit',{totalChecks:0,incidentCount:0,lastCheckedAt:null});
+    return true;
+  }
+  async function compatibilityAuditExport(){
+    const audit=await compatibilityAudit();
+    return{
+      schemaVersion:1,
+      exportedAt:new Date().toISOString(),
+      app:{version:global.APP_VERSION_INFO?.version||'unknown',build:global.APP_VERSION_INFO?.build||0},
+      storage:{database:DB_NAME,version:DB_VERSION},
+      summary:{available:audit.available,totalChecks:audit.totalChecks,totalDivergences:audit.totalDivergences,totalRecoveries:audit.totalRecoveries,lastCheckedAt:audit.lastCheckedAt,lastIncidentAt:audit.lastIncidentAt},
+      domains:clone(audit.domains),
+      events:clone(audit.events),
+      privacy:'Metadatos tecnicos solamente; no incluye valores, notas, credenciales, configuracion Firebase ni contenido de salud.'
+    };
+  }
   async function hydratePrimaryDomain(domain){
     if(!isPrimaryDomain(domain))return{domain,status:'disabled',storageMode:'shadow'};
     const keys=PRIMARY_KEYS[domain];if(!keys)throw new Error(`Dominio primario desconocido: ${domain}`);
@@ -317,7 +402,9 @@
     }
     if(writes.length){const transaction=database.transaction(RECORDS_STORE,'readwrite'),store=transaction.objectStore(RECORDS_STORE);writes.forEach(item=>store.put(item));await transactionDone(transaction);}
     primaryReadyDomains.add(domain);
-    const result={id:`primary:${domain}`,domain,status:'ready',storageMode:'primary',keyCount:keys.length,cachedKeys:keys.filter(key=>primaryRawCache.has(key)).length,divergenceCount:divergences.length,divergences,recoveredCount:recovered.length,recovered,retentionPrunedCount:retention.reduce((sum,item)=>sum+item.removedCount,0),retention,hydratedAt:new Date().toISOString()};await putMeta(result);emit('app-data-primary-ready',result);return result;
+    const result={id:`primary:${domain}`,domain,status:'ready',storageMode:'primary',keyCount:keys.length,cachedKeys:keys.filter(key=>primaryRawCache.has(key)).length,divergenceCount:divergences.length,divergences,recoveredCount:recovered.length,recovered,retentionPrunedCount:retention.reduce((sum,item)=>sum+item.removedCount,0),retention,hydratedAt:new Date().toISOString()};await putMeta(result);
+    try{await recordCompatibilityAudit(result);}catch(error){reportError(error,'compatibility-audit',domain);}
+    emit('app-data-primary-ready',result);return result;
   }
   async function setPrimaryDomain(domain,enabled){
     if(!PRIMARY_KEYS[domain])throw new Error(`Dominio primario desconocido: ${domain}`);
@@ -425,7 +512,7 @@
     }));
     return initializationPromise;
   }
-  async function flush(){await mirrorQueue;await quarantineQueue;}
+  async function flush(){await mirrorQueue;await quarantineQueue;await compatibilityAuditQueue;}
   async function replaceMany(changes,{reason='transaction',rawKeys=[]}={}){
     const entries=Object.entries(changes||{});
     const keys=entries.map(([key])=>key);
@@ -544,7 +631,7 @@
       const key=localStorage.key(index);
       if(key?.startsWith('protocolo_0_100_')&&!registry.get(key))unknownLocalKeys.push(key);
     }
-    const output={database:DB_NAME,version:DB_VERSION,mode:config().mode,enabled:config().enabled,indexedDB:!!global.indexedDB,lastError:lastError?{...lastError}:null,schemaRegistry:{version:registry.REGISTRY_VERSION,registeredKeys:registry.all().length,unknownLocalKeys},quarantine:{count:0},domains:{},primaryGroups:{}};
+    const output={database:DB_NAME,version:DB_VERSION,mode:config().mode,enabled:config().enabled,indexedDB:!!global.indexedDB,lastError:lastError?{...lastError}:null,schemaRegistry:{version:registry.REGISTRY_VERSION,registeredKeys:registry.all().length,unknownLocalKeys},quarantine:{count:0},compatibility:{...emptyCompatibilityAudit(),available:false},domains:{},primaryGroups:{}};
     if(!global.indexedDB)return output;
     try{output.quarantine.count=(await quarantineList()).length;}catch(error){output.quarantine={count:0,status:'unavailable'};}
     for(const domain of Object.keys(DOMAIN_KEYS)){
@@ -562,6 +649,7 @@
         const primary=await getMeta(`primary:${group}`);output.primaryGroups[group]={storageMode:isPrimaryDomain(group)?'primary':'shadow',status:primary?.status||'pending',keyCount:PRIMARY_KEYS[group].length,divergenceCount:primary?.divergenceCount||0,recoveredCount:primary?.recoveredCount||0,retentionPrunedCount:primary?.retentionPrunedCount||0,hydratedAt:primary?.hydratedAt||null};
       }catch(error){output.primaryGroups[group]={storageMode:isPrimaryDomain(group)?'primary':'shadow',status:'unavailable',keyCount:PRIMARY_KEYS[group].length};}
     }
+    try{output.compatibility=await compatibilityAudit();}catch(error){output.compatibility={...emptyCompatibilityAudit(),available:false,status:'unavailable'};}
     if(global.navigator?.storage)output.persistence=await requestPersistentStorage();
     return output;
   }
@@ -601,6 +689,7 @@
     readResult,readIndexed,readIndexedResult,inspectRaw,migrateDomain,migrateAll,initialize,ready:initialize,flush,replaceMany,
     createRecoverySnapshot,restoreRecovery,purgeKeys,clearAllData,diagnostics,
     hydratePrimaryDomain,setPrimaryDomain,primaryDomainStatus,requestPersistentStorage,
+    compatibilityAudit,verifyCompatibility,clearCompatibilityAudit,compatibilityAuditExport,
     quarantineList,quarantineGet,quarantineDelete,quarantineRestore,quarantineExport,applyRetention
   });
   setupCrossTabChannel();

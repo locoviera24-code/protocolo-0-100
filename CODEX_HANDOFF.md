@@ -4,7 +4,7 @@ Ultima actualizacion: 2026-07-21
 Rama esperada: `main`
 Version actual: `2.7.0` (fuente unica: `app-version.json`)
 Android: `versionCode 33`, `versionName "2.7.0"`
-Service worker cache: `protocolo-0-100-pwa-2.7.0-b86`
+Service worker cache: `protocolo-0-100-pwa-2.7.0-b87`
 Backup consolidado: `schemaVersion: 3`
 
 Leer primero este archivo y luego `README.md`, `index.html`,
@@ -24,7 +24,7 @@ Estado actual:
 - Gym Party implementado como modulo web/PWA opcional.
 - Nutricion local/FDC opcional.
 - Backups JSON `schemaVersion: 3`.
-- PWA offline con cache derivada `protocolo-0-100-pwa-2.7.0-b86` y
+- PWA offline con cache derivada `protocolo-0-100-pwa-2.7.0-b87` y
   actualizacion consentida desde el aviso visible.
 - APK con widget Android y permiso `INTERNET` para Firebase/Gym Party.
 
@@ -3202,3 +3202,65 @@ promoverse otro dominio de inmediato: los cinco grupos previstos ya son
 primarios. El siguiente trabajo estructural debe ser un período de
 compatibilidad con auditoría de divergencias y pruebas instaladas en Safari/iOS
 y Android real antes de considerar retirar alguna clave legacy.
+
+## 69. Auditoría de compatibilidad de las dos copias locales
+
+El build 87 inicia el período de observación posterior a la promoción de los
+cinco grupos primarios. No retira ninguna clave legacy ni cambia qué copia se
+usa para leer; añade evidencia técnica persistente sobre reconciliaciones y
+recuperaciones ya resueltas.
+
+Contratos implementados:
+
+- `data/indexeddb.js` conserva en `meta/compatibility:audit` un máximo de 100
+  eventos. Cada evento contiene solo dominio, clave registrada, nombre técnico,
+  tipo, resolución y fecha; nunca raw, checksums, valores, notas o credenciales.
+- Los acumulados por dominio guardan comprobaciones, divergencias y
+  recuperaciones. La actualización usa una transacción `readwrite`, por lo que
+  dos pestañas no pierden incrementos entre sí.
+- `APP_DATA.compatibilityAudit()` consulta el historial;
+  `verifyCompatibility()` rehidrata únicamente los grupos primarios activos;
+  `compatibilityAuditExport()` produce un diagnóstico redactado; y
+  `clearCompatibilityAudit()` elimina solo metadatos técnicos.
+- El historial se borra junto con **Borrar todos los datos locales**, pero su
+  borrado independiente no modifica `localStorage`, registros IndexedDB,
+  cuarentena ni snapshots de recuperación.
+- **Más > Datos y copias** muestra un panel plegado con comprobaciones,
+  diferencias resueltas, recuperaciones y última revisión. Permite comprobar
+  las cinco áreas, exportar el diagnóstico y borrar el historial mediante el
+  diálogo interno accesible.
+- Sin IndexedDB, el panel informa el modo compatible y no bloquea la app.
+
+Archivos funcionales principales:
+
+- `data/indexeddb.js`;
+- `index.html`;
+- `scripts/test-data-layer.mjs` y `scripts/validate-app.ps1`;
+- `tests/e2e/data-compatibility.spec.mjs`;
+- `README.md` y este handoff.
+
+Verificación local previa al empaquetado:
+
+- validadores de capa de datos, integridad y aplicación: correctos;
+- 15/15 escenarios específicos en Android Chromium, iPhone WebKit y escritorio
+  Chromium: divergencia, persistencia, redacción, recuperación, borrado sin
+  pérdida, exportación, 320 px, dos pestañas y fallback sin IndexedDB;
+- la regresión conjunta ejecutó 102 casos: 100 pasaron y dos expectativas de
+  historial vacío fallaron porque había un ajuste automático válido ya
+  registrado; tras alinear la expectativa con el contrato real, el flujo
+  visual/exportación aprobó 9/9 repeticiones en las tres plataformas.
+
+Empaquetado local verificado:
+
+- versión `2.7.0`, Android `33`, build/cache `87` alineados;
+- precache atómico con 64 recursos obligatorios y 4 opcionales;
+- artifact web de 70 recursos con hash, sin rutas ausentes; prueba servida 1/1,
+  sin errores de página/consola y con service worker instalable;
+- paridad de assets web/Android correcta;
+- `:app:assembleDebug` finalizó `BUILD SUCCESSFUL` con Gradle 8.10.2/JDK 17;
+  APK debug de 1.746.537 bytes, SHA-256
+  `DE0FC82AF6B2527DA7C93C6D5AC8B351E8F1979A133FE57123A20E133B19D80C`.
+
+Pendiente para cerrar el bloque: commit, push y quality gate remoto. No retirar
+aún ninguna clave de `localStorage`; antes hacen falta observación de
+divergencias reales y pruebas instaladas en Safari/iOS y Android físicos.
