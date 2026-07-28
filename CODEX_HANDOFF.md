@@ -1,10 +1,10 @@
 # CODEX_HANDOFF - Protocolo 0->100
 
-Ultima actualizacion: 2026-07-21
+Ultima actualizacion: 2026-07-28
 Rama esperada: `main`
 Version actual: `2.7.0` (fuente unica: `app-version.json`)
 Android: `versionCode 33`, `versionName "2.7.0"`
-Service worker cache: `protocolo-0-100-pwa-2.7.0-b87`
+Service worker cache: `protocolo-0-100-pwa-2.7.0-b88`
 Backup consolidado: `schemaVersion: 3`
 
 Leer primero este archivo y luego `README.md`, `index.html`,
@@ -24,7 +24,7 @@ Estado actual:
 - Gym Party implementado como modulo web/PWA opcional.
 - Nutricion local/FDC opcional.
 - Backups JSON `schemaVersion: 3`.
-- PWA offline con cache derivada `protocolo-0-100-pwa-2.7.0-b87` y
+- PWA offline con cache derivada `protocolo-0-100-pwa-2.7.0-b88` y
   actualizacion consentida desde el aviso visible.
 - APK con widget Android y permiso `INTERNET` para Firebase/Gym Party.
 
@@ -3265,7 +3265,7 @@ Resultado remoto definitivo: `Validar aplicacion` #87, commit `14778e9`,
 finalizó **Success** en 13m 05s. El gate aprobó 316 E2E y mantuvo 14 omisiones
 conocidas; la verificación servida del artifact aprobó 1/1. También pasaron
 Firestore Emulator, service worker atómico, Android debug/release de prueba y
-paridad de assets. Artifacts:
+  paridad de assets. Artifacts:
 
 - `protocolo-android-debug-beta`, 1,51 MB, SHA-256
   `3bf28ae51b52bf74b9d8809c9cfb494f3fd30f8acd137ea8d398ceeee0605a8d`;
@@ -3276,3 +3276,73 @@ El bloque queda cerrado y publicado en build 87. No retirar aún ninguna clave
 de `localStorage`: el próximo paso exacto es observar divergencias reales y
 realizar pruebas instaladas en Safari/iOS y Android físicos antes de decidir la
 retirada gradual de compatibilidad legacy.
+
+## 70. Importación explícita y recuperable por área
+
+El build 88 amplía el importador seguro existente sin cambiar el schema 3 ni
+las claves históricas. `data/backup-service.js` genera ahora un plan puro antes
+de escribir y agrupa los datos reconocidos por dominio.
+
+Contratos implementados:
+
+- Cada área incluida permite elegir **Fusionar**, **Reemplazar** o **Conservar
+  actual**. Fusionar es el valor inicial y conserva registros locales que no
+  estén en el archivo; Reemplazar restaura exactamente el área y muestra antes
+  cuántos registros o valores locales desaparecerían; Conservar actual excluye
+  el área de la transacción.
+- Arrays se combinan por ID estable, fecha o identidad canónica; duplicados
+  dentro del archivo se detectan y se consolidan de forma determinista. Los
+  objetos se combinan por propiedad y los valores escalares conservan su
+  contrato de schema.
+- Los conflictos permiten usar el archivo, conservar este dispositivo o
+  revisar uno por uno. La vista previa separa nuevos, actualizados, conflictos,
+  eliminaciones y duplicados.
+- `APP_DATA.replaceMany()` sigue siendo la única escritura final: crea snapshot
+  previo, aplica todas las áreas en una transacción lógica y revierte si falla.
+  El panel Deshacer continúa restaurando la copia anterior.
+- Una configuración Firebase local nunca participa en comparaciones ni
+  eliminaciones. Aunque se elija Reemplazar Gym Party, `firebaseConfig` se
+  conserva únicamente en el dispositivo y sigue excluido de backup.
+- Backups schema 1/legacy mantienen el modo Fusionar por defecto; áreas que no
+  estén presentes en el archivo no se modifican.
+
+Interfaz:
+
+- El diálogo **Antes de importar** muestra controles por área y una advertencia
+  persistente cuando Reemplazar eliminaría datos locales.
+- La revisión individual es accesible mediante `fieldset`, `legend`, controles
+  etiquetados y foco restaurado al botón que abrió el selector de archivo.
+- A 320 px el diálogo no genera scroll horizontal. Datos de usuario usados como
+  etiquetas se escapan antes de renderizarse.
+
+Archivos principales:
+
+- `data/backup-service.js`;
+- `index.html` y `styles/components.css`;
+- `scripts/test-backup-service.mjs` y `scripts/validate-app.ps1`;
+- `tests/e2e/backup-import.spec.mjs`;
+- `README.md`, `app-version.json` y este handoff.
+
+Verificación previa al empaquetado:
+
+- unidad de backup, capa de datos e integridad: correctas;
+- validación estructural: 476 IDs únicos y contratos nuevos presentes;
+- 15 escenarios específicos de importación en Android Chromium, iPhone WebKit
+  y escritorio Chromium: preview, schema futuro, fusión, conflicto individual,
+  reemplazo, conservación, duplicados, XSS, Deshacer, foco y 320 px;
+- regresión conjunta de backup, integridad, cuarentena, IndexedDB primario,
+  compatibilidad y dos pestañas: 117/117 aprobadas en 12m 58s.
+
+Empaquetado local verificado:
+
+- versión `2.7.0`, Android `33`, build/cache `88` alineados;
+- precache atómico con 64 recursos obligatorios y 4 opcionales;
+- artifact web de 70 recursos con inventario y hashes, sin 404 ni errores de
+  página/consola; prueba servida 1/1 y service worker instalable;
+- paridad exacta entre assets web y Android;
+- `:app:assembleDebug` finalizó correctamente con Gradle 8.10.2/JDK 17;
+  APK debug de 1.746.537 bytes, SHA-256
+  `D60D3B0F48152B5E59411625605B76226095D0502C94DC4E85CE9949C78E8767`.
+
+Pendiente para cerrar el bloque: commit, push y quality gate remoto. El período
+de compatibilidad entre IndexedDB y `localStorage` continúa sin cambios.

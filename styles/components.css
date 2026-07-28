@@ -384,3 +384,57 @@ td {
   height: var(--touch-target);
   border-radius: var(--radius-control);
 }
+
+.importDomainChoices {
+  display: grid;
+  gap: var(--space-3);
+}
+.importDomainChoice {
+  min-width: 0;
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-card);
+  background: var(--color-surface-soft);
+}
+.importDomainChoice legend {
+  padding: 0 var(--space-1);
+  font-weight: 700;
+}
+.importDomainControls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+.importDomainControls label,
+.importConflictChoice {
+  display: grid;
+  gap: var(--space-1);
+}
+.importDomainControls span,
+.importConflictChoice span {
+  color: var(--color-text-secondary);
+  font-size: var(--font-small);
+}
+.importDomainChoice [data-import-domain-summary] {
+  margin: var(--space-2) 0 0;
+}
+.importConflictReview {
+  margin-top: var(--space-2);
+}
+.importConflictList {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+.importConflictChoice {
+  grid-template-columns: minmax(0, 1fr) minmax(150px, .75fr);
+  align-items: center;
+}
+
+@media (max-width: 560px) {
+  .importDomainControls,
+  .importConflictChoice {
+    grid-template-columns: 1fr;
+  }
+}

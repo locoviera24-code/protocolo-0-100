@@ -189,8 +189,11 @@ foreach ($contract in @('ProtocolRepository','WorkoutRepository','NutritionRepos
 foreach ($contract in @('createRecoverySnapshot','restoreRecovery','replaceMany','BroadcastChannel','QuotaExceededError')) {
     Assert-True ($indexedData.Contains($contract)) "Falta contrato IndexedDB: $contract"
 }
-foreach ($contract in @('MAX_FILE_BYTES','sanitize','prepareFile','prepareText','previewFor','replaceMany','undo')) {
+foreach ($contract in @('MAX_FILE_BYTES','sanitize','prepareFile','prepareText','createPlan','IMPORT_MODES','CONFLICT_POLICIES','removed','duplicates','replaceMany','undo')) {
     Assert-True ($backupService.Contains($contract)) "Falta contrato de importacion segura: $contract"
+}
+foreach ($contract in @('importDomainChoices','importPreviewRemoved','importPreviewDuplicates','importReplaceWarning','data-import-mode','data-import-conflict-policy','data-import-conflict-decision')) {
+    Assert-True ($html.Contains($contract)) "Falta UI de importacion por areas: $contract"
 }
 Assert-True ($html.Contains('<script src="ui/router.js"></script>')) 'index.html no carga ui/router.js'
 Assert-True ($precacheManifest.Contains('"url": "./ui/router.js"')) 'precache-manifest.js no cachea ui/router.js'

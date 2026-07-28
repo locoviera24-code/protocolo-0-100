@@ -777,13 +777,15 @@
     </div>
   </div>
 
-  <div class="modalBackdrop hidden" id="importPreviewBackdrop" role="dialog" aria-modal="true" aria-labelledby="importPreviewTitle" aria-hidden="true">
+  <div class="modalBackdrop hidden" id="importPreviewBackdrop" role="dialog" aria-modal="true" aria-labelledby="importPreviewTitle" aria-describedby="importPreviewFile importPreviewSafety" aria-hidden="true">
     <div class="actionModal">
       <div class="modalHd"><div><span class="pill">Revisión segura</span><h2 id="importPreviewTitle">Antes de importar</h2><p class="muted small" id="importPreviewFile">Revisá los cambios detectados.</p></div><button type="button" class="closeBtn" id="closeImportPreviewBtn" aria-label="Cancelar importación">×</button></div>
       <div class="modalBd">
-        <div class="quickStats"><div class="quickStat"><span>Nuevos</span><strong id="importPreviewAdded">0</strong></div><div class="quickStat"><span>Reemplazos</span><strong id="importPreviewReplaced">0</strong></div><div class="quickStat"><span>Conflictos</span><strong id="importPreviewConflicts">0</strong></div><div class="quickStat"><span>Áreas</span><strong id="importPreviewKeys">0</strong></div></div>
+        <div class="quickStats"><div class="quickStat"><span>Nuevos</span><strong id="importPreviewAdded">0</strong></div><div class="quickStat"><span>Actualizados</span><strong id="importPreviewReplaced">0</strong></div><div class="quickStat"><span>Conflictos</span><strong id="importPreviewConflicts">0</strong></div><div class="quickStat"><span>Eliminados</span><strong id="importPreviewRemoved">0</strong></div><div class="quickStat"><span>Duplicados</span><strong id="importPreviewDuplicates">0</strong></div><div class="quickStat"><span>Áreas</span><strong id="importPreviewKeys">0</strong></div></div>
+        <div class="importDomainChoices" id="importDomainChoices" aria-label="Tratamiento por área"></div>
+        <div class="inlineMessage warning hidden" id="importReplaceWarning" role="status"></div>
         <div class="auditItem" id="importPreviewIgnored">No se ignoraron campos.</div>
-        <p class="muted small">Se creará una copia interna automática. Podés deshacer la importación después de aplicarla.</p>
+        <p class="muted small" id="importPreviewSafety">Fusionar conserva registros locales que no estén en el archivo. Reemplazar elimina de esa área lo que no figure en el backup. Antes de aplicar se creará una copia interna automática y después podrás Deshacer.</p>
         <div class="buttons"><button type="button" class="good" id="confirmImportBtn">Importar datos</button><button type="button" class="secondary" id="cancelImportBtn">Cancelar</button></div>
       </div>
     </div>
@@ -2781,25 +2783,59 @@ function exportCsv(){
 function downloadBlob(content,name,type){
   const blob=new Blob([content],{type}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
-let pendingBackupImport=null,lastImportSnapshotId='';
+let pendingBackupImport=null,lastImportSnapshotId='',importPreviewReturnFocus=null;
 function closeImportPreview(){
   const backdrop=document.getElementById('importPreviewBackdrop');if(!backdrop)return;
   backdrop.classList.add('hidden');backdrop.setAttribute('aria-hidden','true');pendingBackupImport=null;
+  if(importPreviewReturnFocus?.isConnected)importPreviewReturnFocus.focus();importPreviewReturnFocus=null;
 }
-function openImportPreview(prepared){
-  pendingBackupImport=prepared;const summary=prepared.summary,backdrop=document.getElementById('importPreviewBackdrop');
-  document.getElementById('importPreviewFile').textContent=`${prepared.meta.fileName||'backup.json'} · schema ${prepared.schemaVersion} · ${summary.records} registros detectados`;
+function importDomainOptions(){
+  const domains={};document.querySelectorAll('#importDomainChoices [data-import-domain]').forEach(root=>{
+    const domain=root.dataset.importDomain,mode=root.querySelector('[data-import-mode]')?.value||'merge',conflictPolicy=root.querySelector('[data-import-conflict-policy]')?.value||'incoming',conflictDecisions={};
+    root.querySelectorAll('[data-import-conflict-decision]').forEach(control=>{conflictDecisions[control.dataset.importConflictDecision]=control.value;});
+    domains[domain]={mode,conflictPolicy,conflictDecisions};
+  });return{domains};
+}
+function importDomainSummaryText(summary){
+  const parts=[];if(summary.added)parts.push(`${summary.added} nuevos`);if(summary.replaced)parts.push(`${summary.replaced} actualizados`);if(summary.removed)parts.push(`${summary.removed} eliminados`);if(summary.conflicts)parts.push(`${summary.conflicts} conflictos`);if(summary.duplicates)parts.push(`${summary.duplicates} duplicados`);return parts.join(' · ')||'Sin cambios';
+}
+function renderImportDomainChoices(prepared){
+  const root=document.getElementById('importDomainChoices');if(!root)return;
+  root.innerHTML=prepared.domains.map(area=>{
+    const domain=escapeHtml(area.domain),conflicts=area.conflicts.slice(0,50),extra=Math.max(0,area.conflicts.length-conflicts.length);
+    const conflictRows=conflicts.map(conflict=>`<label class="importConflictChoice"><span>${escapeHtml(conflict.label||conflict.recordName)}</span><select data-import-conflict-decision="${escapeHtml(conflict.id)}" aria-label="Resolver conflicto ${escapeHtml(conflict.label||conflict.recordName)}"><option value="incoming">Usar archivo</option><option value="current">Conservar dispositivo</option></select></label>`).join('');
+    return `<fieldset class="importDomainChoice" data-import-domain="${domain}"><legend>${escapeHtml(area.label)}</legend><div class="importDomainControls"><label><span>Cómo importar</span><select data-import-mode aria-label="Cómo importar ${escapeHtml(area.label)}"><option value="merge">Fusionar</option><option value="replace">Reemplazar</option><option value="keep">Conservar actual</option></select></label><label data-import-conflict-controls class="${area.conflicts.length?'':'hidden'}"><span>Si el mismo registro cambió</span><select data-import-conflict-policy aria-label="Resolver conflictos de ${escapeHtml(area.label)}"><option value="incoming">Usar el archivo</option><option value="current">Conservar este dispositivo</option><option value="review">Revisar uno por uno</option></select></label></div><p class="muted small" data-import-domain-summary>${escapeHtml(importDomainSummaryText(area.summary))}</p>${area.conflicts.length?`<details class="advancedDetails importConflictReview hidden" data-import-conflict-review><summary>Revisar ${area.conflicts.length} conflictos</summary><div class="importConflictList">${conflictRows}${extra?`<p class="muted small">Los ${extra} conflictos adicionales conservarán los datos de este dispositivo.</p>`:''}</div></details>`:''}</fieldset>`;
+  }).join('');
+}
+function updateImportPreviewPlan(){
+  if(!pendingBackupImport)return null;const options=importDomainOptions(),plan=window.BACKUP_SERVICE.createPlan(pendingBackupImport,options),summary=plan.summary;
   document.getElementById('importPreviewAdded').textContent=summary.added;
   document.getElementById('importPreviewReplaced').textContent=summary.replaced;
   document.getElementById('importPreviewConflicts').textContent=summary.conflicts;
-  document.getElementById('importPreviewKeys').textContent=summary.keys;
+  document.getElementById('importPreviewRemoved').textContent=summary.removed;
+  document.getElementById('importPreviewDuplicates').textContent=summary.duplicates;
+  document.getElementById('importPreviewKeys').textContent=plan.domains.filter(area=>area.mode!=='keep').length;
+  plan.domains.forEach(area=>{
+    const root=[...document.querySelectorAll('#importDomainChoices [data-import-domain]')].find(item=>item.dataset.importDomain===area.domain);if(!root)return;
+    const policy=root.querySelector('[data-import-conflict-policy]')?.value||'incoming',mode=root.querySelector('[data-import-mode]')?.value||'merge';
+    root.querySelector('[data-import-domain-summary]').textContent=mode==='keep'?'Se conservarán los datos actuales.':importDomainSummaryText(area.summary);
+    root.querySelector('[data-import-conflict-controls]')?.classList.toggle('hidden',mode!=='merge'||!area.conflicts.length);
+    const review=root.querySelector('[data-import-conflict-review]'),showReview=mode==='merge'&&policy==='review';if(review){review.classList.toggle('hidden',!showReview);review.open=showReview;}
+  });
+  const warning=document.getElementById('importReplaceWarning');warning.classList.toggle('hidden',!summary.removed);warning.textContent=summary.removed?`Reemplazar eliminará ${summary.removed} registros o valores locales que no están en el archivo.`:'';
+  document.getElementById('confirmImportBtn').disabled=!Object.keys(plan.changes).length;return{options,plan};
+}
+function openImportPreview(prepared){
+  pendingBackupImport=prepared;if(!importPreviewReturnFocus?.isConnected)importPreviewReturnFocus=document.activeElement;const summary=prepared.summary,backdrop=document.getElementById('importPreviewBackdrop');
+  document.getElementById('importPreviewFile').textContent=`${prepared.meta.fileName||'backup.json'} · schema ${prepared.schemaVersion} · ${summary.records} registros detectados`;
   document.getElementById('importPreviewIgnored').textContent=prepared.ignored.length?`Campos ignorados por seguridad o compatibilidad: ${prepared.ignored.join(', ')}`:'No se ignoraron campos.';
-  backdrop.classList.remove('hidden');backdrop.setAttribute('aria-hidden','false');document.getElementById('confirmImportBtn').focus();
+  renderImportDomainChoices(prepared);updateImportPreviewPlan();backdrop.classList.remove('hidden');backdrop.setAttribute('aria-hidden','false');document.querySelector('#importDomainChoices [data-import-mode]')?.focus();
 }
 async function importJson(file){
   try{openImportPreview(await window.BACKUP_SERVICE.prepareFile(file));}
-  catch(error){flash(error.message||'No se pudo revisar el backup.');}
+  catch(error){flash(error.message||'No se pudo revisar el backup.');if(importPreviewReturnFocus?.isConnected)importPreviewReturnFocus.focus();importPreviewReturnFocus=null;}
 }
+function openBackupFilePicker(trigger){importPreviewReturnFocus=trigger;document.getElementById('importFile').click();}
 function refreshAfterBackupImport(){
   const start=localStorage.getItem(START_KEY)||todayStr();document.getElementById('startDate').value=start;
   applyUiPreferences();populateFoods();loadNutritionTargets();loadBodyMetricsForDate();window.WORKOUT_FEATURES?.ensureWorkoutData?.();
@@ -2808,7 +2844,7 @@ function refreshAfterBackupImport(){
 async function confirmBackupImport(){
   if(!pendingBackupImport)return;const button=document.getElementById('confirmImportBtn');button.disabled=true;
   try{
-    const result=await window.BACKUP_SERVICE.apply(pendingBackupImport);lastImportSnapshotId=result.snapshotId;
+    const selection=updateImportPreviewPlan();if(!selection)return;const result=await window.BACKUP_SERVICE.apply(pendingBackupImport,selection.options);lastImportSnapshotId=result.snapshotId;
     closeImportPreview();refreshAfterBackupImport();
     const panel=document.getElementById('importUndoPanel');panel.classList.remove('hidden');document.getElementById('importUndoText').textContent=`Importación aplicada: ${result.entry.records} registros revisados.`;
     flash('Importación completa. Podés deshacerla desde Datos y copias.');
@@ -2981,12 +3017,13 @@ document.getElementById('reopenOnboardingBtn')?.addEventListener('click',()=>{lo
 document.querySelectorAll('[data-reset-scope]').forEach(button=>button.addEventListener('click',()=>resetDataScope(button.dataset.resetScope)));
 document.getElementById('settingsExportJsonBtn')?.addEventListener('click',exportJson);
 document.getElementById('settingsExportCsvBtn')?.addEventListener('click',exportCsv);
-document.getElementById('settingsImportBtn')?.addEventListener('click',()=>document.getElementById('importFile').click());
+document.getElementById('settingsImportBtn')?.addEventListener('click',event=>openBackupFilePicker(event.currentTarget));
 document.getElementById('confirmImportBtn')?.addEventListener('click',confirmBackupImport);
 document.getElementById('cancelImportBtn')?.addEventListener('click',closeImportPreview);
 document.getElementById('closeImportPreviewBtn')?.addEventListener('click',closeImportPreview);
 document.getElementById('undoImportBtn')?.addEventListener('click',undoLastImport);
 document.getElementById('importPreviewBackdrop')?.addEventListener('click',event=>{if(event.target===event.currentTarget)closeImportPreview();});
+document.getElementById('importDomainChoices')?.addEventListener('change',updateImportPreviewPlan);
 document.getElementById('dataIntegrityList')?.addEventListener('click',event=>{const button=event.target.closest('[data-quarantine-action]');if(button)handleQuarantineAction(button).catch(error=>flash(error.message||'No se pudo revisar la copia.',{tone:'error'}));});
 document.getElementById('exportQuarantineBtn')?.addEventListener('click',async()=>downloadQuarantinePayload(await window.APP_DATA.quarantineExport()));
 document.getElementById('verifyCompatibilityBtn')?.addEventListener('click',verifyStorageCompatibility);
@@ -3092,7 +3129,7 @@ document.querySelectorAll('.metricTab').forEach(btn=>btn.addEventListener('click
 }));
 document.getElementById('exportJsonBtn').addEventListener('click', exportJson);
 document.getElementById('exportCsvBtn').addEventListener('click', exportCsv);
-document.getElementById('importBtn').addEventListener('click', ()=>document.getElementById('importFile').click());
+document.getElementById('importBtn').addEventListener('click',event=>openBackupFilePicker(event.currentTarget));
 document.getElementById('importFile').addEventListener('change', e=>{ if(e.target.files[0]) importJson(e.target.files[0]); e.target.value=''; });
 ['markActionBtn','modalMarkActionBtn'].forEach(id=>{ const el=document.getElementById(id); if(el) el.addEventListener('click', markActionDone); });
 ['showActionModalBtn'].forEach(id=>{ const el=document.getElementById(id); if(el) el.addEventListener('click', ()=>showActionModal(true)); });

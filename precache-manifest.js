@@ -1,8 +1,8 @@
 globalThis.PRECACHE_MANIFEST=Object.freeze({
   "schemaVersion": 1,
   "version": "2.7.0",
-  "build": 87,
-  "cacheName": "protocolo-0-100-pwa-2.7.0-b87",
+  "build": 88,
+  "cacheName": "protocolo-0-100-pwa-2.7.0-b88",
   "required": [
     {
       "url": "./advanced-features.js",
@@ -12,12 +12,12 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     {
       "url": "./app-version.js",
       "bytes": 358,
-      "sha256": "621650dec1b8bbae32b7e6f378dc8525b3e491f267abf7cbec14d25aa9469e55"
+      "sha256": "0aa772ee7647fac410e79e0b5d8122e41baa2829591a373a23561478be10e03a"
     },
     {
       "url": "./app/build-guard.js",
       "bytes": 1811,
-      "sha256": "3f6680e789c75e3693175767b4edcf71a75b0f84c0245191565ce57dd598e41b"
+      "sha256": "42443379a52029755059015eb554fc5f1836300551bf52771017cc3e712f3725"
     },
     {
       "url": "./app/dates.js",
@@ -36,8 +36,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     },
     {
       "url": "./data/backup-service.js",
-      "bytes": 8924,
-      "sha256": "7cb5a6a9c44e369fcd42109e4d0e2c2ad50dc38ac50725724bfd69b277435e12"
+      "bytes": 18227,
+      "sha256": "08129762fd085791ce4ff08246755400fd97fa83822ee6195389f6903034815e"
     },
     {
       "url": "./data/indexeddb.js",
@@ -111,8 +111,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     },
     {
       "url": "./index.html",
-      "bytes": 303628,
-      "sha256": "3fce8e83a00397fe4a04c430c393ddb63f44ebe1281c915b2e824192aaba3bbf"
+      "bytes": 309610,
+      "sha256": "9bc9b38ff10acc1864d181676fb117d903d4481c774b83103fe1c0600bcba489"
     },
     {
       "url": "./nutrition-data.js",
@@ -221,8 +221,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     },
     {
       "url": "./styles/components.css",
-      "bytes": 9041,
-      "sha256": "da2c70bfcaff44359530f4240c41d6c0581676f1f95ed2b8ab0baa9f05040188"
+      "bytes": 10195,
+      "sha256": "a7b75c60172b527e78f504cbb1b2566519ee252c88e53c5765c7d689371a3150"
     },
     {
       "url": "./styles/features.css",
@@ -329,7 +329,7 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     {
       "url": "./app-version.json",
       "bytes": 90,
-      "sha256": "bcd0aa8ead3a9756178920fc378d40255701f80844435c4d8986335b08046e49"
+      "sha256": "100d61574b43c6f283600e674e1c45e46c5d0d610e4fd8c971584a1bccb43adf"
     },
     {
       "url": "./icons/icon-192.png",

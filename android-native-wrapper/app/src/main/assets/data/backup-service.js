@@ -12,6 +12,9 @@
   const DANGEROUS_KEYS=new Set(['__proto__','prototype','constructor']);
   const FIELD_MAP=registry.backupFieldMap();
   const META_FIELDS=new Set(['schemaVersion','appVersion','updatedAt','exportedAt','settings','startDate']);
+  const IMPORT_MODES=Object.freeze({MERGE:'merge',REPLACE:'replace',KEEP:'keep'});
+  const CONFLICT_POLICIES=Object.freeze({INCOMING:'incoming',CURRENT:'current',REVIEW:'review'});
+  const DOMAIN_LABELS=Object.freeze({protocol:'Registro diario',workout:'Gym',nutrition:'Nutrición',gymParty:'Gym Party',settings:'Preferencias',laboratory:'Laboratorio'});
 
   function cleanString(value){return String(value).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g,'').slice(0,MAX_STRING_LENGTH);}
   function sanitize(value,depth=0,stats={ignored:[]}){
@@ -45,6 +48,14 @@
     if(!value||typeof value!=='object')return value;
     const output={...value};delete output.firebaseConfig;return output;
   }
+  function withoutLocalRedactions(record,value){
+    if(record?.redaction!=='firebase-config'||!isRecord(value))return value;
+    const output={...value};delete output.firebaseConfig;return output;
+  }
+  function restoreLocalRedactions(record,existing,value){
+    if(record?.redaction!=='firebase-config'||!isRecord(existing)||!Object.prototype.hasOwnProperty.call(existing,'firebaseConfig'))return value;
+    const output=isRecord(value)?clone(value):{};output.firebaseConfig=clone(existing.firebaseConfig);return output;
+  }
   function validateForImport(record,value,field){
     const result=registry.validate(record.key,value);
     if(!['valid','legacy'].includes(result.status))throw new Error(`El área ${field} no tiene una estructura compatible (${result.error||result.status}).`);
@@ -74,23 +85,119 @@
     const ignored=Object.keys(data).filter(field=>!usedFields.has(field)&&!META_FIELDS.has(field));
     return {changes,rawKeys,ignored};
   }
-  function itemIdentity(item,index){return String(item?.id||item?.date||item?.exerciseId||item?.fdcId||index);}
-  function compareValue(existing,incoming){
-    if(Array.isArray(incoming)){
-      const current=Array.isArray(existing)?existing:[],currentMap=new Map(current.map((item,index)=>[itemIdentity(item,index),item]));
-      let added=0,replaced=0,conflicts=0;
-      incoming.forEach((item,index)=>{const id=itemIdentity(item,index),old=currentMap.get(id);if(old===undefined)added+=1;else{replaced+=1;if(JSON.stringify(old)!==JSON.stringify(item))conflicts+=1;}});
-      return {records:incoming.length,added,replaced,conflicts};
-    }
-    const exists=existing!==null&&existing!==undefined;
-    return {records:1,added:exists?0:1,replaced:exists?1:0,conflicts:exists&&JSON.stringify(existing)!==JSON.stringify(incoming)?1:0};
+  function clone(value){return value===undefined?undefined:typeof structuredClone==='function'?structuredClone(value):JSON.parse(JSON.stringify(value));}
+  function isRecord(value){return !!value&&typeof value==='object'&&!Array.isArray(value);}
+  function canonical(value){
+    if(Array.isArray(value))return`[${value.map(canonical).join(',')}]`;
+    if(isRecord(value))return`{${Object.keys(value).sort().map(key=>`${JSON.stringify(key)}:${canonical(value[key])}`).join(',')}}`;
+    return JSON.stringify(value);
   }
-  function previewFor(changes){
-    return Object.entries(changes).reduce((summary,[key,value])=>{
-      const part=compareValue(global.APP_DATA.read(key,null),value);
-      summary.keys+=1;summary.records+=part.records;summary.added+=part.added;summary.replaced+=part.replaced;summary.conflicts+=part.conflicts;
-      return summary;
-    },{keys:0,records:0,added:0,replaced:0,conflicts:0});
+  function sameValue(left,right){return canonical(left)===canonical(right);}
+  function itemIdentity(item){
+    if(item&&typeof item==='object'){
+      const stable=item.id??item.date??item.exerciseId??item.fdcId??item.uid??item.key;
+      if(stable!==undefined&&stable!==null&&String(stable)!=='')return String(stable);
+      const name=item.name??item.alias??item.label;
+      if(name!==undefined&&name!==null&&String(name)!=='')return `name:${String(name).trim().toLocaleLowerCase('es')}`;
+      return `value:${canonical(item)}`;
+    }
+    return `value:${canonical(item)}`;
+  }
+  function itemLabel(item,identity){
+    if(item&&typeof item==='object')return cleanString(item.name||item.alias||item.date||item.exerciseName||item.id||identity).slice(0,120);
+    return cleanString(String(item??identity)).slice(0,120);
+  }
+  function emptySummary(){return{keys:0,records:0,added:0,replaced:0,conflicts:0,removed:0,duplicates:0,unchanged:0,kept:0};}
+  function addSummary(target,part){Object.keys(emptySummary()).forEach(field=>{target[field]+=Number(part[field])||0;});return target;}
+  function conflictId(key,identity){return `${key}::${encodeURIComponent(String(identity))}`;}
+  function conflictChoice(options,domain,id){
+    const settings=options?.domains?.[domain]||{},decision=settings.conflictDecisions?.[id];
+    if(decision===CONFLICT_POLICIES.CURRENT||decision===CONFLICT_POLICIES.INCOMING)return decision;
+    return settings.conflictPolicy===CONFLICT_POLICIES.INCOMING?CONFLICT_POLICIES.INCOMING:CONFLICT_POLICIES.CURRENT;
+  }
+  function uniqueIncoming(items){
+    const order=[],values=new Map();let duplicates=0;
+    items.forEach((item,index)=>{const id=itemIdentity(item,index);if(values.has(id))duplicates+=1;else order.push(id);values.set(id,item);});
+    return{order,values,duplicates};
+  }
+  function planArray(record,existing,incoming,mode,options){
+    const current=Array.isArray(existing)?existing:[],next=Array.isArray(incoming)?incoming:[];
+    const currentMap=new Map(current.map((item,index)=>[itemIdentity(item,index),item]));
+    const unique=uniqueIncoming(next),incomingIds=new Set(unique.order),summary=emptySummary(),conflicts=[];
+    summary.records=unique.order.length;summary.duplicates=unique.duplicates;
+    unique.order.forEach(identity=>{
+      const item=unique.values.get(identity),old=currentMap.get(identity);
+      if(old===undefined){summary.added+=1;return;}
+      if(sameValue(old,item)){summary.unchanged+=1;return;}
+      const id=conflictId(record.key,identity);summary.conflicts+=1;
+      if(mode===IMPORT_MODES.MERGE&&conflictChoice(options,record.domain,id)===CONFLICT_POLICIES.CURRENT)summary.kept+=1;else summary.replaced+=1;
+      conflicts.push({id,key:record.key,recordName:record.name,identity,label:itemLabel(item,identity)});
+    });
+    if(mode===IMPORT_MODES.REPLACE)summary.removed=current.filter((item,index)=>!incomingIds.has(itemIdentity(item,index))).length;
+    if(mode===IMPORT_MODES.KEEP){summary.kept=current.length;return{value:clone(existing),summary:emptySummary(),conflicts:[]};}
+    if(mode===IMPORT_MODES.REPLACE)return{value:unique.order.map(identity=>clone(unique.values.get(identity))),summary,conflicts};
+    const merged=unique.order.map(identity=>{
+      const item=unique.values.get(identity),old=currentMap.get(identity);
+      if(old!==undefined&&!sameValue(old,item)&&conflictChoice(options,record.domain,conflictId(record.key,identity))===CONFLICT_POLICIES.CURRENT)return clone(old);
+      return clone(item);
+    });
+    current.forEach((item,index)=>{if(!incomingIds.has(itemIdentity(item,index)))merged.push(clone(item));});
+    return{value:merged,summary,conflicts};
+  }
+  function planObject(record,existing,incoming,mode,options){
+    const current=isRecord(existing)?existing:{},next=isRecord(incoming)?incoming:{},summary=emptySummary(),conflicts=[];
+    const incomingKeys=Object.keys(next),currentKeys=Object.keys(current);summary.records=incomingKeys.length;
+    incomingKeys.forEach(identity=>{
+      if(!Object.prototype.hasOwnProperty.call(current,identity)){summary.added+=1;return;}
+      if(sameValue(current[identity],next[identity])){summary.unchanged+=1;return;}
+      const id=conflictId(record.key,identity);summary.conflicts+=1;
+      if(mode===IMPORT_MODES.MERGE&&conflictChoice(options,record.domain,id)===CONFLICT_POLICIES.CURRENT)summary.kept+=1;else summary.replaced+=1;
+      conflicts.push({id,key:record.key,recordName:record.name,identity,label:cleanString(identity).slice(0,120)});
+    });
+    if(mode===IMPORT_MODES.REPLACE)summary.removed=currentKeys.filter(identity=>!Object.prototype.hasOwnProperty.call(next,identity)).length;
+    if(mode===IMPORT_MODES.KEEP){summary.kept=currentKeys.length;return{value:clone(existing),summary:emptySummary(),conflicts:[]};}
+    if(mode===IMPORT_MODES.REPLACE)return{value:clone(next),summary,conflicts};
+    const merged=clone(current);
+    incomingKeys.forEach(identity=>{
+      const id=conflictId(record.key,identity);
+      if(Object.prototype.hasOwnProperty.call(current,identity)&&!sameValue(current[identity],next[identity])&&conflictChoice(options,record.domain,id)===CONFLICT_POLICIES.CURRENT)return;
+      merged[identity]=clone(next[identity]);
+    });
+    return{value:merged,summary,conflicts};
+  }
+  function planScalar(record,existing,incoming,mode,options){
+    if(mode===IMPORT_MODES.REPLACE&&incoming===undefined){const summary=emptySummary();summary.removed=existing!==null&&existing!==undefined?1:0;return{value:undefined,summary,conflicts:[]};}
+    const summary=emptySummary(),exists=existing!==null&&existing!==undefined,changed=exists&&!sameValue(existing,incoming),id=conflictId(record.key,'value');
+    summary.records=1;if(!exists)summary.added=1;else if(changed){summary.conflicts=1;if(mode===IMPORT_MODES.MERGE&&conflictChoice(options,record.domain,id)===CONFLICT_POLICIES.CURRENT)summary.kept=1;else summary.replaced=1;}else summary.unchanged=1;
+    const conflicts=changed?[{id,key:record.key,recordName:record.name,identity:'value',label:record.backupField||record.name}]:[];
+    if(mode===IMPORT_MODES.KEEP){summary.kept=exists?1:0;return{value:clone(existing),summary:emptySummary(),conflicts:[]};}
+    if(mode===IMPORT_MODES.MERGE&&changed&&conflictChoice(options,record.domain,id)===CONFLICT_POLICIES.CURRENT)return{value:clone(existing),summary,conflicts};
+    return{value:clone(incoming),summary,conflicts};
+  }
+  function planValue(record,existing,incoming,mode,options){
+    if(Array.isArray(incoming))return planArray(record,existing,incoming,mode,options);
+    if(isRecord(incoming))return planObject(record,existing,incoming,mode,options);
+    return planScalar(record,existing,incoming,mode,options);
+  }
+  function normalizeMode(value){return Object.values(IMPORT_MODES).includes(value)?value:IMPORT_MODES.MERGE;}
+  function createPlan(prepared,options={}){
+    if(!prepared?.changes)throw new Error('No hay una importación preparada.');
+    const inputDomains=[...new Set(Object.keys(prepared.changes).map(key=>registry.get(key)?.domain).filter(Boolean))],changes={},rawKeys=[],domains=[],summary=emptySummary();
+    inputDomains.forEach(domain=>{
+      const settings=options.domains?.[domain]||{},mode=normalizeMode(settings.mode),domainSummary=emptySummary(),conflicts=[];
+      const records=mode===IMPORT_MODES.REPLACE?registry.records({domain,backupOnly:true}):Object.keys(prepared.changes).map(key=>registry.get(key)).filter(record=>record?.domain===domain);
+      records.forEach(record=>{
+        const supplied=Object.prototype.hasOwnProperty.call(prepared.changes,record.key),incoming=supplied?prepared.changes[record.key]:clone(record.defaultValue);
+        if(!supplied&&mode!==IMPORT_MODES.REPLACE)return;
+        const stored=global.APP_DATA.read(record.key,undefined),existing=withoutLocalRedactions(record,stored),planned=planValue(record,existing,incoming,mode,options);
+        if(mode!==IMPORT_MODES.KEEP){const selected=supplied?planned.value:undefined;changes[record.key]=restoreLocalRedactions(record,stored,selected);if(record.serialization==='raw')rawKeys.push(record.key);domainSummary.keys+=1;}
+        addSummary(domainSummary,planned.summary);conflicts.push(...planned.conflicts);
+      });
+      if(mode===IMPORT_MODES.KEEP)domainSummary.kept=Object.keys(prepared.changes).filter(key=>registry.get(key)?.domain===domain).length;
+      addSummary(summary,domainSummary);
+      domains.push({domain,label:DOMAIN_LABELS[domain]||domain,mode,conflictPolicy:settings.conflictPolicy||CONFLICT_POLICIES.INCOMING,summary:domainSummary,conflicts});
+    });
+    return{changes,rawKeys:[...new Set(rawKeys)],summary,domains,options};
   }
   function readForExport(record){
     if(record.serialization==='raw'){
@@ -120,14 +227,17 @@
     let parsed;try{parsed=JSON.parse(text);}catch(error){throw new Error('El archivo no contiene JSON valido.');}
     const stats={ignored:[]},data=sanitize(parsed,0,stats),schemaVersion=validateRoot(data),mapped=buildChanges(data);
     if(!Object.keys(mapped.changes).length)throw new Error('El backup no contiene areas reconocidas para importar.');
-    return {id:`import_${Date.now()}_${Math.random().toString(36).slice(2,8)}`,data,changes:mapped.changes,rawKeys:mapped.rawKeys,schemaVersion,ignored:[...new Set([...stats.ignored,...mapped.ignored])],summary:previewFor(mapped.changes),meta};
+    const prepared={id:`import_${Date.now()}_${Math.random().toString(36).slice(2,8)}`,data,changes:mapped.changes,rawKeys:mapped.rawKeys,schemaVersion,ignored:[...new Set([...stats.ignored,...mapped.ignored])],meta};
+    const plan=createPlan(prepared);prepared.summary=plan.summary;prepared.domains=plan.domains;return prepared;
   }
   function history(){return global.APP_DATA.read(HISTORY_KEY,[]);}
   function saveHistory(entry){global.APP_DATA.write(HISTORY_KEY,[entry,...history()].slice(0,10));}
-  async function apply(prepared){
+  async function apply(prepared,options={}){
     if(!prepared?.changes)throw new Error('No hay una importacion preparada.');
-    const result=await global.APP_DATA.replaceMany(prepared.changes,{reason:`import:${prepared.id}`,rawKeys:prepared.rawKeys});
-    const entry={id:prepared.id,at:new Date().toISOString(),schemaVersion:prepared.schemaVersion,status:result.ok?'applied':'rolled-back',keys:prepared.summary.keys,records:prepared.summary.records,snapshotId:result.snapshotId};
+    const plan=createPlan(prepared,options);if(!Object.keys(plan.changes).length)throw new Error('Elegiste conservar todas las áreas; no hay cambios para importar.');
+    const result=await global.APP_DATA.replaceMany(plan.changes,{reason:`import:${prepared.id}`,rawKeys:plan.rawKeys});
+    const modes=Object.fromEntries(plan.domains.map(item=>[item.domain,item.mode]));
+    const entry={id:prepared.id,at:new Date().toISOString(),schemaVersion:prepared.schemaVersion,status:result.ok?'applied':'rolled-back',keys:plan.summary.keys,records:plan.summary.records,removed:plan.summary.removed,conflicts:plan.summary.conflicts,modes,snapshotId:result.snapshotId};
     saveHistory(entry);
     if(!result.ok)throw new Error('La importacion no pudo completarse y se restauro el estado anterior.');
     global.dispatchEvent(new CustomEvent('app-backup-imported',{detail:{...entry,ignored:prepared.ignored.length}}));
@@ -142,5 +252,5 @@
     return result;
   }
 
-  global.BACKUP_SERVICE=Object.freeze({MAX_FILE_BYTES,CURRENT_SCHEMA,HISTORY_KEY,FIELD_MAP,buildExport,prepareFile,prepareText,apply,undo,history});
+  global.BACKUP_SERVICE=Object.freeze({MAX_FILE_BYTES,CURRENT_SCHEMA,HISTORY_KEY,FIELD_MAP,IMPORT_MODES,CONFLICT_POLICIES,DOMAIN_LABELS,buildExport,prepareFile,prepareText,createPlan,apply,undo,history});
 })(window);

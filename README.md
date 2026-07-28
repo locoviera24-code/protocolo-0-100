@@ -15,7 +15,7 @@ PWA y APK Android para medir habitos, atencion, actividad fisica y nutricion con
 
 ## Navegacion y diseno
 
-La version actual `v2.7.0` (build web `87`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
+La version actual `v2.7.0` (build web `88`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
 **Gym**, **Nutricion**, **Progreso** y **Mas**. En escritorio usa una barra
 lateral compacta. Gym Party se abre desde **Gym > Grupo**, desde un acceso
 discreto en Inicio o mediante un enlace `gymPartyCode`; ya no ocupa un boton
@@ -95,7 +95,13 @@ diagnostico sin datos personales ni credenciales.
 En móvil, Inicio muestra primero un estado compacto con score, racha, datos
 pendientes y una acción. **Más > Ajustes** guarda apariencia, densidad, modo
 guiado/compacto, unidad y preferencias de módulos. **Datos y copias** muestra
-uso local, schema, última exportación y restablecimientos selectivos.
+uso local, schema, última exportación y restablecimientos selectivos. Antes de
+importar permite decidir por área entre **Fusionar**, **Reemplazar** o
+**Conservar actual**. La vista previa identifica registros nuevos,
+actualizaciones, conflictos, duplicados y eliminaciones; los conflictos pueden
+resolverse con una regla por área o revisarse individualmente. Fusionar conserva
+los registros locales ausentes del archivo. Reemplazar advierte expresamente
+qué se eliminará, crea una copia automática y mantiene disponible Deshacer.
 
 ## Arquitectura
 
@@ -121,7 +127,7 @@ app/build-guard.js          Impide arrancar con HTML y modulos de builds distint
 data/schema-registry.js     Fuente unica de claves, schemas, backup, reset y retencion
 data/indexeddb.js           Espejo transaccional, migraciones y recuperacion local
 data/repositories.js        Repositorios por dominio sobre claves compatibles
-data/backup-service.js      Validacion, preview, importacion transaccional y Deshacer
+data/backup-service.js      Plan por area, preview, importacion transaccional y Deshacer
 nutrition/nutrition-store.js Repositorio compatible y claves del dominio Nutricion
 nutrition/nutrition-model.js Totales, porciones, comidas y entradas puras
 nutrition/recipes.js         Recetas, ingredientes snapshot y nutricion por porcion
