@@ -121,8 +121,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     },
     {
       "url": "./index.html",
-      "bytes": 313808,
-      "sha256": "31e084e279da34b6cd0f326b59594458868860a87b81b65edfc47a4578e2c803"
+      "bytes": 316982,
+      "sha256": "aefd2d19cc6bd0a8f28b88d4a8b0d371b53d2055e4b42cf21aacdf4f95ddd083"
     },
     {
       "url": "./nutrition-data.js",
@@ -251,8 +251,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     },
     {
       "url": "./styles/modules.css",
-      "bytes": 31077,
-      "sha256": "7f1de630ab80d3b58ebeb3db230c86211a4167b67dcf1ed4ba7156f29daebf28"
+      "bytes": 31672,
+      "sha256": "41080263a6285471438fbff5297281982bc085edc2b1334e636f1009839cc267"
     },
     {
       "url": "./styles/responsive.css",

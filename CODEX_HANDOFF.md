@@ -3428,3 +3428,40 @@ Empaquetado y pruebas del bloque:
 Siguiente bloque exacto: simplificar la vista normal de `Datos y copias` y mover
 modos de almacenamiento, checksums, divergencias y recuperaciones dentro de un
 único `Diagnóstico avanzado`, sin retirar ninguna herramienta ni clave legacy.
+
+## 73. Datos y copias con complejidad progresiva
+
+La ruta `?module=more&view=data` muestra primero un único estado comprensible,
+última exportación, última importación, espacio utilizado, cantidad de elementos
+que necesitan revisión y las acciones Exportar, Importar, Deshacer y
+restablecimiento selectivo. `navigator.storage.estimate()` amplía la estimación
+cuando está disponible y mantiene el cálculo de `localStorage` como fallback.
+
+Todos los controles técnicos existentes se conservaron, pero ahora viven dentro
+de `#dataAdvancedDiagnostics`, cerrado por defecto:
+
+- schema, claves locales y estado IndexedDB;
+- fuente primaria/compatible de Protocolo, Nutrición, cache, Workout y Gym Party;
+- reactivación, comprobación y rollback por dominio;
+- divergencias, recuperaciones y el historial técnico limitado;
+- exportación del diagnóstico redactado y limpieza exclusiva de metadatos.
+
+La tarjeta principal cambia a **Hay elementos que necesitan revisión** cuando
+existe cuarentena, un dominio `review-needed` o un error recuperable. Los datos
+en cuarentena siguen visibles fuera del diagnóstico para que reparar/exportar no
+quede oculto. No se retiró `localStorage`, no cambió ningún schema y no se tocó
+la política de retención.
+
+Verificación:
+
+- 12/12 escenarios de Datos y copias, compatibilidad y rollback visibles en las
+  tres plataformas Playwright;
+- 6/6 escenarios de cuarentena, reparación y redacción en las tres plataformas;
+- precache y paridad Android regenerados; validación estructural con 489 IDs
+  únicos;
+- el panel técnico está oculto inicialmente y sus controles siguen operativos
+  después de abrirlo, recargar y cambiar de modo.
+
+Siguiente bloque exacto: separar definitivamente la administración de alimentos
+y recetas del registro diario, y ocultar la configuración técnica nutricional
+salvo en modo desarrollo/soporte/diagnóstico.

@@ -401,6 +401,27 @@ body[data-module="mas"] .grid {
   margin-top: var(--space-4);
   border-block: 1px solid var(--color-border-soft);
 }
+.dataHealthCard .pill[data-tone="success"] {
+  border-color: var(--state-success-border);
+  color: var(--color-success);
+  background: var(--color-success-soft);
+}
+.dataHealthCard .pill[data-tone="warning"] {
+  border-color: var(--state-warning-border);
+  color: var(--state-warning-text);
+  background: var(--color-warning-soft);
+}
+.dataAdvancedDiagnostics .diagnosticContent {
+  display: grid;
+  gap: var(--space-4);
+  margin-top: var(--space-3);
+}
+.diagnosticSection {
+  display: grid;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border-soft);
+}
 .dangerZone {
   margin-top: var(--space-5);
   border: 1px solid var(--color-danger);

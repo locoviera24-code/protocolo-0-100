@@ -103,8 +103,13 @@ test('Datos muestra almacenamiento y restablece solo un área',async ({page})=>{
     localStorage.setItem('protocolo_0_100_nutrition_entries_v1','[{"id":"food"}]');
   });
   await page.reload();
+  await expect(page.locator('#dataHealthTitle')).toContainText('guardados');
+  await expect(page.locator('#dataAdvancedDiagnostics')).not.toHaveAttribute('open','');
+  await expect(page.locator('#toggleProtocolPrimaryBtn')).toBeHidden();
   await expect(page.locator('#localStorageEstimate')).not.toHaveText('0 KB');
   await expect(page.locator('#dataSchemaVersion')).toHaveText('3');
+  await page.locator('#dataAdvancedDiagnostics > summary').click();
+  await expect(page.locator('#toggleProtocolPrimaryBtn')).toBeVisible();
   await page.locator('[data-reset-scope="protocol"]').click();
   await expect(page.locator('#appConfirmationBackdrop')).toBeVisible();
   await expect(page.locator('#appConfirmationCancel')).toBeFocused();

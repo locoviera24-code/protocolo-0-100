@@ -103,7 +103,12 @@ diagnostico sin datos personales ni credenciales.
 En móvil, Inicio muestra primero un estado compacto con score, racha, datos
 pendientes y una acción. **Más > Ajustes** guarda apariencia, densidad, modo
 guiado/compacto, unidad y preferencias de módulos. **Datos y copias** muestra
-uso local, schema, última exportación y restablecimientos selectivos. Antes de
+un estado general, última exportación e importación, espacio utilizado,
+elementos que necesitan revisión y restablecimientos selectivos. Los detalles
+de IndexedDB/localStorage, modos por dominio, claves, divergencias,
+recuperaciones y rollback permanecen disponibles dentro de **Diagnóstico
+avanzado**, cerrado por defecto. La app elige el almacenamiento; una persona no
+necesita cambiar su tecnología para usar copias. Antes de
 importar permite decidir por área entre **Fusionar**, **Reemplazar** o
 **Conservar actual**. La vista previa identifica registros nuevos,
 actualizaciones, conflictos, duplicados y eliminaciones; los conflictos pueden
@@ -216,8 +221,8 @@ conserva `startDate`, acciones descartadas y sesiones Gym legacy fuera de su
 grupo primario. `PROTOCOL_FEATURES.ready()` garantiza que Inicio vuelva a leer
 el registro diario recuperado antes de declararse hidratado.
 
-Durante el período de compatibilidad, **Más > Datos y copias > Historial
-técnico de compatibilidad** conserva hasta 100 eventos de reconciliación o
+Durante el período de compatibilidad, **Más > Datos y copias > Diagnóstico
+avanzado > Historial técnico de compatibilidad** conserva hasta 100 eventos de reconciliación o
 recuperación. Solo registra dominio, clave técnica, resolución y fecha: no
 incluye valores, notas, credenciales, configuración Firebase ni contenido de
 salud. Desde ese panel se pueden comprobar conjuntamente las cinco áreas,

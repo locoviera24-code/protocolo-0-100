@@ -67,7 +67,7 @@ test('Datos y copias permite comprobar y exportar el diagnostico tecnico',async(
   await expect(page.locator('#compatibilityAuditSummary')).toContainText('comprobación');
   await expect(page.locator('#compatibilityAuditSummary')).not.toContainText('Preparando');
   expect(await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
-  await page.locator('#compatibilityAuditCard > summary').click();
+  await page.locator('#dataAdvancedDiagnostics > summary').click();
   const before=Number(await page.locator('#compatibilityAuditChecks').textContent());
   await page.locator('#verifyCompatibilityBtn').click();
   await expect.poll(async()=>Number(await page.locator('#compatibilityAuditChecks').textContent())).toBeGreaterThan(before);

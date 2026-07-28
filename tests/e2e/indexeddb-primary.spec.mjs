@@ -253,12 +253,14 @@ test('coordina registros de Protocolo entre dos pestañas',async ({page,context}
 
 test('Datos y copias permite rollback y reactivación de Protocolo',async ({page})=>{
   await clean(page);await page.goto('/index.html?module=more&view=data');
+  await page.locator('#dataAdvancedDiagnostics > summary').click();
   await expect(page.locator('#protocolStorageStatus')).toContainText('IndexedDB');
   await expect(page.locator('#toggleProtocolPrimaryBtn')).toHaveText('Usar modo compatible');
   await page.locator('#toggleProtocolPrimaryBtn').click();
   await expect(page.locator('#protocolStorageStatus')).toContainText('Modo compatible');
   expect(await page.evaluate(()=>window.APP_DATA.config().primaryDomains.protocol)).toBe(false);
   await page.reload();await page.evaluate(()=>window.PROTOCOL_FEATURES.ready());
+  await page.locator('#dataAdvancedDiagnostics > summary').click();
   await expect(page.locator('#toggleProtocolPrimaryBtn')).toHaveText('Reactivar IndexedDB');
   await page.locator('#toggleProtocolPrimaryBtn').click();
   await expect(page.locator('#protocolStorageStatus')).toContainText('IndexedDB verificada');
@@ -365,6 +367,7 @@ test('coordina la cola offline de Gym Party entre dos pestañas',async ({page,co
 
 test('Datos y copias permite rollback y reactivación visibles',async ({page})=>{
   await clean(page);await page.goto('/index.html?module=more&view=data');
+  await page.locator('#dataAdvancedDiagnostics > summary').click();
   await expect(page.locator('#nutritionStorageStatus')).toContainText('IndexedDB');
   await expect(page.locator('#toggleNutritionPrimaryBtn')).toHaveText('Usar modo compatible');
   await expect(page.locator('#nutritionCacheStorageStatus')).toContainText('IndexedDB');
@@ -379,6 +382,7 @@ test('Datos y copias permite rollback y reactivación visibles',async ({page})=>
   await expect(page.locator('#nutritionStorageStatus')).toContainText('Modo compatible');
   expect(await page.evaluate(()=>window.APP_DATA.config().primaryDomains.nutrition)).toBe(false);
   await page.reload();await page.evaluate(()=>window.APP_DATA.ready());
+  await page.locator('#dataAdvancedDiagnostics > summary').click();
   await expect(page.locator('#toggleNutritionPrimaryBtn')).toHaveText('Reactivar IndexedDB');
   await page.locator('#toggleNutritionPrimaryBtn').click();
   await expect(page.locator('#nutritionStorageStatus')).toContainText('IndexedDB verificada');
@@ -389,6 +393,7 @@ test('Datos y copias permite rollback y reactivación visibles',async ({page})=>
   await expect(page.locator('#workoutStorageStatus')).toContainText('Modo compatible');
   expect(await page.evaluate(()=>window.APP_DATA.config().primaryDomains.workout)).toBe(false);
   await page.reload();await page.evaluate(()=>window.APP_DATA.ready());
+  await page.locator('#dataAdvancedDiagnostics > summary').click();
   await expect(page.locator('#toggleWorkoutPrimaryBtn')).toHaveText('Reactivar IndexedDB');
   await page.locator('#toggleWorkoutPrimaryBtn').click();
   await expect(page.locator('#workoutStorageStatus')).toContainText('IndexedDB verificada');
@@ -399,6 +404,7 @@ test('Datos y copias permite rollback y reactivación visibles',async ({page})=>
   await expect(page.locator('#gymPartyStorageStatus')).toContainText('Modo compatible');
   expect(await page.evaluate(()=>window.APP_DATA.config().primaryDomains.gymParty)).toBe(false);
   await page.reload();await page.evaluate(()=>window.APP_DATA.ready());
+  await page.locator('#dataAdvancedDiagnostics > summary').click();
   await expect(page.locator('#toggleGymPartyPrimaryBtn')).toHaveText('Reactivar IndexedDB');
   await page.locator('#toggleGymPartyPrimaryBtn').click();
   await expect(page.locator('#gymPartyStorageStatus')).toContainText('IndexedDB verificada');
