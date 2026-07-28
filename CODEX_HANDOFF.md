@@ -3666,3 +3666,20 @@ Siguiente acción exacta: validar y enviar este contrato, crear
 `baseline-stable-2.7`, esperar el gate/despliegue y comprobar que la URL pública
 sirve `2.7.0` build `89` con el commit etiquetado antes de declarar cerrada la
 línea base.
+
+## 80. Ajuste a la política del entorno Pages
+
+La etiqueta `baseline-stable-2.7` disparó el run `30399703693`. El quality gate
+terminó correctamente (346 E2E generales, 27 escenarios axe y 1 smoke del
+artifact), pero GitHub rechazó el job de despliegue porque la política del
+entorno `github-pages` no admite tags como rama de despliegue. No se publicó un
+artifact parcial y la web estable permaneció en build 79.
+
+El disparador explícito se trasladó a `.github/stable-release.json`. El workflow
+solo escucha cambios de ese archivo en `main`, rama permitida por el entorno;
+los pushes normales siguen sin publicar. El despacho manual `stable` permanece
+disponible. El marcador contiene únicamente versión, build, canal y fecha, sin
+secretos ni datos de usuario.
+
+Siguiente acción exacta: enviar este commit, esperar el nuevo gate estable,
+verificar build 89 en Pages y mover `baseline-stable-2.7` al commit publicado.

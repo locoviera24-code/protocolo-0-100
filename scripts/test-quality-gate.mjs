@@ -7,6 +7,8 @@ const validate=await read('.github/workflows/validate-app.yml');
 const pages=await read('.github/workflows/deploy-pages.yml');
 const debug=await read('.github/workflows/build-debug-apk.yml');
 const release=await read('.github/workflows/build-release-apk.yml');
+const stableRelease=JSON.parse(await read('.github/stable-release.json'));
+const appVersion=JSON.parse(await read('app-version.json'));
 const callers=[validate,pages,debug,release];
 
 for(const caller of callers)assert.match(caller,/uses: \.\/\.github\/workflows\/quality-gate\.yml/,'Todo canal publicable debe depender del mismo gate');
@@ -19,12 +21,15 @@ for(const command of [
 for(const contract of ['workflow_call:','channel:','beta','stable','actions/upload-artifact@v7','android-actions/setup-android@v4','gradle/actions/setup-gradle@v6','protocolo-web-','protocolo-android-debug-','-CheckAndroidAssets','test-release.jks'])assert.ok(gate.includes(contract),`Falta contrato del quality gate: ${contract}`);
 
 assert.match(validate,/push:[\s\S]*branches:/,'main y PR deben ejecutar el gate beta');
-assert.match(pages,/push:[\s\S]*tags:[\s\S]*baseline-stable-\*/,'Una etiqueta explicita debe poder publicar la linea base estable');
-assert.doesNotMatch(pages,/push:[\s\S]*branches:/,'Pages estable no debe publicarse automaticamente por cada commit');
+assert.match(pages,/push:[\s\S]*branches:[\s\S]*- main[\s\S]*paths:[\s\S]*\.github\/stable-release\.json/,'Una solicitud versionada en main debe poder publicar la linea base estable');
+assert.doesNotMatch(pages,/push:[\s\S]*branches:[\s\S]*- main\s+(?![\s\S]*paths:)/,'Pages estable no debe publicarse automaticamente por cada commit');
 assert.match(pages,/if: github\.event_name == 'push' \|\| inputs\.channel == 'stable'/);
 assert.match(pages,/github\.event_name == 'push' && 'stable' \|\| inputs\.channel/);
 assert.match(pages,/needs: quality/);
 assert.match(pages,/actions\/download-artifact@v8/);
+assert.equal(stableRelease.channel,'stable');
+assert.equal(stableRelease.version,appVersion.version,'La solicitud estable debe usar la version activa');
+assert.equal(stableRelease.build,appVersion.build,'La solicitud estable debe usar el build activo');
 assert.doesNotMatch(debug,/\n  push:/,'El APK manual no debe duplicar el gate automatico de main');
 assert.doesNotMatch(debug,/gh release/);
 assert.match(release,/needs: quality/);
@@ -32,4 +37,4 @@ assert.match(release,/gh release create/);
 
 for(const caller of callers)assert.doesNotMatch(caller,/npm run test:e2e/,'Las matrices no deben duplicarse fuera del gate');
 
-console.log('Quality gate unico correcto: beta automatica, estable por despacho o etiqueta explicita, E2E, Firestore, web y Android compartidos.');
+console.log('Quality gate unico correcto: beta automatica, estable por despacho o solicitud versionada, E2E, Firestore, web y Android compartidos.');

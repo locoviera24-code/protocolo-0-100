@@ -12,8 +12,10 @@ on:
           - beta
           - stable
   push:
-    tags:
-      - 'baseline-stable-*'
+    branches:
+      - main
+    paths:
+      - '.github/stable-release.json'
 
 permissions:
   contents: read

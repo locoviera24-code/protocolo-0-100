@@ -758,8 +758,8 @@ Assert-True ($qualityWorkflow.Contains('npm run test:web-dist')) 'El gate debe v
 Assert-True ($qualityWorkflow.Contains('npm run test:web-dist:e2e')) 'El gate debe abrir el artifact sin errores'
 Assert-True ($qualityWorkflow.Contains('npm run test:quality-gate')) 'El gate debe validar su propio contrato'
 Assert-True ($deployWorkflow.Contains("if: github.event_name == 'push' || inputs.channel == 'stable'")) 'Pages solo debe publicar el canal estable'
-Assert-True ($deployWorkflow.Contains("- 'baseline-stable-*'")) 'Pages debe aceptar una etiqueta estable explicita'
-Assert-True (-not $deployWorkflow.Contains("    branches:")) 'Pages estable no debe sobrescribirse por cada commit'
+Assert-True ($deployWorkflow.Contains("- '.github/stable-release.json'")) 'Pages debe exigir una solicitud estable versionada'
+Assert-True ($deployWorkflow.Contains('    paths:')) 'Pages estable no debe sobrescribirse por cada commit'
 Assert-True ($validationWorkflow.Contains('channel: beta')) 'main y PR deben producir artifacts beta'
 Assert-True (-not $deployWorkflow.Contains('cp index.html')) 'Pages no debe mantener una lista manual paralela de archivos'
 foreach ($contract in @('discoverWebAssets','asset-manifest.json','sha256','WEB_FIREBASE_CONFIG_PATH','app-version.json')) {
