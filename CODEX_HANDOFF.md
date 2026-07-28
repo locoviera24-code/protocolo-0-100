@@ -3683,3 +3683,43 @@ secretos ni datos de usuario.
 
 Siguiente acción exacta: enviar este commit, esperar el nuevo gate estable,
 verificar build 89 en Pages y mover `baseline-stable-2.7` al commit publicado.
+
+## 81. Línea base 2.7 publicada y cerrada
+
+La solicitud versionada desde `main` produjo el run estable `30401061473` sobre
+el commit `a8d3253359d7975ec37163e5dd7fd5a4846df658`. Terminó correctamente en
+17 minutos y 14 segundos:
+
+- Playwright del artifact: 1 aprobado;
+- matriz Android Chromium, iPhone WebKit y escritorio: 346 aprobados y 14
+  omisiones conocidas;
+- axe: 27 aprobados;
+- Firestore Emulator y Android debug/release de prueba incluidos en el gate;
+- despliegue Pages: aprobado en 14 segundos;
+- artifact `github-pages`: 494 KB, SHA-256
+  `34f1f4a66f0a80bc1eef8c8fead5e4276bae93add3993bb48ca1ad2a5029005e`;
+- artifact `protocolo-web-stable`: 518 KB, SHA-256
+  `42468d1b9884166977b78166ae6dc65e45d4a027064f7cf52caeb8fa6529694e`;
+- artifact `protocolo-android-debug-stable`: 1,7 MB, SHA-256
+  `619c1dd27ce1902ffd9a58ceb7fabd22f6eb992cdb324a5854c6f08303248aee`.
+
+La URL pública sirve `2.7.0`, build `89`, canal `stable`, commit `a8d3253` y
+cache `protocolo-0-100-pwa-2.7.0-b89`. Se descargaron y verificaron los 81
+recursos declarados en `asset-manifest.json`: 0 respuestas fallidas, 0 tamaños
+incorrectos y 0 hashes divergentes. El smoke real abrió Acerca de, Gym,
+Nutrición y Datos y copias sin activar recuperación; la consola pública quedó
+sin warnings ni errores. El navegador que conservaba el build previo mostró el
+aviso de actualización y, después de la acción explícita, abrió build 89 sin
+mezcla de assets.
+
+La etiqueta anotada `baseline-stable-2.7` apunta al commit publicado
+`a8d3253359d7975ec37163e5dd7fd5a4846df658`. La única advertencia del run es la
+deprecación futura de Node.js 20 en acciones oficiales de Pages; GitHub las
+ejecutó con Node.js 24 y no afectó el resultado.
+
+No se ejecutaron pruebas físicas en este cierre: `adb devices -l` no detectó
+dispositivos. Siguen pendientes manualmente iPhone/Safari, Android Chrome/PWA,
+APK instalado y actualización desde APK anterior, widget en launcher, voz y
+Gym Party entre dos teléfonos. La checklist exacta está en
+`docs/physical-test-checklist.md`. No debe atribuirse ningún resultado físico
+hasta completarla.
