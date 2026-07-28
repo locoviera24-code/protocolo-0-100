@@ -72,11 +72,13 @@ continua directamente a cantidad, comida y revision.
 La app no necesita un proveedor externo para funcionar. Sin conexion o sin un
 backend configurado conserva alimentos incluidos, personales, recetas y datos
 guardados. El flujo cotidiano no muestra USDA, FDC, endpoints ni API keys. La
-configuracion tecnica permanece plegada en **Mas > Ajustes > Nutricion >
-Diagnostico avanzado de fuentes**. Una clave configurada directamente en el
-navegador queda expuesta al JavaScript del origen, por lo que se reserva para
-desarrollo, puede borrarse y nunca entra en backups; produccion debe usar un
-proxy o backend con su secreto del lado servidor.
+configuracion tecnica solo aparece en builds de desarrollo o al activar soporte,
+dentro de **Mas > Datos y copias > Diagnostico avanzado > Nutricion**. En un
+build estable se muestra unicamente **Busqueda ampliada disponible**, **no
+disponible** o **Modo offline**. Una clave guardada directamente en el navegador
+se reserva para desarrollo, puede borrarse y nunca entra en backups; un build
+estable solo habilita consultas productivas mediante un proxy o backend con el
+secreto del lado servidor.
 
 Los campos numericos de registro aceptan coma o punto decimal y separadores de
 miles (`7,5`, `7.5`, `1.000,5` o `1,000.5`). La app guarda numeros neutrales y
@@ -251,7 +253,9 @@ IndexedDB; si ambas divergen, la copia local pendiente se reconcilia sin perder
 datos. **Mas > Datos y copias** permite volver al modo compatible o reactivar
 la lectura primaria. La vista normal tiene solo **Hoy**, **Agregar** y
 **Progreso**. Hoy agrupa alimentos por comida y separa el agua; peso corporal,
-objetivos, alimentos propios y FDC viven en **Mas > Ajustes > Nutricion**. Los
+objetivos viven en **Mas > Ajustes > Nutricion** y la administracion de alimentos
+y recetas vive en **Nutricion > Mis alimentos y recetas**. El diagnostico de
+fuentes permanece fuera del uso normal. Los
 backups schema 3 incorporan las claves opcionales `recipes` y `foodPortions`;
 archivos anteriores siguen siendo compatibles. **Agregar** guía alimento, cantidad,
 unidad, comida y revisión en cuatro pasos; muestra recientes/frecuentes,

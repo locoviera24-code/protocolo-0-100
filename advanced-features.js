@@ -254,13 +254,27 @@
     const key=document.getElementById('fdcApiKey'),backend=document.getElementById('fdcBackendUrl'),size=document.getElementById('fdcPageSize');
     if(key)key.value=value.apiKey||'';if(backend)backend.value=value.backendUrl||'';if(size)size.value=value.pageSize||20;
   }
+  function renderExpandedSearchStatus(){
+    const label=document.getElementById('nutritionExpandedSearchLabel'),description=document.getElementById('nutritionExpandedSearchDescription');if(!label||!description)return;
+    if(navigator.onLine===false){label.textContent='Modo offline';description.textContent='Podés usar alimentos guardados, recetas y opciones personales.';return;}
+    if(FDC?.hasRemoteAccess?.()){label.textContent='Búsqueda ampliada disponible';description.textContent='La app buscará más opciones automáticamente cuando sea necesario.';return;}
+    label.textContent='Búsqueda ampliada no disponible';description.textContent='El buscador local y todos tus alimentos guardados siguen funcionando.';
+  }
+  async function configureNutritionDiagnostics(){
+    const info=await window.APP_BUILD_INFO?.active?.()||{channel:'development'},allowed=window.APP_BUILD_INFO?.diagnosticsAllowed?.(info)??info.channel==='development';
+    window.APP_NUTRITION_ALLOW_BROWSER_KEY=allowed;
+    document.getElementById('fdcSettingsCard')?.classList.toggle('hidden',!allowed);
+    window.__nutritionUnifiedSearch=null;
+    renderExpandedSearchStatus();
+  }
   function saveFdcConfig(){
     if(!FDC)return;
     FDC.saveConfig({apiKey:document.getElementById('fdcApiKey')?.value||'',backendUrl:document.getElementById('fdcBackendUrl')?.value||'',pageSize:document.getElementById('fdcPageSize')?.value||20});
+    configureNutritionDiagnostics();
     flash('Configuración avanzada guardada solo en este dispositivo.');
   }
   function clearFdcApiKey(){
-    if(!FDC)return;FDC.saveConfig({...FDC.config(),apiKey:''});loadFdcConfigFields();flash('API key local eliminada.');
+    if(!FDC)return;FDC.saveConfig({...FDC.config(),apiKey:''});loadFdcConfigFields();configureNutritionDiagnostics();flash('API key local eliminada.');
   }
   function nutrientDialogFields(food,fields){return[{name:'name',label:'Nombre',value:food.name,required:true},...Object.entries(fields).map(([name,label])=>({name,label,value:window.APP_NUMBERS?.format?.(food[name]??food.nutrients?.[name]??0,{maximumFractionDigits:3})??String(food[name]??food.nutrients?.[name]??0),type:'text',inputmode:'decimal',validate:value=>{const parsed=window.APP_NUMBERS?.parse?.(value);return parsed!==null&&parsed>=0?'':'Ingresá un número igual o mayor que cero.';}}))];}
   async function editCachedFdcFood(id){
@@ -594,6 +608,8 @@
     document.getElementById('applyReferralBtn')?.addEventListener('click',applyReferral);
     document.getElementById('exportAffiliateCsvBtn')?.addEventListener('click',exportAffiliateCsv);
     document.getElementById('nutritionMeal')?.addEventListener('change',renderNutrition);
+    window.addEventListener('online',renderExpandedSearchStatus);
+    window.addEventListener('offline',renderExpandedSearchStatus);
     document.addEventListener('click',event=>{
       const customAction=event.target.closest('[data-custom-food-action]');if(customAction){customAction.closest('details.nutritionFoodMenu')?.removeAttribute('open');handleCustomFoodAction(customAction);return;}
       const editFdc=event.target.closest('[data-edit-fdc]');if(editFdc){editCachedFdcFood(editFdc.dataset.editFdc);return;}
@@ -610,6 +626,7 @@
   loadAdvancedTargetFields();
   renderSavedMeals();
   loadFdcConfigFields();
+  configureNutritionDiagnostics();
   setupEvents();
   const restoredNutritionDraft=window.restoreNutritionFoodDraft?.({announce:false})===true;
   setNutritionView(restoredNutritionDraft&&document.getElementById('customFoodDetails')?.open?'library':restoredNutritionDraft?'registrar':'resumen');

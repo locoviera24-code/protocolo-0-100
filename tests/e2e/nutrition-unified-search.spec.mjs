@@ -58,5 +58,5 @@ test('cancela consultas obsoletas y conserva fallback offline',async({page,conte
   await reset(page);await installProviderMock(page,{empty:true});
   await page.locator('#nutritionFoodSearch').fill('alimento alfa inusual');await page.waitForTimeout(100);await page.locator('#nutritionFoodSearch').fill('alimento beta inusual');
   await expect(page.locator('#nutritionFoodSearchStatus')).toContainText('No encontramos más coincidencias');expect((await page.evaluate(()=>window.__nutritionExternalQueries)).at(-1)).toBe('alimento beta inusual');
-  await context.setOffline(true);await page.locator('#nutritionFoodSearch').fill('alimento gamma inusual');await expect(page.locator('#nutritionFoodSearchStatus')).toContainText('Sin conexión');await expect(page.locator('#customFoodDetails')).toBeVisible();await context.setOffline(false);
+  await context.setOffline(true);await page.locator('#nutritionFoodSearch').fill('alimento gamma inusual');await expect(page.locator('#nutritionFoodSearchStatus')).toContainText('Sin conexión');await expect(page.getByRole('button',{name:'Crear este alimento'})).toBeVisible();await expect(page.locator('#customFoodDetails')).toBeHidden();await context.setOffline(false);
 });

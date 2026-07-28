@@ -79,7 +79,7 @@
   }
   function hasRemoteAccess(){
     const value=config();
-    return !!(value.backendUrl||value.apiKey);
+    return !!(value.backendUrl||(value.apiKey&&window.APP_NUTRITION_ALLOW_BROWSER_KEY===true));
   }
   function cachedFoods(){
     return read(CACHE_KEY,[]).filter(food=>food&&food.fdcId);

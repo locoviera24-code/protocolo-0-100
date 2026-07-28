@@ -3497,3 +3497,34 @@ Verificación del bloque:
 Siguiente bloque exacto: ocultar `fdcSettingsCard` en builds estables salvo modo
 soporte/diagnóstico y mostrar al usuario solo el estado simple de búsqueda
 ampliada u offline.
+
+## 75. Diagnóstico nutricional reservado para soporte
+
+`#fdcSettingsCard` ya no se monta en Ajustes de Nutrición. Se conserva completo
+dentro de **Más > Datos y copias > Diagnóstico avanzado > Nutrición**, pero
+permanece oculto en builds estables. Se habilita únicamente cuando el canal es
+`development`, la URL contiene `diagnostics=1`/`support=1` o existe una sesión de
+soporte activada explícitamente. `diagnostics=0`/`support=0` la desactiva.
+
+La pantalla normal de Ajustes muestra solamente `#nutritionExpandedSearchStatus`
+con uno de tres estados: **Búsqueda ampliada disponible**, **Búsqueda ampliada no
+disponible** o **Modo offline**. Los cambios `online`/`offline` actualizan ese
+estado sin exponer proveedor, endpoint, IDs ni credenciales.
+
+El contrato remoto quedó endurecido sin borrar compatibilidad: un `backendUrl`
+configurado sigue habilitando la búsqueda en cualquier canal; una API key
+guardada en el navegador solo habilita llamadas directas durante desarrollo o
+soporte. Las claves legacy permanecen locales, no se exportan y no se eliminan.
+
+Pruebas del bloque:
+
+- 9/9 en Android Chromium, iPhone WebKit y escritorio Chromium: build estable
+  oculto, soporte explícito visible y transición a offline;
+- el caso estable comprobó que una clave local legacy no habilita red;
+- 4/4 escenarios del buscador unificado en escritorio Chromium; una expectativa
+  antigua que buscaba el formulario inline se actualizó al nuevo acceso
+  **Crear este alimento** y el recorrido offline quedó aprobado;
+- no cambiaron schemas, caché nutricional, comidas, recetas ni IndexedDB.
+
+Siguiente bloque exacto: integrar `@axe-core/playwright`, ejecutar auditorías
+reales sobre las vistas centrales y documentar únicamente excepciones concretas.

@@ -50,6 +50,13 @@
     else if(extra)reasons.push(String(extra));
     return[...new Set(reasons)];
   }
+  function diagnosticsAllowed(info,{search=global.location?.search||''}={}){
+    const params=new URLSearchParams(search),requested=params.get('diagnostics')==='1'||params.get('support')==='1';
+    if(requested)global.sessionStorage?.setItem?.('protocolo_support_mode_v1','1');
+    if(params.get('diagnostics')==='0'||params.get('support')==='0')global.sessionStorage?.removeItem?.('protocolo_support_mode_v1');
+    const remembered=global.sessionStorage?.getItem?.('protocolo_support_mode_v1')==='1';
+    return info?.channel==='development'||requested||remembered;
+  }
   async function activate(registration,worker){
     const reasons=unsafeReasons();
     if(reasons.length)return{ok:false,reasons};
@@ -68,5 +75,5 @@
     catch{return{label:'No disponible',controlled:false,waiting:false};}
   }
 
-  global.APP_BUILD_INFO=Object.freeze({UPDATE_PARAM,active,check,newer,unsafeReasons,activate,serviceWorkerState,get lastCheckAt(){return lastCheckAt;}});
+  global.APP_BUILD_INFO=Object.freeze({UPDATE_PARAM,active,check,newer,unsafeReasons,diagnosticsAllowed,activate,serviceWorkerState,get lastCheckAt(){return lastCheckAt;}});
 })(window);

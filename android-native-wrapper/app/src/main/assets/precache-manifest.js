@@ -6,8 +6,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
   "required": [
     {
       "url": "./advanced-features.js",
-      "bytes": 61419,
-      "sha256": "3d56d4595c3e593f9740ce614d24019011e784735db90c0a774892f93cf805f9"
+      "bytes": 62821,
+      "sha256": "7f9445c05bc6bbeb226bbb468fb1c3e13e3eb0bad5b91d500ba6de40eeb57d4a"
     },
     {
       "url": "./app-version.js",
@@ -21,8 +21,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     },
     {
       "url": "./app/build-info.js",
-      "bytes": 4318,
-      "sha256": "415efb0ff0581f53e1ec00a4541908f4115005bb7f165adf61a441d56cbb6937"
+      "bytes": 4908,
+      "sha256": "6858f2066816aab3beb220d4bbad72152371b16748719c523d3e07ff9994e917"
     },
     {
       "url": "./app/dates.js",
@@ -66,8 +66,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     },
     {
       "url": "./fdc-client.js",
-      "bytes": 16625,
-      "sha256": "a50aa843ab3bf8a1243eff5fc01933adfe423eafe46bfeacd0a840e882174964"
+      "bytes": 16674,
+      "sha256": "80ed4f72147483d6079ddf6d89ca94ddd9f7aee47e7206ee439c919cd1498395"
     },
     {
       "url": "./firebase-config.js",
@@ -121,8 +121,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     },
     {
       "url": "./index.html",
-      "bytes": 317722,
-      "sha256": "557c4851ecc64724aa5b2a72ad5a03c62a8ba1207eb462e167e12b7ded08c2f4"
+      "bytes": 318391,
+      "sha256": "b3dc262c3bf3c3b8ae4dd6e547c4da9a57dcdea2296d7fe3bbb85d7adc4234b8"
     },
     {
       "url": "./nutrition-data.js",
