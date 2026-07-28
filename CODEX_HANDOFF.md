@@ -3344,5 +3344,18 @@ Empaquetado local verificado:
   APK debug de 1.746.537 bytes, SHA-256
   `D60D3B0F48152B5E59411625605B76226095D0502C94DC4E85CE9949C78E8767`.
 
-Pendiente para cerrar el bloque: commit, push y quality gate remoto. El período
-de compatibilidad entre IndexedDB y `localStorage` continúa sin cambios.
+Resultado remoto definitivo: `Validar aplicacion` #88, commit `29e86e7`,
+finalizó **Success** en 15m 36s. El gate aprobó 325 E2E y mantuvo 14 omisiones
+conocidas; la verificación servida del artifact aprobó 1/1. También pasaron
+Firestore Emulator, service worker atómico, Android debug/release de prueba y
+paridad de assets. Artifacts:
+
+- `protocolo-android-debug-beta`, 1,51 MB, SHA-256
+  `0958e34e8bd305ba84b802264adee42e596742ac003c0fe7b7d3d24d0d633574`;
+- `protocolo-web-beta`, 325 KB, SHA-256
+  `02d0f373d342fb76433d9d2dd723b5fbcbe2c17afbe2092fb45875ec55a8bf7a`.
+
+El bloque queda cerrado y publicado en build 88. El período de compatibilidad
+entre IndexedDB y `localStorage` continúa sin cambios; no retirar claves legacy
+antes de observar divergencias reales y completar pruebas en dispositivos
+físicos.
