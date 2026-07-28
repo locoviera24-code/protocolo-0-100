@@ -19,8 +19,10 @@ for(const command of [
 for(const contract of ['workflow_call:','channel:','beta','stable','actions/upload-artifact@v7','android-actions/setup-android@v4','gradle/actions/setup-gradle@v6','protocolo-web-','protocolo-android-debug-','-CheckAndroidAssets','test-release.jks'])assert.ok(gate.includes(contract),`Falta contrato del quality gate: ${contract}`);
 
 assert.match(validate,/push:[\s\S]*branches:/,'main y PR deben ejecutar el gate beta');
-assert.doesNotMatch(pages,/\n  push:/,'Pages estable no debe publicarse automaticamente por cada commit');
-assert.match(pages,/if: inputs\.channel == 'stable'/);
+assert.match(pages,/push:[\s\S]*tags:[\s\S]*baseline-stable-\*/,'Una etiqueta explicita debe poder publicar la linea base estable');
+assert.doesNotMatch(pages,/push:[\s\S]*branches:/,'Pages estable no debe publicarse automaticamente por cada commit');
+assert.match(pages,/if: github\.event_name == 'push' \|\| inputs\.channel == 'stable'/);
+assert.match(pages,/github\.event_name == 'push' && 'stable' \|\| inputs\.channel/);
 assert.match(pages,/needs: quality/);
 assert.match(pages,/actions\/download-artifact@v8/);
 assert.doesNotMatch(debug,/\n  push:/,'El APK manual no debe duplicar el gate automatico de main');
@@ -30,4 +32,4 @@ assert.match(release,/gh release create/);
 
 for(const caller of callers)assert.doesNotMatch(caller,/npm run test:e2e/,'Las matrices no deben duplicarse fuera del gate');
 
-console.log('Quality gate unico correcto: beta automatica, estable manual, E2E, Firestore, web y Android compartidos.');
+console.log('Quality gate unico correcto: beta automatica, estable por despacho o etiqueta explicita, E2E, Firestore, web y Android compartidos.');

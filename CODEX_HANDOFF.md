@@ -3647,3 +3647,22 @@ Siguiente acción exacta: enviar este commit a `main`, esperar el quality gate
 remoto, ejecutar manualmente **Publicar PWA en GitHub Pages** con canal
 `stable`, repetir el smoke público y solo entonces considerar publicado el
 build 89. La referencia `baseline-stable-2.7` debe apuntar al commit probado.
+
+## 79. Despacho estable mediante línea base explícita
+
+El commit `ab62fbf` fue enviado a `main` y el quality gate remoto
+`30397932600` terminó correctamente. La sesión del navegador y `gh` no estaban
+autenticadas para usar `workflow_dispatch`; no se accedió ni se expuso ningún
+token almacenado.
+
+`deploy-pages.yml` acepta ahora, además del despacho manual, exclusivamente
+etiquetas `baseline-stable-*`. La etiqueta se interpreta como canal `stable`,
+ejecuta el mismo quality gate completo y solo después permite el despliegue.
+No existe disparador por ramas, por lo que un push normal a `main` sigue sin
+sobrescribir la web estable. `scripts/test-quality-gate.mjs` y
+`scripts/validate-app.ps1` verifican ese límite.
+
+Siguiente acción exacta: validar y enviar este contrato, crear
+`baseline-stable-2.7`, esperar el gate/despliegue y comprobar que la URL pública
+sirve `2.7.0` build `89` con el commit etiquetado antes de declarar cerrada la
+línea base.

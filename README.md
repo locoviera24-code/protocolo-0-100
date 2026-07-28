@@ -651,9 +651,11 @@ revision.
   requests. Produce `protocolo-web-beta` y `protocolo-android-debug-beta`; no
   reemplaza la web estable.
 - **PWA estable:** ejecutar manualmente `Publicar PWA en GitHub Pages` con canal
-  `stable`. El job descarga exactamente el artifact aprobado por el gate; un
-  recurso ausente, error de consola, E2E, reglas o Android fallido impide
-  publicar. El canal `beta` solo genera artifacts descargables.
+  `stable`, o crear deliberadamente una etiqueta `baseline-stable-*`. Un push
+  normal a `main` nunca publica Pages. En ambos casos el job descarga
+  exactamente el artifact aprobado por el gate; un recurso ausente, error de
+  consola, E2E, reglas o Android fallido impide publicar. El canal `beta` solo
+  genera artifacts descargables.
 - **APK debug:** `Construir APK Android validado` es manual y reutiliza el mismo
   gate; no recompila desde una matriz mas debil.
 - **APK release:** `Publicar APK Android release` espera el mismo gate y luego

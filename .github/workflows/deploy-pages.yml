@@ -11,6 +11,9 @@ on:
         options:
           - beta
           - stable
+  push:
+    tags:
+      - 'baseline-stable-*'
 
 permissions:
   contents: read
@@ -18,7 +21,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages-${{ inputs.channel }}
+  group: pages-${{ github.event_name == 'push' && 'stable' || inputs.channel }}
   cancel-in-progress: false
 
 jobs:
@@ -26,13 +29,13 @@ jobs:
     name: Quality gate previo a Pages
     uses: ./.github/workflows/quality-gate.yml
     with:
-      channel: ${{ inputs.channel }}
+      channel: ${{ github.event_name == 'push' && 'stable' || inputs.channel }}
     secrets: inherit
 
   deploy:
     name: Publicar canal estable
     needs: quality
-    if: inputs.channel == 'stable'
+    if: github.event_name == 'push' || inputs.channel == 'stable'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
