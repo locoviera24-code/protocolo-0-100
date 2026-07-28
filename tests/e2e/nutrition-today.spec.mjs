@@ -19,9 +19,14 @@ test('Nutricion presenta Hoy, Agregar y Progreso sin ajustes avanzados en el flu
   await expect(page.locator('#nutritionSettingsMount #nutritionTargetsCard')).toHaveCount(1);
   await page.getByRole('button',{name:'Agregar',exact:true}).click();
   await expect(page.locator('#nutritionBuilderCard')).toBeVisible();
+  await expect(page.locator('#nutritionRecipesCard')).toBeHidden();
   await expect(page.locator('#customFoodName')).toBeHidden();
   await expect(page.locator('#nutritionFoodSearch')).toBeVisible();
   await expect(page.locator('#addFoodBtn')).toBeHidden();
+  await page.getByRole('button',{name:'No encuentro este alimento'}).click();
+  await expect(page.locator('#nutritionRecipesCard')).toBeVisible();
+  await expect(page.locator('#nutritionBuilderCard')).toBeHidden();
+  await expect(page.locator('#customFoodName')).toBeVisible();
 });
 
 test('Hoy agrupa alimentos por comida y conserva agua y peso por separado',async({page})=>{
@@ -105,7 +110,7 @@ test('Agregar alimento guia seleccion, cantidad, comida, revision y Deshacer',as
 test('Alimento personalizado solo se crea al completar el flujo',async({page})=>{
   await resetNutrition(page);
   await page.getByRole('button',{name:'Agregar',exact:true}).click();
-  await page.locator('#customFoodDetails > summary').click();
+  await page.getByRole('button',{name:'No encuentro este alimento'}).click();
   await page.locator('#customFoodName').fill('Sopa casera de prueba');
   await page.locator('#foodCalories').fill('80');
   await page.locator('#foodProtein').fill('4');

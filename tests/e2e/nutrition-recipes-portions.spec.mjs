@@ -9,7 +9,7 @@ async function resetNutrition(page){
 
 test('una receta calcula porciones y conserva el snapshot historico al editarse',async({page})=>{
   await resetNutrition(page);
-  await page.getByRole('button',{name:'Agregar',exact:true}).click();
+  await page.getByRole('button',{name:'Mis alimentos y recetas',exact:true}).click();
   await page.locator('#nutritionRecipesDetails > summary').click();
   await page.locator('#recipeName').fill('Tortilla de prueba');
   await page.locator('#recipeServings').fill('2');
@@ -36,7 +36,7 @@ test('una receta calcula porciones y conserva el snapshot historico al editarse'
   expect(backup.recipes).toHaveLength(1);
   expect(Object.keys(backup.foodPortions)).toHaveLength(1);
 
-  await page.getByRole('button',{name:'Agregar',exact:true}).click();
+  await page.getByRole('button',{name:'Mis alimentos y recetas',exact:true}).click();
   await page.locator('#recipeList .nutritionFoodMenu summary').click();
   await page.getByRole('menuitem',{name:'Editar'}).click();
   await page.locator('#recipeName').fill('Tortilla actualizada');

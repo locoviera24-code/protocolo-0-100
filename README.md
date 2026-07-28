@@ -63,7 +63,11 @@ para uso offline y continua directamente a cantidad, comida y revision.
 Cada alimento recuerda cantidad, unidad, comida habitual y las ultimas tres
 combinaciones. La comida sugerida por horario es solo un valor inicial editable.
 Las recetas calculan nutrientes desde snapshots de ingredientes y permiten
-registrar una porcion o gramos. Editarlas no cambia registros historicos.
+registrar una porcion o gramos. Editarlas no cambia registros historicos. Su
+editor y la administracion de alimentos propios viven en **Nutricion > Mis
+alimentos y recetas**; el flujo cotidiano **Agregar** conserva solamente la
+busqueda y los cuatro pasos de registro. Elegir una receta desde el buscador
+continua directamente a cantidad, comida y revision.
 
 La app no necesita un proveedor externo para funcionar. Sin conexion o sin un
 backend configurado conserva alimentos incluidos, personales, recetas y datos

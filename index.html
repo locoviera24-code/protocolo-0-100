@@ -278,6 +278,7 @@
               <div class="nutritionSecondaryActions">
                 <button type="button" class="textButton" data-open-nutrition-view="coverage">Ver cobertura estimada</button>
                 <button type="button" class="textButton" data-open-nutrition-view="tendencias">Ver tendencias</button>
+                <button type="button" class="textButton" data-open-nutrition-view="library">Mis alimentos y recetas</button>
                 <button type="button" class="textButton hidden" id="undoLastFoodBtn">Deshacer ultimo cambio</button>
               </div>
             </div>
@@ -332,40 +333,7 @@
                 <div class="muted small" id="nutritionFoodSearchStatus" aria-live="polite">Escribí al menos tres letras para buscar más opciones.</div>
                 <div class="nutritionFoodSuggestions" id="nutritionFoodSuggestions" aria-live="polite"></div>
                 <select id="nutritionFood" class="hidden" aria-hidden="true" tabindex="-1"></select>
-              <details class="advancedDetails" id="customFoodDetails">
-                <summary>No encuentro este alimento</summary>
-                <h4>Crear alimento</h4>
-                <div class="formGrid customFoodBasicFields">
-                  <div class="field"><label>Nombre</label><input type="text" id="customFoodName" placeholder="Ej. receta casera"></div>
-                  <div class="field"><label>Porción base (g)</label><input type="text" inputmode="decimal" id="foodPortionGrams" value="100"></div>
-                  <div class="field"><label>Calorías por 100 g</label><input type="text" inputmode="decimal" id="foodCalories"></div>
-                  <div class="field"><label>Proteína por 100 g</label><input type="text" inputmode="decimal" id="foodProtein"></div>
-                  <div class="field"><label>Carbohidratos por 100 g</label><input type="text" inputmode="decimal" id="foodCarbs"></div>
-                  <div class="field"><label>Grasas por 100 g</label><input type="text" inputmode="decimal" id="foodFat"></div>
-                </div>
-                <details class="advancedDetails customFoodOptional" id="customFoodOptionalFields">
-                  <summary>Datos opcionales</summary>
-                  <div class="formGrid">
-                    <div class="field"><label>Fibra (g/100 g)</label><input type="text" inputmode="decimal" id="foodFiber"></div>
-                    <div class="field"><label>Sodio (mg/100 g)</label><input type="text" inputmode="decimal" id="foodSodium"></div>
-                    <div class="field"><label>Potasio (mg/100 g)</label><input type="text" inputmode="decimal" id="foodPotassium"></div>
-                    <div class="field"><label>Calcio (mg/100 g)</label><input type="text" inputmode="decimal" id="foodCalcium"></div>
-                    <div class="field"><label>Hierro (mg/100 g)</label><input type="text" inputmode="decimal" id="foodIron"></div>
-                    <div class="field"><label>Magnesio (mg/100 g)</label><input type="text" inputmode="decimal" id="foodMagnesium"></div>
-                    <div class="field"><label>Zinc (mg/100 g)</label><input type="text" inputmode="decimal" id="foodZinc"></div>
-                    <div class="field"><label>Vitamina A (mcg/100 g)</label><input type="text" inputmode="decimal" id="foodVitaminA"></div>
-                    <div class="field"><label>Vitamina C (mg/100 g)</label><input type="text" inputmode="decimal" id="foodVitaminC"></div>
-                    <div class="field"><label>Vitamina D (mcg/100 g)</label><input type="text" inputmode="decimal" id="foodVitaminD"></div>
-                    <div class="field"><label>Vitamina B12 (mcg/100 g)</label><input type="text" inputmode="decimal" id="foodB12"></div>
-                    <div class="field"><label>Folato (mcg/100 g)</label><input type="text" inputmode="decimal" id="foodFolate"></div>
-                    <div class="field"><label>Fuente o etiqueta</label><input type="text" id="foodSource" placeholder="Ej. etiqueta del envase"></div>
-                    <div class="field"><label>Confianza</label><select id="foodConfidence"><option value="alto">Alta</option><option value="medio">Media</option><option value="aproximado" selected>Aproximada</option><option value="desconocido">Desconocida</option></select></div>
-                    <div class="field wide"><label>Aliases, separados por coma</label><input type="text" id="foodAliases" placeholder="Ej. nombre corto, marca"></div>
-                  </div>
-                  <div class="muted small">Usá la etiqueta o una fuente confiable cuando esté disponible. Si no conocés un dato, dejalo vacío.</div>
-                </details>
-                <div class="buttons"><button type="button" class="secondary" id="useCustomFoodBtn">Usar este alimento</button></div>
-              </details>
+                <div class="nutritionSecondaryActions"><button type="button" class="textButton" data-open-custom-food>No encuentro este alimento</button></div>
               </section>
               <section class="nutritionFlowPanel hidden" data-food-flow-step="amount" aria-labelledby="nutritionAmountStepTitle">
                 <h4 id="nutritionAmountStepTitle">¿Cuánto consumiste?</h4>
@@ -420,7 +388,41 @@
               </details>
             </div>
 
-            <div class="moduleCard" id="nutritionRecipesCard" data-nutrition-panel="registrar">
+            <div class="moduleCard" id="nutritionRecipesCard" data-nutrition-panel="library">
+              <div class="coverageToolbar"><div><h3>Mis alimentos y recetas</h3><div class="muted small">Creá y administrá opciones propias sin cargar el registro diario.</div></div><button type="button" class="secondary" data-open-nutrition-view="resumen">Volver a Hoy</button></div>
+              <details class="advancedDetails" id="customFoodDetails">
+                <summary>Crear alimento</summary>
+                <div class="formGrid customFoodBasicFields">
+                  <div class="field"><label>Nombre</label><input type="text" id="customFoodName" placeholder="Ej. receta casera"></div>
+                  <div class="field"><label>Porción base (g)</label><input type="text" inputmode="decimal" id="foodPortionGrams" value="100"></div>
+                  <div class="field"><label>Calorías por 100 g</label><input type="text" inputmode="decimal" id="foodCalories"></div>
+                  <div class="field"><label>Proteína por 100 g</label><input type="text" inputmode="decimal" id="foodProtein"></div>
+                  <div class="field"><label>Carbohidratos por 100 g</label><input type="text" inputmode="decimal" id="foodCarbs"></div>
+                  <div class="field"><label>Grasas por 100 g</label><input type="text" inputmode="decimal" id="foodFat"></div>
+                </div>
+                <details class="advancedDetails customFoodOptional" id="customFoodOptionalFields">
+                  <summary>Datos opcionales</summary>
+                  <div class="formGrid">
+                    <div class="field"><label>Fibra (g/100 g)</label><input type="text" inputmode="decimal" id="foodFiber"></div>
+                    <div class="field"><label>Sodio (mg/100 g)</label><input type="text" inputmode="decimal" id="foodSodium"></div>
+                    <div class="field"><label>Potasio (mg/100 g)</label><input type="text" inputmode="decimal" id="foodPotassium"></div>
+                    <div class="field"><label>Calcio (mg/100 g)</label><input type="text" inputmode="decimal" id="foodCalcium"></div>
+                    <div class="field"><label>Hierro (mg/100 g)</label><input type="text" inputmode="decimal" id="foodIron"></div>
+                    <div class="field"><label>Magnesio (mg/100 g)</label><input type="text" inputmode="decimal" id="foodMagnesium"></div>
+                    <div class="field"><label>Zinc (mg/100 g)</label><input type="text" inputmode="decimal" id="foodZinc"></div>
+                    <div class="field"><label>Vitamina A (mcg/100 g)</label><input type="text" inputmode="decimal" id="foodVitaminA"></div>
+                    <div class="field"><label>Vitamina C (mg/100 g)</label><input type="text" inputmode="decimal" id="foodVitaminC"></div>
+                    <div class="field"><label>Vitamina D (mcg/100 g)</label><input type="text" inputmode="decimal" id="foodVitaminD"></div>
+                    <div class="field"><label>Vitamina B12 (mcg/100 g)</label><input type="text" inputmode="decimal" id="foodB12"></div>
+                    <div class="field"><label>Folato (mcg/100 g)</label><input type="text" inputmode="decimal" id="foodFolate"></div>
+                    <div class="field"><label>Fuente o etiqueta</label><input type="text" id="foodSource" placeholder="Ej. etiqueta del envase"></div>
+                    <div class="field"><label>Confianza</label><select id="foodConfidence"><option value="alto">Alta</option><option value="medio">Media</option><option value="aproximado" selected>Aproximada</option><option value="desconocido">Desconocida</option></select></div>
+                    <div class="field wide"><label>Aliases, separados por coma</label><input type="text" id="foodAliases" placeholder="Ej. nombre corto, marca"></div>
+                  </div>
+                  <div class="muted small">Usá la etiqueta o una fuente confiable cuando esté disponible. Si no conocés un dato, dejalo vacío.</div>
+                </details>
+                <div class="buttons"><button type="button" class="good" id="useCustomFoodBtn">Usar este alimento</button></div>
+              </details>
               <details class="advancedDetails" id="nutritionRecipesDetails">
                 <summary>Mis recetas y platos compuestos</summary>
                 <p class="muted small">Calculá una vez el plato y después registrá una porción o los gramos consumidos. Los días anteriores conservan su snapshot.</p>
@@ -464,7 +466,7 @@
               <div class="recommendGrid" id="nutritionTrendInsights" style="margin-top:10px"></div>
             </div>
 
-            <div class="moduleCard" id="customFoodsCard" data-nutrition-settings-card>
+            <div class="moduleCard" id="customFoodsCard" data-nutrition-panel="library">
               <h3>Mis alimentos</h3>
               <div class="muted small">Administrá alimentos propios y recetas fuera del registro cotidiano.</div>
               <div class="entryList" id="customFoodsList"></div>
@@ -673,11 +675,11 @@
             <section id="nutritionSettingsSection" aria-labelledby="nutritionSettingsTitle">
               <div class="moduleCard settingsSection">
                 <h3 id="nutritionSettingsTitle">Nutrición</h3>
-                <p class="muted small">Objetivos, peso corporal, alimentos propios y fuentes externas. Estas opciones no interrumpen el registro diario.</p>
+                <p class="muted small">Objetivos y métricas corporales. Los alimentos y las recetas se administran en su propia pantalla.</p>
                 <div class="formGrid">
                   <div class="field"><label for="nutritionWeight">Peso corporal</label><div class="inputSuffix"><input type="text" inputmode="decimal" id="nutritionWeight" placeholder="Opcional"><span id="nutritionWeightUnit">kg</span></div></div>
                 </div>
-                <div class="buttons"><button type="button" class="secondary" id="saveNutritionWeightBtn">Guardar peso para la fecha elegida</button></div>
+                <div class="buttons"><button type="button" class="secondary" id="saveNutritionWeightBtn">Guardar peso para la fecha elegida</button><button type="button" class="secondary" data-open-nutrition-library>Mis alimentos y recetas</button></div>
               </div>
               <div id="nutritionSettingsMount"></div>
             </section>
@@ -1528,7 +1530,7 @@ function useCustomFoodForFlow(){
   if(duplicate){window.APP_INLINE_VALIDATION.show(nameInput,`Ya existe ${duplicate.name}. Elegilo desde la búsqueda o editá su definición en Ajustes.`);return;}
   const nutrientFields={fiber:'foodFiber',sodium:'foodSodium',potassium:'foodPotassium',calcium:'foodCalcium',iron:'foodIron',magnesium:'foodMagnesium',zinc:'foodZinc',vitaminA:'foodVitaminA',vitaminC:'foodVitaminC',vitaminD:'foodVitaminD',b12:'foodB12',folate:'foodFolate'},reportedNutrients=Object.entries(nutrientFields).filter(([,id])=>document.getElementById(id).value.trim()!=='').map(([key])=>key),nutrients=Object.fromEntries(Object.entries(nutrientFields).map(([key,id])=>[key,num(id)]));
   const portionGrams=Math.max(.1,num('foodPortionGrams')||100),aliases=document.getElementById('foodAliases').value.split(',').map(value=>value.trim()).filter(Boolean),food={id:`draft-${Date.now()}`,name,aliases:[name,...aliases],calories:num('foodCalories'),protein:num('foodProtein'),carbs:num('foodCarbs'),fat:num('foodFat'),...nutrients,nutrients,reportedNutrients,portionGrams,units:{porcion:portionGrams},confidence:document.getElementById('foodConfidence').value||'aproximado',source:document.getElementById('foodSource').value.trim()||'etiqueta manual',custom:true,__customDraft:true};
-  window.APP_INLINE_VALIDATION.clear(nameInput);document.getElementById('foodQuantity').value=String(portionGrams);document.getElementById('foodUnit').value='g';nutritionEntryFlow.set({food,amount:portionGrams,unit:'g'}).go('amount');captureNutritionFoodDraft();renderNutritionFoodFlow({focus:true});
+  window.APP_INLINE_VALIDATION.clear(nameInput);document.getElementById('foodQuantity').value=String(portionGrams);document.getElementById('foodUnit').value='g';nutritionEntryFlow.set({food,amount:portionGrams,unit:'g'}).go('amount');captureNutritionFoodDraft();window.setNutritionView?.('registrar',{focus:true});renderNutritionFoodFlow({focus:true});
 }
 function resetNutritionFoodFlow({openToday=false,discard=false}={}){
   const id=nutritionFoodDraftId();if(discard)window.APP_DRAFTS?.remove?.(id);
@@ -1596,7 +1598,7 @@ function renderRecipeManager(){
 }
 function addRecipeIngredient(){const select=document.getElementById('recipeIngredientFood'),amountInput=document.getElementById('recipeIngredientAmount'),food=recipeIngredientFoods().find(item=>item.id===select.value),amount=window.APP_NUMBERS.read(amountInput,{fallback:0}),unit=document.getElementById('recipeIngredientUnit').value;if(!food){window.APP_INLINE_VALIDATION.show(select,'Elegí un alimento.');return;}if(!(amount>0)){window.APP_INLINE_VALIDATION.show(amountInput,'Indicá una cantidad mayor que cero.');return;}window.APP_INLINE_VALIDATION.clear(select);window.APP_INLINE_VALIDATION.clear(amountInput);recipeEditorState.ingredients.push(window.NUTRITION_RECIPES.normalizeIngredient({food,foodId:food.id,amount,unit}));captureRecipeDraft();renderRecipeManager();}
 function saveRecipe(){const payload=recipeEditorPayload(),existing=nutritionRecipes({includeArchived:true}).find(recipe=>recipe.id===payload.id)||null,recipe=window.NUTRITION_RECIPES.build({id:payload.id||undefined,name:payload.name,ingredients:payload.ingredients,totalWeightGrams:payload.totalWeight,servings:payload.servings,confidence:payload.confidence,source:payload.source},existing),validation=window.NUTRITION_RECIPES.validate(recipe),nameInput=document.getElementById('recipeName');if(!validation.ok){window.APP_INLINE_VALIDATION.show(nameInput,validation.errors.join(' '));return;}const duplicate=nutritionRecipes({includeArchived:true}).find(item=>item.id!==recipe.id&&normalizeFoodText(item.name)===normalizeFoodText(recipe.name));if(duplicate){window.APP_INLINE_VALIDATION.show(nameInput,'Ya existe una receta con ese nombre. Podés editarla o duplicarla explícitamente.');return;}window.APP_INLINE_VALIDATION.clear(nameInput);const recipes=nutritionRecipes({includeArchived:true}),index=recipes.findIndex(item=>item.id===recipe.id);if(index>=0)recipes[index]=recipe;else recipes.push(recipe);window.NUTRITION_STORE.saveRecipes(recipes);window.APP_DRAFTS?.remove?.(recipeDraftId);resetRecipeEditor({discard:false});populateFoods();renderFoodSearchSuggestions();flash(existing?'Receta actualizada. Los registros anteriores no cambiaron.':'Receta guardada. Ya podés registrar una porción.');}
-function editRecipe(id){const recipe=nutritionRecipes({includeArchived:true}).find(item=>item.id===id);if(!recipe)return;document.getElementById('nutritionRecipesDetails').open=true;applyRecipeEditorPayload({id:recipe.id,ingredients:recipe.ingredients,name:recipe.name,servings:recipe.servings,totalWeight:recipe.totalWeightGrams,confidence:recipe.confidence,source:recipe.source});captureRecipeDraft();document.getElementById('recipeName')?.focus();}
+function editRecipe(id){const recipe=nutritionRecipes({includeArchived:true}).find(item=>item.id===id);if(!recipe)return;window.setNutritionView?.('library');document.getElementById('nutritionRecipesDetails').open=true;applyRecipeEditorPayload({id:recipe.id,ingredients:recipe.ingredients,name:recipe.name,servings:recipe.servings,totalWeight:recipe.totalWeightGrams,confidence:recipe.confidence,source:recipe.source});captureRecipeDraft();document.getElementById('recipeName')?.focus();}
 function saveRecipeAsFrequent(recipe){const food=window.NUTRITION_RECIPES.toFood(recipe),entry=window.NUTRITION_MODEL.buildEntry(food,recipe.servingWeightGrams,'Almuerzo',todayStr()),{id,date,meal,savedAt,...item}=entry,saved=window.NUTRITION_STORE.savedMeals();saved.push({id:uid('savedmeal'),name:recipe.name,items:[item],savedAt:new Date().toISOString(),recipeId:recipe.id});window.NUTRITION_STORE.saveSavedMeals(saved);window.renderSavedMeals?.();renderFoodSearchSuggestions();flash('Receta guardada como comida frecuente.');}
 function registerRecipe(recipe,mode){populateFoods();const foodId=`recipe:${recipe.id}`,index=allFoods().findIndex(food=>food.id===foodId);if(index<1)return;const food=allFoods()[index],meal=window.NUTRITION_PORTIONS.suggestedMeal(),amount=mode==='portion'?1:recipe.servingWeightGrams,unit=mode==='portion'?'porcion':'g';document.getElementById('nutritionFood').value=String(index);document.getElementById('foodQuantity').value=String(amount);document.getElementById('foodUnit').value=unit;document.getElementById('nutritionMeal').value=meal;nutritionEntryFlow.set({food,amount,unit,meal,date:document.getElementById('nutritionDate').value||todayStr()}).go(mode==='portion'?'review':'amount');captureNutritionFoodDraft();window.setNutritionView?.('registrar',{focus:true});renderNutritionFoodFlow({focus:true});}
 async function handleRecipeAction(button){const action=button.dataset.recipeAction,id=button.dataset.recipeId,recipes=nutritionRecipes({includeArchived:true}),index=recipes.findIndex(item=>item.id===id);if(index<0)return;const recipe=recipes[index];if(action==='edit'){editRecipe(id);return;}if(action==='duplicate'){recipes.push(window.NUTRITION_RECIPES.duplicate(recipe));window.NUTRITION_STORE.saveRecipes(recipes);populateFoods();renderRecipeManager();flash('Receta duplicada.');return;}if(action==='portion'||action==='grams'){registerRecipe(recipe,action);return;}if(action==='frequent'){saveRecipeAsFrequent(recipe);return;}if(action==='archive'||action==='restore'){recipes[index]={...recipe,archived:action==='archive',updatedAt:new Date().toISOString()};window.NUTRITION_STORE.saveRecipes(recipes);populateFoods();renderRecipeManager();renderFoodSearchSuggestions();flash(action==='archive'?'Receta archivada.':'Receta restaurada.');return;}if(action==='delete'){const confirmed=await window.APP_CONFIRMATION.ask({title:'Eliminar receta',message:'Los registros anteriores conservarán su snapshot. La receta dejará de estar disponible para nuevos registros.',confirmLabel:'Eliminar',danger:true});if(!confirmed)return;recipes.splice(index,1);window.NUTRITION_STORE.saveRecipes(recipes);populateFoods();renderRecipeManager();renderFoodSearchSuggestions();flash('Receta eliminada.',{actionLabel:'Deshacer',duration:7000,onAction:()=>{const current=nutritionRecipes({includeArchived:true});if(!current.some(item=>item.id===recipe.id))current.splice(Math.min(index,current.length),0,recipe);window.NUTRITION_STORE.saveRecipes(current);populateFoods();renderRecipeManager();renderFoodSearchSuggestions();}});}}
@@ -3227,7 +3229,7 @@ document.addEventListener('click', e=>{
   const foodChoice=e.target.closest('[data-food-flow-select]');
   if(foodChoice){chooseFoodForFlow(foodChoice.dataset.foodFlowSelect);return;}
   const externalFood=e.target.closest('[data-food-flow-external]');if(externalFood){chooseExternalFoodForFlow(externalFood.dataset.foodFlowExternal);return;}
-  if(e.target.closest('[data-open-custom-food]')){const details=document.getElementById('customFoodDetails');details.open=true;document.getElementById('customFoodName').value=document.getElementById('nutritionFoodSearch').value.trim();document.getElementById('customFoodName').focus();captureNutritionFoodDraft();return;}
+  if(e.target.closest('[data-open-custom-food]')){window.setNutritionView?.('library',{focus:true});const details=document.getElementById('customFoodDetails');details.open=true;document.getElementById('customFoodName').value=document.getElementById('nutritionFoodSearch').value.trim();document.getElementById('customFoodName').focus();captureNutritionFoodDraft();return;}
   const repeatFood=e.target.closest('[data-food-flow-repeat]');if(repeatFood){repeatLastFoodForFlow(repeatFood.dataset.foodFlowRepeat);return;}
   const repeatMeal=e.target.closest('[data-saved-meal-repeat]');if(repeatMeal){addSavedMealFromSearch(repeatMeal.dataset.savedMealRepeat);return;}
   const portion=e.target.closest('[data-food-portion]');if(portion){document.getElementById('foodQuantity').value=portion.dataset.foodPortion;document.getElementById('foodUnit').value='g';nutritionEntryFlow.set({amount:portion.dataset.foodPortion,unit:'g'});captureNutritionFoodDraft();return;}

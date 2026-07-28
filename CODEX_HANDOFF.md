@@ -3465,3 +3465,35 @@ Verificación:
 Siguiente bloque exacto: separar definitivamente la administración de alimentos
 y recetas del registro diario, y ocultar la configuración técnica nutricional
 salvo en modo desarrollo/soporte/diagnóstico.
+
+## 74. Administración nutricional separada del registro
+
+El flujo **Nutrición > Agregar** ya no contiene el editor completo de recetas ni
+el formulario expandible de alimentos propios. La pantalla mantiene una sola
+tarea: buscar, elegir cantidad, elegir comida, revisar y guardar. La acción
+**No encuentro este alimento** abre la vista secundaria **Mis alimentos y
+recetas**, donde están la creación manual, alimentos existentes y recetas.
+
+La vista secundaria reutiliza `customFoods`, `recipes`, `NutritionRepository`,
+los borradores y los snapshots existentes. No crea claves ni modelos paralelos.
+Al usar un alimento recién creado se regresa al paso Cantidad; al elegir una
+receta desde el buscador se mantiene el flujo normal. Editar una receta sigue
+sin modificar entradas históricas.
+
+La ruta de Ajustes ofrece un acceso directo a esta vista, pero ya no mueve la
+lista de alimentos propios dentro del formulario de configuración. Los tabs
+principales siguen siendo solo Hoy, Agregar y Progreso.
+
+Verificación del bloque:
+
+- 18/18 escenarios nutricionales dirigidos en escritorio Chromium;
+- 3/3 recorridos críticos de administración, recetas y separación visual en
+  iPhone WebKit, y 3/3 en Android Chromium;
+- una primera ejecución cruzada agotó el límite externo y no se contabilizó;
+  las matrices se repitieron por plataforma para obtener resultados concluyentes;
+- recetas, snapshots, Deshacer, objetivos y Gym Party conservaron sus contratos;
+- no cambiaron schemas, claves legacy ni fuentes primarias.
+
+Siguiente bloque exacto: ocultar `fdcSettingsCard` en builds estables salvo modo
+soporte/diagnóstico y mostrar al usuario solo el estado simple de búsqueda
+ampliada u offline.

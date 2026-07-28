@@ -540,7 +540,7 @@
     document.querySelectorAll('[data-nutrition-panel]').forEach(panel=>panel.classList.toggle('hidden',panel.dataset.nutritionPanel!==view));
     if(view==='coverage'){renderCoverage();renderDiagnosis();}
     if(view==='tendencias')renderNutritionTrends();
-    if(focus)requestAnimationFrame(()=>{const targetId={resumen:'nutritionTodayCard',registrar:'nutritionBuilderCard',coverage:'nutritionCoverageCard',tendencias:'nutritionTrendsCard'}[view],target=document.getElementById(targetId);target?.scrollIntoView({block:'start',behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});const heading=target?.querySelector('h2,h3,h4');if(heading){heading.tabIndex=-1;heading.focus({preventScroll:true});}});
+    if(focus)requestAnimationFrame(()=>{const targetId={resumen:'nutritionTodayCard',registrar:'nutritionBuilderCard',coverage:'nutritionCoverageCard',tendencias:'nutritionTrendsCard',library:'nutritionRecipesCard'}[view],target=document.getElementById(targetId);target?.scrollIntoView({block:'start',behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});const heading=target?.querySelector('h2,h3,h4');if(heading){heading.tabIndex=-1;heading.focus({preventScroll:true});}});
   }
   window.setNutritionView=setNutritionView;
   function renderAdvancedNutrition(){
@@ -575,6 +575,7 @@
   function setupEvents(){
     document.querySelectorAll('[data-nutrition-view]').forEach(button=>button.addEventListener('click',()=>setNutritionView(button.dataset.nutritionView,{focus:true})));
     document.querySelectorAll('[data-open-nutrition-view]').forEach(button=>button.addEventListener('click',()=>setNutritionView(button.dataset.openNutritionView,{focus:true})));
+    document.querySelectorAll('[data-open-nutrition-library]').forEach(button=>button.addEventListener('click',()=>{window.APP_ROUTER?.navigate?.({module:'nutrition',view:'meals'});setNutritionView('library',{focus:true});}));
     document.getElementById('saveFdcConfigBtn')?.addEventListener('click',saveFdcConfig);
     document.getElementById('clearFdcApiKeyBtn')?.addEventListener('click',clearFdcApiKey);
     document.getElementById('importFdcDatasetBtn')?.addEventListener('click',importFdcDataset);
@@ -611,7 +612,7 @@
   loadFdcConfigFields();
   setupEvents();
   const restoredNutritionDraft=window.restoreNutritionFoodDraft?.({announce:false})===true;
-  setNutritionView(restoredNutritionDraft?'registrar':'resumen');
+  setNutritionView(restoredNutritionDraft&&document.getElementById('customFoodDetails')?.open?'library':restoredNutritionDraft?'registrar':'resumen');
   renderAdvancedNutrition();
   renderAdvancedProgress();
   setupUpdateNotice();

@@ -10,7 +10,8 @@ async function reset(page,path='/index.html?module=nutrition&view=meals'){
 test('alimento personalizado usa campos basicos y acepta coma decimal',async({page})=>{
   await reset(page);
   await page.getByRole('button',{name:'Agregar',exact:true}).click();
-  await page.locator('#customFoodDetails > summary').click();
+  await page.getByRole('button',{name:'No encuentro este alimento'}).click();
+  await expect(page.locator('#nutritionRecipesCard')).toBeVisible();
   await expect(page.locator('#foodFiber')).toBeHidden();
   await page.locator('#customFoodName').fill('Yogur decimal de prueba');
   await page.locator('#foodPortionGrams').fill('125,5');
@@ -30,7 +31,7 @@ test('alimento personalizado usa campos basicos y acepta coma decimal',async({pa
   expect(stored.entry.grams).toBe(125.5);
 
   await page.getByRole('button',{name:'Agregar',exact:true}).click();
-  await page.locator('#customFoodDetails > summary').click();
+  await page.getByRole('button',{name:'No encuentro este alimento'}).click();
   await page.locator('#customFoodName').fill('Yogur decimal de prueba');
   await page.locator('#useCustomFoodBtn').click();
   await expect(page.locator('#customFoodName')).toHaveAttribute('aria-invalid','true');
@@ -60,6 +61,8 @@ test('objetivos son manuales, localizados y conservan procedencia',async({page})
 
 test('alimentos propios se duplican, archivan, fusionan y eliminan con Deshacer',async({page})=>{
   await reset(page,'/index.html?module=more&view=settings');
+  await page.getByRole('button',{name:'Mis alimentos y recetas'}).click();
+  await expect(page.locator('#nutritionRecipesCard')).toBeVisible();
   await page.evaluate(()=>{
     window.NUTRITION_STORE.saveCustomFoods([
       {id:'custom-a',name:'Alimento A',aliases:['Alimento A'],portionGrams:100,calories:100,protein:5,carbs:15,fat:2,reportedNutrients:[],custom:true},
