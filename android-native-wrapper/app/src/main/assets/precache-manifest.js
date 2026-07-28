@@ -1,8 +1,8 @@
 globalThis.PRECACHE_MANIFEST=Object.freeze({
   "schemaVersion": 1,
   "version": "2.7.0",
-  "build": 88,
-  "cacheName": "protocolo-0-100-pwa-2.7.0-b88",
+  "build": 89,
+  "cacheName": "protocolo-0-100-pwa-2.7.0-b89",
   "required": [
     {
       "url": "./advanced-features.js",
@@ -12,17 +12,17 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     {
       "url": "./app-version.js",
       "bytes": 358,
-      "sha256": "0aa772ee7647fac410e79e0b5d8122e41baa2829591a373a23561478be10e03a"
+      "sha256": "0257065ebf9762d04905a95b5f555deecd5ec24691f8b893d11350ae86f6169c"
     },
     {
       "url": "./app/build-guard.js",
       "bytes": 1811,
-      "sha256": "42443379a52029755059015eb554fc5f1836300551bf52771017cc3e712f3725"
+      "sha256": "062a571bdda5dcf2abf06c771315a09a3ad81d3f1b838418ae7b1b2c1e64f60f"
     },
     {
       "url": "./app/build-info.js",
-      "bytes": 4908,
-      "sha256": "6858f2066816aab3beb220d4bbad72152371b16748719c523d3e07ff9994e917"
+      "bytes": 4903,
+      "sha256": "68c1fab0698117c8cd4c7922c984d69889df6f443ec11ab8452dcb42539c1074"
     },
     {
       "url": "./app/dates.js",
@@ -42,7 +42,7 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     {
       "url": "./build-info.json",
       "bytes": 189,
-      "sha256": "eb3d851f95f806a82a7b5d702d58bd76aeee0abd323c125065af42029f78bcef"
+      "sha256": "c6701b4701c6b4811e187c5ca148f5ba5ead4acdc4b3a513dbec763f145dd0fb"
     },
     {
       "url": "./data/backup-service.js",
@@ -121,8 +121,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     },
     {
       "url": "./index.html",
-      "bytes": 319506,
-      "sha256": "b851daa57edad6e8242bde268b5ca47f5637eca4adbf93238a280258121b9ffd"
+      "bytes": 319927,
+      "sha256": "fbf9812fa51f45ab4c5971345a045663e7d99f9a2266fbe646b2d57c04e4fafc"
     },
     {
       "url": "./nutrition-data.js",
@@ -339,7 +339,7 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     {
       "url": "./app-version.json",
       "bytes": 90,
-      "sha256": "100d61574b43c6f283600e674e1c45e46c5d0d610e4fd8c971584a1bccb43adf"
+      "sha256": "608987350789e0fa14ac295f92703210c7723f12cf6ee1a42f04cf76a2bf6de2"
     },
     {
       "url": "./icons/icon-192.png",

@@ -21,7 +21,8 @@ test('Snackbar mantiene un solo mensaje y ejecuta Deshacer',async({page})=>{
 test('Validacion nutricional queda asociada al campo',async({page})=>{
   await clean(page,'/index.html?module=nutrition&view=meals');
   await page.getByRole('button',{name:'Agregar',exact:true}).click();
-  await page.locator('#customFoodDetails > summary').click();
+  await page.getByRole('button',{name:'No encuentro este alimento'}).click();
+  await expect(page.locator('#customFoodDetails')).toHaveAttribute('open','');
   await page.locator('#useCustomFoodBtn').click();
   const name=page.locator('#customFoodName');
   await expect(name).toHaveAttribute('aria-invalid','true');

@@ -43,8 +43,12 @@ test('@axe tabs de Inicio responden a flechas, Home y End',async({page})=>{
 test('@axe drawer cerrado queda fuera del orden de foco y restaura el control',async({page})=>{
   await clean(page);await page.goto('/index.html?module=home&view=register');await waitForAppReady(page);
   const trigger=page.locator('#openDrawerBtn'),drawer=page.locator('#sideDrawer');
+  if(!await trigger.isVisible()){
+    if(await drawer.isVisible()){await expect(drawer).not.toHaveAttribute('inert','');await expect(drawer).toHaveAttribute('aria-hidden','false');}
+    else{await expect(drawer).toHaveAttribute('inert','');await expect(drawer).toHaveAttribute('aria-hidden','true');}
+    return;
+  }
   await expect(drawer).toHaveAttribute('inert','');
-  if(!await trigger.isVisible()){await expect(drawer).toHaveAttribute('aria-hidden','true');return;}
   await trigger.click();
   await expect(drawer).not.toHaveAttribute('inert','');await expect(page.locator('#closeDrawerBtn')).toBeFocused();
   await page.keyboard.press('Escape');

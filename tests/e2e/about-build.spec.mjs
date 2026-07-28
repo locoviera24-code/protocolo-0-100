@@ -1,4 +1,5 @@
 import {test,expect} from '@playwright/test';
+import version from '../../app-version.json' with {type:'json'};
 
 test.use({serviceWorkers:'block'});
 
@@ -22,11 +23,12 @@ test('Acerca de muestra metadatos del artifact y comprueba el build activo',asyn
 });
 
 test('Acerca de detecta un build publicado posterior sin recargar',async({page})=>{
-  await page.route(/build-info\.json\?__pwa_update_check=/,route=>route.fulfill({contentType:'application/json',body:JSON.stringify({schemaVersion:1,version:'2.7.0',versionCode:33,build:89,commit:'abcdef1234567890',artifactCreatedAt:'2026-07-28T12:00:00.000Z',channel:'stable'})}));
-  await page.route(/app-version\.json\?__pwa_update_check=/,route=>route.fulfill({contentType:'application/json',body:JSON.stringify({version:'2.7.0',versionCode:33,build:89,updatedAt:'2026-07-28'})}));
+  const nextBuild=version.build+1;
+  await page.route(/build-info\.json\?__pwa_update_check=/,route=>route.fulfill({contentType:'application/json',body:JSON.stringify({schemaVersion:1,version:version.version,versionCode:version.versionCode,build:nextBuild,commit:'abcdef1234567890',artifactCreatedAt:'2026-07-28T12:00:00.000Z',channel:'stable'})}));
+  await page.route(/app-version\.json\?__pwa_update_check=/,route=>route.fulfill({contentType:'application/json',body:JSON.stringify({...version,build:nextBuild})}));
   await openAbout(page);
   await page.locator('#checkForUpdateBtn').click();
-  await expect(page.locator('#aboutUpdateStatus')).toContainText('Hay una actualización disponible: build 89');
+  await expect(page.locator('#aboutUpdateStatus')).toContainText(`Hay una actualización disponible: build ${nextBuild}`);
   await expect(page.locator('#checkForUpdateBtn')).toHaveText('Preparar actualización');
 });
 

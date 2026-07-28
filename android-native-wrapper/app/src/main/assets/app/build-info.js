@@ -7,7 +7,7 @@
 
   function fallback(){
     const version=global.APP_VERSION_INFO||{};
-    return{schemaVersion:1,version:String(version.version||'desconocida'),versionCode:Number(version.versionCode)||0,build:Number(version.build)||0,commit:'development',artifactCreatedAt:String(version.updatedAt||''),channel:'development'};
+    return{schemaVersion:1,version:String(version.version||'desconocida'),versionCode:Number(version.versionCode)||0,build:Number(version.build)||0,commit:'desconocido',artifactCreatedAt:String(version.updatedAt||''),channel:'stable'};
   }
   function normalize(value){
     if(!value||Number(value.schemaVersion)!==1||!value.version||!Number.isFinite(Number(value.build)))throw new Error('BUILD_INFO_INVALID');

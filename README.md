@@ -15,7 +15,7 @@ PWA y APK Android para medir habitos, atencion, actividad fisica y nutricion con
 
 ## Navegacion y diseno
 
-La version actual `v2.7.0` (build web `88`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
+La version actual `v2.7.0` (build web `89`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
 **Gym**, **Nutricion**, **Progreso** y **Mas**. En escritorio usa una barra
 lateral compacta. Gym Party se abre desde **Gym > Grupo**, desde un acceso
 discreto en Inicio o mediante un enlace `gymPartyCode`; ya no ocupa un boton
@@ -677,6 +677,12 @@ regenerar los recursos visuales se ejecutan
 `powershell -ExecutionPolicy Bypass -File scripts/generate-pwa-icons.ps1` y
 `npm run build:pwa-screenshots`; `npm run test:manifest` comprueba dimensiones,
 rutas y que los iconos de shortcut no sean copias entre si.
+
+Las pruebas sobre hardware no se deducen de Playwright ni de Gradle. La
+checklist [docs/physical-test-checklist.md](docs/physical-test-checklist.md)
+separa lo automatizado de lo ejecutado físicamente y deja los recorridos
+pendientes para iPhone/Safari, Android Chrome/PWA, APK/widget y Gym Party con
+dos dispositivos.
 
 ## Seguridad
 

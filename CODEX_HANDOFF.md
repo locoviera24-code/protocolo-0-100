@@ -4,7 +4,7 @@ Ultima actualizacion: 2026-07-28
 Rama esperada: `main`
 Version actual: `2.7.0` (fuente unica: `app-version.json`)
 Android: `versionCode 33`, `versionName "2.7.0"`
-Service worker cache: `protocolo-0-100-pwa-2.7.0-b88`
+Service worker cache: `protocolo-0-100-pwa-2.7.0-b89`
 Backup consolidado: `schemaVersion: 3`
 
 Leer primero este archivo y luego `README.md`, `index.html`,
@@ -24,7 +24,7 @@ Estado actual:
 - Gym Party implementado como modulo web/PWA opcional.
 - Nutricion local/FDC opcional.
 - Backups JSON `schemaVersion: 3`.
-- PWA offline con cache derivada `protocolo-0-100-pwa-2.7.0-b88` y
+- PWA offline con cache derivada `protocolo-0-100-pwa-2.7.0-b89` y
   actualizacion consentida desde el aviso visible.
 - APK con widget Android y permiso `INTERNET` para Firebase/Gym Party.
 
@@ -86,7 +86,7 @@ Web:
   tombstones, backoff y contexto horario.
 - `gym-party.js`: modulo Gym Party, registro rapido, graficas y edicion/eliminacion de series.
 - `advanced-features.js`: version `2.7.0`, backup/importacion Gym Party.
-- `sw.js`: cache build 58, actualizacion consentida, incluye modulos nuevos y evita
+- `sw.js`: cache derivada del build 89, actualización atómica consentida y sin mezcla de assets; evita
   persistir una configuracion Firebase obsoleta.
 - `README.md`: documenta Gym Party, demo, Firebase, privacidad y pruebas.
 - `CODEX_HANDOFF.md`: este handoff.
@@ -3594,3 +3594,56 @@ Siguiente bloque exacto: documentar las pruebas físicas sin atribuir resultados
 no ejecutados, incrementar una sola vez el build publicable, ejecutar la suite
 completa y establecer la referencia `baseline-stable-2.7` si el gate y la
 publicación real quedan verificados.
+
+## 78. Cierre local del ciclo 2.7
+
+El build web/PWA se incrementó una sola vez a `89` por el conjunto funcional
+cerrado en los bloques 72-77. La versión permanece `2.7.0` y Android conserva
+`versionCode 33`; no hubo cambio de schema ni retirada de claves legacy.
+
+La primera regresión completa del build 89 ejecutó 384 escenarios y expuso 9
+fallos reales o contratos desactualizados. Se corrigieron antes de continuar:
+
+- la comparación de actualización ya deriva el siguiente build desde
+  `app-version.json`;
+- la validación de alimento propio entra por **No encuentro este alimento**;
+- el drawer permanente de escritorio deja de estar `inert`, mientras el móvil
+  oculto conserva `aria-hidden` e `inert`;
+- si `build-info.json` falta o es inválido, el diagnóstico técnico se mantiene
+  cerrado por defecto;
+- las pruebas de metadatos que interceptan red bloquean el service worker para
+  que WebKit no responda desde una caché previa.
+
+Resultados locales concluyentes:
+
+- contratos estáticos completos: aprobados;
+- Playwright: 373 aprobados, 14 omitidos, 0 fallos en 46,8 minutos sobre Android
+  Chromium, iPhone WebKit y escritorio Chromium;
+- axe está incluido en esa matriz y no reportó infracciones graves en las siete
+  vistas centrales;
+- Firestore Emulator: aprobado; los `PERMISSION_DENIED` visibles corresponden
+  a operaciones negativas que las reglas deben rechazar;
+- artifact web: 81 recursos con SHA-256, rutas profundas y service worker sin
+  404 ni errores de página;
+- Android Gradle 8.10.2/JDK 17: `assembleDebug` y `assembleRelease` aprobados;
+- debug: 1.924.907 bytes, SHA-256
+  `8B0438183AC9173B764CBFA86A97280D0ADE4AC5436083ECC6A53EA62761B35C`;
+- release de prueba con firma efímera: 1.504.426 bytes, SHA-256
+  `6AFD7A6CADC047EC4B42BB004B524CE24E90DF898751B146CE9FE83DCF9A60D4`,
+  verificado con esquemas APK v1 y v2. No reemplaza el release firmado real;
+- paridad web/Android aprobada con 496 IDs estáticos.
+
+Verificación pública realizada el 28 de julio de 2026 antes de este commit:
+GitHub Pages respondía 200, pero servía `2.7.0` build `79` y no tenía
+`build-info.json`. Por tanto, el build 89 todavía no estaba publicado y no debe
+afirmarse lo contrario. `gh auth status` indicó que no existe sesión CLI para
+despachar el workflow estable.
+
+`docs/physical-test-checklist.md` distingue automatización de hardware. Durante
+este ciclo `adb devices -l` no detectó dispositivos: iPhone, Android Chrome,
+APK instalado, widget y Gym Party con dos teléfonos siguen pendientes manuales.
+
+Siguiente acción exacta: enviar este commit a `main`, esperar el quality gate
+remoto, ejecutar manualmente **Publicar PWA en GitHub Pages** con canal
+`stable`, repetir el smoke público y solo entonces considerar publicado el
+build 89. La referencia `baseline-stable-2.7` debe apuntar al commit probado.
