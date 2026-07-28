@@ -3528,3 +3528,37 @@ Pruebas del bloque:
 
 Siguiente bloque exacto: integrar `@axe-core/playwright`, ejecutar auditorías
 reales sobre las vistas centrales y documentar únicamente excepciones concretas.
+
+## 76. Auditoría axe y contratos de foco
+
+Se agregó `@axe-core/playwright` y el escenario
+`tests/e2e/accessibility-axe.spec.mjs`. El gate analiza Inicio, Gym, Nutrición,
+Progreso, Más, Datos y copias y Gym Party con reglas WCAG A/AA en Android
+Chromium, iPhone WebKit y escritorio Chromium. El workflow ejecuta axe de forma
+explícita y luego evita duplicarlo en la matriz E2E restante.
+
+La primera ejecución encontró dos defectos reales compartidos:
+
+- `#sideDrawer` tenía `aria-hidden=true`, pero sus botones seguían en el orden de
+  foco;
+- las vistas Registro/Resumen usaban `aria-selected` sobre botones sin rol de
+  tab.
+
+El drawer ahora usa `inert` mientras está cerrado, lo retira al abrirse y
+restaura el foco al control de apertura. Registro/Resumen forman un tablist real
+con `aria-controls`, tabpanels, roving `tabindex` y soporte de flechas,
+Home/End. La navegación por teclado actualiza la URL sin desviar el foco al
+encabezado.
+
+Resultados:
+
+- 21/21 auditorías axe sobre las siete vistas y tres plataformas, sin
+  infracciones `serious` o `critical` y sin reglas excluidas;
+- 6/6 recorridos conductuales de tabs y drawer en las tres plataformas;
+- contratos estáticos de accesibilidad, router y layout aprobados;
+- `docs/accessibility-exceptions.md` documenta que actualmente no hay
+  excepciones activas.
+
+Siguiente bloque exacto: completar manifest, iconos dedicados, screenshots y
+validación de la experiencia instalable sin cambiar la orientación ni romper
+shortcuts existentes.

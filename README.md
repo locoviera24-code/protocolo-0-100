@@ -591,6 +591,7 @@ node ./scripts/test-module-boundaries.mjs
 node ./scripts/test-android-webview-security.mjs
 node ./scripts/test-android-release.mjs
 node ./scripts/test-accessibility.mjs
+npm run test:axe
 npm run test:precache
 npm run test:quality-gate
 npm run test:design
@@ -629,9 +630,15 @@ keystore codificado en `ANDROID_KEYSTORE_BASE64` y nunca lo guarda en el repo.
 
 `.github/workflows/quality-gate.yml` es la unica matriz publicable. Ejecuta
 contratos, datos/backups, PWA atomica, Nutricion, Progreso, Gym, Gym Party,
-Playwright en Android/iPhone/escritorio, Firestore Emulator, accesibilidad y
+Playwright en Android/iPhone/escritorio, Firestore Emulator, axe sobre las siete
+vistas centrales, accesibilidad conductual y
 compilacion Android debug/release con firma efimera. Solo despues sube el
 artifact web y el APK debug del canal seleccionado.
+
+La auditoria axe no tiene reglas desactivadas. Las excepciones, si alguna se
+necesita en el futuro, deben quedar justificadas en
+`docs/accessibility-exceptions.md` con regla, navegador, issue y fecha de
+revision.
 
 - **Beta automatica:** `Validar aplicacion` se ejecuta en `main`, `master` y pull
   requests. Produce `protocolo-web-beta` y `protocolo-android-debug-beta`; no

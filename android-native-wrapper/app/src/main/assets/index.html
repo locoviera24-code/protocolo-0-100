@@ -32,7 +32,7 @@
     <button type="button" class="quickPartyBtn" id="openGymPartyTopBtn" hidden aria-hidden="true" tabindex="-1">Gym Party</button>
   </div>
   <div class="drawerBackdrop" id="drawerBackdrop"></div>
-  <aside class="sideDrawer" id="sideDrawer" aria-label="Módulos de la aplicación" aria-hidden="true">
+  <aside class="sideDrawer" id="sideDrawer" aria-label="Módulos de la aplicación" aria-hidden="true" inert>
     <div class="drawerHead"><div><h2>Protocolo 0→100</h2><div class="muted small">Elegí un espacio</div></div><button type="button" class="closeBtn" id="closeDrawerBtn" aria-label="Cerrar menú">×</button></div>
     <nav class="drawerNav">
       <button type="button" class="drawerItem active" data-module-target="protocolo"><span class="drawerIcon"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v10h13V10M9 20v-6h6v6"/></svg></span><span><strong>Inicio</strong><span>Tu día y registro.</span></span></button>
@@ -132,12 +132,12 @@
             </div>
           </div>
 
-          <div class="tabs protocolOnly" style="margin-top:16px">
-            <button class="tab active" data-tab="registro" type="button">Registro</button>
-            <button class="tab" data-tab="dashboard" type="button">Resumen</button>
+          <div class="tabs protocolOnly" style="margin-top:16px" role="tablist" aria-label="Vistas de Inicio">
+            <button class="tab active" id="protocol-tab-registro" data-tab="registro" type="button" role="tab" aria-controls="tab-registro" aria-selected="true">Registro</button>
+            <button class="tab" id="protocol-tab-dashboard" data-tab="dashboard" type="button" role="tab" aria-controls="tab-dashboard" aria-selected="false" tabindex="-1">Resumen</button>
           </div>
 
-          <div id="tab-registro">
+          <div id="tab-registro" role="tabpanel" aria-labelledby="protocol-tab-registro">
             <h3 class="formSectionTitle">Esenciales</h3>
             <div class="formGrid essentialFields">
               <div class="field"><label>Pantalla no esencial (h)</label><input type="text" inputmode="decimal" id="nonEssential" placeholder="Ej. 6,25"></div>
@@ -185,7 +185,7 @@
             </details>
           </div>
 
-          <div id="tab-dashboard" class="hidden">
+          <div id="tab-dashboard" class="hidden" role="tabpanel" aria-labelledby="protocol-tab-dashboard">
             <section class="moduleCard legacyProgressRedirect" aria-labelledby="legacyProgressTitle">
               <h2 id="legacyProgressTitle" tabindex="-1">Tus tendencias ahora están en Progreso</h2>
               <p class="muted">El score, los períodos, Gym, Nutrición, historial y logros comparten una sola vista analítica.</p>
@@ -2475,8 +2475,8 @@ function trapOverlayFocus(event,container){
   if(event.key!=='Tab'||!container)return;const items=focusableElements(container);if(!items.length)return;const first=items[0],last=items[items.length-1];
   if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
 }
-function openDrawer(){lastFocusedBeforeOverlay=document.activeElement;document.body.classList.add('drawerOpen');document.getElementById('openDrawerBtn')?.setAttribute('aria-expanded','true');document.getElementById('sideDrawer')?.setAttribute('aria-hidden','false');document.getElementById('closeDrawerBtn')?.focus();}
-function closeDrawer(){const wasOpen=document.body.classList.contains('drawerOpen');document.body.classList.remove('drawerOpen');document.getElementById('openDrawerBtn')?.setAttribute('aria-expanded','false');document.getElementById('sideDrawer')?.setAttribute('aria-hidden','true');if(wasOpen&&lastFocusedBeforeOverlay?.focus)lastFocusedBeforeOverlay.focus();}
+function openDrawer(){const drawer=document.getElementById('sideDrawer');lastFocusedBeforeOverlay=document.activeElement;document.body.classList.add('drawerOpen');document.getElementById('openDrawerBtn')?.setAttribute('aria-expanded','true');drawer?.setAttribute('aria-hidden','false');if(drawer)drawer.inert=false;document.getElementById('closeDrawerBtn')?.focus();}
+function closeDrawer(){const drawer=document.getElementById('sideDrawer'),wasOpen=document.body.classList.contains('drawerOpen');document.body.classList.remove('drawerOpen');document.getElementById('openDrawerBtn')?.setAttribute('aria-expanded','false');drawer?.setAttribute('aria-hidden','true');if(drawer)drawer.inert=true;if(wasOpen&&lastFocusedBeforeOverlay?.focus)lastFocusedBeforeOverlay.focus();}
 const APP_VIEW_META={
   'home/register':['Inicio','Tu día, atención y hábitos'],
   'home/overview':['Resumen diario','Tendencias y registros del protocolo'],
@@ -2540,7 +2540,7 @@ function activateTab(tabName,{internal=false}={}){
     if(routes[tabName])return window.APP_ROUTER.navigate(routes[tabName]);
   }
   if(['registro','dashboard'].includes(tabName))lastProtocolTab=tabName;
-  document.querySelectorAll('.tab').forEach(button=>{const selected=button.dataset.tab===tabName;button.classList.toggle('active',selected);button.setAttribute('aria-selected',String(selected));});
+  document.querySelectorAll('.tab').forEach(button=>{const selected=button.dataset.tab===tabName;button.classList.toggle('active',selected);button.setAttribute('aria-selected',String(selected));button.tabIndex=selected?0:-1;});
   APP_TAB_IDS.forEach(name=>document.getElementById('tab-'+name)?.classList.toggle('hidden',name!==tabName));
   if(tabName==='dashboard')drawChart();
   if(tabName==='gym')renderGym();
@@ -3193,6 +3193,13 @@ document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>
   activateTab(btn.dataset.tab);
   if(btn.dataset.tab==='guia') renderHelpGuide();
 }));
+document.querySelector('.tabs[role="tablist"]')?.addEventListener('keydown',event=>{
+  if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
+  const tabs=Array.from(event.currentTarget.querySelectorAll('[role="tab"]')),current=Math.max(0,tabs.indexOf(document.activeElement));
+  const next=event.key==='Home'?0:event.key==='End'?tabs.length-1:(current+(event.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length;
+  const target=tabs[next];if(!target)return;event.preventDefault();
+  window.APP_ROUTER?.navigate({module:'home',view:target.dataset.tab==='dashboard'?'overview':'register'},{focus:false});target.focus();
+});
 document.querySelectorAll('.metricTab').forEach(btn=>btn.addEventListener('click',()=>{
   document.querySelectorAll('.metricTab').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');

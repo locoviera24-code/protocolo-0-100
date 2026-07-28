@@ -107,8 +107,11 @@ jobs:
           node ./scripts/test-android-release.mjs
           node ./scripts/test-accessibility.mjs
 
-      - name: Probar flujos Android, iPhone y escritorio
-        run: npm run test:e2e
+      - name: Auditar accesibilidad con axe en Android, iPhone y escritorio
+        run: npm run test:axe
+
+      - name: Probar los demas flujos Android, iPhone y escritorio
+        run: npm run test:e2e -- --grep-invert @axe
 
       - name: Probar reglas Firestore en Emulator
         run: npm run test:rules

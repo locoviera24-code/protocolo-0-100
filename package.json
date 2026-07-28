@@ -22,9 +22,11 @@
     "test:data": "node scripts/test-schema-registry.mjs && node scripts/test-data-integrity.mjs && node scripts/test-data-layer.mjs && node scripts/test-backup-service.mjs",
     "test:nutrition": "node scripts/test-numbers.mjs && node scripts/test-nutrition-modules.mjs && node scripts/test-food-search-service.mjs",
     "test:fdc": "node scripts/test-fdc-confidence.mjs",
+    "test:axe": "playwright test tests/e2e/accessibility-axe.spec.mjs",
     "test:e2e": "playwright test"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
     "@firebase/rules-unit-testing": "^5.0.0",
     "@playwright/test": "1.61.1",
     "firebase": "^12.0.0"
