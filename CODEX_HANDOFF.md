@@ -3723,3 +3723,17 @@ APK instalado y actualización desde APK anterior, widget en launcher, voz y
 Gym Party entre dos teléfonos. La checklist exacta está en
 `docs/physical-test-checklist.md`. No debe atribuirse ningún resultado físico
 hasta completarla.
+
+## 82. Inicio de Controles nativos de entrenamiento V1
+
+Se creó `feature/native-workout-controls-v1` desde `1a9186e`. La etiqueta
+`baseline-stable-2.7` permanece sin cambios en `a8d3253`; este proyecto no debe
+publicar el canal estable ni fusionarse a `main`.
+
+La auditoría detallada está en `docs/native-workout-controls-v1-audit.md`.
+Confirma que el widget puede mutar y guardar una sesión provisional con la app
+cerrada, pero usa el JSON completo de `SharedPreferences` como transporte. La
+importación reemplaza la sesión por timestamp, el timer vive solo en la WebView,
+Gym Party espera a que se abra la app y no hay deduplicación robusta ante doble
+tap. El siguiente bloque debe introducir flags apagadas y una cola nativa
+append-only sin cambiar el comportamiento cuando estén desactivadas.
