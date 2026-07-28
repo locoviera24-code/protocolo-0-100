@@ -3261,6 +3261,18 @@ Empaquetado local verificado:
   APK debug de 1.746.537 bytes, SHA-256
   `DE0FC82AF6B2527DA7C93C6D5AC8B351E8F1979A133FE57123A20E133B19D80C`.
 
-Pendiente para cerrar el bloque: commit, push y quality gate remoto. No retirar
-aún ninguna clave de `localStorage`; antes hacen falta observación de
-divergencias reales y pruebas instaladas en Safari/iOS y Android físicos.
+Resultado remoto definitivo: `Validar aplicacion` #87, commit `14778e9`,
+finalizó **Success** en 13m 05s. El gate aprobó 316 E2E y mantuvo 14 omisiones
+conocidas; la verificación servida del artifact aprobó 1/1. También pasaron
+Firestore Emulator, service worker atómico, Android debug/release de prueba y
+paridad de assets. Artifacts:
+
+- `protocolo-android-debug-beta`, 1,51 MB, SHA-256
+  `3bf28ae51b52bf74b9d8809c9cfb494f3fd30f8acd137ea8d398ceeee0605a8d`;
+- `protocolo-web-beta`, 321 KB, SHA-256
+  `1e3c6b8c35cc0d8c73210207acb417c984d04540f25a0450c39fb30f23e71052`.
+
+El bloque queda cerrado y publicado en build 87. No retirar aún ninguna clave
+de `localStorage`: el próximo paso exacto es observar divergencias reales y
+realizar pruebas instaladas en Safari/iOS y Android físicos antes de decidir la
+retirada gradual de compatibilidad legacy.
