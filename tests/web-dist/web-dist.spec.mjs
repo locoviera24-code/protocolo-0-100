@@ -32,7 +32,7 @@ test('artifact publicado carga modulos, rutas y service worker sin errores',asyn
     routeStates.push({name,state});
   }
 
-  for(const asset of ['/app/numbers.js','/app/drafts.js','/app/dates.js','/gym/set-model.js','/manifest.webmanifest','/icons/icon-192.png','/offline.html','/precache-manifest.js']){
+  for(const asset of ['/app/numbers.js','/app/drafts.js','/app/dates.js','/gym/set-model.js','/manifest.webmanifest','/icons/icon-192.png','/icons/icon-maskable-192.png','/icons/shortcut-nutrition-96.png','/screenshots/mobile-home-390x844.png','/screenshots/desktop-gym-1440x900.png','/offline.html','/precache-manifest.js']){
     const response=await request.get(asset);
     expect(response.status(),`${asset} debe responder 200`).toBe(200);
   }

@@ -12,42 +12,84 @@
   ],
   "background_color": "#0b1220",
   "theme_color": "#0b1220",
-  "orientation": "portrait-primary",
+  "orientation": "any",
   "icons": [
     {
       "src": "icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
   "shortcuts": [
+    {
+      "name": "Registro de hoy",
+      "short_name": "Inicio",
+      "description": "Abrir el registro diario",
+      "url": "./index.html?module=home&view=register",
+      "icons": [{"src": "icons/shortcut-home-96.png", "sizes": "96x96", "type": "image/png"}]
+    },
     {
       "name": "Entrenamiento de hoy",
       "short_name": "Gym",
       "description": "Abrir la rutina y el progreso de hoy",
       "url": "./index.html?module=gym&view=train",
-      "icons": [{"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png"}]
-    },
-    {
-      "name": "Gym Party",
-      "short_name": "Gym Party",
-      "description": "Abrir la sala privada compartida",
-      "url": "./index.html?module=gym&view=group",
-      "icons": [{"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png"}]
+      "icons": [{"src": "icons/shortcut-gym-96.png", "sizes": "96x96", "type": "image/png"}]
     },
     {
       "name": "Registrar serie",
       "short_name": "Serie rápida",
       "description": "Abrir directamente el registro rápido",
       "url": "./index.html?module=gym&view=train&quickLog=1",
-      "icons": [{"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png"}]
+      "icons": [{"src": "icons/shortcut-set-96.png", "sizes": "96x96", "type": "image/png"}]
+    },
+    {
+      "name": "Registrar alimento",
+      "short_name": "Nutrición",
+      "description": "Abrir el registro de alimentos",
+      "url": "./index.html?module=nutrition&view=meals",
+      "icons": [{"src": "icons/shortcut-nutrition-96.png", "sizes": "96x96", "type": "image/png"}]
+    },
+    {
+      "name": "Gym Party",
+      "short_name": "Gym Party",
+      "description": "Abrir la sala privada compartida",
+      "url": "./index.html?module=gym&view=group",
+      "icons": [{"src": "icons/shortcut-party-96.png", "sizes": "96x96", "type": "image/png"}]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "screenshots/mobile-home-390x844.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Registro diario en un teléfono"
+    },
+    {
+      "src": "screenshots/desktop-gym-1440x900.png",
+      "sizes": "1440x900",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Entrenamiento del día en escritorio"
     }
   ],
   "categories": [

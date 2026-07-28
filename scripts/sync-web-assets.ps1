@@ -77,7 +77,16 @@ $relativeFiles = @(
     'styles/modules.css',
     'styles/responsive.css',
     'icons/icon-192.png',
-    'icons/icon-512.png'
+    'icons/icon-512.png',
+    'icons/icon-maskable-192.png',
+    'icons/icon-maskable-512.png',
+    'icons/shortcut-home-96.png',
+    'icons/shortcut-gym-96.png',
+    'icons/shortcut-set-96.png',
+    'icons/shortcut-nutrition-96.png',
+    'icons/shortcut-party-96.png',
+    'screenshots/mobile-home-390x844.png',
+    'screenshots/desktop-gym-1440x900.png'
 )
 
 $mismatches = @()

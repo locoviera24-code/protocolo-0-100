@@ -352,9 +352,54 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
       "sha256": "ea77dfc00920042a0c4269933e78df3b9fef0ef1baf550c9ceb277de49d364e6"
     },
     {
+      "url": "./icons/icon-maskable-192.png",
+      "bytes": 3118,
+      "sha256": "996cbb7ae49a7f50f0678dd6d3f94aa1b2d6f3941ddbc1c8340cb867825ca742"
+    },
+    {
+      "url": "./icons/icon-maskable-512.png",
+      "bytes": 9515,
+      "sha256": "831922f5d26ef1a4d91b28a9916ff98dc3e4061c8c99334df658b3b0bc1402b1"
+    },
+    {
+      "url": "./icons/shortcut-gym-96.png",
+      "bytes": 1004,
+      "sha256": "bbcaf13807e72e59b04a90d51f0eb4c02e20a749269864cb73f35db19c04fcf9"
+    },
+    {
+      "url": "./icons/shortcut-home-96.png",
+      "bytes": 1153,
+      "sha256": "0f4dee6b242a25ff076029a765b9670c04e735ddac0592edc71ceb0516be2555"
+    },
+    {
+      "url": "./icons/shortcut-nutrition-96.png",
+      "bytes": 1184,
+      "sha256": "65b05dea8f6e778c2c1f7e0b97c65675f96c8a1a90412711b58885b3aae5ae39"
+    },
+    {
+      "url": "./icons/shortcut-party-96.png",
+      "bytes": 1891,
+      "sha256": "075ed839332c97579535542018383610c31b1d3ea3a3a60d4c4202dad12637ab"
+    },
+    {
+      "url": "./icons/shortcut-set-96.png",
+      "bytes": 985,
+      "sha256": "0b59eb361552a988631b1191287f33622187276e99cd88c3b695a081451aac3a"
+    },
+    {
       "url": "./manifest.webmanifest",
-      "bytes": 1722,
-      "sha256": "90e5f010bafaa234be695d49a9e5a020e456f9411b467602be68ad2b1ce35adb"
+      "bytes": 2976,
+      "sha256": "582d11d33f7c5074d9912807c584159008d8c96529914514eee2aba0d40c077d"
+    },
+    {
+      "url": "./screenshots/desktop-gym-1440x900.png",
+      "bytes": 118041,
+      "sha256": "e31abdcc1de167aba36df2dc092f473da9169c2c4bdfee23a3abd37958018432"
+    },
+    {
+      "url": "./screenshots/mobile-home-390x844.png",
+      "bytes": 59306,
+      "sha256": "db4d7b10703c98743f30f9fc9922bcb560d32d38a0eaa4d87ffa827a43a7bebc"
     }
   ]
 });

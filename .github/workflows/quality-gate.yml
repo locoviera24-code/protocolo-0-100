@@ -81,6 +81,7 @@ jobs:
       - name: Probar PWA atomica y versionado
         run: |
           npm run test:precache
+          npm run test:manifest
           node ./scripts/test-service-worker.mjs
           npm run test:version
 

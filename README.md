@@ -183,8 +183,14 @@ manifest.webmanifest        Configuracion instalable
 precache-manifest.js        Inventario generado de recursos, bytes y SHA-256
 offline.html                Recuperacion minima cuando no existe shell disponible
 sw.js                       Instalacion atomica, cache por build y funcionamiento offline
+icons/icon-maskable-*.png   Iconos maskable con zona segura propia
+icons/shortcut-*.png        Iconos diferenciados para accesos directos
+screenshots/*.png           Capturas instalables movil y escritorio
 scripts/precache-manifest.mjs Clasificacion obligatoria/opcional del shell
 scripts/generate-precache-manifest.mjs Generador reproducible para web y Android
+scripts/generate-pwa-icons.ps1 Generador reproducible de iconos PWA
+scripts/capture-pwa-screenshots.mjs Captura vistas limpias sin datos personales
+scripts/test-manifest.mjs   Valida rutas, dimensiones, purposes y shortcuts
 scripts/validate-app.ps1    Validaciones estructurales
 scripts/test-service-worker.mjs Prueba de cache/offline/FDC
 scripts/test-workout-features.mjs Prueba de rutina, widget e importacion directa
@@ -592,6 +598,7 @@ node ./scripts/test-android-webview-security.mjs
 node ./scripts/test-android-release.mjs
 node ./scripts/test-accessibility.mjs
 npm run test:axe
+npm run test:manifest
 npm run test:precache
 npm run test:quality-gate
 npm run test:design
@@ -662,6 +669,14 @@ La PWA no activa una nueva version a mitad de un registro: muestra aviso y solo
 envia `SKIP_WAITING` cuando el usuario toca **Actualizar ahora**. El APK release
 es distinto del debug y debe conservar siempre la misma clave de firma para
 permitir actualizaciones sobre una instalacion previa.
+
+El manifiesto permite orientacion libre. Usa iconos `any` y `maskable`
+separados, capturas verificadas para telefono y escritorio y accesos directos
+con iconos propios para Inicio, Gym, serie rapida, Nutricion y Gym Party. Para
+regenerar los recursos visuales se ejecutan
+`powershell -ExecutionPolicy Bypass -File scripts/generate-pwa-icons.ps1` y
+`npm run build:pwa-screenshots`; `npm run test:manifest` comprueba dimensiones,
+rutas y que los iconos de shortcut no sean copias entre si.
 
 ## Seguridad
 

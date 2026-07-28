@@ -3562,3 +3562,35 @@ Resultados:
 Siguiente bloque exacto: completar manifest, iconos dedicados, screenshots y
 validación de la experiencia instalable sin cambiar la orientación ni romper
 shortcuts existentes.
+
+## 77. Manifest y experiencia instalable completos
+
+`manifest.webmanifest` ya no fuerza orientación vertical: declara `any`. Los
+iconos normales de 192/512 px conservan `purpose: any` y existen archivos
+maskable separados, generados con una zona segura real mediante
+`scripts/generate-pwa-icons.ps1`. Inicio, Gym, serie rápida, Nutrición y Gym
+Party tienen iconos de shortcut propios.
+
+Se agregaron capturas reproducibles y sin datos personales para los factores
+`narrow` (390x844, Inicio) y `wide` (1440x900, Gym). El generador
+`scripts/capture-pwa-screenshots.mjs` levanta un servidor efímero, usa contextos
+limpios de Chromium y guarda las dimensiones exactas declaradas por el
+manifiesto.
+
+`scripts/test-manifest.mjs` valida JSON, orientación, rutas, dimensiones PNG,
+separación `any`/`maskable`, iconos diferenciados y screenshots. El quality gate
+lo ejecuta junto al contrato PWA. El constructor web descubre estos recursos a
+partir del manifiesto y `scripts/sync-web-assets.ps1` los copia al APK.
+
+Verificación del bloque:
+
+- manifest: 4 iconos, 5 shortcuts y 2 screenshots válidos;
+- precache: 80 recursos descubiertos para build 88;
+- artifact: 81 recursos con hash y rutas profundas sin 404;
+- Playwright del artifact: 1/1, service worker instalado y sin errores de página;
+- validación estructural y paridad Android aprobadas con 496 IDs estáticos.
+
+Siguiente bloque exacto: documentar las pruebas físicas sin atribuir resultados
+no ejecutados, incrementar una sola vez el build publicable, ejecutar la suite
+completa y establecer la referencia `baseline-stable-2.7` si el gate y la
+publicación real quedan verificados.

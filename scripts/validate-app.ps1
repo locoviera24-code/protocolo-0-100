@@ -122,7 +122,7 @@ $requiredFiles = @(
     'data/schema-registry.js', 'data/backup-service.js', 'scripts/test-schema-registry.mjs', 'scripts/test-data-integrity.mjs', 'scripts/test-backup-service.mjs', 'tests/e2e/backup-import.spec.mjs', 'tests/e2e/data-integrity.spec.mjs', 'tests/e2e/data-compatibility.spec.mjs', 'tests/e2e/indexeddb-primary.spec.mjs',
     'ui/confirmation-dialog.js',
     'build-info.json', 'app/build-info.js', 'scripts/build-info.mjs', 'scripts/generate-build-info.mjs',
-    'app-version.json', 'app-version.js', 'app/build-guard.js', 'precache-manifest.js', 'offline.html', 'scripts/precache-manifest.mjs', 'scripts/generate-precache-manifest.mjs', 'scripts/test-build-guard.mjs', 'scripts/test-quality-gate.mjs', '.github/workflows/quality-gate.yml', 'app/numbers.js', 'scripts/test-numbers.mjs', 'data/indexeddb.js', 'data/repositories.js', 'nutrition-data.js', 'fdc-client.js', 'workout-store.js', 'workout-plan.js', 'gym/equipment.js', 'gym/set-model.js', 'gym/anomaly-detector.js', 'gym/progression-engine.js', 'workout-metrics.js', 'workout-ranking.js', 'workout-ui.js', 'workout-features.js', 'advanced-features.js', 'ui/router.js', 'ui/navigation.js', 'ui/notifications.js', 'ui/form-dialog.js', 'ui/error-boundary.js', 'ui/recovery-view.js', 'progress/muscle-taxonomy.js', 'progress/progress-data-model.js', 'progress/gym-progress-model.js', 'progress/muscle-progress.js', 'progress/exercise-progress.js', 'progress/personal-records.js', 'progress/progress-view.js',
+    'app-version.json', 'app-version.js', 'app/build-guard.js', 'precache-manifest.js', 'offline.html', 'scripts/precache-manifest.mjs', 'scripts/generate-precache-manifest.mjs', 'scripts/test-build-guard.mjs', 'scripts/test-quality-gate.mjs', 'scripts/test-manifest.mjs', 'scripts/generate-pwa-icons.ps1', 'scripts/capture-pwa-screenshots.mjs', '.github/workflows/quality-gate.yml', 'app/numbers.js', 'scripts/test-numbers.mjs', 'data/indexeddb.js', 'data/repositories.js', 'nutrition-data.js', 'fdc-client.js', 'workout-store.js', 'workout-plan.js', 'gym/equipment.js', 'gym/set-model.js', 'gym/anomaly-detector.js', 'gym/progression-engine.js', 'workout-metrics.js', 'workout-ranking.js', 'workout-ui.js', 'workout-features.js', 'advanced-features.js', 'ui/router.js', 'ui/navigation.js', 'ui/notifications.js', 'ui/form-dialog.js', 'ui/error-boundary.js', 'ui/recovery-view.js', 'progress/muscle-taxonomy.js', 'progress/progress-data-model.js', 'progress/gym-progress-model.js', 'progress/muscle-progress.js', 'progress/exercise-progress.js', 'progress/personal-records.js', 'progress/progress-view.js',
     'firebase-config.js', 'firebase-service.js', 'gym-party-sync.js', 'gym-party-metrics.js', 'gym-party-ui.js', 'gym-party.js',
     'scripts/test-android-webview-security.mjs',
     'scripts/test-android-release.mjs',
@@ -311,13 +311,20 @@ Assert-True ($manifest.start_url -eq './index.html') 'El manifest debe conservar
 Assert-True ($manifest.scope -eq './') 'El manifest debe conservar scope relativo para GitHub Pages'
 Assert-True ($manifest.display -eq 'standalone') 'El manifest debe mantener display standalone'
 Assert-True ($manifest.id -eq './') 'El manifest debe declarar un id estable y relativo'
+Assert-True ($manifest.orientation -eq 'any') 'El manifest no debe forzar una orientacion'
 Assert-True (($manifest.display_override -contains 'standalone')) 'El manifest debe declarar display_override'
+Assert-True (($manifest.shortcuts.url -contains './index.html?module=home&view=register')) 'Falta shortcut PWA a Inicio'
 Assert-True (($manifest.shortcuts.url -contains './index.html?module=gym&view=train')) 'Falta shortcut PWA a Gym'
 Assert-True (($manifest.shortcuts.url -contains './index.html?module=gym&view=group')) 'Falta shortcut PWA a Gym Party'
 Assert-True (($manifest.shortcuts.url -contains './index.html?module=gym&view=train&quickLog=1')) 'Falta shortcut PWA a registro rapido'
-foreach ($icon in @('icons/icon-192.png', 'icons/icon-512.png')) {
+Assert-True (($manifest.shortcuts.url -contains './index.html?module=nutrition&view=meals')) 'Falta shortcut PWA a Nutricion'
+foreach ($icon in @('icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-192.png', 'icons/icon-maskable-512.png')) {
     Assert-True (($manifest.icons.src -contains $icon)) "El manifest no declara $icon"
     Assert-True ($precacheManifest.Contains('"url": "./' + $icon + '"')) "precache-manifest.js no cachea $icon"
+}
+foreach ($screenshot in @('screenshots/mobile-home-390x844.png', 'screenshots/desktop-gym-1440x900.png')) {
+    Assert-True (($manifest.screenshots.src -contains $screenshot)) "El manifest no declara $screenshot"
+    Assert-True ($precacheManifest.Contains('"url": "./' + $screenshot + '"')) "precache-manifest.js no cachea $screenshot"
 }
 
 try { $appVersionManifest = $appVersionText | ConvertFrom-Json } catch { throw 'app-version.json no contiene JSON valido' }
