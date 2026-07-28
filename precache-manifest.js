@@ -6,8 +6,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
   "required": [
     {
       "url": "./advanced-features.js",
-      "bytes": 60669,
-      "sha256": "ee55dbf43e1a04e27d7d648c8c4bd7fe252508580c0d13836025152ea885ee48"
+      "bytes": 61076,
+      "sha256": "7e73d67fd4e1370f79b980ddd455d71350b0c48c1acbea745accb2c6e467120f"
     },
     {
       "url": "./app-version.js",
@@ -18,6 +18,11 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
       "url": "./app/build-guard.js",
       "bytes": 1811,
       "sha256": "42443379a52029755059015eb554fc5f1836300551bf52771017cc3e712f3725"
+    },
+    {
+      "url": "./app/build-info.js",
+      "bytes": 4318,
+      "sha256": "415efb0ff0581f53e1ec00a4541908f4115005bb7f165adf61a441d56cbb6937"
     },
     {
       "url": "./app/dates.js",
@@ -33,6 +38,11 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
       "url": "./app/numbers.js",
       "bytes": 2236,
       "sha256": "699b7203e54f9ece561283bd87d71cf7a0bee578ee976905f93a0aa1cc2d4884"
+    },
+    {
+      "url": "./build-info.json",
+      "bytes": 189,
+      "sha256": "eb3d851f95f806a82a7b5d702d58bd76aeee0abd323c125065af42029f78bcef"
     },
     {
       "url": "./data/backup-service.js",
@@ -111,8 +121,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     },
     {
       "url": "./index.html",
-      "bytes": 309610,
-      "sha256": "9bc9b38ff10acc1864d181676fb117d903d4481c774b83103fe1c0600bcba489"
+      "bytes": 313808,
+      "sha256": "31e084e279da34b6cd0f326b59594458868860a87b81b65edfc47a4578e2c803"
     },
     {
       "url": "./nutrition-data.js",

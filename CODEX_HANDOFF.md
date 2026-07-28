@@ -3389,3 +3389,42 @@ Verificación de la corrección:
 Siguiente bloque exacto: generar metadatos verificables del artifact, mostrarlos
 en `Más > Acerca de` y añadir una comprobación de actualización sin caché ni
 recarga automática insegura.
+
+## 72. Metadatos verificables y actualización segura
+
+`Más > Acerca de` ya no muestra solo etiquetas de versión. La vista obtiene el
+contrato `build-info.json` y presenta versión, build, canal, commit abreviado,
+fecha del artifact, cache activa, estado del service worker y versión Android.
+La acción **Comprobar actualización** solicita `build-info.json` y
+`app-version.json` con `__pwa_update_check`; `sw.js` deja pasar exclusivamente
+esa consulta a red para evitar comparar contra su propia cache activa.
+
+El nuevo módulo `app/build-info.js` valida el contrato, compara builds y evita
+activar una actualización cuando existen borradores, ajustes sin guardar,
+diálogos/importaciones abiertos o escrituras de `APP_DATA` pendientes. El banner
+PWA existente usa el mismo guard. La recarga sigue ocurriendo solo después del
+consentimiento y de `controllerchange`.
+
+El artifact no usa un commit escrito a mano:
+
+- `scripts/build-info.mjs` construye metadatos desde `app-version.json`,
+  `GITHUB_SHA` y `QUALITY_CHANNEL`;
+- `scripts/build-web-dist.mjs` genera el archivo exacto dentro de `dist-pages`;
+- el quality gate genera el mismo contrato antes de sincronizar Android;
+- el checkout conserva un fallback identificado como `development`.
+
+Empaquetado y pruebas del bloque:
+
+- precache build 88: 66 recursos obligatorios y 4 opcionales;
+- artifact web: 72 recursos con inventario y hashes, incluidos
+  `build-info.json` y `app/build-info.js`;
+- service worker atómico, bypass de comprobación y rollback correctos;
+- validación/paridad Android correctas, 483 IDs estáticos únicos;
+- 28 aprobadas y 2 omisiones esperadas en la matriz Acerca de/Ajustes sobre
+  Android Chromium, iPhone WebKit y escritorio Chromium;
+- la URL pública seguía sin estar disponible al cerrar este bloque; no existe
+  todavía un commit público verificable de esta continuación.
+
+Siguiente bloque exacto: simplificar la vista normal de `Datos y copias` y mover
+modos de almacenamiento, checksums, divergencias y recuperaciones dentro de un
+único `Diagnóstico avanzado`, sin retirar ninguna herramienta ni clave legacy.

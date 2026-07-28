@@ -21,6 +21,14 @@ lateral compacta. Gym Party se abre desde **Gym > Grupo**, desde un acceso
 discreto en Inicio o mediante un enlace `gymPartyCode`; ya no ocupa un boton
 permanente en todas las pantallas.
 
+**Mas > Acerca de** muestra version, build, canal, commit abreviado, fecha del
+artifact, cache activa y estado del service worker. **Comprobar actualizacion**
+consulta `build-info.json` y `app-version.json` sin usar la copia cacheada. La
+app no activa un worker nuevo mientras existan borradores, formularios sin
+guardar, una importacion abierta o escrituras locales pendientes. El artifact
+de CI genera esos metadatos desde `app-version.json`, `GITHUB_SHA` y el canal;
+el checkout local se identifica expresamente como desarrollo.
+
 La navegación conserva estado en URLs `module/view`, por ejemplo
 `?module=gym&view=train`, `?module=gym&view=group` y
 `?module=more&view=settings`. Atrás, recarga y los botones del navegador
@@ -586,6 +594,7 @@ npm run test:e2e
 Sincronizar la version web dentro del APK y comprobarla:
 
 ```powershell
+node ./scripts/generate-build-info.mjs
 powershell -ExecutionPolicy Bypass -File ./scripts/sync-web-assets.ps1
 powershell -ExecutionPolicy Bypass -File ./scripts/validate-app.ps1 -CheckAndroidAssets
 ```

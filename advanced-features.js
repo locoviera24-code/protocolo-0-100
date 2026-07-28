@@ -553,11 +553,12 @@
     if(!('serviceWorker'in navigator)||location.hostname==='appassets.androidplatform.net'||document.documentElement.dataset.safeMode==='true')return;
     const showUpdate=(registration,worker)=>{
       if(!worker)return;
-      window.APP_NOTIFICATIONS?.showBanner?.({id:'pwa-update',title:'Nueva version disponible',message:'Actualiza sin perder tus datos locales.',tone:'success',priority:50,actionLabel:'Actualizar ahora',onAction:button=>{
+      window.APP_NOTIFICATIONS?.showBanner?.({id:'pwa-update',title:'Nueva version disponible',message:'Actualiza sin perder tus datos locales.',tone:'success',priority:50,actionLabel:'Actualizar ahora',onAction:async button=>{
         button.disabled=true;
-        window.__pwaUpdateAccepted=true;
-        sessionStorage.setItem('protocolo_pwa_update_accepted','1');
-        (registration.waiting||worker).postMessage({type:'SKIP_WAITING'});
+        const result=await window.APP_BUILD_INFO?.activate?.(registration,worker);
+        if(result?.ok)return;
+        button.disabled=false;
+        window.APP_NOTIFICATIONS?.showSnackbar?.(result?.reasons?.[0]||'Guarda los cambios antes de actualizar.',{tone:'warning',duration:6000});
       }});
     };
     navigator.serviceWorker.ready.then(registration=>{

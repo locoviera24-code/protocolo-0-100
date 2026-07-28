@@ -18,6 +18,8 @@ function Assert-True([bool]$condition, [string]$message) {
 $html = Read-Utf8 'index.html'
 $appVersionText = Read-Utf8 'app-version.json'
 $appVersionScript = Read-Utf8 'app-version.js'
+$buildInfo = Read-Utf8 'build-info.json'
+$buildInfoScript = Read-Utf8 'app/build-info.js'
 $buildGuard = Read-Utf8 'app/build-guard.js'
 $appNumbers = Read-Utf8 'app/numbers.js'
 $nutrition = Read-Utf8 'nutrition-data.js'
@@ -119,6 +121,7 @@ $requiredFiles = @(
     'nutrition/nutrition-store.js', 'nutrition/nutrition-model.js', 'nutrition/recipes.js', 'nutrition/portions.js', 'nutrition/food-search.js', 'nutrition/food-provider.js', 'nutrition/food-search-service.js', 'nutrition/food-entry-flow.js', 'nutrition/meal-history.js', 'nutrition/nutrition-confidence.js', 'nutrition/nutrition-view.js', 'scripts/test-nutrition-modules.mjs', 'scripts/test-food-search-service.mjs', 'scripts/test-fdc-confidence.mjs', 'tests/e2e/nutrition-domain.spec.mjs', 'tests/e2e/nutrition-today.spec.mjs', 'tests/e2e/nutrition-recipes-portions.spec.mjs', 'tests/e2e/nutrition-numbers-targets.spec.mjs', 'tests/e2e/nutrition-unified-search.spec.mjs',
     'data/schema-registry.js', 'data/backup-service.js', 'scripts/test-schema-registry.mjs', 'scripts/test-data-integrity.mjs', 'scripts/test-backup-service.mjs', 'tests/e2e/backup-import.spec.mjs', 'tests/e2e/data-integrity.spec.mjs', 'tests/e2e/data-compatibility.spec.mjs', 'tests/e2e/indexeddb-primary.spec.mjs',
     'ui/confirmation-dialog.js',
+    'build-info.json', 'app/build-info.js', 'scripts/build-info.mjs', 'scripts/generate-build-info.mjs',
     'app-version.json', 'app-version.js', 'app/build-guard.js', 'precache-manifest.js', 'offline.html', 'scripts/precache-manifest.mjs', 'scripts/generate-precache-manifest.mjs', 'scripts/test-build-guard.mjs', 'scripts/test-quality-gate.mjs', '.github/workflows/quality-gate.yml', 'app/numbers.js', 'scripts/test-numbers.mjs', 'data/indexeddb.js', 'data/repositories.js', 'nutrition-data.js', 'fdc-client.js', 'workout-store.js', 'workout-plan.js', 'gym/equipment.js', 'gym/set-model.js', 'gym/anomaly-detector.js', 'gym/progression-engine.js', 'workout-metrics.js', 'workout-ranking.js', 'workout-ui.js', 'workout-features.js', 'advanced-features.js', 'ui/router.js', 'ui/navigation.js', 'ui/notifications.js', 'ui/form-dialog.js', 'ui/error-boundary.js', 'ui/recovery-view.js', 'progress/muscle-taxonomy.js', 'progress/progress-data-model.js', 'progress/gym-progress-model.js', 'progress/muscle-progress.js', 'progress/exercise-progress.js', 'progress/personal-records.js', 'progress/progress-view.js',
     'firebase-config.js', 'firebase-service.js', 'gym-party-sync.js', 'gym-party-metrics.js', 'gym-party-ui.js', 'gym-party.js',
     'scripts/test-android-webview-security.mjs',
@@ -151,7 +154,9 @@ foreach ($script in @('data/schema-registry.js', 'data/indexeddb.js', 'data/repo
 }
 Assert-True ($html.Contains('<script src="app/numbers.js"></script>')) 'index.html no carga app/numbers.js'
 Assert-True ($html.IndexOf('<script src="app-version.js"></script>') -lt $html.IndexOf('<script src="app/build-guard.js"></script>')) 'El guard de build debe cargar despues de la version'
+Assert-True ($html.IndexOf('<script src="app/build-info.js"></script>') -lt $html.IndexOf('<script src="app/numbers.js"></script>')) 'Los metadatos de build deben cargar antes de los modulos'
 Assert-True ($html.IndexOf('<script src="app/build-guard.js"></script>') -lt $html.IndexOf('<script src="app/numbers.js"></script>')) 'El guard de build debe cargar antes de los modulos'
+foreach ($contract in @('APP_BUILD_INFO','__pwa_update_check','unsafeReasons','serviceWorkerState')) { Assert-True ($buildInfoScript.Contains($contract)) "Falta contrato de metadatos de build: $contract" }
 foreach ($contract in @('__PWA_BUILD_MISMATCH','expectedBuild','SKIP_WAITING','root.stop')) { Assert-True ($buildGuard.Contains($contract)) "Falta contrato del guard de build: $contract" }
 Assert-True ($precacheManifest.Contains('"url": "./app/numbers.js"')) 'precache-manifest.js no cachea app/numbers.js'
 foreach ($contract in @('Intl.NumberFormat', 'parseOr', 'neutral', 'es-PY')) {
@@ -316,9 +321,12 @@ foreach ($icon in @('icons/icon-192.png', 'icons/icon-512.png')) {
 }
 
 try { $appVersionManifest = $appVersionText | ConvertFrom-Json } catch { throw 'app-version.json no contiene JSON valido' }
+try { $buildInfoManifest = $buildInfo | ConvertFrom-Json } catch { throw 'build-info.json no contiene JSON valido' }
 $appVersion = [string]$appVersionManifest.version
 $cacheName = "protocolo-0-100-pwa-$appVersion-b$($appVersionManifest.build)"
 Assert-True ($appVersionScript.Contains("version:'$appVersion'")) 'app-version.js no coincide con app-version.json'
+Assert-True ([string]$buildInfoManifest.version -eq $appVersion) 'build-info.json no coincide en version'
+Assert-True ([int]$buildInfoManifest.build -eq [int]$appVersionManifest.build) 'build-info.json no coincide en build'
 Assert-True ($advanced.Contains('window.APP_VERSION_INFO')) 'advanced-features.js no consume la fuente unica de version'
 Assert-True ($androidBuild.Contains("new groovy.json.JsonSlurper().parse(rootProject.file('../app-version.json'))")) 'Gradle no consume app-version.json'
 Assert-True ($serviceWorker.Contains('CACHE_NAME=APP_VERSION_INFO.cacheName')) 'El cache PWA no deriva de app-version.json'
@@ -347,7 +355,7 @@ foreach ($contract in @("event.data?.type==='SKIP_WAITING'",'firebaseConfigRespo
 }
 Assert-True (-not $serviceWorker.Contains('then(() => self.skipWaiting())')) 'El service worker no debe activarse antes de que el usuario acepte'
 foreach ($contract in @('Nueva versi','Actualizar ahora','protocolo_pwa_update_accepted',"postMessage({type:'SKIP_WAITING'})")) {
-    Assert-True (($advanced + $html).Contains($contract)) "Falta UX de actualizacion PWA: $contract"
+    Assert-True (($advanced + $html + $buildInfoScript).Contains($contract)) "Falta UX de actualizacion PWA: $contract"
 }
 foreach ($contract in @('initialRouteParams','initialRouteParams.quickLog','window.openQuickSetLogger?.()')) {
     Assert-True ($html.Contains($contract)) "Falta manejo de shortcuts PWA: $contract"

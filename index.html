@@ -713,7 +713,21 @@
 
           <section id="tab-about" class="hidden routeSubpage" aria-labelledby="aboutViewTitle">
             <div class="moduleHero"><h2 id="aboutViewTitle" tabindex="-1">Acerca de</h2><div class="muted small">Protocolo 0→100</div></div>
-            <div class="moduleCard"><div class="quickStats"><div class="quickStat"><span>Web</span><strong id="aboutWebVersion">—</strong></div><div class="quickStat"><span>Android</span><strong id="aboutAndroidVersion">Web/PWA</strong></div><div class="quickStat"><span>Caché</span><strong id="aboutCacheVersion">—</strong></div><div class="quickStat"><span>Actualización</span><strong id="aboutUpdatedAt">—</strong></div></div><p class="muted small">Datos local-first. Fuentes nutricionales documentadas en la biblioteca y USDA FDC opcional. Herramienta orientativa de autoorganización; no reemplaza asesoramiento profesional de salud o entrenamiento.</p><div class="buttons"><button type="button" class="secondary" data-more-view="privacy">Ver privacidad</button><a class="btn-secondary aboutRepoLink" href="https://github.com/locoviera24-code/protocolo-0-100" target="_blank" rel="noopener noreferrer">Código y licencias</a></div></div>
+            <div class="moduleCard">
+              <div class="quickStats">
+                <div class="quickStat"><span>Versión</span><strong id="aboutWebVersion">—</strong></div>
+                <div class="quickStat"><span>Build</span><strong id="aboutBuildNumber">—</strong></div>
+                <div class="quickStat"><span>Canal</span><strong id="aboutChannel">—</strong></div>
+                <div class="quickStat"><span>Commit</span><strong id="aboutCommit">—</strong></div>
+                <div class="quickStat"><span>Artifact</span><strong id="aboutArtifactAt">—</strong></div>
+                <div class="quickStat"><span>Caché activa</span><strong id="aboutCacheVersion">—</strong></div>
+                <div class="quickStat"><span>Service worker</span><strong id="aboutServiceWorker">—</strong></div>
+                <div class="quickStat"><span>Android</span><strong id="aboutAndroidVersion">Web/PWA</strong></div>
+              </div>
+              <div class="auditItem" aria-live="polite"><div><strong id="aboutUpdateStatus">Actualización no comprobada</strong><span class="muted small" id="aboutLastUpdateCheck">Todavía no se realizó una comprobación.</span></div><button type="button" class="secondary" id="checkForUpdateBtn">Comprobar actualización</button></div>
+              <p class="muted small">Datos local-first. Herramienta orientativa de autoorganización; no reemplaza asesoramiento profesional de salud o entrenamiento.</p>
+              <div class="buttons"><button type="button" class="secondary" data-more-view="privacy">Ver privacidad</button><a class="btn-secondary aboutRepoLink" href="https://github.com/locoviera24-code/protocolo-0-100" target="_blank" rel="noopener noreferrer">Código y licencias</a></div>
+            </div>
           </section>
 
         </div>
@@ -819,6 +833,7 @@
 
 <script src="app-version.js"></script>
 <script src="app/build-guard.js"></script>
+<script src="app/build-info.js"></script>
 <script src="app/numbers.js"></script>
 <script src="app/drafts.js"></script>
 <script src="app/dates.js"></script>
@@ -1030,6 +1045,41 @@ function maybeShowInternalReminder(){
 function estimatedLocalStorage(){let bytes=0;for(let index=0;index<localStorage.length;index++){const key=localStorage.key(index)||'';bytes+=(key.length+(localStorage.getItem(key)||'').length)*2;}return bytes;}
 function formatStorage(bytes){return bytes<1024?(bytes+' B'):bytes<1048576?((bytes/1024).toFixed(1)+' KB'):((bytes/1048576).toFixed(1)+' MB');}
 function androidVersionLabel(){try{const raw=window.AndroidBridge?.getAppInfo?.();if(!raw)return 'Web/PWA';const info=JSON.parse(raw);return info.versionName?(info.versionName+' ('+info.versionCode+')'):'APK Android';}catch(error){return 'APK Android';}}
+function buildDateLabel(value){if(!value||!Number.isFinite(Date.parse(value)))return'No disponible';return new Intl.DateTimeFormat('es-PY',{dateStyle:'short',timeStyle:'short'}).format(new Date(value));}
+function buildChannelLabel(value){return({stable:'Estable',beta:'Beta',development:'Desarrollo'})[value]||'Desarrollo';}
+async function renderAboutBuildInfo(){
+  const current=await window.APP_BUILD_INFO?.active?.()||{version:APP_WEB_VERSION,build:window.APP_VERSION_INFO?.build||0,commit:'development',artifactCreatedAt:window.APP_VERSION_INFO?.updatedAt||'',channel:'development'};
+  const worker=await window.APP_BUILD_INFO?.serviceWorkerState?.()||{label:'No disponible'};
+  const values={aboutWebVersion:current.version,aboutBuildNumber:String(current.build),aboutChannel:buildChannelLabel(current.channel),aboutCommit:current.commit==='development'?'Desarrollo local':current.commit.slice(0,7),aboutArtifactAt:buildDateLabel(current.artifactCreatedAt),aboutCacheVersion:APP_CACHE_VERSION,aboutServiceWorker:worker.label,aboutAndroidVersion:androidVersionLabel()};
+  Object.entries(values).forEach(([id,value])=>{const element=document.getElementById(id);if(element)element.textContent=value;});
+}
+async function activateCheckedUpdate(button){
+  if(!('serviceWorker'in navigator))return false;
+  const registration=await navigator.serviceWorker.getRegistration();
+  const result=await window.APP_BUILD_INFO.activate(registration,registration?.waiting);
+  if(result.ok)return true;
+  button.disabled=false;
+  window.APP_NOTIFICATIONS?.showSnackbar?.(result.reasons[0]||'Guardá los cambios antes de actualizar.',{tone:'warning',duration:6000});
+  return false;
+}
+async function checkForAppUpdate(){
+  const button=document.getElementById('checkForUpdateBtn'),status=document.getElementById('aboutUpdateStatus'),checked=document.getElementById('aboutLastUpdateCheck');if(!button||!status||!checked)return;
+  if(button.dataset.ready==='true'){button.disabled=true;await activateCheckedUpdate(button);return;}
+  button.disabled=true;status.textContent='Comprobando actualización…';
+  const result=await window.APP_BUILD_INFO.check();checked.textContent=`Última comprobación: ${buildDateLabel(result.checkedAt)}.`;
+  if(result.status==='current'){status.textContent='La aplicación está actualizada';button.textContent='Comprobar de nuevo';}
+  else if(result.status==='error'){status.textContent='No se pudo comprobar la actualización';button.textContent='Reintentar';}
+  else{
+    status.textContent=`Hay una actualización disponible: build ${result.published.build}`;
+    button.textContent='Preparar actualización';
+    if('serviceWorker'in navigator){
+      const registration=await navigator.serviceWorker.getRegistration();
+      await registration?.update?.().catch(()=>{});
+      if(registration?.waiting){button.dataset.ready='true';button.textContent='Actualizar ahora';}
+    }
+  }
+  button.disabled=false;await renderAboutBuildInfo();
+}
 function dataIntegrityMessage(item){if(item.status==='unsupported')return 'Fue guardado por una versión de datos posterior.';if(item.error==='invalid-json')return 'El contenido JSON está incompleto o dañado.';return 'El contenido no cumple la estructura esperada.';}
 async function renderDataIntegrity(){
   const card=document.getElementById('dataIntegrityCard'),list=document.getElementById('dataIntegrityList'),count=document.getElementById('dataIntegrityCount');if(!card||!list||!window.APP_DATA?.quarantineList)return;
@@ -1196,10 +1246,7 @@ function renderSettingsData(){
     undoPanel.classList.toggle('hidden',!canUndo);
     if(canUndo){lastImportSnapshotId=latestImport.snapshotId;document.getElementById('importUndoText').textContent=`Última importación: ${latestImport.records||0} registros revisados.`;}
   }
-  const web=document.getElementById('aboutWebVersion');if(web)web.textContent=APP_WEB_VERSION;
-  const android=document.getElementById('aboutAndroidVersion');if(android)android.textContent=androidVersionLabel();
-  const cache=document.getElementById('aboutCacheVersion');if(cache)cache.textContent=APP_CACHE_VERSION;
-  const updated=document.getElementById('aboutUpdatedAt');if(updated)updated.textContent=window.APP_VERSION_INFO?.updatedAt||'desconocida';
+  renderAboutBuildInfo();
   renderDataIntegrity();
 }
 function resetKeysForScope(scope){
@@ -2784,6 +2831,13 @@ function downloadBlob(content,name,type){
   const blob=new Blob([content],{type}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 let pendingBackupImport=null,lastImportSnapshotId='',importPreviewReturnFocus=null;
+window.APP_HAS_UNSAVED_WORK=()=>{
+  const reasons=[];
+  if(settingsFormDirty)reasons.push('Hay ajustes sin guardar.');
+  if(pendingBackupImport)reasons.push('Hay una importación en revisión.');
+  if(document.querySelector('.modalBackdrop:not(.hidden)'))reasons.push('Hay un diálogo abierto.');
+  return reasons;
+};
 function closeImportPreview(){
   const backdrop=document.getElementById('importPreviewBackdrop');if(!backdrop)return;
   backdrop.classList.add('hidden');backdrop.setAttribute('aria-hidden','true');pendingBackupImport=null;
@@ -3017,6 +3071,7 @@ document.getElementById('reopenOnboardingBtn')?.addEventListener('click',()=>{lo
 document.querySelectorAll('[data-reset-scope]').forEach(button=>button.addEventListener('click',()=>resetDataScope(button.dataset.resetScope)));
 document.getElementById('settingsExportJsonBtn')?.addEventListener('click',exportJson);
 document.getElementById('settingsExportCsvBtn')?.addEventListener('click',exportCsv);
+document.getElementById('checkForUpdateBtn')?.addEventListener('click',checkForAppUpdate);
 document.getElementById('settingsImportBtn')?.addEventListener('click',event=>openBackupFilePicker(event.currentTarget));
 document.getElementById('confirmImportBtn')?.addEventListener('click',confirmBackupImport);
 document.getElementById('cancelImportBtn')?.addEventListener('click',closeImportPreview);

@@ -96,6 +96,11 @@ assert.equal(unknown.responsePromise,undefined);
 const external=normal.dispatchFetch({method:'GET',mode:'cors',url:'https://api.nal.usda.gov/fdc/v1/foods/search'});
 assert.equal(external.responsePromise,undefined);
 
+normal.setCustomFetch(async()=>new Response('{"build":89}',{status:200,headers:{'Content-Type':'application/json'}}));
+const updateCheck=normal.dispatchFetch(new Request(`${baseUrl}app-version.json?__pwa_update_check=1`));
+assert.equal(await(await updateCheck.responsePromise).json().then(value=>value.build),89,'La comprobacion explicita debe omitir la cache activa');
+normal.setCustomFetch(null);
+
 normal.setCustomFetch(async()=>new Response('window.GYM_PARTY_FIREBASE_CONFIG={projectId:"real"};'));
 const firebaseOnline=normal.dispatchFetch({method:'GET',mode:'cors',url:`${baseUrl}firebase-config.js?v=1`});
 assert.match(await(await firebaseOnline.responsePromise).text(),/projectId:"real"/);

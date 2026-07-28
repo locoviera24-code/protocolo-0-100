@@ -141,6 +141,7 @@ self.addEventListener('fetch',event=>{
   if(event.request.method!=='GET')return;
   const url=new URL(event.request.url);
   if(url.origin!==self.location.origin)return;
+  if(url.searchParams.has('__pwa_update_check')){event.respondWith(fetch(event.request,{cache:'no-store'}));return;}
   if(url.pathname.endsWith('/firebase-config.js')){event.respondWith(firebaseConfigResponse(event.request));return;}
   if(event.request.mode==='navigate'){event.respondWith(cachedShellNavigation());return;}
   const asset=PRECACHE_BY_URL.get(canonicalUrl(event.request.url));

@@ -369,8 +369,10 @@
   }
   function renderCustomFoods(){
     const box=document.getElementById('customFoodsList');if(!box)return;
+    const openMenuId=box.querySelector('details.nutritionFoodMenu[open]')?.dataset.customFoodMenu||'';
     const foods=getLocalData(CUSTOM_FOODS_KEY,[]);
-    box.innerHTML=foods.length?foods.map(food=>`<div class="entryRow ${food.archived?'muted':''}"><div><strong>${escapeHtml(food.name)}</strong><div class="meta">${food.calories||0} kcal · P ${food.protein||0} · C ${food.carbs||0} · G ${food.fat||0} · ${escapeHtml(food.source||'etiqueta manual')}${food.archived?' · archivado':''}</div></div><details class="nutritionFoodMenu"><summary aria-label="Opciones para ${escapeHtml(food.name)}">Opciones</summary><div class="nutritionFoodMenuPanel" role="menu"><button type="button" role="menuitem" data-custom-food-action="edit" data-custom-food-id="${escapeHtml(food.id)}">Editar</button><button type="button" role="menuitem" data-custom-food-action="duplicate" data-custom-food-id="${escapeHtml(food.id)}">Duplicar / usar como plantilla</button><button type="button" role="menuitem" data-custom-food-action="merge" data-custom-food-id="${escapeHtml(food.id)}">Fusionar duplicado</button><button type="button" role="menuitem" data-custom-food-action="${food.archived?'restore':'archive'}" data-custom-food-id="${escapeHtml(food.id)}">${food.archived?'Restaurar':'Archivar'}</button><button type="button" class="dangerText" role="menuitem" data-custom-food-action="delete" data-custom-food-id="${escapeHtml(food.id)}">Eliminar</button></div></details></div>`).join(''):'<div class="emptyState">Todavía no creaste alimentos personalizados.</div>';
+    box.innerHTML=foods.length?foods.map(food=>`<div class="entryRow ${food.archived?'muted':''}"><div><strong>${escapeHtml(food.name)}</strong><div class="meta">${food.calories||0} kcal · P ${food.protein||0} · C ${food.carbs||0} · G ${food.fat||0} · ${escapeHtml(food.source||'etiqueta manual')}${food.archived?' · archivado':''}</div></div><details class="nutritionFoodMenu" data-custom-food-menu="${escapeHtml(food.id)}"><summary aria-label="Opciones para ${escapeHtml(food.name)}">Opciones</summary><div class="nutritionFoodMenuPanel" role="menu"><button type="button" role="menuitem" data-custom-food-action="edit" data-custom-food-id="${escapeHtml(food.id)}">Editar</button><button type="button" role="menuitem" data-custom-food-action="duplicate" data-custom-food-id="${escapeHtml(food.id)}">Duplicar / usar como plantilla</button><button type="button" role="menuitem" data-custom-food-action="merge" data-custom-food-id="${escapeHtml(food.id)}">Fusionar duplicado</button><button type="button" role="menuitem" data-custom-food-action="${food.archived?'restore':'archive'}" data-custom-food-id="${escapeHtml(food.id)}">${food.archived?'Restaurar':'Archivar'}</button><button type="button" class="dangerText" role="menuitem" data-custom-food-action="delete" data-custom-food-id="${escapeHtml(food.id)}">Eliminar</button></div></details></div>`).join(''):'<div class="emptyState">Todavía no creaste alimentos personalizados.</div>';
+    if(openMenuId)box.querySelectorAll('details.nutritionFoodMenu').forEach(menu=>{if(menu.dataset.customFoodMenu===openMenuId)menu.open=true;});
   }
 
   function rebuildCoinLedger(){
@@ -551,11 +553,12 @@
     if(!('serviceWorker'in navigator)||location.hostname==='appassets.androidplatform.net'||document.documentElement.dataset.safeMode==='true')return;
     const showUpdate=(registration,worker)=>{
       if(!worker)return;
-      window.APP_NOTIFICATIONS?.showBanner?.({id:'pwa-update',title:'Nueva version disponible',message:'Actualiza sin perder tus datos locales.',tone:'success',priority:50,actionLabel:'Actualizar ahora',onAction:button=>{
+      window.APP_NOTIFICATIONS?.showBanner?.({id:'pwa-update',title:'Nueva version disponible',message:'Actualiza sin perder tus datos locales.',tone:'success',priority:50,actionLabel:'Actualizar ahora',onAction:async button=>{
         button.disabled=true;
-        window.__pwaUpdateAccepted=true;
-        sessionStorage.setItem('protocolo_pwa_update_accepted','1');
-        (registration.waiting||worker).postMessage({type:'SKIP_WAITING'});
+        const result=await window.APP_BUILD_INFO?.activate?.(registration,worker);
+        if(result?.ok)return;
+        button.disabled=false;
+        window.APP_NOTIFICATIONS?.showSnackbar?.(result?.reasons?.[0]||'Guarda los cambios antes de actualizar.',{tone:'warning',duration:6000});
       }});
     };
     navigator.serviceWorker.ready.then(registration=>{

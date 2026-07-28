@@ -2,10 +2,11 @@ import {cp,mkdir,readFile,rm,stat,writeFile} from 'node:fs/promises';
 import {dirname,extname,relative,resolve,sep} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {PRECACHE_FILE,createPrecacheManifest,normalizePrecacheData,renderPrecacheManifest,sha256} from './precache-manifest.mjs';
+import {createBuildInfo,renderBuildInfo} from './build-info.mjs';
 
 export const repoRoot=resolve(fileURLToPath(new URL('../',import.meta.url)));
 export const distRoot=resolve(repoRoot,process.env.WEB_DIST_DIR||'dist-pages');
-const entryAssets=['index.html','offline.html','manifest.webmanifest','sw.js','app-version.json',PRECACHE_FILE];
+const entryAssets=['index.html','offline.html','manifest.webmanifest','sw.js','app-version.json','build-info.json',PRECACHE_FILE];
 
 function insideRoot(target,root=repoRoot){
   return target===root||target.startsWith(`${root}${sep}`);
@@ -96,6 +97,8 @@ export function sourceFor(asset){
 export async function buildWebDist(){
   if(!insideRoot(distRoot)||distRoot===repoRoot)throw new Error(`Directorio de salida inseguro: ${distRoot}`);
   const assets=await discoverWebAssets();
+  const version=JSON.parse(await readFile(resolve(repoRoot,'app-version.json'),'utf8'));
+  const generatedBuildInfo=Buffer.from(renderBuildInfo(createBuildInfo(version)),'utf8');
   await rm(distRoot,{recursive:true,force:true});
   await mkdir(distRoot,{recursive:true});
   const inventory=[];
@@ -104,12 +107,12 @@ export async function buildWebDist(){
     if(!insideRoot(target,distRoot))throw new Error(`Destino fuera del artifact: ${asset}`);
     try{if(!(await stat(source)).isFile())throw new Error();}catch{throw new Error(`Falta la fuente de build para ${asset}: ${source}`);}
     await mkdir(dirname(target),{recursive:true});
-    await cp(source,target);
+    if(asset==='build-info.json')await writeFile(target,generatedBuildInfo);
+    else await cp(source,target);
     const copiedData=await readFile(target),data=normalizePrecacheData(asset,copiedData);
     if(!data.equals(copiedData))await writeFile(target,data);
     inventory.push({path:asset,bytes:data.byteLength,sha256:sha256(data),required:true});
   }
-  const version=JSON.parse(await readFile(resolve(repoRoot,'app-version.json'),'utf8'));
   const precache=createPrecacheManifest({version,assets:inventory});
   const precacheContent=renderPrecacheManifest(precache),precacheTarget=resolve(distRoot,PRECACHE_FILE);
   await writeFile(precacheTarget,precacheContent,'utf8');

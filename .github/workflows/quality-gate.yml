@@ -127,6 +127,7 @@ jobs:
       - name: Regenerar precache y sincronizar Android
         shell: pwsh
         run: |
+          node ./scripts/generate-build-info.mjs
           npm run build:precache
           ./scripts/sync-web-assets.ps1
           ./scripts/validate-app.ps1 -CheckAndroidAssets

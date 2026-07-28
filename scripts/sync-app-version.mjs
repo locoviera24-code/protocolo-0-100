@@ -1,4 +1,5 @@
 import {readFile,writeFile} from 'node:fs/promises';
+import {renderBuildInfo} from './build-info.mjs';
 
 const root=new URL('../',import.meta.url);
 const manifest=JSON.parse(await readFile(new URL('../app-version.json',import.meta.url),'utf8'));
@@ -15,6 +16,13 @@ async function ensure(url,expected,label){
 await ensure(new URL('../app-version.js',import.meta.url),generated,'app-version.js');
 await ensure(new URL('../app/build-guard.js',import.meta.url),buildGuard,'app/build-guard.js');
 
+const buildInfoUrl=new URL('../build-info.json',import.meta.url);
+const currentBuildInfo=JSON.parse(await readFile(buildInfoUrl,'utf8'));
+if(currentBuildInfo.version!==manifest.version||Number(currentBuildInfo.versionCode)!==manifest.versionCode||Number(currentBuildInfo.build)!==manifest.build)throw new Error('build-info.json no coincide con app-version.json');
+if(!check){
+  await writeFile(buildInfoUrl,renderBuildInfo({schemaVersion:1,version:manifest.version,versionCode:manifest.versionCode,build:manifest.build,commit:'development',artifactCreatedAt:`${manifest.updatedAt}T00:00:00.000Z`,channel:'development'}),'utf8');
+}
+
 if(!check){
   for(const name of ['package.json','package-lock.json']){
     const url=new URL(`../${name}`,import.meta.url),data=JSON.parse(await readFile(url,'utf8'));
@@ -26,7 +34,6 @@ if(!check){
   let html=await readFile(indexUrl,'utf8');
   html=html.replace(/id="aboutWebVersion">[^<]*/, 'id="aboutWebVersion">—')
     .replace(/id="aboutCacheVersion">[^<]*/, 'id="aboutCacheVersion">—')
-    .replace(/id="aboutUpdatedAt">[^<]*/, 'id="aboutUpdatedAt">—')
     .replace('rel="noopener">Código y licencias','rel="noopener noreferrer">Código y licencias');
   await writeFile(indexUrl,html,'utf8');
 }
