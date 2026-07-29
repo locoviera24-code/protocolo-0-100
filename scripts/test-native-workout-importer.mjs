@@ -1,0 +1,10 @@
+import fs from'node:fs';import vm from'node:vm';import assert from'node:assert/strict';
+const window={},context=vm.createContext({window,console,Date,JSON,Object,Array,Set,Number,String});
+vm.runInContext(fs.readFileSync('gym/native-workout-importer.js','utf8'),context);
+const mutation={id:'native_mutation_1',type:'save_set',sessionId:'session-1',exerciseId:'press',setId:'set-1',payload:{date:'2026-07-28',dayKey:'tuesday',weekday:'Martes',routine:{name:'Torso'},startedAt:'2026-07-28T10:00:00.000Z',currentExerciseIndex:0,exercise:{id:'press-row',exerciseId:'press',name:'Press banca',muscle:'Pecho'},set:{id:'set-1',setNumber:1,reps:8,weight:80,setType:'working',completed:true}}};
+const first=window.NATIVE_WORKOUT_IMPORTER.apply([],mutation,{protectSet:set=>({...set,protected:true})});
+assert.equal(first.status,'applied');assert.equal(first.sessions.length,1);assert.equal(first.sessions[0].exercises[0].sets[0].protected,true);assert.equal(first.sessions[0].exercises[0].sets[0].privateImportState,'imported');
+const second=window.NATIVE_WORKOUT_IMPORTER.apply(first.sessions,mutation);assert.equal(second.status,'duplicate');assert.equal(second.sessions[0].exercises[0].sets.length,1);
+const differentSession={...mutation,id:'native_mutation_2',sessionId:'session-2'};const duplicateAcrossSessions=window.NATIVE_WORKOUT_IMPORTER.apply(first.sessions,differentSession);assert.equal(duplicateAcrossSessions.status,'duplicate');
+const invalid=window.NATIVE_WORKOUT_IMPORTER.apply([],{...mutation,setId:'other'});assert.equal(invalid.status,'invalid');assert.equal(invalid.error,'set-id-mismatch');
+console.log('Importador nativo correcto: aplica una vez, deduplica globalmente por setId y rechaza payloads inconsistentes.');

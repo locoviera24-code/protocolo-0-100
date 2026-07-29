@@ -43,6 +43,7 @@ $relativeFiles = @(
     'gym/progression-engine.js',
     'workout-metrics.js',
     'gym/workout-load-guidance.js',
+    'gym/native-workout-importer.js',
     'workout-ranking.js',
     'workout-ui.js',
     'workout-features.js',
