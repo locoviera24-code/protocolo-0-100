@@ -91,7 +91,12 @@
 .formChoiceGroup legend { padding: 0 var(--space-1); font-weight: 700; }
 .formChoiceGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-1) var(--space-2); }
 .formChoiceGrid label { display: flex; align-items: center; gap: var(--space-2); min-height: var(--touch-target); }
-.formChoiceGrid input { flex: 0 0 auto; }
+.formChoiceGrid input[type="checkbox"] {
+  flex: 0 0 auto;
+  inline-size: auto;
+  min-inline-size: auto;
+  margin: 0;
+}
 html[data-safe-mode="true"] #fdcSearchCard,
 html[data-safe-mode="true"] [data-experimental] { display: none !important; }
 

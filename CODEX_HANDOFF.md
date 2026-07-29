@@ -4057,3 +4057,34 @@ Siguiente acción exacta: confirmar este bloque documental, pushear
 `feature/native-workout-controls-v1`, ejecutar `Quality gate reutilizable` con
 canal `beta`, descargar los artifacts validados si pasa y registrar resultado,
 URL de ejecución y omisiones físicas. No publicar stable.
+
+## 91. Correccion de regresiones del primer quality gate beta
+
+El primer quality gate remoto de esta rama fue la ejecucion `30415418016` sobre
+el commit `9fe07d3`. Estructura, paridad inicial, PWA, contratos y axe aprobaron,
+pero la matriz E2E termino con 348 escenarios aprobados, 14 omitidos y 4
+fallidos. El job se detuvo antes de Firestore Emulator y Android, por lo que ese
+intento no valida APK ni reglas.
+
+Tres fallos provenian de `tests/e2e/gym-flow.spec.mjs`: la simulacion de un
+segundo dispositivo borraba solamente la membresia singular legacy y dejaba
+activas `gymPartyMembershipsV2` y `selectedPartyId`. La prueba tambien intentaba
+abrir `Entrar desde otro dispositivo`, que corresponde al acceso portable, no
+al ingreso por codigo. Ahora la simulacion limpia las tres proyecciones de
+membresia, conserva la sala local y comprueba directamente el formulario que el
+deep link abre con el codigo precargado.
+
+El cuarto fallo revelo un defecto visual real en el dialogo de clasificacion:
+los checkbox de `.formChoiceGrid` heredaban el ancho completo de los inputs y
+podian interceptar opciones vecinas. `styles/components.css` restablece ancho y
+margen propios del checkbox sin reducir el area tactil de su etiqueta. La prueba
+selecciona las etiquetas como lo hace una persona y verifica cada estado.
+
+Los seis escenarios afectados aprobaron localmente en Android Chromium, iPhone
+WebKit y escritorio. Se regenero el precache del build 89 y se sincronizo el CSS
+con Android. Version, build y versionCode siguen en `2.7.0`, `89` y `33`; no se
+publico stable ni se fusiono la rama.
+
+Siguiente accion exacta: confirmar el commit de esta correccion, pushear la rama
+y repetir el quality gate beta completo. Si pasa, descargar los artifacts web y
+APK debug, registrar Firestore/Android reales y cerrar sin publicar stable.

@@ -256,8 +256,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     },
     {
       "url": "./styles/components.css",
-      "bytes": 10195,
-      "sha256": "a7b75c60172b527e78f504cbb1b2566519ee252c88e53c5765c7d689371a3150"
+      "bytes": 10273,
+      "sha256": "06107c17ebcb504b1682f9fc716beb761e1c1a83a7b14493dfe12f4863cfd111"
     },
     {
       "url": "./styles/features.css",

@@ -42,9 +42,12 @@ test('ejercicio personalizado ambiguo exige clasificacion canonica',async ({page
   await row.getByRole('button',{name:'Revisar músculos'}).click();
   const primary=page.locator('[data-form-group="primaryMuscles"]');
   const secondary=page.locator('[data-form-group="secondaryMuscles"]');
-  await primary.getByLabel('Deltoides lateral').check();
-  await primary.getByLabel('Deltoides posterior').check();
-  await secondary.getByLabel('Trapecios').check();
+  await primary.getByText('Deltoides lateral',{exact:true}).click();
+  await expect(primary.getByLabel('Deltoides lateral')).toBeChecked();
+  await primary.getByText('Deltoides posterior',{exact:true}).click();
+  await expect(primary.getByLabel('Deltoides posterior')).toBeChecked();
+  await secondary.getByText('Trapecios',{exact:true}).click();
+  await expect(secondary.getByLabel('Trapecios')).toBeChecked();
   await page.locator('#appFormDialogSubmit').click();
   await expect(page.locator('#appFormDialogBackdrop')).toBeHidden();
   await expect(page.locator('#exerciseClassificationStatus')).toContainText('Todas las clasificaciones');
@@ -121,10 +124,14 @@ test('codigo de invitacion se limpia y permite unir otro miembro',async ({page})
   await page.evaluate(async()=>{
     const key='protocolo_0_100_gym_party_settings_v1';
     const membershipKey='protocolo_0_100_gym_party_membership_v1';
+    const membershipsKey='protocolo_0_100_gym_party_memberships_v2';
+    const selectedPartyKey='protocolo_0_100_gym_party_selected_party_id_v1';
     const settings=window.APP_DATA.read(key,{});
     settings.localUserId='party_friend_e2e';
     window.APP_DATA.write(key,settings);
     window.APP_DATA.remove(membershipKey);
+    window.APP_DATA.remove(membershipsKey);
+    window.APP_DATA.remove(selectedPartyKey);
     await window.APP_DATA.flush();
   });
   const localPartiesBefore=await page.evaluate(()=>Object.values(JSON.parse(localStorage.getItem('protocolo_0_100_gym_party_settings_v1')).localParties||{}).map(party=>party.inviteCode));
@@ -133,7 +140,6 @@ test('codigo de invitacion se limpia y permite unir otro miembro',async ({page})
   await expect(page).not.toHaveURL(/gymPartyCode=/);
   const localPartiesAfter=await page.evaluate(()=>Object.values(JSON.parse(localStorage.getItem('protocolo_0_100_gym_party_settings_v1')).localParties||{}).map(party=>party.inviteCode));
   expect(localPartiesAfter).toContain(inviteCode);
-  await page.locator('details').filter({hasText:'Entrar desde otro dispositivo'}).locator('summary').click();
   await expect(page.locator('#gymPartyJoinCode')).toHaveValue(inviteCode);
   await page.locator('#gymPartyJoinAlias').fill('Amigo');
   await page.locator('[data-gym-party-action="join"]').click();
