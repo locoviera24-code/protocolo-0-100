@@ -1404,8 +1404,9 @@ function nutritionFoodDraftPayload(){
   const state=nutritionEntryFlow.state(),food=state.food||null;
   return{date:document.getElementById('nutritionDate')?.value||state.date||todayStr(),state:{step:state.step,query:document.getElementById('nutritionFoodSearch')?.value||state.query||'',foodId:food?.id||'',foodName:food?.name||'',foodSnapshot:food?.__customDraft?food:null,amount:document.getElementById('foodQuantity')?.value??state.amount,unit:document.getElementById('foodUnit')?.value||state.unit,meal:document.getElementById('nutritionMeal')?.value||state.meal},custom:Object.fromEntries(nutritionCustomDraftFields.map(id=>[id,document.getElementById(id)?.value??''])),customOpen:!!document.getElementById('customFoodDetails')?.open,customOptionalOpen:!!document.getElementById('customFoodOptionalFields')?.open};
 }
-function captureNutritionFoodDraft(){
+function captureNutritionFoodDraft({customInput=false}={}){
   const payload=nutritionFoodDraftPayload();
+  if(!customInput)payload.custom=Object.fromEntries(Object.entries(payload.custom).map(([fieldId,value])=>[fieldId,value!==''||!Object.hasOwn(nutritionCustomDraftSnapshot,fieldId)?value:nutritionCustomDraftSnapshot[fieldId]]));
   nutritionCustomDraftSnapshot={...payload.custom};
   window.APP_DRAFTS?.schedule?.({id:nutritionFoodDraftId(payload.date),domain:'nutrition-food',payload});
 }
@@ -3189,9 +3190,10 @@ document.getElementById('nutritionAssistantPreview').addEventListener('click',e=
   if(create) createAssistantCustomFood(create.dataset.assistantCreate,create.closest('[data-assistant-row]'));
 });
 document.getElementById('nutritionDate').addEventListener('change', ()=>{loadBodyMetricsForDate();renderNutrition();resetNutritionFoodFlow();restoreNutritionFoodDraft();});
-['foodQuantity','foodUnit','nutritionMeal',...nutritionCustomDraftFields].forEach(id=>document.getElementById(id)?.addEventListener('input',captureNutritionFoodDraft));
+['foodQuantity','foodUnit','nutritionMeal'].forEach(id=>document.getElementById(id)?.addEventListener('input',()=>captureNutritionFoodDraft()));
+nutritionCustomDraftFields.forEach(id=>document.getElementById(id)?.addEventListener('input',()=>captureNutritionFoodDraft({customInput:true})));
 document.getElementById('customFoodDetails')?.addEventListener('toggle',event=>{if(event.currentTarget.dataset.suppressDraft!=='1')captureNutritionFoodDraft();});
-document.getElementById('customFoodOptionalFields')?.addEventListener('toggle',captureNutritionFoodDraft);
+document.getElementById('customFoodOptionalFields')?.addEventListener('toggle',()=>captureNutritionFoodDraft());
 
 document.getElementById('saveBtn').addEventListener('click', saveEntry);
 document.getElementById('deleteBtn').addEventListener('click', deleteEntry);

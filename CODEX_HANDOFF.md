@@ -4270,3 +4270,12 @@ sin evento y exige que el paso Cantidad quede visible. Los dos escenarios de
 alimento personalizado aprobaron 10/10 repeticiones combinadas en iPhone
 WebKit; tambien aprobaron modulos de Nutricion, numeros localizados, busqueda,
 precache, version y paridad Android.
+
+La ejecucion `30467810189` confirmo que el primer snapshot todavia podia ser
+reemplazado por el `toggle` tardio del mismo panel. El contrato final distingue
+origen: solo eventos `input` de los campos personalizados pueden sobrescribir
+el snapshot con un valor vacio; toggles y repintados conservan el ultimo valor
+confirmado. La prueba dispara expresamente ese toggle despues de simular un
+repintado y tambien verifica que borrar el nombre mediante `input` normal siga
+produciendo validacion. Tras el ajuste, el flujo completo aprobo 5/5 y la
+validacion de duplicado/coma decimal aprobo 5/5 en WebKit.
