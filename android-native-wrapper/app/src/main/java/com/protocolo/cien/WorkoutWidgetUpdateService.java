@@ -98,6 +98,7 @@ public final class WorkoutWidgetUpdateService {
         views.setTextViewText(R.id.widgetProgress, state.progressText);
         views.setTextViewText(R.id.widgetCurrentExercise, state.currentExerciseName);
         views.setTextViewText(R.id.widgetSetStats, state.setStatsText);
+        views.setTextViewText(R.id.widgetLoadGuidance, state.loadGuidanceText);
         views.setTextViewText(R.id.widgetQuickReps, state.quickRepsText);
         views.setTextViewText(R.id.widgetQuickWeight, state.quickWeightText);
         views.setTextViewText(R.id.widgetActionStatus, state.actionStatus);
@@ -995,6 +996,7 @@ public final class WorkoutWidgetUpdateService {
         String quickRepsText;
         String quickWeightText;
         String actionStatus;
+        String loadGuidanceText;
         String type;
         boolean timerEnabled;
         String timerStatus;
@@ -1034,7 +1036,16 @@ public final class WorkoutWidgetUpdateService {
                 state.quickWeightText = "0 " + json.optString("unit", "kg");
             }
             state.actionStatus = opt(json, "lastWidgetActionText", "Ajusta reps/kg y guarda desde el widget.");
+            state.loadGuidanceText = loadGuidanceText(json);
             return state;
+        }
+
+        private static String loadGuidanceText(JSONObject json) {
+            JSONObject last = json.optJSONObject("lastComparableSet");
+            JSONObject record = json.optJSONObject("historicalLoadRecord");
+            String lastText = last == null ? "sin datos" : last.optString("label", "sin datos");
+            String recordText = record == null ? "sin datos" : record.optString("label", "sin datos");
+            return "Última: " + lastText + " · Mejor: " + recordText;
         }
 
         void applyNativeControl(JSONObject control) {
