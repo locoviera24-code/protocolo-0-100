@@ -7,6 +7,7 @@ const taxonomySource = await readFile(new URL('../progress/muscle-taxonomy.js', 
 const setModelSource = await readFile(new URL('../gym/set-model.js', import.meta.url), 'utf8');
 const metricsSource = await readFile(new URL('../workout-metrics.js', import.meta.url), 'utf8');
 const anomalySource = await readFile(new URL('../gym/anomaly-detector.js', import.meta.url), 'utf8');
+const nativeImporterSource = await readFile(new URL('../gym/native-workout-importer.js', import.meta.url), 'utf8');
 const rankingSource = await readFile(new URL('../workout-ranking.js', import.meta.url), 'utf8');
 const storeSource = await readFile(new URL('../workout-store.js', import.meta.url), 'utf8');
 const planSource = await readFile(new URL('../workout-plan.js', import.meta.url), 'utf8');
@@ -72,6 +73,7 @@ function createContext(preloaded = {}, today = '2026-06-22') {
   vm.runInContext(planSource, vmContext, {filename: 'workout-plan.js'});
   vm.runInContext(metricsSource, vmContext, {filename: 'workout-metrics.js'});
   vm.runInContext(anomalySource, vmContext, {filename: 'gym/anomaly-detector.js'});
+  vm.runInContext(nativeImporterSource, vmContext, {filename: 'gym/native-workout-importer.js'});
   vm.runInContext(uiSource, vmContext, {filename: 'workout-ui.js'});
   vm.runInContext(rankingSource, vmContext, {filename: 'workout-ranking.js'});
   vm.runInContext(source, vmContext, {filename: 'workout-features.js'});
@@ -317,6 +319,22 @@ assert.equal(workout.importWidgetStateFromAndroid({
 }), true);
 assert.equal(JSON.parse(store.get(workout.keys.workoutSessions))[0].id, 'workout_android_test');
 assert.equal(JSON.parse(store.get(workout.keys.exerciseHistory))['press-banca'].lastWeight, 60);
+
+const nativeMutation={id:'native_mutation_test',type:'save_set',sessionId:'native-queue-session',exerciseId:'press-banca',setId:'native-queue-set',privateImportState:'pending',payload:{date:'2026-06-22',dayKey:'monday',weekday:'Lunes',routine:{name:'Torso A'},startedAt:'2026-06-22T13:00:00.000Z',currentExerciseIndex:0,exercise:{id:'press-native',exerciseId:'press-banca',name:'Press de banca',muscle:'Pecho'},set:{id:'native-queue-set',setNumber:1,reps:8,weight:70,weightKg:70,measurementMode:'reps',loadMode:'total',equipmentId:'machine',setType:'working',completed:true}}};
+const nativeAcks=[];context.AndroidBridge={acknowledgeNativeWorkoutMutation:(...args)=>{nativeAcks.push(args);return true;}};
+const firstNativeImport=await workout.importNativeWorkoutMutationsFromAndroid({schemaVersion:1,mutations:[nativeMutation]});
+assert.equal(firstNativeImport.ok,true);assert.equal(firstNativeImport.imported,1);
+const secondNativeImport=await workout.importNativeWorkoutMutationsFromAndroid({schemaVersion:1,mutations:[nativeMutation]});
+assert.equal(secondNativeImport.ok,true);assert.equal(secondNativeImport.duplicates,1);
+const nativeQueuedSession=JSON.parse(store.get(workout.keys.workoutSessions)).find(item=>item.id==='native-queue-session');
+assert.equal(nativeQueuedSession.exercises[0].sets.length,1);assert.equal(nativeQueuedSession.exercises[0].sets[0].id,'native-queue-set');
+assert.equal(JSON.parse(store.get(workout.keys.exerciseHistory))['press-banca'].lastWeight,70);
+assert.deepEqual(nativeAcks.map(item=>item[1]),['imported','imported']);
+const {context:failedNativeContext,store:failedNativeStore}=createContext();const failedAcks=[];
+failedNativeContext.APP_REPOSITORIES={workout:{replace:async()=>({ok:false,error:{message:'quota'}})}};
+failedNativeContext.AndroidBridge={acknowledgeNativeWorkoutMutation:(...args)=>{failedAcks.push(args);return true;}};
+const failedNativeImport=await failedNativeContext.WORKOUT_FEATURES.importNativeWorkoutMutationsFromAndroid({schemaVersion:1,mutations:[nativeMutation]});
+assert.equal(failedNativeImport.ok,false);assert.equal(failedNativeStore.get(failedNativeContext.WORKOUT_FEATURES.keys.workoutSessions),'[]');assert.equal(failedAcks[0][1],'error');
 
 const customPlan = {monday: {dayKey: 'monday', weekday: 'Lunes', name: 'Rutina propia', type: 'workout', muscles: ['Test'], exercises: []}};
 const {context: customContext} = createContext({
