@@ -1,9 +1,9 @@
 # CODEX_HANDOFF - Protocolo 0->100
 
-Ultima actualizacion: 2026-08-04
-Rama esperada: `codex/web-core-flow-p0`
+Ultima actualizacion: 2026-07-29
+Rama esperada: `codex/android-quick-access-v1`
 Version actual: `2.7.0` (fuente unica: `app-version.json`)
-Android: `versionCode 33`, `versionName "2.7.0"`
+Android: `versionCode 34`, `versionName "2.7.0"`
 Service worker cache: `protocolo-0-100-pwa-2.7.0-b90`
 Backup consolidado: `schemaVersion: 3`
 
@@ -3887,3 +3887,43 @@ Verificacion real del bloque hasta este punto:
 Antes de cerrar la rama faltan sincronizar assets web/Android, incrementar una
 sola vez el build beta, ejecutar gate completo, producir artifacts, actualizar
 la checklist fisica, enviar la rama y abrir el pull request. No publicar stable.
+
+## 83. Empaquetado beta 90 y validacion local
+
+El bloque completo incrementa una sola vez `app-version.json`: version `2.7.0`,
+build web/PWA `90` y Android `versionCode 34`. La solicitud estable
+`.github/stable-release.json` permanece deliberadamente en build 89; la prueba
+del quality gate permite que una beta este por delante, pero rechaza una
+solicitud estable futura o de otra version. Por tanto esta rama no publica ni
+solicita stable.
+
+Resultados locales posteriores al empaquetado:
+
+- version, cache `protocolo-0-100-pwa-2.7.0-b90` y Android 34 alineados;
+- precache: 83 recursos descubiertos;
+- artifact `dist-pages`: 84 recursos con SHA-256, rutas profundas y cero 404;
+- smoke del artifact: 1/1, service worker instalado y sin errores de pagina;
+- acceso rapido E2E: 6/6 en Android Chromium, iPhone WebKit y escritorio;
+- axe: 27/27 en las tres plataformas, sin infracciones graves;
+- contratos de Workout, datos, backup, PWA, Gym Party, Progreso, Nutricion,
+  router, layout, Ajustes, seguridad Android y release: aprobados;
+- Firestore Emulator: aprobado; los `PERMISSION_DENIED` del log corresponden a
+  casos negativos que las reglas deben rechazar;
+- paridad web/Android: aprobada con 496 IDs estaticos;
+- Android `assembleDebug`: aprobado; APK de 1.874.536 bytes, SHA-256
+  `E548DF5D59AA0243777D28654750FE1CF1D2C239E8B7A13D648BFF02E8AC0A72`.
+
+El primer intento local de axe se cancelo por el timeout de cuatro minutos; la
+repeticion con margen termino correctamente en 5,2 minutos. El primer intento
+de Firestore no encontro Java en `PATH`; al incorporar el JDK 21 local, la
+suite ejecuto y aprobo. No se ocultan estos intentos de entorno.
+
+`adb devices -l` no detecto hardware. No se ejecutaron pruebas fisicas de
+launcher, redimensionamiento, doble toque, bloqueo, permiso, proceso destruido,
+reinicio o actualizacion desde APK anterior. Todas permanecen sin marcar en
+`docs/physical-test-checklist.md`.
+
+Siguiente accion exacta: commit del build 90, push de
+`codex/android-quick-access-v1`, pull request draft, quality gate remoto beta y
+descarga de sus artifacts. No fusionar a `main` ni publicar stable desde este
+bloque.
