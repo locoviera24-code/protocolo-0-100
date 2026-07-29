@@ -166,6 +166,8 @@ progress/exercise-progress.js Fuerza, historial y sugerencia por ejercicio
 progress/personal-records.js Records derivados de sesiones canonicas
 gym/anomaly-detector.js     Revision conservadora de registros inusuales
 gym/progression-engine.js   Prescripciones y sugerencias conservadoras comparables
+gym/workout-load-guidance.js Ultima carga y record bajo comparisonKey compatible
+gym/native-workout-importer.js Importacion privada idempotente de la cola Android
 workout-store.js            Acceso conservador y versionado al repositorio Gym
 workout-plan.js             Normalizacion, deduplicacion e insercion en rutinas
 workout-ui.js               Renderizadores pequenos y anuncios accesibles de Gym
@@ -174,6 +176,8 @@ firebase-config.js          Stub seguro; GitHub Actions puede generar config Fir
 firebase-service.js         Deteccion de config y carga diferida del SDK Firebase
 gym-party-sync.js           Reconciliacion incremental, LWW, tombstones y backoff
 gym-party-metrics.js        Agregados semanales compartidos y fuerza/peso corporal
+gym-party-memberships.js    Membresias multiples y proyeccion singular legacy
+gym-party-fanout.js         Destinos idempotentes y privacidad por sala
 gym-party-ui.js             Componentes pequenos y estado de sincronizacion
 gym-party.js                Orquestador de sala, demo, privacidad y comparativas
 nutrition-data.js           Base local estructurada de alimentos y nutrientes
@@ -199,6 +203,9 @@ scripts/test-module-boundaries.mjs Prueba de contratos entre modulos extraidos
 scripts/sync-web-assets.ps1 Sincronizacion web -> Android
 scripts/write-firebase-config.ps1 Genera firebase-config.js desde secrets FIREBASE_*
 android-native-wrapper/     Proyecto Android con WebView y widget nativo
+android-native-wrapper/.../NativeWorkoutControlRepository.java Cola durable nativa
+android-native-wrapper/.../WorkoutTimerController.java Timer monotónico recuperable
+android-native-wrapper/.../WorkoutControlNotificationManager.java Controles de bloqueo
 firebase/                   Reglas, esquema y configuracion ejemplo para Gym Party
 .github/workflows/          Publicacion Pages, validacion y compilacion APK
 ```
@@ -500,9 +507,16 @@ Gym Party permite exportar CSV comparativo de la sala y JSON con mis datos
 compartidos. El CSV no incluye datos privados de nutricion, sueno, ansiedad,
 pantalla ni notas personales.
 
-## Widget Android de gimnasio
+## Controles nativos Android de entrenamiento
 
 La PWA/GitHub Pages no puede crear widgets nativos. El widget real vive en el APK Android y usa `AppWidgetProvider`, `AppWidgetManager`, `RemoteViews` y `SharedPreferences`.
+
+La rama `feature/native-workout-controls-v1` amplía el widget con una
+notificación persistente de entrenamiento y un temporizador nativo. Las flags
+`nativeWorkoutControlsV1`, `lockScreenWorkoutControls`, `nativeRestTimer` y
+`multiPartyWorkoutSharing` permanecen apagadas por defecto, por lo que el canal
+stable conserva exactamente el comportamiento 2.7.0. Este proyecto no se
+publica ni se fusiona a `main` hasta aprobar el gate beta y las pruebas físicas.
 
 La app web sincroniza `weeklyWorkoutPlan`, `workoutSessions`, `exerciseHistory`, `exerciseLibrary`, `gymSettings` y `workoutWidgetState` mediante `AndroidBridge.saveWorkoutWidgetData(json)`. Si todavia no hay datos, Android usa la rutina predeterminada segun el dia actual.
 
@@ -520,13 +534,51 @@ Desde la pantalla de inicio el widget permite:
 - tocar **Siguiente** para avanzar de ejercicio;
 - abrir Gym / Entrenamiento de hoy o Registro rapido cuando hace falta una edicion completa.
 
+Con las flags beta activas, el guardado directo crea primero una mutación
+append-only con `setId` estable dentro de SharedPreferences. Esto funciona aun
+si la actividad y la WebView están cerradas, evita dobles taps y sobrevive al
+cierre del proceso. Al abrir la app, el importador incorpora la serie una sola
+vez en `workoutSessions`/IndexedDB, actualiza historial y récords, y conserva la
+mutación si ocurre un error recuperable.
+
+Durante una sesión activa, la notificación de pantalla bloqueada permite bajar
+o subir repeticiones, guardar la serie y controlar el temporizador. Muestra
+ejercicio, serie, reps, peso opcional, última carga comparable, mejor registro y
+solo el conteo de destinos Gym Party. Nunca muestra alias, nombres de salas,
+códigos, miembros, emails, notas ni IDs. El permiso de notificaciones se pide
+desde **Gym > Configurar rutina semanal y widget Android > Controles Android y
+pantalla bloqueada**, después de una explicación; no se solicita al arrancar.
+Desde allí también se puede ocultar peso/récord o hacer privada u oculta la
+notificación.
+
+El temporizador ofrece cuenta regresiva de descanso y cronómetro ascendente.
+Usa el reloj monotónico mientras el teléfono está encendido y referencias de
+hora de pared para reconstruirse tras `BOOT_COMPLETED` o una actualización del
+APK. No usa un foreground service ni escribe un contador cada segundo. Widget,
+notificación y WebView leen el mismo estado; la cuenta regresiva se reprograma
+después del reinicio y el cronómetro conserva el tiempo acumulado.
+
+Con `multiPartyWorkoutSharing` activa, una persona puede conservar varias
+membresías y decidir entre todos los grupos activos, grupos elegidos o solo
+privado. Una serie privada se guarda una vez y genera destinos idempotentes por
+`partyId + userId + originSetId`. Cada sala aplica su propia privacidad, puede
+quedar pendiente o fallar sin revertir el historial privado ni los otros
+destinos.
+
+**Comportamiento con la app completamente cerrada:** widget, notificación,
+ajustes de reps/peso, guardado local y temporizador siguen funcionando. La
+incorporación a IndexedDB y la sincronización Firebase/Gym Party quedan en cola
+durable hasta que la WebView vuelva a ejecutarse; no se añadió otra identidad
+Firebase ni se almacenan tokens en texto plano. Volver a abrir la app o
+recuperar conexión con el proceso activo reintenta cada sala por separado.
+
 Limitacion practica: `RemoteViews` no ofrece un formulario libre comodo con teclado, RIR/RPE y notas largas. Para eso el boton de abrir registro rapido sigue entrando directo a la pantalla completa. El registro directo del widget cubre el flujo estable de gimnasio: reps, kilos, ajustes rapidos de peso, guardar, repetir, atras y siguiente.
 
 El APK tiene permiso de Internet para que Gym Party/Firebase pueda sincronizar
 desde el WebView. En iPhone se usa la PWA/Safari; no hay dependencia del widget
 Android.
 
-Para agregarlo: instala el APK, manten presionada la pantalla de inicio, entra a **Widgets**, busca **Protocolo 0->100 · Gym** y agregalo. El widget pequeno ofrece guardado rapido minimo; el mediano muestra controles completos.
+Para agregarlo: instala el APK, manten presionada la pantalla de inicio, entra a **Widgets**, busca **Protocolo 0->100 · Gym** y agregalo. El widget pequeno ofrece guardado rapido minimo; el mediano muestra controles completos. Cuando el host ofrece al menos 300 × 220 dp se selecciona explícitamente la superficie grande completa.
 
 Rutina predeterminada: lunes Torso A, martes Pierna A, miercoles Torso B, jueves Pierna B, viernes Torso C, sabado descanso o actividad suave y domingo descanso o revision semanal. Dentro de **Gym** se puede editar la rutina semanal, copiar un dia a otro, restablecer la rutina predeterminada exacta, cambiar kg/lb, activar RIR/RPE y actualizar manualmente el widget.
 

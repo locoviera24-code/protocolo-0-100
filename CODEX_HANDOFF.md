@@ -4024,3 +4024,36 @@ Siguiente acción exacta: ejecutar la regresión completa del repositorio,
 actualizar README con alcance y limitaciones de app cerrada, confirmar el bloque
 de documentación, pushear la rama y ejecutar el quality gate remoto sin publicar
 stable ni fusionar a `main`.
+
+## 90. Cierre local de Controles nativos V1
+
+`README.md` documenta ahora el proyecto beta, sus cuatro feature flags, la cola
+append-only, notificación, privacidad, timer, membresías múltiples y el límite
+de sincronización con la app cerrada. Widget/notificación/guardado local/timer
+funcionan sin Activity; importar a IndexedDB y subir a Firebase requiere que la
+WebView vuelva a ejecutarse. No se afirma sincronización inmediata en background.
+
+La regresión estática completa aprobó PWA atómica, manifest, versión, Workout,
+equipos/modalidades, progresión, anomalías, controles nativos, Gym Party, sync,
+módulos, diseño, router, layout, Inicio/Ajustes, datos/backups, Progreso,
+Nutrición, FDC, seguridad WebView, release y accesibilidad estructural. Se
+actualizó `scripts/test-settings-contract.mjs`: exigía la condición singular
+anterior y ahora valida que autosync use cualquier membresía Firebase activa.
+
+Playwright axe aprobó 27/27 escenarios en Android Chromium, iPhone WebKit y
+escritorio. Los 6 E2E afectados de multigrupo y ajustes nativos también
+aprobaron. El inventario restante contiene 366 escenarios; la corrida completa
+local fue terminada por el timeout de 20 minutos antes del resumen, sin salida
+de fallos, por lo que **no se marca aprobada**. `test:web-dist:e2e` aprobó 1/1;
+el artifact contiene 86 recursos, el precache 85 y no hay 404 ni mezcla de
+builds. El entorno local no tiene Java, Gradle ni Android SDK: Firestore
+Emulator y APK debug/release quedan pendientes del quality gate remoto.
+
+Versión, build y versionCode permanecen `2.7.0`, `89` y `33`. Las flags siguen
+apagadas por defecto. No se publicó stable, no se movió
+`baseline-stable-2.7` y no se fusionó esta rama a `main`.
+
+Siguiente acción exacta: confirmar este bloque documental, pushear
+`feature/native-workout-controls-v1`, ejecutar `Quality gate reutilizable` con
+canal `beta`, descargar los artifacts validados si pasa y registrar resultado,
+URL de ejecución y omisiones físicas. No publicar stable.

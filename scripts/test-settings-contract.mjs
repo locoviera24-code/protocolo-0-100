@@ -13,6 +13,8 @@ assert.match(html,/nutritionDiagnosisCard[^\n]+preferenceHidden|classList\.toggl
 assert.match(html,/maybeShowInternalReminder/);
 assert.match(html,/La web no puede garantizar avisos en segundo plano/);
 assert.match(party,/function autoSyncEnabled/);
-assert.match(party,/autoSyncEnabled\(\) && m\?\.backendMode/);
+assert.match(party,/function firebaseMemberships/);
+assert.match(party,/autoSyncEnabled\(\) && firebaseMemberships\(\)\.length/);
+assert.doesNotMatch(party,/autoSyncEnabled\(\) && m\?\.backendMode/);
 for(const contract of ['LB_PER_KG','canonicalWeight','displayWeight','displayVolume','weightCanonical'])assert.match(workout,new RegExp(contract));
 console.log('Ajustes funcionales: tema del sistema, densidad, experiencia, orientación, recordatorio interno y autosync.');
