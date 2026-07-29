@@ -1,7 +1,7 @@
 # Checklist de pruebas físicas
 
-Referencia objetivo: Protocolo 0->100 `2.7.0`, build web/PWA `89`, Android
-`versionCode 33`.
+Referencia objetivo beta: Protocolo 0->100 `2.7.0`, build web/PWA `90`, Android
+`versionCode 34`, rama `codex/android-quick-access-v1`.
 
 Este documento separa resultados automatizados de pruebas sobre hardware real.
 No marcar una prueba física por inferencia a partir de Playwright, Gradle o un
@@ -46,8 +46,28 @@ datos personales.
 - [ ] Abrir Inicio, Gym, Nutrición y Gym Party mediante deep links.
 - [ ] Registrar serie, tipo de serie y alimento; reiniciar el proceso.
 - [ ] Probar voz y validar permisos denegados/aceptados.
-- [ ] Agregar el widget pequeño y el mediano desde el selector del launcher.
-- [ ] Registrar una serie desde el widget y comprobar actualización de progreso.
+- [ ] Abrir **Gym > Acceso rapido durante el entrenamiento**.
+- [ ] Tocar **Agregar widget** y comprobar el dialogo del launcher, si es compatible.
+- [ ] Verificar el fallback manual en un launcher sin `requestPinAppWidget`.
+- [ ] Agregar y redimensionar los widgets compacto, estandar y expandido.
+- [ ] Confirmar que ningun control queda oculto o truncado con fuente aumentada.
+- [ ] Corregir reps y carga hacia abajo y hacia arriba desde el widget.
+- [ ] Registrar una serie con un toque y comprobar actualizacion de progreso.
+- [ ] Hacer doble toque accidental y confirmar que se guarda una sola serie.
+- [ ] Guardar dos series deliberadas consecutivas y confirmar que ambas existen.
+- [ ] Tocar **Deshacer** durante diez segundos con la WebView cerrada.
+- [ ] Forzar cierre tras guardar y comprobar importacion unica al reabrir.
+- [ ] Reiniciar el telefono con una mutacion pendiente y comprobar recuperacion.
+- [ ] Probar kg, lb, peso corporal, lastre, asistencia, tiempo y distancia.
+- [ ] Probar dia de descanso y ausencia de sesion.
+- [ ] Activar controles y aceptar `POST_NOTIFICATIONS` desde la accion contextual.
+- [ ] Repetir con permiso denegado y comprobar acceso a Ajustes de Android.
+- [ ] Bloquear el telefono y verificar la notificacion privada de entrenamiento.
+- [ ] Confirmar que la version publica solo dice **Entrenamiento en curso**.
+- [ ] Probar Guardar, Deshacer, Siguiente y temporizador desde la notificacion.
+- [ ] Finalizar/cancelar la sesion y confirmar que la notificacion desaparece.
+- [ ] Cambiar fecha y zona horaria; comprobar actualizacion del widget.
+- [ ] Actualizar desde APK anterior y comprobar cola, widget y preferencias.
 - [ ] Exportar y restaurar un backup desde el WebView.
 - [ ] Comprobar background, offline y reconexión.
 
@@ -66,3 +86,18 @@ La línea base solo puede declararse validada físicamente cuando las cuatro
 secciones anteriores tengan fecha, dispositivo y resultado. Un fallo debe
 quedar registrado como issue antes de marcar la referencia como estable para
 usuarios finales.
+
+## Registro de hardware de Controles Android V1
+
+Estado al 29 de julio de 2026: **pendiente completo**. En esta ejecucion no hay
+un dispositivo Android conectado. Los tres SVG de `docs/previews/` son previews
+de jerarquia y no evidencia de launcher, pantalla de bloqueo o fabricante.
+
+Al ejecutar, registrar aqui:
+
+- modelo y fabricante: pendiente;
+- version Android y parche: pendiente;
+- launcher y version: pendiente;
+- build instalado: pendiente;
+- permiso de notificaciones aceptado/denegado: pendiente;
+- resultado y enlace al issue en caso de fallo: pendiente.

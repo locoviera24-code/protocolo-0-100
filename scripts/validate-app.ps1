@@ -75,6 +75,9 @@ $mainActivity = Read-Utf8 'android-native-wrapper/app/src/main/java/com/protocol
 $widgetProvider = Read-Utf8 'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetProvider.java'
 $widgetUpdater = Read-Utf8 'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetUpdateService.java'
 $nativeWorkoutRepository = Read-Utf8 'android-native-wrapper/app/src/main/java/com/protocolo/cien/NativeWorkoutControlRepository.java'
+$workoutMutationQueue = Read-Utf8 'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutMutationQueue.java'
+$workoutNativeState = Read-Utf8 'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutNativeRepository.java'
+$workoutQuickReducer = Read-Utf8 'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutQuickActionReducer.java'
 $deployWorkflow = Read-Utf8 '.github/workflows/deploy-pages.yml'
 $apkWorkflow = Read-Utf8 '.github/workflows/build-debug-apk.yml'
 $validationWorkflow = Read-Utf8 '.github/workflows/validate-app.yml'
@@ -135,12 +138,17 @@ $requiredFiles = @(
     'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetProvider.java',
     'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetUpdateService.java',
   'android-native-wrapper/app/src/main/java/com/protocolo/cien/NativeWorkoutControlRepository.java',
+  'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutMutationQueue.java',
+  'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutNativeRepository.java',
+  'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutQuickActionReducer.java',
   'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutTimerController.java',
   'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutControlNotificationManager.java',
   'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutControlReceiver.java',
     'android-native-wrapper/app/src/main/res/xml/workout_widget_info.xml',
-    'android-native-wrapper/app/src/main/res/layout/widget_workout_small.xml',
-    'android-native-wrapper/app/src/main/res/layout/widget_workout_medium.xml',
+    'android-native-wrapper/app/src/main/res/layout/widget_workout_compact.xml',
+    'android-native-wrapper/app/src/main/res/layout/widget_workout_standard.xml',
+    'android-native-wrapper/app/src/main/res/layout/widget_workout_expanded.xml',
+    'android-native-wrapper/app/src/main/res/values/widget_layout_aliases.xml',
     'android-native-wrapper/app/src/main/res/drawable/widget_background.xml',
     'android-native-wrapper/app/src/main/res/drawable/widget_button.xml',
     'android-native-wrapper/app/src/main/res/drawable/widget_button_secondary.xml'
@@ -719,11 +727,20 @@ foreach ($contract in @(
     Assert-True (($widgetProvider + $widgetUpdater + $mainActivity).Contains($contract)) "Falta contrato nativo de widget: $contract"
 }
 foreach ($contract in @('widgetPreviousButton', 'widgetSetStats', 'widgetWeightFastPlusButton', 'WEIGHT_STEP = 0.5', 'WEIGHT_FAST_STEP = 5.0', 'currentExerciseSets', 'currentMuscleSets')) {
-    Assert-True ($widgetUpdater.Contains($contract) -or ($contract -eq 'widgetPreviousButton' -and (($widgetUpdater + (Read-Utf8 'android-native-wrapper/app/src/main/res/layout/widget_workout_medium.xml') + (Read-Utf8 'android-native-wrapper/app/src/main/res/layout/widget_workout_small.xml')).Contains($contract)))) "Falta contrato de widget directo: $contract"
+    Assert-True ($widgetUpdater.Contains($contract)) "Falta contrato de widget directo: $contract"
 }
 
-foreach ($contract in @('native_mutation_queue_v1', 'privateImportState', 'DOUBLE_TAP_WINDOW_MS', 'UUID.randomUUID', '.commit()')) {
+foreach ($contract in @('native_mutation_queue_v1', 'pending', 'imported', 'rejected', 'undone', 'acknowledgeImported')) {
+    Assert-True ($workoutMutationQueue.Contains($contract)) "Falta contrato de cola nativa: $contract"
+}
+foreach ($contract in @('privateImportState', 'DOUBLE_TAP_WINDOW_MS = 650L', 'expectedRevision', 'revision-conflict')) {
     Assert-True ($nativeWorkoutRepository.Contains($contract)) "Falta contrato de repositorio nativo: $contract"
+}
+foreach ($contract in @('UUID.randomUUID', 'claimDelivery', 'nativeRevision')) {
+    Assert-True ($workoutNativeState.Contains($contract)) "Falta contrato de estado nativo: $contract"
+}
+foreach ($contract in @('ADJUST_REPS', 'ADJUST_WEIGHT', 'SAVE_SET', 'UNDO_LAST_SET', 'COMPLETE_TIME_SET')) {
+    Assert-True ($workoutQuickReducer.Contains($contract)) "Falta reducer nativo comun: $contract"
 }
 
 foreach ($contract in @(
@@ -731,6 +748,12 @@ foreach ($contract in @(
     'getWorkoutWidgetData',
     'updateWorkoutWidget',
     'getNativeWorkoutControlData',
+    'getPendingWorkoutMutations',
+    'acknowledgeWorkoutMutations',
+    'getWorkoutQuickAccessCapabilities',
+    'requestPinWorkoutWidget',
+    'startWorkoutNotification',
+    'stopWorkoutNotification',
     'acknowledgeNativeWorkoutMutation',
     'handleAndroidWidgetIntent'
 )) {

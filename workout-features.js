@@ -908,7 +908,10 @@
     if(busy)tab.setAttribute('aria-busy','true');else tab.removeAttribute('aria-busy');
     tab.querySelectorAll('button,input,select,textarea').forEach(control=>{
       if(busy&&!control.disabled){control.dataset.workoutBusyDisabled='true';control.disabled=true;}
-      else if(!busy&&control.dataset.workoutBusyDisabled==='true'){delete control.dataset.workoutBusyDisabled;control.disabled=false;}
+      else if(!busy&&control.dataset.workoutBusyDisabled==='true'){
+        delete control.dataset.workoutBusyDisabled;
+        control.disabled=control.dataset.workoutStateDisabled==='true';
+      }
     });
   }
   function renderTodayWorkout(date=todayStr()){
@@ -1726,23 +1729,28 @@
     const status=nativeBridgeJson('getWorkoutWidgetStatus');
     const enabled=window.APP_FEATURE_FLAGS?.isEnabled?.('nativeWorkoutControlsV1')===true;
     const lockEnabled=window.APP_FEATURE_FLAGS?.isEnabled?.('lockScreenWorkoutControls')===true;
+    const setStateDisabled=(button,disabled)=>{
+      if(!button)return;
+      if(disabled)button.dataset.workoutStateDisabled='true';else delete button.dataset.workoutStateDisabled;
+      button.disabled=!!disabled||button.dataset.workoutBusyDisabled==='true';
+    };
     if(!capabilities||capabilities.platform!=='android-apk'){
       widgetStatus.textContent='No disponible en la versión web. Requiere el APK Android.';
       lockStatus.textContent='Requiere el APK Android. En la web podés registrar desde Gym.';
       overall.textContent='Tus registros web continúan guardándose normalmente.';
-      if(addButton)addButton.disabled=true;
-      if(enableButton)enableButton.disabled=true;
+      setStateDisabled(addButton,true);
+      setStateDisabled(enableButton,true);
       if(diagnostic)diagnostic.textContent='El navegador no ofrece controles Android.';
       return;
     }
     const instances=Math.max(0,Number(capabilities.widgetInstances||status?.instances||0));
     widgetStatus.textContent=instances>0?`Widget agregado (${instances}).`:(capabilities.pinWidgetSupported?'Widget no agregado. Podés instalarlo ahora.':'El launcher requiere agregarlo manualmente.');
-    if(addButton){addButton.disabled=instances>0;addButton.textContent=instances>0?'Widget agregado':'Agregar widget';}
+    if(addButton){setStateDisabled(addButton,instances>0);addButton.textContent=instances>0?'Widget agregado':'Agregar widget';}
     const permission=capabilities.notificationPermission||'unknown';
     if(lockEnabled&&permission==='granted')lockStatus.textContent='Disponible en este dispositivo durante una sesión activa.';
     else if(permission==='blocked'||permission==='denied')lockStatus.textContent='Notificaciones desactivadas. Podés habilitarlas desde Ajustes de Android.';
     else lockStatus.textContent='Puede depender de tu versión de Android y del fabricante.';
-    if(enableButton){enableButton.disabled=lockEnabled&&permission==='granted';enableButton.textContent=lockEnabled&&permission==='granted'?'Controles activos':'Activar controles';}
+    if(enableButton){setStateDisabled(enableButton,lockEnabled&&permission==='granted');enableButton.textContent=lockEnabled&&permission==='granted'?'Controles activos':'Activar controles';}
     const queue=status?.queue||{};
     const pending=Math.max(0,Number(queue.pending||0));
     const rejected=Math.max(0,Number(queue.rejected||0));
