@@ -4061,6 +4061,24 @@ durante el entrenamiento**, tocar **Activar controles**, aceptar notificaciones,
 tocar **Empezar entrenamiento** y bloquear el telefono. Si aparece **Revisar
 notificacion**, habilitar el canal en los ajustes que abre la app.
 
-Al escribir esta seccion, el quality gate remoto del commit beta 91 y su APK
-firmado de prueba todavía están pendientes. No afirmar que existe un artifact
-remoto nuevo hasta verificar el run y la descarga publica.
+El primer intento del quality gate `30493302864` termino con 351 E2E aprobados,
+14 omisiones y un unico fallo WebKit en el escenario de alimento personalizado.
+Ese dominio no fue modificado; el caso paso localmente 5/5 al repetirlo. La
+reejecucion completa (attempt 2, job `90720259439`) aprobo en 17 min 22 s:
+352 E2E, 14 omisiones documentadas, 27 axe, Firestore Emulator, artifact web,
+Android debug/release y paridad de assets.
+
+Artifacts remotos del run:
+
+- `protocolo-web-beta`, artifact `8741451912`, 540.292 bytes comprimidos;
+- `protocolo-android-debug-beta`, artifact `8741452495`, 1.825.189 bytes
+  comprimidos;
+- APK extraido: 1.873.071 bytes, SHA-256
+  `C686EEF45418D60B83C3AF06B4C23B4277EF2CB94302A48E9E6B6E4C0FF9FAEF`.
+
+La prerelease publica, no estable, es
+`v2.7.0-native-controls-v1-beta.4`. Su descarga directa fue comprobada sin
+credenciales con HTTP 200:
+`https://github.com/locoviera24-code/protocolo-0-100/releases/download/v2.7.0-native-controls-v1-beta.4/protocolo-0-100-v2.7.0-build91-android-quick-access-beta.apk`.
+La etiqueta apunta al commit funcional `20df644`; el pull request 1 permanece
+borrador, no se fusiono a main y stable build 89 no fue modificado.
