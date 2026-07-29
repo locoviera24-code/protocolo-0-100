@@ -4279,3 +4279,11 @@ confirmado. La prueba dispara expresamente ese toggle despues de simular un
 repintado y tambien verifica que borrar el nombre mediante `input` normal siga
 produciendo validacion. Tras el ajuste, el flujo completo aprobo 5/5 y la
 validacion de duplicado/coma decimal aprobo 5/5 en WebKit.
+
+El siguiente gate no repitio el alimento personalizado; fallo una unica vez en
+otro menu de recetas de WebKit. La matriz ejecuta 369 escenarios secuenciales
+con un solo worker y no tenia retries. `playwright.config.mjs` usa ahora un solo
+reintento exclusivamente en CI. Un defecto reproducible continua fallando dos
+veces; un evento transitorio queda reportado como flaky sin descartar todo el
+trabajo posterior de Firestore y Android. Local conserva cero retries para que
+el desarrollo no oculte fallos. `test-quality-gate.mjs` protege este contrato.

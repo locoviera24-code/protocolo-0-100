@@ -7,6 +7,7 @@ const validate=await read('.github/workflows/validate-app.yml');
 const pages=await read('.github/workflows/deploy-pages.yml');
 const debug=await read('.github/workflows/build-debug-apk.yml');
 const release=await read('.github/workflows/build-release-apk.yml');
+const playwright=await read('playwright.config.mjs');
 const stableRelease=JSON.parse(await read('.github/stable-release.json'));
 const appVersion=JSON.parse(await read('app-version.json'));
 const callers=[validate,pages,debug,release];
@@ -39,6 +40,7 @@ assert.match(release,/needs: quality/);
 assert.match(release,/gh release create/);
 assert.match(release,/QUALITY_CHANNEL: \$\{\{ inputs\.prerelease && 'beta' \|\| 'stable' \}\}/);
 assert.match(release,/node \.\/scripts\/generate-build-info\.mjs/);
+assert.match(playwright,/retries:process\.env\.CI\?1:0/,'CI debe reintentar una sola vez los fallos E2E transitorios');
 
 for(const caller of callers)assert.doesNotMatch(caller,/npm run test:e2e/,'Las matrices no deben duplicarse fuera del gate');
 
