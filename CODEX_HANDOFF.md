@@ -4088,3 +4088,25 @@ publico stable ni se fusiono la rama.
 Siguiente accion exacta: confirmar el commit de esta correccion, pushear la rama
 y repetir el quality gate beta completo. Si pasa, descargar los artifacts web y
 APK debug, registrar Firestore/Android reales y cerrar sin publicar stable.
+
+## 92. Correccion de compilacion Android detectada por el segundo gate
+
+El segundo quality gate beta fue la ejecucion `30416957682` sobre `012a185`.
+Axe aprobo 27/27; la matriz general aprobo 352 escenarios y mantuvo 14 omisiones
+documentadas. Firestore Emulator tambien aprobo. La ejecucion llego a Android y
+Javac detecto dos errores antes de producir APK: `AndroidBridge` conservaba su
+referencia como `Activity` aunque invoca un metodo propio de `MainActivity`, y
+`NativeWorkoutControlRepository` usaba `StandardCharsets` sin importarlo.
+
+El bridge ahora conserva `MainActivity` sin cambiar ninguna firma expuesta a
+JavaScript. El repositorio importa `java.nio.charset.StandardCharsets`; no cambia
+la serializacion ni el limite de 64 KiB. Despues del parche aprobaron localmente
+los contratos de controles nativos, orientacion de carga, importador, seguridad
+WebView y release Android. El entorno local sigue sin toolchain Android, por lo
+que la compilacion real debe confirmarse con un tercer gate remoto.
+
+Version/build/versionCode permanecen `2.7.0` / `89` / `33`. No se publico
+stable, no se movio la referencia estable y no se fusiono a `main`.
+
+Siguiente accion exacta: confirmar y pushear este parche, repetir el quality gate
+beta y, si todo queda verde, descargar los artifacts web y APK debug validados.

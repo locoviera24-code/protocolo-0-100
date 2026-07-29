@@ -253,9 +253,9 @@ public class MainActivity extends Activity {
     }
 
     public class AndroidBridge {
-        private final Activity activity;
+        private final MainActivity activity;
 
-        AndroidBridge(Activity activity) {
+        AndroidBridge(MainActivity activity) {
             this.activity = activity;
         }
 
