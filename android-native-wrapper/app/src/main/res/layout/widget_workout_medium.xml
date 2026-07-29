@@ -267,6 +267,39 @@
             android:text="Ajusta reps/kg y guarda desde el widget."
             android:textColor="#ffd36e"
             android:textSize="10sp" />
+
+        <LinearLayout
+            android:id="@+id/widgetTimerPanel"
+            android:layout_width="match_parent"
+            android:layout_height="30dp"
+            android:layout_marginTop="5dp"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <Chronometer
+                android:id="@+id/widgetTimerChronometer"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@drawable/widget_button_secondary"
+                android:gravity="center"
+                android:text="Descanso 01:30"
+                android:textColor="#eef5ff"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/widgetTimerButton"
+                android:layout_width="92dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="7dp"
+                android:background="@drawable/widget_button_secondary"
+                android:gravity="center"
+                android:text="Iniciar"
+                android:textColor="#eef5ff"
+                android:textSize="10sp"
+                android:textStyle="bold" />
+        </LinearLayout>
     </LinearLayout>
 
     <LinearLayout

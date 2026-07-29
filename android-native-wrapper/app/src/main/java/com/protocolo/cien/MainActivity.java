@@ -1,5 +1,6 @@
 package com.protocolo.cien;
 
+import android.Manifest;
 import android.app.Activity;
 import android.app.AppOpsManager;
 import android.app.usage.UsageStats;
@@ -52,6 +53,7 @@ public class MainActivity extends Activity {
     public static final String ACTION_WIDGET_PREVIOUS_EXERCISE = "com.protocolo.cien.ACTION_WIDGET_PREVIOUS_EXERCISE";
     public static final String ACTION_WIDGET_NEXT_EXERCISE = "com.protocolo.cien.ACTION_WIDGET_NEXT_EXERCISE";
     private static final int SPEECH_REQUEST_CODE = 4100;
+    private static final int NOTIFICATION_PERMISSION_REQUEST_CODE = 4101;
     private static final String APP_HOST = "appassets.androidplatform.net";
     private static final String APP_URL = "https://" + APP_HOST + "/assets/index.html";
     private WebView webView;
@@ -194,6 +196,18 @@ public class MainActivity extends Activity {
     }
 
     @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == NOTIFICATION_PERMISSION_REQUEST_CODE) {
+            WorkoutControlNotificationManager.update(this);
+            if (webView != null) {
+                boolean granted = WorkoutControlNotificationManager.hasPermission(this);
+                webView.evaluateJavascript("window.dispatchEvent(new CustomEvent('native-workout-notification-permission',{detail:{granted:" + granted + "}}));", null);
+            }
+        }
+    }
+
+    @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode != SPEECH_REQUEST_CODE || webView == null) return;
@@ -244,6 +258,7 @@ public class MainActivity extends Activity {
             try { NativeWorkoutControlRepository.syncFromWidgetState(activity, new JSONObject(json == null ? "{}" : json)); }
             catch (Exception ignored) {}
             WorkoutWidgetUpdateService.updateAll(activity);
+            WorkoutControlNotificationManager.update(activity);
         }
 
         @JavascriptInterface
@@ -266,6 +281,27 @@ public class MainActivity extends Activity {
         public boolean acknowledgeNativeWorkoutMutation(String mutationId, String importState, String error) {
             if (mutationId == null || mutationId.length() > 160 || error != null && error.length() > 500) return false;
             return NativeWorkoutControlRepository.acknowledge(activity, mutationId, importState, error);
+        }
+
+        @JavascriptInterface
+        public String workoutNotificationPermissionState() {
+            if (Build.VERSION.SDK_INT < 33) return WorkoutControlNotificationManager.hasPermission(activity) ? "granted" : "blocked";
+            return activity.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED ? "granted" : "prompt";
+        }
+
+        @JavascriptInterface
+        public String requestWorkoutNotificationPermission() {
+            if (Build.VERSION.SDK_INT < 33) return WorkoutControlNotificationManager.hasPermission(activity) ? "granted" : "blocked";
+            if (activity.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) return "granted";
+            activity.runOnUiThread(() -> activity.requestPermissions(
+                    new String[]{Manifest.permission.POST_NOTIFICATIONS}, NOTIFICATION_PERMISSION_REQUEST_CODE));
+            return "requested";
+        }
+
+        @JavascriptInterface
+        public boolean handleNativeWorkoutTimerAction(String action) {
+            if (action == null || action.length() > 120) return false;
+            return WorkoutTimerController.handleAction(activity, action);
         }
 
         @JavascriptInterface
