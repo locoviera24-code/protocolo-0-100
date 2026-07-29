@@ -116,7 +116,11 @@ test('Alimento personalizado solo se crea al completar el flujo',async({page})=>
   await page.locator('#foodProtein').fill('4');
   await page.locator('#foodCarbs').fill('10');
   await page.locator('#foodFat').fill('2');
+  // WebKit puede repintar inputs sin emitir un nuevo evento; el ultimo valor
+  // confirmado por la persona debe sobrevivir a ese repintado tardio.
+  await page.evaluate(()=>['customFoodName','foodCalories','foodProtein','foodCarbs','foodFat'].forEach(id=>{document.getElementById(id).value='';}));
   await page.locator('#useCustomFoodBtn').click();
+  await expect(page.locator('[data-food-flow-step="amount"]')).toBeVisible();
   expect(await page.evaluate(()=>window.NUTRITION_STORE.customFoods().some(food=>food.name==='Sopa casera de prueba'))).toBe(false);
   await page.locator('#foodQuantity').fill('250');
   await page.locator('#foodAmountNextBtn').click();

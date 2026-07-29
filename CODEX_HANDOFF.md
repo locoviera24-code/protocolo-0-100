@@ -4257,3 +4257,16 @@ exacta, mientras beta/desarrollo permiten que el build estable solicitado sea
 anterior o igual al activo. Se comprobo que beta y desarrollo aprueban y que
 stable sigue bloqueado correctamente mientras su solicitud permanezca en build
 89. No se modifico `.github/stable-release.json` ni se publico stable.
+
+La ejecucion posterior `30463921497` sobre `4d3969a` completo los contratos
+iniciales, pero sus intentos 1 y 2 encontraron la misma carrera de WebKit en
+`nutrition-today.spec.mjs`: un repintado tardio podia vaciar los inputs del
+alimento personalizado sin emitir otro evento y el flujo no avanzaba a
+cantidad. `index.html` conserva ahora un snapshot inmediato de los campos ante
+cada input. El guardado usa ese ultimo valor confirmado si el DOM fue repintado;
+si la persona borra un campo mediante un evento normal, el snapshot tambien se
+vacia y la validacion no lo recupera indebidamente. La prueba simula el repintado
+sin evento y exige que el paso Cantidad quede visible. Los dos escenarios de
+alimento personalizado aprobaron 10/10 repeticiones combinadas en iPhone
+WebKit; tambien aprobaron modulos de Nutricion, numeros localizados, busqueda,
+precache, version y paridad Android.

@@ -1398,6 +1398,7 @@ const nutritionExternalChoices=new Map();
 let recipeEditorState={id:'',ingredients:[]};
 const restoredDraftNotices=new Set();
 const nutritionCustomDraftFields=['customFoodName','foodPortionGrams','foodCalories','foodProtein','foodCarbs','foodFat','foodFiber','foodSodium','foodPotassium','foodCalcium','foodIron','foodMagnesium','foodZinc','foodVitaminA','foodVitaminC','foodVitaminD','foodB12','foodFolate','foodSource','foodConfidence','foodAliases'];
+let nutritionCustomDraftSnapshot={};
 function nutritionFoodDraftId(date=document.getElementById('nutritionDate')?.value||todayStr()){return `nutrition-food:${date}`;}
 function nutritionFoodDraftPayload(){
   const state=nutritionEntryFlow.state(),food=state.food||null;
@@ -1405,7 +1406,12 @@ function nutritionFoodDraftPayload(){
 }
 function captureNutritionFoodDraft(){
   const payload=nutritionFoodDraftPayload();
+  nutritionCustomDraftSnapshot={...payload.custom};
   window.APP_DRAFTS?.schedule?.({id:nutritionFoodDraftId(payload.date),domain:'nutrition-food',payload});
+}
+function nutritionCustomFieldValue(id){
+  const current=document.getElementById(id)?.value??'';
+  return current!==''?current:(nutritionCustomDraftSnapshot[id]??'');
 }
 function restoreNutritionFoodDraft({announce=true}={}){
   const date=document.getElementById('nutritionDate')?.value||todayStr(),id=nutritionFoodDraftId(date),draft=window.APP_DRAFTS?.get?.(id);
@@ -1419,6 +1425,7 @@ function restoreNutritionFoodDraft({announce=true}={}){
   const meal=document.getElementById('nutritionMeal');if(meal)meal.value=state.meal||'Almuerzo';
   if(food){const index=foods.findIndex(item=>item.id===food.id);if(index>=0)document.getElementById('nutritionFood').value=String(index);}
   Object.entries(payload.custom||{}).forEach(([fieldId,value])=>{const element=document.getElementById(fieldId);if(element)element.value=value??'';});
+  nutritionCustomDraftSnapshot={...(payload.custom||{})};
   const details=document.getElementById('customFoodDetails');if(details)details.open=!!payload.customOpen;
   const optional=document.getElementById('customFoodOptionalFields');if(optional)optional.open=!!payload.customOptionalOpen;
   renderNutritionFoodFlow();
@@ -1528,18 +1535,18 @@ function addSavedMealFromSearch(id){
   rememberNutritionEntries();window.NUTRITION_STORE.saveEntries([...window.NUTRITION_STORE.entries(),...(saved.items||[]).map(item=>({...item,id:uid('food'),date,meal,savedAt:new Date().toISOString(),source:item.source||'comida frecuente'}))]);renderNutrition();window.setNutritionView?.('resumen',{focus:true});flash('Comida frecuente agregada. Podés deshacerla desde Hoy.');
 }
 function useCustomFoodForFlow(){
-  const nameInput=document.getElementById('customFoodName'),name=nameInput.value.trim();if(!window.APP_INLINE_VALIDATION.require(nameInput,'Escribi el nombre del alimento personalizado.'))return;
+  const nameInput=document.getElementById('customFoodName'),name=String(nutritionCustomFieldValue('customFoodName')).trim();if(!name){window.APP_INLINE_VALIDATION.show(nameInput,'Escribi el nombre del alimento personalizado.');return;}
   const nameKey=normalizeFoodText(name),duplicate=allFoods().slice(1).find(item=>normalizeFoodText(item.name)===nameKey||(item.aliases||[]).some(alias=>normalizeFoodText(alias)===nameKey));
   if(duplicate){window.APP_INLINE_VALIDATION.show(nameInput,`Ya existe ${duplicate.name}. Elegilo desde la búsqueda o editá su definición en Ajustes.`);return;}
-  const nutrientFields={fiber:'foodFiber',sodium:'foodSodium',potassium:'foodPotassium',calcium:'foodCalcium',iron:'foodIron',magnesium:'foodMagnesium',zinc:'foodZinc',vitaminA:'foodVitaminA',vitaminC:'foodVitaminC',vitaminD:'foodVitaminD',b12:'foodB12',folate:'foodFolate'},reportedNutrients=Object.entries(nutrientFields).filter(([,id])=>document.getElementById(id).value.trim()!=='').map(([key])=>key),nutrients=Object.fromEntries(Object.entries(nutrientFields).map(([key,id])=>[key,num(id)]));
-  const portionGrams=Math.max(.1,num('foodPortionGrams')||100),aliases=document.getElementById('foodAliases').value.split(',').map(value=>value.trim()).filter(Boolean),food={id:`draft-${Date.now()}`,name,aliases:[name,...aliases],calories:num('foodCalories'),protein:num('foodProtein'),carbs:num('foodCarbs'),fat:num('foodFat'),...nutrients,nutrients,reportedNutrients,portionGrams,units:{porcion:portionGrams},confidence:document.getElementById('foodConfidence').value||'aproximado',source:document.getElementById('foodSource').value.trim()||'etiqueta manual',custom:true,__customDraft:true};
+  const customNumber=id=>window.APP_NUMBERS?.parseOr?.(nutritionCustomFieldValue(id),0)??0,nutrientFields={fiber:'foodFiber',sodium:'foodSodium',potassium:'foodPotassium',calcium:'foodCalcium',iron:'foodIron',magnesium:'foodMagnesium',zinc:'foodZinc',vitaminA:'foodVitaminA',vitaminC:'foodVitaminC',vitaminD:'foodVitaminD',b12:'foodB12',folate:'foodFolate'},reportedNutrients=Object.entries(nutrientFields).filter(([,id])=>String(nutritionCustomFieldValue(id)).trim()!=='').map(([key])=>key),nutrients=Object.fromEntries(Object.entries(nutrientFields).map(([key,id])=>[key,customNumber(id)]));
+  const portionGrams=Math.max(.1,customNumber('foodPortionGrams')||100),aliases=String(nutritionCustomFieldValue('foodAliases')).split(',').map(value=>value.trim()).filter(Boolean),food={id:`draft-${Date.now()}`,name,aliases:[name,...aliases],calories:customNumber('foodCalories'),protein:customNumber('foodProtein'),carbs:customNumber('foodCarbs'),fat:customNumber('foodFat'),...nutrients,nutrients,reportedNutrients,portionGrams,units:{porcion:portionGrams},confidence:String(nutritionCustomFieldValue('foodConfidence')||'aproximado'),source:String(nutritionCustomFieldValue('foodSource')).trim()||'etiqueta manual',custom:true,__customDraft:true};
   window.APP_INLINE_VALIDATION.clear(nameInput);document.getElementById('foodQuantity').value=String(portionGrams);document.getElementById('foodUnit').value='g';nutritionEntryFlow.set({food,amount:portionGrams,unit:'g'}).go('amount');captureNutritionFoodDraft();window.setNutritionView?.('registrar',{focus:true});renderNutritionFoodFlow({focus:true});
 }
 function resetNutritionFoodFlow({openToday=false,discard=false}={}){
   const id=nutritionFoodDraftId();if(discard)window.APP_DRAFTS?.remove?.(id);
   nutritionSearchController?.cancel();nutritionSearchResult=null;nutritionExternalChoices.clear();
   const suggestedMeal=window.NUTRITION_PORTIONS.suggestedMeal();document.getElementById('nutritionMeal').value=suggestedMeal;nutritionEntryFlow=window.NUTRITION_ENTRY_FLOW.create({date:document.getElementById('nutritionDate').value||todayStr(),meal:suggestedMeal});
-  document.getElementById('nutritionFoodSearch').value='';document.getElementById('nutritionFood').value='0';nutritionCustomDraftFields.forEach(fieldId=>{const field=document.getElementById(fieldId);if(field)field.value=fieldId==='foodPortionGrams'?'100':fieldId==='foodConfidence'?'aproximado':'';});const optional=document.getElementById('customFoodOptionalFields');if(optional)optional.open=false;const customDetails=document.getElementById('customFoodDetails');customDetails.dataset.suppressDraft='1';customDetails.open=false;queueMicrotask(()=>delete customDetails.dataset.suppressDraft);renderNutritionFoodFlow();
+  document.getElementById('nutritionFoodSearch').value='';document.getElementById('nutritionFood').value='0';nutritionCustomDraftFields.forEach(fieldId=>{const field=document.getElementById(fieldId);if(field)field.value=fieldId==='foodPortionGrams'?'100':fieldId==='foodConfidence'?'aproximado':'';});nutritionCustomDraftSnapshot=Object.fromEntries(nutritionCustomDraftFields.map(fieldId=>[fieldId,document.getElementById(fieldId)?.value??'']));const optional=document.getElementById('customFoodOptionalFields');if(optional)optional.open=false;const customDetails=document.getElementById('customFoodDetails');customDetails.dataset.suppressDraft='1';customDetails.open=false;queueMicrotask(()=>delete customDetails.dataset.suppressDraft);renderNutritionFoodFlow();
   if(openToday)window.setNutritionView?.('resumen',{focus:true});
 }
 function advanceFoodAmount(){
