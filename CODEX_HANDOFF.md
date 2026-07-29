@@ -4110,3 +4110,32 @@ stable, no se movio la referencia estable y no se fusiono a `main`.
 
 Siguiente accion exacta: confirmar y pushear este parche, repetir el quality gate
 beta y, si todo queda verde, descargar los artifacts web y APK debug validados.
+
+## 93. Quality gate beta verde y artifacts de Controles nativos V1
+
+El tercer quality gate beta, ejecucion `30417878423`, aprobo sobre el commit
+`b2a76c1`. Completo estructura, paridad, PWA atomica, contratos, 27 escenarios
+axe, 352 escenarios E2E con las 14 omisiones ya documentadas, Firestore Emulator,
+artifact web, compilacion Android debug y release de prueba, verificacion de APK
+y subida de artifacts. El job tardo aproximadamente 17 minutos.
+
+Artifacts descargados y verificados localmente:
+
+- `protocolo-android-debug-beta`: APK de 1.868.974 bytes, SHA-256
+  `57213acaae68397ee90d14ed9c7535c852e75d0aff0192b5c684fa3871a8fdbd`.
+- `protocolo-web-beta`: ZIP de 546.239 bytes, SHA-256
+  `da86c853d81930a6c4f10426f118115ea2a588ab068743c82ce23b4fa76af319`.
+
+El APK y el ZIP se copiaron a `dist/` con nombres que incluyen version, build y
+canal beta. La version permanece `2.7.0`, build `89`, versionCode `33`; las flags
+nativas siguen apagadas por defecto. No se publico stable, no se fusiono `main`
+y no se movio `baseline-stable-2.7`.
+
+Pendiente exclusivamente fisico/manual: instalar el APK en dispositivos Android
+reales, probar acciones con bloqueo y pantalla apagada, reinicio del telefono,
+redimensionado por launchers distintos y fan-out Firebase entre varios telefonos.
+La sincronizacion Firebase con la app completamente cerrada no es inmediata: la
+cola nativa es durable y se importa/sincroniza cuando vuelve a ejecutarse WebView.
+
+Siguiente accion exacta: confirmar este cierre documental, pushear y ejecutar el
+quality gate beta final sobre el HEAD documental exacto. No publicar stable.
