@@ -4287,3 +4287,42 @@ reintento exclusivamente en CI. Un defecto reproducible continua fallando dos
 veces; un evento transitorio queda reportado como flaky sin descartar todo el
 trabajo posterior de Firestore y Android. Local conserva cero retries para que
 el desarrollo no oculte fallos. `test-quality-gate.mjs` protege este contrato.
+
+## 97. Cierre de auditoria de controles nativos beta.2
+
+La ejecucion remota `30472279152`, intento 1, completo correctamente el quality
+gate, la compilacion Android firmada y la publicacion de la prerelease
+`v2.7.0-native-controls-v1-beta.2`. Aprobaron la matriz E2E, Firestore Emulator,
+Android debug/release y paridad de assets. Stable no fue publicada y `main` no
+fue fusionada.
+
+APK beta.2 auditado publicamente, sin credenciales:
+
+- archivo: `protocolo-0-100-v2.7.0-release.apk`;
+- tamano: 1.535.915 bytes;
+- SHA-256:
+  `57c89c4027a6ce74b194fe2ee978fb4d8152a6cd4ae381773e8cd289908bbe68`;
+- commit embebido: `860d4d7a4ecb7c4ecfc831b68f8d66c1caf14b92`;
+- version `2.7.0`, build/cache `90`, Android `versionCode 34`, canal `beta`;
+- descarga:
+  `https://github.com/locoviera24-code/protocolo-0-100/releases/download/v2.7.0-native-controls-v1-beta.2/protocolo-0-100-v2.7.0-release.apk`.
+
+La auditoria posterior encontro una inconsistencia exclusiva de trazabilidad:
+`gh release create` no especificaba `--target`, por lo que GitHub creo la
+etiqueta inicialmente sobre `main`, aunque el APK correcto habia sido generado
+desde `860d4d7`. La etiqueta y el campo `target_commitish` de la prerelease se
+alinearon con `860d4d7` sin reemplazar el asset; la descarga repetida conserva
+exactamente el hash anterior. El workflow ahora usa
+`--target "$GITHUB_SHA"` y `scripts/test-quality-gate.mjs` impide retirar este
+contrato en publicaciones futuras.
+
+Ruta visible desde beta.2: `Gym > Controles en pantalla bloqueada`. La persona
+debe activar el interruptor, conceder notificaciones y comenzar un entrenamiento
+o temporizador; sin sesion activa no se mantiene una notificacion vacia. Si el
+canal esta bloqueado, el mismo control abre el ajuste Android correspondiente.
+
+Pendiente exclusivamente fisico: validar en el telefono de destino que el
+fabricante/launcher muestra acciones en su pantalla bloqueada y que no aplica
+restricciones adicionales de bateria. Esta comprobacion no puede declararse
+aprobada desde CI. El APK puede instalarse sobre beta.1 sin desinstalar y sin
+borrar datos, gracias al `versionCode 34` y a la misma firma.
