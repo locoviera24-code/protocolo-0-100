@@ -1,0 +1,351 @@
+package com.protocolo.cien;
+
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.os.SystemClock;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+import java.util.TimeZone;
+import java.util.UUID;
+
+public final class NativeWorkoutControlRepository {
+    static final String KEY_CONTROL_STATE = "native_control_state_v1";
+    static final String KEY_MUTATION_QUEUE = "native_mutation_queue_v1";
+    private static final String KEY_LAST_SAVE_FINGERPRINT = "native_last_save_fingerprint_v1";
+    private static final String KEY_LAST_SAVE_ELAPSED = "native_last_save_elapsed_v1";
+    private static final int SCHEMA_VERSION = 1;
+    private static final int MAX_MUTATIONS = 200;
+    private static final int MAX_PAYLOAD_BYTES = 64 * 1024;
+    private static final long IMPORTED_RETENTION_MS = 7L * 24L * 60L * 60L * 1000L;
+    private static final long DOUBLE_TAP_WINDOW_MS = 1_200L;
+
+    private NativeWorkoutControlRepository() {}
+
+    public static boolean isEnabled(JSONObject widgetState) {
+        JSONObject flags = widgetState == null ? null : widgetState.optJSONObject("featureFlags");
+        return flags != null && flags.optBoolean("nativeWorkoutControlsV1", false);
+    }
+
+    public static synchronized void syncFromWidgetState(Context context, JSONObject widgetState) {
+        if (!isEnabled(widgetState)) return;
+        JSONObject control = readControlState(context);
+        JSONObject quick = widgetState.optJSONObject("quickLog");
+        JSONObject session = widgetState.optJSONObject("workoutSession");
+        put(control, "schemaVersion", SCHEMA_VERSION);
+        put(control, "sessionId", session == null ? "" : session.optString("id", ""));
+        put(control, "exerciseId", widgetState.optString("currentExerciseId", ""));
+        put(control, "exerciseName", widgetState.optString("currentExerciseName", ""));
+        put(control, "setNumber", quick == null ? 1 : Math.max(1, quick.optInt("setNumber", 1)));
+        put(control, "draftReps", quick == null ? 8 : Math.max(0, quick.optInt("reps", 8)));
+        put(control, "draftWeight", quick == null ? 0 : Math.max(0, quick.optDouble("weight", 0)));
+        put(control, "unit", widgetState.optString("unit", "kg"));
+        put(control, "lastComparableSet", cloneObject(widgetState.optJSONObject("lastComparableSet")));
+        put(control, "historicalLoadRecord", cloneObject(widgetState.optJSONObject("historicalLoadRecord")));
+        put(control, "loadGuidanceSnapshot", cloneObject(widgetState.optJSONObject("loadGuidanceSnapshot")));
+        put(control, "timer", cloneObject(widgetState.optJSONObject("nativeTimer")));
+        put(control, "shareTargets", cloneArray(widgetState.optJSONArray("nativeShareTargets")));
+        put(control, "syncState", cloneObject(widgetState.optJSONObject("nativeSyncState")));
+        put(control, "pendingMutationCount", pendingCount(readMutations(context)));
+        put(control, "updatedAt", nowIso());
+        preferences(context).edit().putString(KEY_CONTROL_STATE, control.toString()).commit();
+    }
+
+    public static synchronized EnqueueResult enqueueSaveSet(
+            Context context,
+            JSONObject widgetState,
+            JSONObject session,
+            JSONObject exercise,
+            JSONObject quick,
+            double canonicalWeight
+    ) {
+        if (!isEnabled(widgetState)) return EnqueueResult.disabled();
+        if (session == null || exercise == null || quick == null) return EnqueueResult.error("missing-context");
+        int reps = Math.max(0, quick.optInt("reps", 0));
+        if (reps <= 0) return EnqueueResult.error("invalid-reps");
+
+        String sessionId = session.optString("id", "");
+        String exerciseId = exercise.optString("exerciseId", exercise.optString("id", ""));
+        int setNumber = Math.max(1, quick.optInt("setNumber", 1));
+        // setNumber advances in widget state immediately after a save. Excluding it keeps
+        // a repeated PendingIntent tap idempotent across that state transition.
+        String fingerprint = sessionId + "|" + exerciseId + "|" + reps + "|" + canonicalWeight;
+        SharedPreferences prefs = preferences(context);
+        long elapsed = SystemClock.elapsedRealtime();
+        long previousElapsed = prefs.getLong(KEY_LAST_SAVE_ELAPSED, Long.MIN_VALUE);
+        if (fingerprint.equals(prefs.getString(KEY_LAST_SAVE_FINGERPRINT, ""))
+                && previousElapsed >= 0
+                && elapsed >= previousElapsed
+                && elapsed - previousElapsed <= DOUBLE_TAP_WINDOW_MS) {
+            return EnqueueResult.duplicate(findByFingerprint(readMutations(context), fingerprint));
+        }
+
+        JSONArray queue = prune(readMutations(context), System.currentTimeMillis());
+        if (queue.length() >= MAX_MUTATIONS) return EnqueueResult.error("queue-full");
+        String uuid = UUID.randomUUID().toString();
+        String setId = "set_native_" + uuid;
+        JSONObject set = new JSONObject();
+        put(set, "id", setId);
+        put(set, "setNumber", setNumber);
+        put(set, "reps", reps);
+        put(set, "weight", Math.max(0, canonicalWeight));
+        put(set, "weightKg", Math.max(0, canonicalWeight));
+        put(set, "rir", JSONObject.NULL);
+        put(set, "rpe", JSONObject.NULL);
+        put(set, "bodyweight", quick.optBoolean("bodyweight", exercise.optBoolean("bodyweight", false)));
+        copyIfPresent(quick, set, "measurementMode");
+        copyIfPresent(quick, set, "loadMode");
+        copyIfPresent(quick, set, "equipmentId");
+        copyIfPresent(quick, set, "equipmentName");
+        copyIfPresent(quick, set, "laterality");
+        put(set, "setType", quick.optString("setType", "working"));
+        put(set, "completed", true);
+        put(set, "excludeFromRecords", false);
+        put(set, "excludeFromProgression", false);
+        put(set, "note", "Guardado desde control nativo Android");
+        put(set, "savedAt", nowIso());
+
+        JSONObject exerciseContext = new JSONObject();
+        for (String key : new String[]{"id","exerciseId","name","muscle","type","unit","bodyweight","measurementMode","defaultLoadMode","equipmentId","primaryMuscles","secondaryMuscles","muscleClassificationSnapshot"}) {
+            copyIfPresent(exercise, exerciseContext, key);
+        }
+        JSONObject payload = new JSONObject();
+        put(payload, "date", session.optString("date", widgetState.optString("date", "")));
+        put(payload, "dayKey", session.optString("dayKey", widgetState.optString("dayKey", "")));
+        put(payload, "weekday", session.optString("weekday", widgetState.optString("weekday", "")));
+        put(payload, "routine", cloneObject(session.optJSONObject("routine")));
+        put(payload, "startedAt", session.optString("startedAt", nowIso()));
+        put(payload, "currentExerciseIndex", Math.max(0, session.optInt("currentExerciseIndex", 0)));
+        put(payload, "exercise", exerciseContext);
+        put(payload, "set", set);
+        if (payload.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8).length > MAX_PAYLOAD_BYTES) {
+            return EnqueueResult.error("payload-too-large");
+        }
+
+        NativeWorkoutMutation model = new NativeWorkoutMutation(
+                "native_mutation_" + uuid,
+                "save_set",
+                sessionId,
+                exerciseId,
+                setId,
+                payload,
+                cloneArray(widgetState.optJSONArray("nativeShareTargets"))
+        );
+        JSONObject mutation = model.toJson();
+        put(mutation, "dedupeFingerprint", fingerprint);
+        queue.put(mutation);
+
+        JSONObject control = readControlState(context);
+        put(control, "schemaVersion", SCHEMA_VERSION);
+        put(control, "sessionId", sessionId);
+        put(control, "exerciseId", exerciseId);
+        put(control, "exerciseName", exercise.optString("name", "Ejercicio"));
+        put(control, "setNumber", setNumber + 1);
+        put(control, "draftReps", reps);
+        put(control, "draftWeight", quick.optDouble("weight", 0));
+        put(control, "unit", widgetState.optString("unit", "kg"));
+        put(control, "privateImportState", "pending");
+        put(control, "pendingMutationCount", pendingCount(queue));
+        put(control, "updatedAt", nowIso());
+
+        boolean committed = prefs.edit()
+                .putString(KEY_MUTATION_QUEUE, queue.toString())
+                .putString(KEY_CONTROL_STATE, control.toString())
+                .putString(KEY_LAST_SAVE_FINGERPRINT, fingerprint)
+                .putLong(KEY_LAST_SAVE_ELAPSED, elapsed)
+                .commit();
+        return committed ? EnqueueResult.created(mutation) : EnqueueResult.error("commit-failed");
+    }
+
+    public static synchronized String bridgePayload(Context context) {
+        JSONObject payload = new JSONObject();
+        put(payload, "schemaVersion", SCHEMA_VERSION);
+        put(payload, "state", readControlState(context));
+        put(payload, "mutations", readMutations(context));
+        put(payload, "generatedAt", nowIso());
+        return payload.toString();
+    }
+
+    public static synchronized boolean acknowledge(Context context, String mutationId, String importState, String error) {
+        if (mutationId == null || mutationId.length() == 0) return false;
+        JSONArray queue = readMutations(context);
+        boolean found = false;
+        for (int index = 0; index < queue.length(); index++) {
+            JSONObject mutation = queue.optJSONObject(index);
+            if (mutation == null || !mutationId.equals(mutation.optString("id", ""))) continue;
+            put(mutation, "privateImportState", validImportState(importState));
+            put(mutation, "attempts", Math.max(0, mutation.optInt("attempts", 0)) + 1);
+            put(mutation, "lastError", error == null || error.trim().length() == 0 ? JSONObject.NULL : error.trim());
+            put(mutation, "updatedAt", nowIso());
+            found = true;
+            break;
+        }
+        if (!found) return false;
+        queue = prune(queue, System.currentTimeMillis());
+        JSONObject control = readControlState(context);
+        put(control, "privateImportState", validImportState(importState));
+        put(control, "pendingMutationCount", pendingCount(queue));
+        put(control, "updatedAt", nowIso());
+        return preferences(context).edit()
+                .putString(KEY_MUTATION_QUEUE, queue.toString())
+                .putString(KEY_CONTROL_STATE, control.toString())
+                .commit();
+    }
+
+    static synchronized JSONObject readControlState(Context context) {
+        String raw = preferences(context).getString(KEY_CONTROL_STATE, "");
+        try { return raw == null || raw.length() == 0 ? defaultControlState() : new JSONObject(raw); }
+        catch (Exception ignored) { return defaultControlState(); }
+    }
+
+    static synchronized JSONArray readMutations(Context context) {
+        String raw = preferences(context).getString(KEY_MUTATION_QUEUE, "");
+        try { return raw == null || raw.length() == 0 ? new JSONArray() : new JSONArray(raw); }
+        catch (Exception ignored) { return new JSONArray(); }
+    }
+
+    private static JSONObject defaultControlState() {
+        JSONObject state = new JSONObject();
+        put(state, "schemaVersion", SCHEMA_VERSION);
+        put(state, "timer", new JSONObject());
+        put(state, "shareTargets", new JSONArray());
+        put(state, "syncState", new JSONObject());
+        put(state, "pendingMutationCount", 0);
+        put(state, "updatedAt", nowIso());
+        return state;
+    }
+
+    private static JSONArray prune(JSONArray source, long now) {
+        JSONArray retained = new JSONArray();
+        for (int index = 0; index < source.length(); index++) {
+            JSONObject mutation = source.optJSONObject(index);
+            if (mutation == null) continue;
+            boolean imported = "imported".equals(mutation.optString("privateImportState", "pending"));
+            long createdAt = mutation.optLong("createdAtEpochMs", now);
+            if (imported && now - createdAt > IMPORTED_RETENTION_MS) continue;
+            retained.put(mutation);
+        }
+        if (retained.length() <= MAX_MUTATIONS) return retained;
+        JSONArray limited = new JSONArray();
+        int start = retained.length() - MAX_MUTATIONS;
+        for (int index = start; index < retained.length(); index++) limited.put(retained.opt(index));
+        return limited;
+    }
+
+    private static int pendingCount(JSONArray queue) {
+        int count = 0;
+        for (int index = 0; index < queue.length(); index++) {
+            JSONObject mutation = queue.optJSONObject(index);
+            if (mutation != null && !"imported".equals(mutation.optString("privateImportState", "pending"))) count++;
+        }
+        return count;
+    }
+
+    private static JSONObject findByFingerprint(JSONArray queue, String fingerprint) {
+        for (int index = queue.length() - 1; index >= 0; index--) {
+            JSONObject mutation = queue.optJSONObject(index);
+            if (mutation != null && fingerprint.equals(mutation.optString("dedupeFingerprint", ""))) return cloneObject(mutation);
+        }
+        return null;
+    }
+
+    private static String validImportState(String value) {
+        if ("imported".equals(value) || "error".equals(value) || "pending".equals(value)) return value;
+        return "pending";
+    }
+
+    private static SharedPreferences preferences(Context context) {
+        return context.getSharedPreferences(WorkoutWidgetUpdateService.PREFS_NAME, Context.MODE_PRIVATE);
+    }
+
+    private static JSONObject cloneObject(JSONObject value) {
+        if (value == null) return new JSONObject();
+        try { return new JSONObject(value.toString()); } catch (Exception ignored) { return new JSONObject(); }
+    }
+
+    private static JSONArray cloneArray(JSONArray value) {
+        if (value == null) return new JSONArray();
+        try { return new JSONArray(value.toString()); } catch (Exception ignored) { return new JSONArray(); }
+    }
+
+    private static void copyIfPresent(JSONObject source, JSONObject target, String key) {
+        if (source != null && source.has(key)) put(target, key, source.opt(key));
+    }
+
+    private static String nowIso() {
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
+        format.setTimeZone(TimeZone.getTimeZone("UTC"));
+        return format.format(new Date());
+    }
+
+    private static void put(JSONObject target, String key, Object value) {
+        try { target.put(key, value == null ? JSONObject.NULL : value); } catch (Exception ignored) {}
+    }
+
+    public static final class EnqueueResult {
+        public final boolean ok;
+        public final boolean duplicate;
+        public final boolean disabled;
+        public final String error;
+        public final JSONObject mutation;
+
+        private EnqueueResult(boolean ok, boolean duplicate, boolean disabled, String error, JSONObject mutation) {
+            this.ok = ok;
+            this.duplicate = duplicate;
+            this.disabled = disabled;
+            this.error = error == null ? "" : error;
+            this.mutation = mutation;
+        }
+
+        static EnqueueResult created(JSONObject mutation) { return new EnqueueResult(true, false, false, "", cloneObject(mutation)); }
+        static EnqueueResult duplicate(JSONObject mutation) { return new EnqueueResult(true, true, false, "", cloneObject(mutation)); }
+        static EnqueueResult disabled() { return new EnqueueResult(false, false, true, "disabled", null); }
+        static EnqueueResult error(String error) { return new EnqueueResult(false, false, false, error, null); }
+        public String setId() { return mutation == null ? "" : mutation.optString("setId", ""); }
+    }
+
+    static final class NativeWorkoutMutation {
+        final String id;
+        final String type;
+        final String sessionId;
+        final String exerciseId;
+        final String setId;
+        final JSONObject payload;
+        final String createdAt;
+        final long createdAtEpochMs;
+        final JSONArray shareTargets;
+
+        NativeWorkoutMutation(String id, String type, String sessionId, String exerciseId, String setId, JSONObject payload, JSONArray shareTargets) {
+            this.id = id;
+            this.type = type;
+            this.sessionId = sessionId;
+            this.exerciseId = exerciseId;
+            this.setId = setId;
+            this.payload = cloneObject(payload);
+            this.createdAt = nowIso();
+            this.createdAtEpochMs = System.currentTimeMillis();
+            this.shareTargets = cloneArray(shareTargets);
+        }
+
+        JSONObject toJson() {
+            JSONObject output = new JSONObject();
+            put(output, "id", id);
+            put(output, "type", type);
+            put(output, "sessionId", sessionId);
+            put(output, "exerciseId", exerciseId);
+            put(output, "setId", setId);
+            put(output, "payload", cloneObject(payload));
+            put(output, "createdAt", createdAt);
+            put(output, "createdAtEpochMs", createdAtEpochMs);
+            put(output, "privateImportState", "pending");
+            put(output, "shareTargets", cloneArray(shareTargets));
+            put(output, "attempts", 0);
+            put(output, "lastError", JSONObject.NULL);
+            return output;
+        }
+    }
+}

@@ -1906,6 +1906,7 @@
       : 'Ajusta reps/kg y guarda desde el widget.';
     return {
       schemaVersion:3,
+      featureFlags:window.APP_FEATURE_FLAGS?.all?.()||{schemaVersion:1,nativeWorkoutControlsV1:false,lockScreenWorkoutControls:false,nativeRestTimer:false,multiPartyWorkoutSharing:false},
       date,
       dayKey:plan.dayKey,
       weekday:plan.weekday,

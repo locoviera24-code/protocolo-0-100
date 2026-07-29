@@ -236,10 +236,13 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public void saveWorkoutWidgetData(String json) {
+            if (json != null && json.length() > 512 * 1024) return;
             activity.getSharedPreferences(WorkoutWidgetUpdateService.PREFS_NAME, Context.MODE_PRIVATE)
                     .edit()
                     .putString(WorkoutWidgetUpdateService.KEY_STATE_JSON, json == null ? "" : json)
                     .apply();
+            try { NativeWorkoutControlRepository.syncFromWidgetState(activity, new JSONObject(json == null ? "{}" : json)); }
+            catch (Exception ignored) {}
             WorkoutWidgetUpdateService.updateAll(activity);
         }
 
@@ -252,6 +255,17 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void updateWorkoutWidget() {
             WorkoutWidgetUpdateService.updateAll(activity);
+        }
+
+        @JavascriptInterface
+        public String getNativeWorkoutControlData() {
+            return NativeWorkoutControlRepository.bridgePayload(activity);
+        }
+
+        @JavascriptInterface
+        public boolean acknowledgeNativeWorkoutMutation(String mutationId, String importState, String error) {
+            if (mutationId == null || mutationId.length() > 160 || error != null && error.length() > 500) return false;
+            return NativeWorkoutControlRepository.acknowledge(activity, mutationId, importState, error);
         }
 
         @JavascriptInterface

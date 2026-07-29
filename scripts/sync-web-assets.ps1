@@ -20,6 +20,7 @@ $relativeFiles = @(
     'app/home-state.js',
     'app/platform-capabilities.js',
     'app/data-events.js',
+    'app/feature-flags.js',
     'data/schema-registry.js',
     'data/indexeddb.js',
     'data/repositories.js',

@@ -15,6 +15,7 @@ for(const caller of callers)assert.match(caller,/uses: \.\/\.github\/workflows\/
 for(const command of [
   'npm run test:precache','node ./scripts/test-service-worker.mjs','npm run test:e2e','npm run test:rules',
   'npm run test:data','npm run test:nutrition','npm run test:progress','npm run test:fdc',
+  'npm run test:native-controls',
   'node ./scripts/test-gym-party.mjs','node ./scripts/test-accessibility.mjs','npm run test:web-dist:e2e',
   'gradle :app:assembleDebug :app:assembleRelease'
 ])assert.ok(gate.includes(command),`El quality gate no ejecuta ${command}`);
