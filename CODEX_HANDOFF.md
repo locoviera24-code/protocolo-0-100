@@ -3737,3 +3737,44 @@ importación reemplaza la sesión por timestamp, el timer vive solo en la WebVie
 Gym Party espera a que se abra la app y no hay deduplicación robusta ante doble
 tap. El siguiente bloque debe introducir flags apagadas y una cola nativa
 append-only sin cambiar el comportamiento cuando estén desactivadas.
+
+## 83. Flags y repositorio de mutaciones nativas
+
+El proyecto conserva la versión `2.7.0`, build web/PWA `89` y Android
+`versionCode 33`. No se publicó stable. `app/feature-flags.js` registra cuatro
+flags versionadas y apagadas por defecto: `nativeWorkoutControlsV1`,
+`lockScreenWorkoutControls`, `nativeRestTimer` y
+`multiPartyWorkoutSharing`. La clave
+`protocolo_0_100_feature_flags_v1` forma parte de `data/schema-registry.js`, del
+backup y de la copia de assets Android. Con todas las flags apagadas el widget
+mantiene el flujo estable anterior.
+
+`NativeWorkoutControlRepository.java` agrega una cola append-only separada del
+JSON de presentación del widget. Guarda en `SharedPreferences` las claves
+`native_control_state_v1` y `native_mutation_queue_v1`. Cada `save_set` usa UUID
+para `mutationId` y `setId`, limita la cola a 200 entradas, limita cada payload
+a 64 KiB, retiene importadas durante siete días y escribe estado y cola con un
+único `commit()`. La huella anti-doble-tap ignora el número de serie porque este
+avanza después del primer guardado; así un segundo `PendingIntent` inmediato no
+crea otra mutación.
+
+`WorkoutWidgetUpdateService` usa la cola solamente cuando
+`nativeWorkoutControlsV1` está activa. Un fallo de persistencia no se presenta
+como guardado y no muta visualmente la sesión. `MainActivity.AndroidBridge`
+expone `getNativeWorkoutControlData()` y
+`acknowledgeNativeWorkoutMutation(...)`, con límites de tamaño; la fuente
+privada canónica sigue siendo `workoutSessions` y una mutación `pending` aún no
+debe considerarse incorporada a IndexedDB.
+
+Pruebas ejecutadas y aprobadas: `test:native-controls`, `test:data`,
+`test-workout-features.mjs`, `test:quality-gate`, `test:precache`,
+`test-feature-flags.mjs`, `test-web-dist.mjs`, validación completa con paridad
+Android, contrato de release Android y seguridad WebView. El artifact local
+contiene 82 recursos y el precache 81 recursos, sin rutas ausentes. No se pudo
+compilar Android localmente porque este equipo no tiene Java, Gradle ni Android
+SDK disponibles; esa compilación queda obligatoria en el quality gate remoto.
+
+Siguiente acción exacta: implementar `WorkoutTimerController`,
+`WorkoutControlNotificationManager` y `WorkoutControlReceiver`, todos detrás de
+las flags correspondientes, sin introducir un foreground service salvo que los
+requisitos reales del target Android lo hagan necesario.
