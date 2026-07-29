@@ -40,6 +40,18 @@ test('Gym Party migra, conserva y permite seleccionar varias salas',async({page}
   expect(state.selectedPartyId).toBe('party_two');
   expect(state.gymPartyMembership.partyId).toBe('party_two');
 
+  const fanout=await page.evaluate(()=>{
+    const session={id:'multi-session',date:'2026-07-28',weekday:'Martes',routine:{name:'Pierna'},startedAt:'2026-07-28T10:00:00.000Z',status:'en progreso',currentExerciseIndex:0,exercises:[{id:'press-row',exerciseId:'press-banca',name:'Press de banca',muscle:'Pecho',sets:[{id:'multi-set',setNumber:1,reps:8,weight:60,weightKg:60,setType:'working',completed:true}]}]};
+    window.WORKOUT_FEATURES.replaceSessionPayload(session);
+    const first=window.GYM_PARTY_FEATURES.syncFromLocalWorkouts({silent:true});
+    window.GYM_PARTY_FEATURES.syncFromLocalWorkouts({silent:true});
+    const exported=window.GYM_PARTY_FEATURES.exportState();
+    return{destinations:first.destinations,sets:exported.sharedWorkoutSets.filter(item=>item.localSetId==='multi-set')};
+  });
+  expect(fanout.destinations.sort()).toEqual(['party_one','party_two']);
+  expect(fanout.sets).toHaveLength(2);
+  expect(new Set(fanout.sets.map(item=>item.id)).size).toBe(2);
+
   await page.locator('.partyRoomSwitcher [data-gym-party-action="new-room"]').click();
   await expect(page.locator('#gymPartyCreateAlias')).toBeVisible();
   await expect(page.locator('.partyRoomSwitcher')).toContainText('Sala Uno');

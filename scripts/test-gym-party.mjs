@@ -4,6 +4,7 @@ import vm from 'node:vm';
 
 const source = await readFile(new URL('../gym-party.js', import.meta.url), 'utf8');
 const membershipsSource=await readFile(new URL('../gym-party-memberships.js',import.meta.url),'utf8');
+const fanoutSource=await readFile(new URL('../gym-party-fanout.js',import.meta.url),'utf8');
 const equipmentSource=await readFile(new URL('../gym/equipment.js',import.meta.url),'utf8');
 const setModelSource=await readFile(new URL('../gym/set-model.js',import.meta.url),'utf8');
 const workoutMetricsSource=await readFile(new URL('../workout-metrics.js',import.meta.url),'utf8');
@@ -72,6 +73,7 @@ function createContext() {
   vm.runInContext(syncSource,vmContext,{filename:'gym-party-sync.js'});
   vm.runInContext(metricsSource,vmContext,{filename:'gym-party-metrics.js'});
   vm.runInContext(membershipsSource,vmContext,{filename:'gym-party-memberships.js'});
+  vm.runInContext(fanoutSource,vmContext,{filename:'gym-party-fanout.js'});
   vm.runInContext(uiSource,vmContext,{filename:'gym-party-ui.js'});
   vm.runInContext(source,vmContext,{filename:'gym-party.js'});
   return {context, store};
@@ -80,6 +82,7 @@ function createContext() {
 const {context} = createContext();
 const party = context.GYM_PARTY_FEATURES;
 const membershipModel=context.GYM_PARTY_MEMBERSHIPS;
+const fanoutModel=context.GYM_PARTY_FANOUT;
 
 const normalizedMemberships=membershipModel.normalizeMemberships([
   {partyId:'party_a',userId:'user',active:true,joinedAt:'2026-07-01',privacy:{shareGymData:true}},
@@ -90,6 +93,14 @@ assert.equal(normalizedMemberships.length,2);
 assert.equal(normalizedMemberships.find(item=>item.partyId==='party_a').privacy.hideAbsoluteWeights,true);
 assert.equal(membershipModel.resolveSelectedPartyId(normalizedMemberships,'missing'),'party_b');
 assert.equal(membershipModel.shareable(normalizedMemberships).map(item=>item.partyId).join(','),'party_a');
+assert.equal(fanoutModel.destinationMemberships(normalizedMemberships,{sharingDestination:'private-only'}).length,0);
+assert.equal(fanoutModel.destinationMemberships(normalizedMemberships,{sharingDestination:'selected-parties',selectedSharePartyIds:['party_a']}).length,1);
+const modeledTargets=fanoutModel.targets(normalizedMemberships,{originSessionId:'session',originSetId:'set',sharingDestination:'all-active-parties'});
+assert.equal(modeledTargets.length,1);
+assert.equal(modeledTargets[0].id,'party_a_user_set');
+assert.equal(fanoutModel.stricterPrivacy({hideAbsoluteWeights:false,shareSetDetails:true},{hideAbsoluteWeights:true,shareSetDetails:false}).hideAbsoluteWeights,true);
+const targetStates=[{partyId:'done',originSetId:'set',syncState:'synced'},{partyId:'wait',originSetId:'set',syncState:'pending'},{partyId:'broken',originSetId:'set',syncState:'error'}];
+assert.deepEqual({...fanoutModel.status(targetStates,[])},{total:3,synced:1,pending:1,errors:1});
 
 assert.equal(party.MAX_GYM_PARTY_MEMBERS, 10);
 assert.equal(context.GYM_PARTY_UI.syncState({backendMode:'local'}).id,'local');
@@ -219,6 +230,35 @@ assert.equal(multiParty.shareableMemberships().length,1);
 multiParty.selectMembership('party_two',{render:false});
 assert.equal(multiParty.selectedMembership().partyId,'party_two');
 assert.equal(multiParty.exportState().gymPartyMembership.partyId,'party_two');
+
+const {context: fanoutContext,store: fanoutStore}=createContext();
+fanoutContext.APP_FEATURE_FLAGS={isEnabled:name=>name==='multiPartyWorkoutSharing'};
+const fanoutParty=fanoutContext.GYM_PARTY_FEATURES;
+const fanoutSession={id:'native_session',date:'2026-07-20',weekday:'Lunes',routine:{name:'Torso'},startedAt:'2026-07-20T10:00:00.000Z',status:'en progreso',summary:{totalSets:1,totalReps:8,totalVolume:480},exercises:[{id:'press-row',exerciseId:'press-banca',name:'Press de banca',muscle:'Pecho',sets:[{id:'native_set',setNumber:1,reps:8,weight:60,weightKg:60,setType:'working',completed:true}]}]};
+fanoutStore.set('protocolo_0_100_workout_sessions_v1',JSON.stringify([fanoutSession]));
+fanoutParty.importState({
+  gymPartySettings:{localUserId:'fanout_user',sharingDestination:'all-active-parties'},
+  gymPartyMembershipsV2:[
+    {partyId:'party_alpha',userId:'fanout_user',active:true,backendMode:'firebase',privacy:{shareGymData:true,shareSetDetails:true},party:{id:'party_alpha',name:'Alpha'}},
+    {partyId:'party_beta',userId:'fanout_user',active:true,backendMode:'firebase',privacy:{shareGymData:true,shareSetDetails:true,hideAbsoluteWeights:true},party:{id:'party_beta',name:'Beta'}},
+    {partyId:'party_aggregate',userId:'fanout_user',active:true,backendMode:'firebase',privacy:{shareGymData:true,shareAggregateOnly:true,shareSetDetails:false},party:{id:'party_aggregate',name:'Agregado'}},
+    {partyId:'party_private',userId:'fanout_user',active:true,backendMode:'firebase',privacy:{shareGymData:false},party:{id:'party_private',name:'Privada'}}
+  ],
+  selectedPartyId:'party_alpha',sharedWorkoutSessions:[],sharedWorkoutSets:[],syncQueue:[]
+});
+const preparedFanout=fanoutParty.syncFromLocalWorkouts({silent:true});
+assert.equal(preparedFanout.destinations.length,3);
+let fanoutExport=fanoutParty.exportState();
+assert.equal(fanoutExport.sharedWorkoutSessions.length,3);
+assert.equal(fanoutExport.sharedWorkoutSets.length,2);
+assert.equal(fanoutExport.sharedWorkoutSets.find(item=>item.partyId==='party_alpha').weightKg,60);
+assert.equal(fanoutExport.sharedWorkoutSets.find(item=>item.partyId==='party_beta').weightKg,null);
+assert.equal(fanoutExport.syncQueue.length,5);
+const nativeTargets=fanoutParty.nativeShareTargets({originSessionId:'native_session',originSetId:'native_set'});
+const nativeFanout=await fanoutParty.enqueueNativeMutationShare({id:'mutation',sessionId:'native_session',exerciseId:'press-banca',setId:'native_set',shareTargets:nativeTargets},[fanoutSession]);
+assert.equal(nativeFanout.total,3);
+fanoutExport=fanoutParty.exportState();
+assert.equal(fanoutExport.sharedWorkoutSets.length,2,'El reintento nativo no duplica filas por destino');
 
 const {context: syncContext, store: syncStore} = createContext();
 const syncParty = syncContext.GYM_PARTY_FEATURES;

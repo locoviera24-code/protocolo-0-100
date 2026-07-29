@@ -20,6 +20,7 @@ public final class NativeWorkoutControlRepository {
     private static final String KEY_LAST_SAVE_ELAPSED = "native_last_save_elapsed_v1";
     private static final int SCHEMA_VERSION = 1;
     private static final int MAX_MUTATIONS = 200;
+    private static final int MAX_SHARE_TARGETS = 20;
     private static final int MAX_PAYLOAD_BYTES = 64 * 1024;
     private static final long IMPORTED_RETENTION_MS = 7L * 24L * 60L * 60L * 1000L;
     private static final long DOUBLE_TAP_WINDOW_MS = 1_200L;
@@ -132,6 +133,7 @@ public final class NativeWorkoutControlRepository {
             return EnqueueResult.error("payload-too-large");
         }
 
+        JSONArray mutationShareTargets = mutationShareTargets(widgetState.optJSONArray("nativeShareTargets"), sessionId, setId);
         NativeWorkoutMutation model = new NativeWorkoutMutation(
                 "native_mutation_" + uuid,
                 "save_set",
@@ -139,10 +141,13 @@ public final class NativeWorkoutControlRepository {
                 exerciseId,
                 setId,
                 payload,
-                cloneArray(widgetState.optJSONArray("nativeShareTargets"))
+                mutationShareTargets
         );
         JSONObject mutation = model.toJson();
         put(mutation, "dedupeFingerprint", fingerprint);
+        if (mutation.toString().getBytes(StandardCharsets.UTF_8).length > MAX_PAYLOAD_BYTES) {
+            return EnqueueResult.error("payload-too-large");
+        }
         queue.put(mutation);
 
         JSONObject control = readControlState(context);
@@ -156,6 +161,13 @@ public final class NativeWorkoutControlRepository {
         put(control, "unit", widgetState.optString("unit", "kg"));
         updateProvisionalGuidance(control, set, exerciseId, comparisonKey, payload.optString("date", ""));
         put(control, "privateImportState", "pending");
+        put(control, "shareTargets", cloneArray(mutationShareTargets));
+        JSONObject shareState = new JSONObject();
+        put(shareState, "total", mutationShareTargets.length());
+        put(shareState, "synced", 0);
+        put(shareState, "pending", mutationShareTargets.length());
+        put(shareState, "errors", 0);
+        put(control, "syncState", shareState);
         put(control, "pendingMutationCount", pendingCount(queue));
         put(control, "updatedAt", nowIso());
 
@@ -375,6 +387,48 @@ public final class NativeWorkoutControlRepository {
     private static JSONArray cloneArray(JSONArray value) {
         if (value == null) return new JSONArray();
         try { return new JSONArray(value.toString()); } catch (Exception ignored) { return new JSONArray(); }
+    }
+
+    private static JSONArray mutationShareTargets(JSONArray source, String sessionId, String setId) {
+        JSONArray output = new JSONArray();
+        if (source == null) return output;
+        for (int index = 0; index < source.length() && output.length() < MAX_SHARE_TARGETS; index++) {
+            JSONObject raw = source.optJSONObject(index);
+            if (raw == null) continue;
+            String partyId = safeId(raw.optString("partyId", ""));
+            String userId = safeId(raw.optString("userId", ""));
+            if (partyId.length() == 0 || userId.length() == 0) continue;
+            JSONObject target = new JSONObject();
+            put(target, "id", partyId + "_" + userId + "_" + safeId(setId));
+            put(target, "partyId", partyId);
+            put(target, "userId", userId);
+            put(target, "backendMode", "firebase".equals(raw.optString("backendMode", "")) ? "firebase" : "local");
+            put(target, "originSessionId", safeId(sessionId));
+            put(target, "originSetId", safeId(setId));
+            put(target, "privacySnapshot", mutationPrivacySnapshot(raw.optJSONObject("privacySnapshot")));
+            put(target, "syncState", "pending");
+            put(target, "attempts", 0);
+            put(target, "lastError", JSONObject.NULL);
+            output.put(target);
+        }
+        return output;
+    }
+
+    private static JSONObject mutationPrivacySnapshot(JSONObject raw) {
+        JSONObject value = raw == null ? new JSONObject() : raw;
+        JSONObject output = new JSONObject();
+        put(output, "shareGymData", value.optBoolean("shareGymData", true));
+        put(output, "shareAggregateOnly", value.optBoolean("shareAggregateOnly", false));
+        put(output, "shareSetDetails", value.optBoolean("shareSetDetails", true));
+        put(output, "hideAbsoluteWeights", value.optBoolean("hideAbsoluteWeights", false));
+        put(output, "anonymousAlias", value.optBoolean("anonymousAlias", false));
+        put(output, "shareGeneralScore", value.optBoolean("shareGeneralScore", false));
+        return output;
+    }
+
+    private static String safeId(String value) {
+        String clean = value == null ? "" : value.trim().replaceAll("[^A-Za-z0-9_-]", "_");
+        return clean.length() > 180 ? clean.substring(0, 180) : clean;
     }
 
     private static void copyIfPresent(JSONObject source, JSONObject target, String key) {

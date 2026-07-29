@@ -3926,3 +3926,60 @@ Siguiente acción exacta: crear destinos `ShareTarget` por membresía activa,
 encolar el fan-out después de la importación privada y sincronizar cada sala de
 forma idempotente e independiente, sin revertir el historial privado si una
 sala falla.
+
+## 88. Fan-out durable por Gym Party
+
+`gym-party-fanout.js` define los destinos de una serie sin duplicar el historial
+privado. Cada `ShareTarget` conserva `partyId`, `userId`, `originSessionId`,
+`originSetId`, snapshot de privacidad, estado, intentos y último error. El ID
+compartido nuevo se deriva de `partyId + userId + originSetId`. El adaptador
+reconoce también los IDs largos de builds anteriores y los conserva, para que
+un reintento o una actualización no cree una segunda fila.
+
+Con `multiPartyWorkoutSharing` activa, `sharingDestination` admite
+`all-active-parties`, `selected-parties` y `private-only`. El valor inicial es
+todos los grupos activos con `shareGymData=true`; la interfaz lo configura en
+`Grupo e invitaciones > Destino de nuevas series`. El guardado privado siempre
+ocurre primero. Cada destino aplica la política más restrictiva entre el
+snapshot capturado al guardar y la privacidad actual: detalle, solo agregado u
+ocultación de pesos. Una sala demo nunca se convierte en destino real.
+
+`WORKOUT_FEATURES` incluye `nativeShareTargets` y `nativeSyncState` en el estado
+del widget. Android valida un máximo de 20 destinos, completa los IDs de sesión
+y serie, y al guardar marca todos como pendientes. La notificación sigue
+mostrando únicamente el conteo `Grupos n/total`; no muestra nombres, códigos,
+miembros ni IDs. Tras incorporar la mutación, la WebView escribe sesiones,
+series y cola Gym Party mediante una transacción del repositorio antes de
+confirmar `privateImportState=imported` al bridge.
+
+Si el fan-out falla después de la escritura privada, la mutación permanece
+reintentable. En el intento siguiente el importador detecta el `setId` privado
+como duplicado, no lo vuelve a guardar y reintenta los destinos. La cola de
+Firestore filtra por `partyId + userId`; `syncAllActiveMemberships()` procesa
+cada sala independientemente, continúa si una falla y usa backoff existente.
+Abrir la app o recuperar conexión intenta todas las salas activas cuando la
+flag está encendida. No se añadió autenticación Firebase paralela ni se guardan
+tokens en texto plano.
+
+El bridge Android no copia objetos arbitrarios dentro de `privacySnapshot`:
+acepta únicamente los seis booleanos de privacidad conocidos y vuelve a medir
+el límite total de 64 KiB después de agregar los destinos. La sincronización
+automática tampoco depende de que la sala visible use Firebase; si hay otra
+membresía Firebase activa, sus operaciones pendientes se procesan igualmente.
+
+Pruebas aprobadas: tres grupos, destino privado, selección parcial, agregado
+sin detalle, pesos ocultos, ID determinista, compatibilidad de ID legacy,
+reintento sin duplicado, fallo de fan-out después del guardado privado,
+contadores synced/pending/error, contratos nativos, Workout, Gym Party, sync,
+datos, módulos y diseño. El E2E multigrupo aprobó en Android Chromium, iPhone
+WebKit y escritorio. Android assets están sincronizados; precache 85 recursos y
+artifact web 86, sin 404. Versión/build continúan en `2.7.0` / `89`.
+
+Pendiente real: la compilación Android y Firestore Emulator requieren el gate
+remoto. La sincronización con la app completamente cerrada sigue siendo cola
+durable hasta abrir la app o recuperar un proceso WebView; no se implementó un
+segundo login ni WorkManager con credenciales Firebase.
+
+Siguiente acción exacta: cerrar privacidad/estados visuales del control nativo,
+añadir política de reinicio del temporizador, ejecutar la regresión completa y
+documentar el proyecto antes del push beta.

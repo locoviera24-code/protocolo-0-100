@@ -441,6 +441,12 @@
           :(saveSessions(nextSessions),saveHistory(nextHistory),{ok:true});
         if(!result?.ok)throw new Error(result?.error?.message||result?.error||'native-import-write-failed');
       }
+      const fanoutResults=[];
+      if(typeof window.GYM_PARTY_FEATURES?.enqueueNativeMutationShare==='function'){
+        for(const mutation of [...imported,...duplicates]){
+          fanoutResults.push(await window.GYM_PARTY_FEATURES.enqueueNativeMutationShare(mutation,nextSessions));
+        }
+      }
       const acknowledge=(mutation,state,error='')=>{
         try{return typeof window.AndroidBridge?.acknowledgeNativeWorkoutMutation==='function'&&window.AndroidBridge.acknowledgeNativeWorkoutMutation(String(mutation.id||''),state,String(error||'').slice(0,300));}
         catch{return false;}
@@ -452,7 +458,7 @@
         if(latest)currentQuickExerciseId=latest.exercises?.[latest.currentExerciseIndex||0]?.id||currentQuickExerciseId;
         syncWorkoutWidget();
       }
-      return{ok:true,imported:imported.length,duplicates:duplicates.length,invalid:invalid.length};
+      return{ok:true,imported:imported.length,duplicates:duplicates.length,invalid:invalid.length,fanout:fanoutResults};
     })().catch(error=>{
       try{
         const payload=payloadOverride||JSON.parse(String(window.AndroidBridge?.getNativeWorkoutControlData?.()||'{}'));
@@ -1948,6 +1954,8 @@
       repsMode:normalizedLast.repsMode||'total'
     };
     const guidance=current&&window.WORKOUT_LOAD_GUIDANCE?.calculate?.({sessions:sessions(),exercise:current,candidateSet})||null;
+    const nativeShareTargets=window.GYM_PARTY_FEATURES?.nativeShareTargets?.({originSessionId:session?.id||'',originSetId:''})||[];
+    const nativeSyncState=window.GYM_PARTY_FEATURES?.nativeSyncState?.()||{total:0,synced:0,pending:0,errors:0};
     return {
       schemaVersion:3,
       featureFlags:window.APP_FEATURE_FLAGS?.all?.()||{schemaVersion:1,nativeWorkoutControlsV1:false,lockScreenWorkoutControls:false,nativeRestTimer:false,multiPartyWorkoutSharing:false},
@@ -2011,6 +2019,8 @@
         calculatedAt:guidance.calculatedAt,
         policyVersion:guidance.policyVersion
       }:null,
+      nativeShareTargets,
+      nativeSyncState,
       quickLog:{
         currentExerciseId:currentId,
         exerciseName:current?.name||'',

@@ -183,6 +183,8 @@
       firebaseConfig: {},
       localParties: {},
       selectedExerciseId: '',
+      sharingDestination:'all-active-parties',
+      selectedSharePartyIds:[],
       ...current,
       localUserId
     };
@@ -264,6 +266,27 @@
   function shareableMemberships(){
     const model=membershipModel(),current=memberships();
     return model?model.shareable(current):activeMemberships().filter(value=>value.privacy?.shareGymData!==false);
+  }
+  function sharingMemberships(){
+    const available=shareableMemberships();
+    if(!multiPartyEnabled()){
+      const selected=activeMembership();
+      return selected&&selected.privacy?.shareGymData!==false?[selected]:[];
+    }
+    return window.GYM_PARTY_FANOUT?.destinationMemberships?.(available,settings())||available;
+  }
+  function firebaseMemberships(){
+    const rows=multiPartyEnabled()?activeMemberships():[activeMembership()];
+    return rows.filter(item=>item?.backendMode==='firebase');
+  }
+  function nativeShareTargets({originSessionId='',originSetId=''}={}){
+    if(!multiPartyEnabled())return[];
+    const s=settings();
+    return window.GYM_PARTY_FANOUT?.targets?.(sharingMemberships(),{originSessionId,originSetId,sharingDestination:s.sharingDestination,selectedSharePartyIds:s.selectedSharePartyIds})||[];
+  }
+  function nativeSyncState(){
+    const targets=nativeShareTargets();
+    return window.GYM_PARTY_FANOUT?.status?.(targets,syncQueue())||{total:targets.length,synced:0,pending:targets.length,errors:0};
   }
   function activeMembership(){return selectedMembership();}
   function sharedSessions(){ return read(keys.sharedWorkoutSessions, []); }
@@ -706,7 +729,7 @@
     return safeArray(session.exercises).flatMap(exercise => safeArray(exercise.sets).map((rawSet, index) => {
       const set=window.WORKOUT_EQUIPMENT?.normalizeSet?.(rawSet,exercise)||rawSet;
       return ({
-      id: `${member.partyId}_${member.userId}_${session.id}_${exercise.id || exercise.exerciseId}_${set.id || index + 1}`,
+      id: window.GYM_PARTY_FANOUT?.targetId?.(member.partyId,member.userId,set.id||`${session.id}_${exercise.id||exercise.exerciseId}_${index+1}`)||`${member.partyId}_${member.userId}_${session.id}_${exercise.id || exercise.exerciseId}_${set.id || index + 1}`,
       partyId: member.partyId,
       sessionId: `${member.partyId}_${member.userId}_${session.id}`,
       userId: member.userId,
@@ -848,42 +871,101 @@
         updatedAt: nowIso()
       }));
   }
-  function queueUpserts(type, rows){
-    const queue = syncQueue();
+  function queuedUpserts(queue,type,rows){
     const map = new Map(queue.map(op => [op.id, op]));
     rows.filter(row=>row.dirty||row.pendingSync).forEach(row => {
       const id = `${type}:${row.id}`;
       const previous=map.get(id),sameRevision=number(previous?.payload?.revision)===number(row.revision);
       map.set(id,{id,type,collection:type==='session'?collections.sessions:collections.sets,payload:row,queuedAt:previous?.queuedAt||nowIso(),attempts:sameRevision?number(previous?.attempts):0,lastError:sameRevision?previous?.lastError||null:null,nextAttemptAt:sameRevision?previous?.nextAttemptAt||null:null});
     });
-    saveSyncQueue([...map.values()]);
+    return [...map.values()];
+  }
+  function queueUpserts(type,rows){
+    const next=queuedUpserts(syncQueue(),type,rows);
+    saveSyncQueue(next);
+    return next;
+  }
+  function retainExistingSharedSetIds(rows,existingRows){
+    const key=row=>`${row.sessionId||''}\u0000${row.localExerciseId||''}\u0000${row.localSetId||''}`;
+    const existing=new Map(safeArray(existingRows).filter(row=>row.localSetId).map(row=>[key(row),row]));
+    const existingById=new Map(safeArray(existingRows).map(row=>[row.id,row]));
+    return safeArray(rows).map(row=>{
+      const legacyId=`${row.sessionId||''}_${row.localExerciseId||''}_${row.localSetId||''}`;
+      const previous=existing.get(key(row))||existingById.get(legacyId);
+      return previous?{...row,id:previous.id}:row;
+    });
   }
   function syncFromLocalWorkouts({silent = false, queue = true} = {}){
-    const m = activeMembership();
-    if(!m || m.backendMode === 'demo') return {sessions: [], sets: []};
-    const privacy = privacyForShare();
-    if(!privacy.shareGymData) return {sessions: [], sets: []};
-    const member = {partyId: m.partyId, userId: m.userId, backendMode: m.backendMode};
-    const local = localWorkoutSessions();
-    const sessionBase=local.map(session=>sanitizeWorkoutSession(session,member,privacy));
-    const setBase=local.flatMap(session=>sanitizeWorkoutSets(session,member,privacy));
-    const ownExistingSessions=sharedSessions().filter(row=>row.partyId===m.partyId&&row.userId===m.userId);
-    const ownExistingSets=sharedSets().filter(row=>row.partyId===m.partyId&&row.userId===m.userId);
-    const sessions=m.backendMode==='firebase'?(syncEngine()?.prepareLocalRows?.(sessionBase,ownExistingSessions)||sessionBase):sessionBase.map(row=>({...row,pendingSync:false,dirty:false,syncState:'local'}));
-    const sets=m.backendMode==='firebase'?(syncEngine()?.prepareLocalRows?.(setBase,ownExistingSets)||setBase):setBase.map(row=>({...row,pendingSync:false,dirty:false,syncState:'local'}));
-    const deletedSets=localSetTombstones(ownExistingSets,sessions,sets,member);
-    const currentPreparedSetIds=new Set(sets.map(row=>row.id));
-    const existingTombstones=ownExistingSets.filter(row=>(row.deleted||row.deletedAt)&&!currentPreparedSetIds.has(row.id));
-    const withoutOwnSessions = sharedSessions().filter(row => !(row.partyId === m.partyId && row.userId === m.userId));
-    const withoutOwnSets = sharedSets().filter(row => !(row.partyId === m.partyId && row.userId === m.userId));
-    saveSharedSessions(upsertById(withoutOwnSessions, sessions));
-    saveSharedSets(upsertById(withoutOwnSets,[...sets,...existingTombstones,...deletedSets]));
-    if(queue && m.backendMode === 'firebase'){
-      queueUpserts('session',sessions);
-      queueUpserts('set',[...sets,...existingTombstones,...deletedSets]);
+    const destinations=sharingMemberships().filter(item=>item.backendMode!=='demo');
+    if(!destinations.length)return{sessions:[],sets:[],destinations:[]};
+    const local=localWorkoutSessions(),preparedSessions=[],preparedSets=[];
+    let nextSharedSessions=sharedSessions(),nextSharedSets=sharedSets();
+    destinations.forEach(m=>{
+      const privacy={...defaultPrivacy,...(m.privacy||{})};
+      if(!privacy.shareGymData)return;
+      const member={partyId:m.partyId,userId:m.userId,backendMode:m.backendMode};
+      const ownExistingSessions=nextSharedSessions.filter(row=>row.partyId===m.partyId&&row.userId===m.userId);
+      const ownExistingSets=nextSharedSets.filter(row=>row.partyId===m.partyId&&row.userId===m.userId);
+      const sessionBase=local.map(session=>sanitizeWorkoutSession(session,member,privacy));
+      const setBase=retainExistingSharedSetIds(local.flatMap(session=>sanitizeWorkoutSets(session,member,privacy)),ownExistingSets);
+      const sessionsForParty=m.backendMode==='firebase'?(syncEngine()?.prepareLocalRows?.(sessionBase,ownExistingSessions)||sessionBase):sessionBase.map(row=>({...row,pendingSync:false,dirty:false,syncState:'local'}));
+      const setsForParty=m.backendMode==='firebase'?(syncEngine()?.prepareLocalRows?.(setBase,ownExistingSets)||setBase):setBase.map(row=>({...row,pendingSync:false,dirty:false,syncState:'local'}));
+      const deletedSets=localSetTombstones(ownExistingSets,sessionsForParty,setsForParty,member);
+      const currentPreparedSetIds=new Set(setsForParty.map(row=>row.id));
+      const existingTombstones=ownExistingSets.filter(row=>(row.deleted||row.deletedAt)&&!currentPreparedSetIds.has(row.id));
+      nextSharedSessions=upsertById(nextSharedSessions.filter(row=>!(row.partyId===m.partyId&&row.userId===m.userId)),sessionsForParty);
+      nextSharedSets=upsertById(nextSharedSets.filter(row=>!(row.partyId===m.partyId&&row.userId===m.userId)),[...setsForParty,...existingTombstones,...deletedSets]);
+      preparedSessions.push(...sessionsForParty);preparedSets.push(...setsForParty);
+      if(queue&&m.backendMode==='firebase'){
+        queueUpserts('session',sessionsForParty);
+        queueUpserts('set',[...setsForParty,...existingTombstones,...deletedSets]);
+      }
+    });
+    saveSharedSessions(nextSharedSessions);saveSharedSets(nextSharedSets);
+    if(!silent&&preparedSessions.length)flashMessage(`Entrenamientos preparados para ${destinations.length} grupo(s).`);
+    return{sessions:preparedSessions,sets:preparedSets,destinations:destinations.map(item=>item.partyId)};
+  }
+  async function enqueueNativeMutationShare(mutation,canonicalSessions=null){
+    if(!multiPartyEnabled())return{ok:true,total:0,synced:0,pending:0,errors:0};
+    const fanout=window.GYM_PARTY_FANOUT;
+    const targets=fanout?.normalizeTargets?.(mutation?.shareTargets,{originSessionId:mutation?.sessionId,originSetId:mutation?.setId})||[];
+    if(!targets.length)return{ok:true,total:0,synced:0,pending:0,errors:0};
+    const session=safeArray(canonicalSessions||localWorkoutSessions()).find(item=>item.id===mutation.sessionId);
+    const exercise=session?.exercises?.find(item=>(item.exerciseId||item.id)===mutation.exerciseId||safeArray(item.sets).some(set=>set.id===mutation.setId));
+    const set=exercise?.sets?.find(item=>item.id===mutation.setId);
+    if(!session||!exercise||!set)throw new Error('native-share-source-missing');
+    const activeById=new Map(activeMemberships().map(item=>[`${item.partyId}\u0000${item.userId}`,item]));
+    let nextSessions=sharedSessions(),nextSets=sharedSets(),nextQueue=syncQueue();
+    const effectiveTargets=[];
+    for(const target of targets){
+      const membership=activeById.get(`${target.partyId}\u0000${target.userId}`);
+      if(!membership||membership.backendMode==='demo'||membership.privacy?.shareGymData===false)continue;
+      const privacy=fanout.stricterPrivacy(target.privacySnapshot,membership.privacy);
+      if(!privacy.shareGymData)continue;
+      const member={partyId:membership.partyId,userId:membership.userId,backendMode:membership.backendMode};
+      const existingSessions=nextSessions.filter(row=>row.partyId===member.partyId&&row.userId===member.userId);
+      const existingSets=nextSets.filter(row=>row.partyId===member.partyId&&row.userId===member.userId);
+      const rawSession=sanitizeWorkoutSession(session,member,privacy);
+      let rawSet=sanitizeWorkoutSets(session,member,privacy).find(row=>row.localSetId===mutation.setId)||null;
+      if(rawSet){
+        rawSet={...rawSet,id:fanout.targetId(member.partyId,member.userId,mutation.setId),sessionId:fanout.sessionId(member.partyId,member.userId,mutation.sessionId)};
+        rawSet=retainExistingSharedSetIds([rawSet],existingSets)[0];
+      }
+      const sessionRows=member.backendMode==='firebase'?(syncEngine()?.prepareLocalRows?.([rawSession],existingSessions)||[rawSession]):[{...rawSession,pendingSync:false,dirty:false,syncState:'local'}];
+      const setRows=rawSet?(member.backendMode==='firebase'?(syncEngine()?.prepareLocalRows?.([rawSet],existingSets)||[rawSet]):[{...rawSet,pendingSync:false,dirty:false,syncState:'local'}]):[];
+      nextSessions=upsertById(nextSessions,sessionRows);nextSets=upsertById(nextSets,setRows);
+      if(member.backendMode==='firebase'){
+        nextQueue=queuedUpserts(nextQueue,'session',sessionRows);
+        nextQueue=queuedUpserts(nextQueue,'set',setRows);
+      }
+      effectiveTargets.push({...target,privacySnapshot:privacy,backendMode:member.backendMode,syncState:member.backendMode==='firebase'?'pending':'synced'});
     }
-    if(!silent && sessions.length) flashMessage('Entrenamientos de gym preparados para compartir.');
-    return {sessions, sets};
+    const changes={[keys.sharedWorkoutSessions]:nextSessions,[keys.sharedWorkoutSets]:nextSets,[keys.syncQueue]:nextQueue};
+    const result=window.APP_REPOSITORIES?.gymParty?.replace
+      ?await window.APP_REPOSITORIES.gymParty.replace(changes,'native-workout-fanout')
+      :(saveSharedSessions(nextSessions),saveSharedSets(nextSets),saveSyncQueue(nextQueue),{ok:true});
+    if(!result?.ok)throw new Error(result?.error?.message||result?.error||'native-share-write-failed');
+    return{ok:true,...(fanout.status(effectiveTargets,nextQueue)),targets:effectiveTargets};
   }
 
   function memberStats(member, sessions, sets, start){
@@ -1114,6 +1196,23 @@
         ?`<button type="button" class="secondary" data-gym-party-action="back-to-party">Volver al grupo seleccionado</button>`
         :`<button type="button" class="secondary" data-gym-party-action="new-room">Agregar otro grupo</button>`}
     </div>`;
+  }
+  function sharingControlsHtml(){
+    if(!multiPartyEnabled())return'';
+    const s=settings(),mode=window.GYM_PARTY_FANOUT?.destination?.(s.sharingDestination)||'all-active-parties';
+    const selected=new Set(safeArray(s.selectedSharePartyIds));
+    const rows=activeMemberships().filter(item=>item.backendMode!=='demo');
+    return `<details class="partyNestedFold">
+      <summary>Destino de nuevas series</summary>
+      <div class="field"><label for="partySharingDestination">Compartir después del guardado privado</label><select id="partySharingDestination">
+        <option value="all-active-parties" ${mode==='all-active-parties'?'selected':''}>Todos mis grupos activos</option>
+        <option value="selected-parties" ${mode==='selected-parties'?'selected':''}>Solo grupos elegidos</option>
+        <option value="private-only" ${mode==='private-only'?'selected':''}>Solo privado</option>
+      </select></div>
+      <div class="checks">${rows.map(item=>`<label class="check"><input type="checkbox" data-party-share-choice value="${escape(item.partyId)}" ${selected.has(item.partyId)?'checked':''}><span>${escape(membershipLabel(item))}</span></label>`).join('')}</div>
+      <button type="button" class="secondary" data-gym-party-action="save-sharing-destination">Guardar destino</button>
+      <div class="muted small">El historial privado siempre se guarda. Cada grupo usa su propia configuración de privacidad.</div>
+    </details>`;
   }
   function noRoomHtmlSimple(){
     const cfg = settings().firebaseConfig || {};
@@ -2003,6 +2102,7 @@
           <summary>Guardar acceso para otro dispositivo</summary>
           ${portableAccessFormHtml({mode: 'link'})}
         </details>` : '<div class="muted small">La recuperacion en otro dispositivo requiere sala online con Firebase.</div>'}
+        ${sharingControlsHtml()}
         <details class="partyNestedFold">
           <summary>Salir o borrar datos compartidos</summary>
           <div class="buttons partySecondaryActions">
@@ -2086,6 +2186,7 @@
     else if(action === 'new-room') newRoomFlow();
     else if(action === 'select-party') selectMembership(event?.target?.closest?.('[data-party-id]')?.dataset?.partyId||'');
     else if(action === 'back-to-party'){saveSettings({partyComposerOpen:false});renderGymParty();}
+    else if(action === 'save-sharing-destination') saveSharingDestination();
     else if(action === 'leave'||action === 'leave-device') leavePartyDevice();
     else if(action === 'leave-remote') deactivateFirebaseMembership().catch(error=>flashMessage(firebaseError(error)));
     else if(action === 'leave-delete-shared') deleteSharedDataAndLeave().catch(error=>flashMessage(firebaseError(error)));
@@ -2195,9 +2296,9 @@
   }
   function refreshPartyWorkoutShare(){
     syncFromLocalWorkouts({silent: true});
-    const m = activeMembership();
-    if(autoSyncEnabled() && m?.backendMode === 'firebase' && typeof navigator !== 'undefined' && navigator.onLine !== false){
-      syncFirebaseNow({silent: true}).catch(() => flashMessage('Guardado localmente. Se sincronizara al volver a intentar.'));
+    if(autoSyncEnabled() && firebaseMemberships().length && typeof navigator !== 'undefined' && navigator.onLine !== false){
+      const operation=multiPartyEnabled()?syncAllActiveMemberships({silent:true}):syncFirebaseNow({silent:true});
+      operation.catch(() => flashMessage('Guardado localmente. Se sincronizara al volver a intentar.'));
     }
   }
   function selectPartyMuscle(event, options = {}){
@@ -2356,6 +2457,15 @@
     }finally{
       renderGymParty();
     }
+  }
+  function saveSharingDestination(){
+    const mode=window.GYM_PARTY_FANOUT?.destination?.(document.getElementById('partySharingDestination')?.value)||'all-active-parties';
+    const selectedSharePartyIds=[...document.querySelectorAll('[data-party-share-choice]:checked')].map(item=>item.value);
+    saveSettings({sharingDestination:mode,selectedSharePartyIds});
+    syncFromLocalWorkouts({silent:true});
+    window.WORKOUT_FEATURES?.syncWorkoutWidget?.();
+    renderGymParty();
+    flashMessage(mode==='private-only'?'Las nuevas series quedarán solo en privado.':'Destino de grupos actualizado.');
   }
 
   function setGymPartyBusy(busy){
@@ -2807,9 +2917,10 @@
     const next=error?(syncEngine()?.markRowsError?.(current,ids,error,attempts)||current):(syncEngine()?.markRowsSynced?.(current,ids)||current);
     if(isSession) saveSharedSessions(next); else saveSharedSets(next);
   }
-  async function uploadSyncQueue(runtime,{force=false}={}){
+  async function uploadSyncQueue(runtime,{force=false,partyId='',userId=''}={}){
     const {db,firestoreMod}=runtime; let queue=syncQueue(); const now=Date.now(); let uploaded=0;
-    const due=queue.filter(op=>force||!op.nextAttemptAt||new Date(op.nextAttemptAt).getTime()<=now);
+    const belongs=op=>(!partyId||op?.payload?.partyId===partyId)&&(!userId||op?.payload?.userId===userId);
+    const due=queue.filter(op=>belongs(op)&&(force||!op.nextAttemptAt||new Date(op.nextAttemptAt).getTime()<=now));
     for(let index=0;index<due.length;index+=400){
       const chunk=due.slice(index,index+400),batch=firestoreMod.writeBatch(db),timestamp=firestoreMod.serverTimestamp();
       chunk.forEach(op=>batch.set(firestoreMod.doc(db,op.collection,op.payload.id),{...firestorePayload(op.payload,op.collection),updatedAt:timestamp}));
@@ -2849,10 +2960,10 @@
         throw detailedError;
       }
     }
-    return {uploaded,remaining:syncQueue().length};
+    return {uploaded,remaining:syncQueue().filter(belongs).length};
   }
-  async function fetchRemoteCollection(runtime,collectionName,{full=false,pageSize=250}={}){
-    const m=activeMembership(),{db,firestoreMod}=runtime,watermark=lastRemoteSyncAt(); let cursor=null,pages=0; const rows=[];
+  async function fetchRemoteCollection(runtime,collectionName,{full=false,pageSize=250,member=activeMembership(),watermark=''}={}){
+    const m=member,{db,firestoreMod}=runtime; let cursor=null,pages=0; const rows=[];
     do{
       const constraints=[firestoreMod.where('partyId','==',m.partyId)];
       if(!full&&watermark) constraints.push(firestoreMod.where('updatedAt','>',firestoreMod.Timestamp.fromDate(new Date(watermark))));
@@ -2881,8 +2992,8 @@
       if(session) api.replaceSessionPayload(session);
     });
   }
-  async function syncFirebaseNow({silent=false,full=false,force=false}={}){
-    const m=activeMembership(); if(!m||m.backendMode!=='firebase') return;
+  async function syncFirebaseNow({silent=false,full=false,force=false,membershipOverride=null}={}){
+    const m=membershipOverride||activeMembership(); if(!m||m.backendMode!=='firebase') return;
     saveMembership({...m,syncState:'syncing',lastError:''},{select:false});
     let stage='cargar Firebase';
     try{
@@ -2891,13 +3002,14 @@
       assertFirebaseSessionMatchesMembership(auth,m);
       stage='preparar consultas';
       const membersQuery=firestoreMod.query(firestoreMod.collection(db,collections.members),firestoreMod.where('partyId','==',m.partyId),firestoreMod.where('active','==',true),firestoreMod.limit(MAX_GYM_PARTY_MEMBERS+1));
-      const shouldFull=full||!lastRemoteSyncAt();
+      const watermark=m.lastRemoteSyncAt||(activeMemberships().length<=1?read(keys.lastRemoteSyncAt,''):'');
+      const shouldFull=full||!watermark;
       stage='leer datos compartidos';
       const [partySnap,membersSnap,remoteSessions,remoteSets]=await Promise.all([
         firebaseStage('leer sala',()=>firestoreMod.getDoc(firestoreMod.doc(db,collections.parties,m.partyId))),
         firebaseStage('leer miembros',()=>firestoreMod.getDocs(membersQuery)),
-        firebaseStage('leer sesiones',()=>fetchRemoteCollection(runtime,collections.sessions,{full:shouldFull,pageSize:120})),
-        firebaseStage('leer series',()=>fetchRemoteCollection(runtime,collections.sets,{full:shouldFull,pageSize:300}))
+        firebaseStage('leer sesiones',()=>fetchRemoteCollection(runtime,collections.sessions,{full:shouldFull,pageSize:120,member:m,watermark})),
+        firebaseStage('leer series',()=>fetchRemoteCollection(runtime,collections.sets,{full:shouldFull,pageSize:300,member:m,watermark}))
       ]);
       stage='integrar datos';
       const localSessions=sharedSessions(),localSets=sharedSets();
@@ -2909,22 +3021,35 @@
       discardResolvedQueueRows([...mergedSessions,...mergedSets]);
       reconcileOwnRemoteWorkouts(m,mergedSessions,mergedSets);
       stage='subir cambios';
-      const upload=await firebaseStage(stage,()=>uploadSyncQueue(runtime,{force}));
+      const upload=await firebaseStage(stage,()=>uploadSyncQueue(runtime,{force,partyId:m.partyId,userId:m.userId}));
       stage='guardar estado';
-      const members=membersSnap.docs.map(docSnap=>docSnap.data()),party={...(m.party||currentParty()||{}),...(partySnap.exists()?partySnap.data():{}),members,membersCount:members.length,maxMembers:partySnap.data()?.maxMembers||MAX_GYM_PARTY_MEMBERS};
-      saveMembership({...m,party,inviteCode:party.inviteCode||m.inviteCode,updatedAt:nowIso()});
-      const latest=syncEngine()?.latestRemoteTimestamp?.([...remoteSessions,...remoteSets])||''; if(latest) setLastRemoteSyncAt(latest);
-      setLastSync(); saveSettings({syncLastError:'',syncLastMode:shouldFull?'full':'incremental',syncLastDownloaded:remoteSessions.length+remoteSets.length});
+      const members=membersSnap.docs.map(docSnap=>docSnap.data()),party={...(m.party||{}),...(partySnap.exists()?partySnap.data():{}),members,membersCount:members.length,maxMembers:partySnap.data()?.maxMembers||MAX_GYM_PARTY_MEMBERS};
+      const latest=syncEngine()?.latestRemoteTimestamp?.([...remoteSessions,...remoteSets])||'',syncedAt=nowIso();
+      saveMembership({...m,party,inviteCode:party.inviteCode||m.inviteCode,updatedAt:syncedAt,lastSyncAt:syncedAt,lastRemoteSyncAt:latest||m.lastRemoteSyncAt||'',syncState:'synced',lastError:''},{select:false});
+      if(m.partyId===selectedPartyId()){
+        write(keys.lastSyncAt,syncedAt);if(latest)write(keys.lastRemoteSyncAt,latest);
+        saveSettings({syncLastError:'',syncLastMode:shouldFull?'full':'incremental',syncLastDownloaded:remoteSessions.length+remoteSets.length});
+      }
       if(!silent) flashMessage(`Gym Party sincronizada: ${upload.uploaded} subida(s), ${remoteSessions.length+remoteSets.length} cambio(s) remoto(s).`);
       return {uploaded:upload.uploaded,downloaded:remoteSessions.length+remoteSets.length,full:shouldFull};
     }catch(error){
       const traced=error?.gymPartyStage
         ? error
         : Object.assign(new Error(`${stage}: ${error?.message||error}`),{code:error?.code||'',gymPartyStage:stage,cause:error});
-      saveSettings({syncLastError:String(traced.message).slice(0,300),syncLastFailedAt:nowIso(),syncLastFailedStage:traced.gymPartyStage||stage});
+      if(m.partyId===selectedPartyId())saveSettings({syncLastError:String(traced.message).slice(0,300),syncLastFailedAt:nowIso(),syncLastFailedStage:traced.gymPartyStage||stage});
       saveMembership({...m,syncState:'error',lastError:String(traced.message).slice(0,300)},{select:false});
       throw traced;
     }
+  }
+  async function syncAllActiveMemberships({force=false,full=false,silent=true}={}){
+    const rows=firebaseMemberships();
+    const results=[];
+    for(const item of rows){
+      try{results.push({partyId:item.partyId,ok:true,result:await syncFirebaseNow({force,full,silent,membershipOverride:item})});}
+      catch(error){results.push({partyId:item.partyId,ok:false,error:String(error?.message||error).slice(0,300)});}
+    }
+    window.WORKOUT_FEATURES?.syncWorkoutWidget?.();
+    return results;
   }
 
   function exportableSettings(){
@@ -3029,9 +3154,9 @@
         if(tab&&!tab.classList.contains('hidden'))renderGymParty();
       });
       window.addEventListener('online', () => {
-        const m = activeMembership();
-        if(autoSyncEnabled() && m?.backendMode === 'firebase' && syncQueue().length){
-          syncNow({force:false}).catch(() => flashMessage('Hay datos pendientes; probá sincronizar manualmente.'));
+        if(autoSyncEnabled() && firebaseMemberships().length && syncQueue().length){
+          const operation=multiPartyEnabled()?syncAllActiveMemberships({force:false,silent:true}):syncNow({force:false});
+          operation.catch(() => flashMessage('Hay datos pendientes; probá sincronizar manualmente.'));
         }
       });
     }
@@ -3072,13 +3197,12 @@
   function resumeFirebaseMembership(){
     if(window.__gymPartyResumeSyncStarted) return;
     if(!autoSyncEnabled()) return;
-    const m = activeMembership();
-    if(!m || m.backendMode !== 'firebase') return;
+    if(!firebaseMemberships().length) return;
     if(typeof navigator !== 'undefined' && navigator.onLine === false) return;
     window.__gymPartyResumeSyncStarted = true;
     setTimeout(() => {
       syncFromLocalWorkouts({silent: true});
-      syncFirebaseNow({silent: true})
+      (multiPartyEnabled()?syncAllActiveMemberships({silent:true}):syncFirebaseNow({silent:true}))
         .then(() => {
           if(document.getElementById('gymPartyRoot')) renderGymParty();
         })
@@ -3117,7 +3241,12 @@
     selectedMembership,
     selectMembership,
     shareableMemberships,
-    saveMemberships
+    saveMemberships,
+    sharingMemberships,
+    nativeShareTargets,
+    nativeSyncState,
+    enqueueNativeMutationShare,
+    syncAllActiveMemberships
   };
   window.renderGymParty = renderGymParty;
 

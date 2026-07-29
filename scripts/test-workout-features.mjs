@@ -300,8 +300,9 @@ assert.equal(workout.importWidgetStateFromAndroid({
 assert.equal(JSON.parse(store.get(workout.keys.workoutSessions))[0].id, 'workout_android_test');
 assert.equal(JSON.parse(store.get(workout.keys.exerciseHistory))['press-banca'].lastWeight, 60);
 
-const nativeMutation={id:'native_mutation_test',type:'save_set',sessionId:'native-queue-session',exerciseId:'press-banca',setId:'native-queue-set',privateImportState:'pending',payload:{date:'2026-06-22',dayKey:'monday',weekday:'Lunes',routine:{name:'Torso A'},startedAt:'2026-06-22T13:00:00.000Z',currentExerciseIndex:0,exercise:{id:'press-native',exerciseId:'press-banca',name:'Press de banca',muscle:'Pecho'},set:{id:'native-queue-set',setNumber:1,reps:8,weight:70,weightKg:70,measurementMode:'reps',loadMode:'total',equipmentId:'machine',setType:'working',completed:true}}};
+const nativeMutation={id:'native_mutation_test',type:'save_set',sessionId:'native-queue-session',exerciseId:'press-banca',setId:'native-queue-set',privateImportState:'pending',shareTargets:[{partyId:'party',userId:'user',originSessionId:'native-queue-session',originSetId:'native-queue-set'}],payload:{date:'2026-06-22',dayKey:'monday',weekday:'Lunes',routine:{name:'Torso A'},startedAt:'2026-06-22T13:00:00.000Z',currentExerciseIndex:0,exercise:{id:'press-native',exerciseId:'press-banca',name:'Press de banca',muscle:'Pecho'},set:{id:'native-queue-set',setNumber:1,reps:8,weight:70,weightKg:70,measurementMode:'reps',loadMode:'total',equipmentId:'machine',setType:'working',completed:true}}};
 const nativeAcks=[];context.AndroidBridge={acknowledgeNativeWorkoutMutation:(...args)=>{nativeAcks.push(args);return true;}};
+const nativeFanoutCalls=[];context.GYM_PARTY_FEATURES={enqueueNativeMutationShare:async(mutation,sessions)=>{nativeFanoutCalls.push({mutation,sessions});return{ok:true,total:1,pending:1};}};
 const firstNativeImport=await workout.importNativeWorkoutMutationsFromAndroid({schemaVersion:1,mutations:[nativeMutation]});
 assert.equal(firstNativeImport.ok,true);assert.equal(firstNativeImport.imported,1);
 const secondNativeImport=await workout.importNativeWorkoutMutationsFromAndroid({schemaVersion:1,mutations:[nativeMutation]});
@@ -310,11 +311,20 @@ const nativeQueuedSession=JSON.parse(store.get(workout.keys.workoutSessions)).fi
 assert.equal(nativeQueuedSession.exercises[0].sets.length,1);assert.equal(nativeQueuedSession.exercises[0].sets[0].id,'native-queue-set');
 assert.equal(JSON.parse(store.get(workout.keys.exerciseHistory))['press-banca'].lastWeight,70);
 assert.deepEqual(nativeAcks.map(item=>item[1]),['imported','imported']);
+assert.equal(nativeFanoutCalls.length,2);assert.equal(nativeFanoutCalls[1].sessions.find(item=>item.id==='native-queue-session').exercises[0].sets.length,1);
 const {context:failedNativeContext,store:failedNativeStore}=createContext();const failedAcks=[];
 failedNativeContext.APP_REPOSITORIES={workout:{replace:async()=>({ok:false,error:{message:'quota'}})}};
 failedNativeContext.AndroidBridge={acknowledgeNativeWorkoutMutation:(...args)=>{failedAcks.push(args);return true;}};
 const failedNativeImport=await failedNativeContext.WORKOUT_FEATURES.importNativeWorkoutMutationsFromAndroid({schemaVersion:1,mutations:[nativeMutation]});
 assert.equal(failedNativeImport.ok,false);assert.equal(failedNativeStore.get(failedNativeContext.WORKOUT_FEATURES.keys.workoutSessions),'[]');assert.equal(failedAcks[0][1],'error');
+const {context:fanoutFailureContext,store:fanoutFailureStore}=createContext();const fanoutFailureAcks=[];
+fanoutFailureContext.AndroidBridge={acknowledgeNativeWorkoutMutation:(...args)=>{fanoutFailureAcks.push(args);return true;}};
+fanoutFailureContext.GYM_PARTY_FEATURES={enqueueNativeMutationShare:async()=>{throw new Error('party-offline');}};
+const failedFanoutImport=await fanoutFailureContext.WORKOUT_FEATURES.importNativeWorkoutMutationsFromAndroid({schemaVersion:1,mutations:[nativeMutation]});
+assert.equal(failedFanoutImport.ok,false);assert.equal(JSON.parse(fanoutFailureStore.get(fanoutFailureContext.WORKOUT_FEATURES.keys.workoutSessions))[0].exercises[0].sets.length,1);assert.equal(fanoutFailureAcks[0][1],'error');
+fanoutFailureContext.GYM_PARTY_FEATURES={enqueueNativeMutationShare:async()=>({ok:true,total:1,pending:1})};
+const retriedFanoutImport=await fanoutFailureContext.WORKOUT_FEATURES.importNativeWorkoutMutationsFromAndroid({schemaVersion:1,mutations:[nativeMutation]});
+assert.equal(retriedFanoutImport.ok,true);assert.equal(retriedFanoutImport.duplicates,1);assert.equal(fanoutFailureAcks.at(-1)[1],'imported');
 
 const customPlan = {monday: {dayKey: 'monday', weekday: 'Lunes', name: 'Rutina propia', type: 'workout', muscles: ['Test'], exercises: []}};
 const {context: customContext} = createContext({

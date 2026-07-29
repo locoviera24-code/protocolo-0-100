@@ -15,6 +15,10 @@ const [repository,widget,activity,timer,notification,receiver,manifest,smallLayo
 ]);
 
 for(const contract of ['native_control_state_v1','native_mutation_queue_v1','MAX_MUTATIONS = 200','DOUBLE_TAP_WINDOW_MS','UUID.randomUUID','privateImportState','shareTargets','payload-too-large','commit()'])assert.ok(repository.includes(contract),`Falta contrato nativo: ${contract}`);
+for(const contract of ['MAX_SHARE_TARGETS = 20','mutationShareTargets','mutationPrivacySnapshot','originSessionId','originSetId','privacySnapshot'])assert.ok(repository.includes(contract),`Falta destino nativo validado: ${contract}`);
+for(const field of ['shareGymData','shareAggregateOnly','shareSetDetails','hideAbsoluteWeights','anonymousAlias','shareGeneralScore'])assert.ok(repository.includes(`put(output, "${field}"`),`Falta campo permitido de privacidad: ${field}`);
+assert.doesNotMatch(repository,/put\(target, "privacySnapshot", cloneObject/);
+assert.match(repository,/mutation\.toString\(\)\.getBytes\(StandardCharsets\.UTF_8\)\.length > MAX_PAYLOAD_BYTES/);
 assert.match(repository,/public static synchronized EnqueueResult enqueueSaveSet/);
 assert.match(repository,/public static synchronized boolean acknowledge/);
 assert.match(repository,/NativeWorkoutMutation model = new NativeWorkoutMutation\([\s\S]+?"save_set"/);
@@ -34,5 +38,7 @@ for(const layout of [smallLayout,mediumLayout])for(const id of ['widgetTimerPane
 assert.match(activity,/requestWorkoutNotificationPermission/);
 assert.match(activity,/handleNativeWorkoutTimerAction/);
 assert.match(features,/nativeWorkoutSettings/);
+assert.match(features,/nativeShareTargets/);
+assert.match(features,/nativeSyncState/);
 assert.match(features,/syncNativeTimerFromBridge/);
 console.log('Controles nativos correctos: cola durable, timer monotónico, widget compartido, notificación privada y bridge acotado.');

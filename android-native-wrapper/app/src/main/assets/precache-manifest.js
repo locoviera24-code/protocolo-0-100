@@ -85,6 +85,11 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
       "sha256": "6817df93e282223b4995ab830162922e8feb301fd94d7033eb80fa8b797c8c46"
     },
     {
+      "url": "./gym-party-fanout.js",
+      "bytes": 4388,
+      "sha256": "76c6a6843d212a033da9e86d5f22b87b8c627da42a55b6aeb789b93b8b36e6a8"
+    },
+    {
       "url": "./gym-party-memberships.js",
       "bytes": 3466,
       "sha256": "8d0baa56cd4b77e921396e7e103d8bc8fcfa3c36c356f7ac4afd54c4ac4abc0e"
@@ -106,8 +111,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     },
     {
       "url": "./gym-party.js",
-      "bytes": 200350,
-      "sha256": "8f3dbf28de8986f81a1c78e2d60a4254d393469379beac9c3423a179bfc42736"
+      "bytes": 209950,
+      "sha256": "439735af7ecd7bdcaf9f1c2745d223636225f2d51b463261fca320db399c3522"
     },
     {
       "url": "./gym/anomaly-detector.js",
@@ -141,8 +146,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     },
     {
       "url": "./index.html",
-      "bytes": 320129,
-      "sha256": "953df033182314c4af98f7b37e4398c3439431db679711189f56f641d680cc5d"
+      "bytes": 320173,
+      "sha256": "ef09536d83ec99d6e2454f44bf8a261dee87c3b1ca74574180ae4f5b180b7efc"
     },
     {
       "url": "./nutrition-data.js",
@@ -326,8 +331,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     },
     {
       "url": "./workout-features.js",
-      "bytes": 166309,
-      "sha256": "f2240e032b9590a5a9ce301a27bb0006d8adba3d09a7f0df06cca0e7bb060490"
+      "bytes": 166930,
+      "sha256": "d9fdc573668ec682b95ba5616ede70ddef1c3392345c0475eab2726ef7aea83d"
     },
     {
       "url": "./workout-metrics.js",
