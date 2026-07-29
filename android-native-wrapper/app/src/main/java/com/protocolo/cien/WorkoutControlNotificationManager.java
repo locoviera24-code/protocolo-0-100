@@ -50,12 +50,14 @@ public final class WorkoutControlNotificationManager {
     }
 
     public static void notifyTimerFinished(Context context) {
-        if (!NativeWorkoutControlRepository.featureEnabled(context, "lockScreenWorkoutControls") || !hasPermission(context)) return;
+        JSONObject settings = NativeWorkoutControlRepository.nativeSettings(context);
+        if (!NativeWorkoutControlRepository.featureEnabled(context, "lockScreenWorkoutControls")
+                || !settings.optBoolean("showWorkoutOnLockScreen", true)
+                || !hasPermission(context)) return;
         NotificationManager manager = manager(context);
         if (manager == null) return;
         createChannel(manager);
         JSONObject control = NativeWorkoutControlRepository.readControlState(context);
-        JSONObject settings = NativeWorkoutControlRepository.nativeSettings(context);
         boolean sound = settings.optBoolean("timerSound", false);
         boolean vibration = settings.optBoolean("timerVibration", true);
         Notification.Builder builder = builder(context, sound ? CHANNEL_TIMER_SOUND : vibration ? CHANNEL_TIMER_VIBRATE : CHANNEL_ID)
@@ -88,7 +90,7 @@ public final class WorkoutControlNotificationManager {
         int setNumber = Math.max(1, control.optInt("setNumber", 1));
         String line = reps + " reps";
         if (showWeight) line += " · " + formatWeight(control.optDouble("draftWeight", 0)) + " " + unit;
-        String detail = guidanceText(control, showRecord);
+        String detail = guidanceText(control, showRecord, showWeight);
         String sync = syncText(control);
         if (sync.length() > 0) detail = detail.length() == 0 ? sync : detail + " · " + sync;
 
@@ -104,27 +106,44 @@ public final class WorkoutControlNotificationManager {
                 .setVisibility(lockVisibility(context));
 
         String timerStatus = timer.optString("timerStatus", "idle");
-        if ("running".equals(timerStatus)) {
-            long end = timer.optLong("endsAtElapsedRealtime", SystemClock.elapsedRealtime());
-            builder.setWhen(System.currentTimeMillis() + Math.max(0L, end - SystemClock.elapsedRealtime()))
-                    .setUsesChronometer(true)
-                    .addAction(0, "-15 s", actionIntent(context, WorkoutTimerController.ACTION_TIMER_SUBTRACT_15))
-                    .addAction(0, "Pausar", actionIntent(context, WorkoutTimerController.ACTION_TIMER_PAUSE))
-                    .addAction(0, "+15 s", actionIntent(context, WorkoutTimerController.ACTION_TIMER_ADD_15));
-            if (Build.VERSION.SDK_INT >= 24) builder.setChronometerCountDown(true);
-        } else if ("paused".equals(timerStatus)) {
-            builder.addAction(0, "-15 s", actionIntent(context, WorkoutTimerController.ACTION_TIMER_SUBTRACT_15))
-                    .addAction(0, "Continuar", actionIntent(context, WorkoutTimerController.ACTION_TIMER_RESUME))
-                    .addAction(0, "+15 s", actionIntent(context, WorkoutTimerController.ACTION_TIMER_ADD_15));
-        } else {
+        String timerMode = timer.optString("timerMode", WorkoutTimerController.MODE_COUNTDOWN);
+        boolean activeSession = "en progreso".equals(control.optString("sessionStatus", ""));
+        if (activeSession) {
             builder.addAction(0, "Reps -", actionIntent(context, MainActivity.ACTION_WIDGET_REPS_DOWN))
                     .addAction(0, "Guardar", actionIntent(context, MainActivity.ACTION_WIDGET_SAVE_SET))
                     .addAction(0, "Reps +", actionIntent(context, MainActivity.ACTION_WIDGET_REPS_UP));
         }
+        if ("running".equals(timerStatus)) {
+            if (WorkoutTimerController.MODE_STOPWATCH.equals(timerMode)) {
+                builder.setWhen(System.currentTimeMillis() - WorkoutTimerController.elapsedMs(timer))
+                        .setUsesChronometer(true)
+                        .addAction(0, "Pausar", actionIntent(context, WorkoutTimerController.ACTION_TIMER_PAUSE))
+                        .addAction(0, "Detener", actionIntent(context, WorkoutTimerController.ACTION_TIMER_STOP));
+                if (Build.VERSION.SDK_INT >= 24) builder.setChronometerCountDown(false);
+            } else {
+                long end = timer.optLong("endsAtElapsedRealtime", SystemClock.elapsedRealtime());
+                builder.setWhen(System.currentTimeMillis() + Math.max(0L, end - SystemClock.elapsedRealtime()))
+                        .setUsesChronometer(true)
+                        .addAction(0, "-15 s", actionIntent(context, WorkoutTimerController.ACTION_TIMER_SUBTRACT_15))
+                        .addAction(0, "Pausar", actionIntent(context, WorkoutTimerController.ACTION_TIMER_PAUSE))
+                        .addAction(0, "+15 s", actionIntent(context, WorkoutTimerController.ACTION_TIMER_ADD_15));
+                if (Build.VERSION.SDK_INT >= 24) builder.setChronometerCountDown(true);
+            }
+        } else if ("paused".equals(timerStatus)) {
+            if (WorkoutTimerController.MODE_STOPWATCH.equals(timerMode)) {
+                builder.addAction(0, "Continuar", actionIntent(context, WorkoutTimerController.ACTION_TIMER_RESUME))
+                        .addAction(0, "Detener", actionIntent(context, WorkoutTimerController.ACTION_TIMER_STOP));
+            } else {
+                builder.addAction(0, "-15 s", actionIntent(context, WorkoutTimerController.ACTION_TIMER_SUBTRACT_15))
+                        .addAction(0, "Continuar", actionIntent(context, WorkoutTimerController.ACTION_TIMER_RESUME))
+                        .addAction(0, "+15 s", actionIntent(context, WorkoutTimerController.ACTION_TIMER_ADD_15));
+            }
+        }
         return builder.build();
     }
 
-    private static String guidanceText(JSONObject control, boolean showRecord) {
+    private static String guidanceText(JSONObject control, boolean showRecord, boolean showWeight) {
+        if (!showWeight) return "";
         JSONObject last = control.optJSONObject("lastComparableSet");
         JSONObject record = control.optJSONObject("historicalLoadRecord");
         String text = last == null || last.length() == 0 ? "" : "Última: " + compactSet(last);
@@ -146,11 +165,19 @@ public final class WorkoutControlNotificationManager {
     private static String syncText(JSONObject control) {
         String privateState = control.optString("privateImportState", "pending");
         int pending = Math.max(0, control.optInt("pendingMutationCount", 0));
-        String privateText = "imported".equals(privateState) ? "Privado ✓" : pending > 0 ? "Privado pendiente" : "Privado local";
+        String privateText = "imported".equals(privateState) ? "Privado incorporado"
+                : "error".equals(privateState) ? "Privado con error recuperable"
+                : pending > 0 ? "Privado pendiente" : "Guardado en el telefono";
         JSONObject sync = control.optJSONObject("syncState");
         int total = sync == null ? 0 : Math.max(0, sync.optInt("total", 0));
         int done = sync == null ? 0 : Math.max(0, sync.optInt("synced", 0));
-        return total > 0 ? privateText + " · Grupos " + done + "/" + total : privateText;
+        int groupPending = sync == null ? 0 : Math.max(0, sync.optInt("pending", 0));
+        int errors = sync == null ? 0 : Math.max(0, sync.optInt("errors", 0));
+        if (total <= 0) return privateText;
+        String groups = "Grupos " + done + "/" + total;
+        if (groupPending > 0) groups += " · " + groupPending + " pendiente" + (groupPending == 1 ? "" : "s");
+        if (errors > 0) groups += " · " + errors + " error" + (errors == 1 ? "" : "es");
+        return privateText + " · " + groups;
     }
 
     private static int lockVisibility(Context context) {

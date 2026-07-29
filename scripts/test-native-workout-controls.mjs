@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 
-const [repository,widget,activity,timer,notification,receiver,manifest,smallLayout,mediumLayout,features]=await Promise.all([
+const [repository,widget,activity,timer,notification,receiver,manifest,smallLayout,mediumLayout,largeLayoutAlias,features]=await Promise.all([
   readFile(new URL('../android-native-wrapper/app/src/main/java/com/protocolo/cien/NativeWorkoutControlRepository.java',import.meta.url),'utf8'),
   readFile(new URL('../android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetUpdateService.java',import.meta.url),'utf8'),
   readFile(new URL('../android-native-wrapper/app/src/main/java/com/protocolo/cien/MainActivity.java',import.meta.url),'utf8'),
@@ -11,6 +11,7 @@ const [repository,widget,activity,timer,notification,receiver,manifest,smallLayo
   readFile(new URL('../android-native-wrapper/app/src/main/AndroidManifest.xml',import.meta.url),'utf8'),
   readFile(new URL('../android-native-wrapper/app/src/main/res/layout/widget_workout_small.xml',import.meta.url),'utf8'),
   readFile(new URL('../android-native-wrapper/app/src/main/res/layout/widget_workout_medium.xml',import.meta.url),'utf8'),
+  readFile(new URL('../android-native-wrapper/app/src/main/res/values/widget_layout_aliases.xml',import.meta.url),'utf8'),
   readFile(new URL('../workout-features.js',import.meta.url),'utf8')
 ]);
 
@@ -29,15 +30,22 @@ assert.match(widget,/nativeResult\.duplicate/);
 assert.match(activity,/getNativeWorkoutControlData/);
 assert.match(activity,/acknowledgeNativeWorkoutMutation/);
 assert.match(activity,/json\.length\(\) > 512 \* 1024/);
-for(const contract of ['rest_countdown','timerStatus','startedAtElapsedRealtime','endsAtElapsedRealtime','pausedRemainingMs','setAndAllowWhileIdle','ACTION_TIMER_ADD_15','ACTION_TIMER_SUBTRACT_15'])assert.ok(timer.includes(contract),`Falta contrato de timer: ${contract}`);
+for(const contract of ['rest_countdown','stopwatch','timerStatus','startedAtElapsedRealtime','endsAtElapsedRealtime','startedAtEpochMs','endsAtEpochMs','bootEpochMs','elapsedBeforeStartMs','pausedRemainingMs','setAndAllowWhileIdle','ACTION_TIMER_ADD_15','ACTION_TIMER_SUBTRACT_15','restoreAfterBoot'])assert.ok(timer.includes(contract),`Falta contrato de timer: ${contract}`);
 assert.doesNotMatch(timer,/setInterval|Thread\.sleep|startForeground/);
-for(const contract of ['POST_NOTIFICATIONS','WorkoutControlReceiver'])assert.ok(manifest.includes(contract),`Falta manifest nativo: ${contract}`);
-for(const contract of ['setOngoing(true)','CATEGORY_STOPWATCH','VISIBILITY_SECRET','PendingIntent.FLAG_IMMUTABLE','showWeightOnLockScreen','showRecordOnLockScreen'])assert.ok(notification.includes(contract),`Falta contrato de notificación: ${contract}`);
+for(const contract of ['POST_NOTIFICATIONS','RECEIVE_BOOT_COMPLETED','BOOT_COMPLETED','MY_PACKAGE_REPLACED','WorkoutControlReceiver'])assert.ok(manifest.includes(contract),`Falta manifest nativo: ${contract}`);
+for(const contract of ['setOngoing(true)','CATEGORY_STOPWATCH','VISIBILITY_SECRET','PendingIntent.FLAG_IMMUTABLE','showWeightOnLockScreen','showRecordOnLockScreen','Privado incorporado','Grupos '])assert.ok(notification.includes(contract),`Falta contrato de notificación: ${contract}`);
+assert.match(notification,/if \(!showWeight\) return ""/);
 assert.match(receiver,/WorkoutTimerController\.handleAction/);
+assert.match(receiver,/WorkoutTimerController\.restoreAfterBoot/);
 for(const layout of [smallLayout,mediumLayout])for(const id of ['widgetTimerPanel','widgetTimerChronometer','widgetTimerButton'])assert.ok(layout.includes(id),`Falta ${id} en widget`);
+assert.match(widget,/R\.layout\.widget_workout_large/);
+assert.match(largeLayoutAlias,/name="widget_workout_large"[\s\S]+?@layout\/widget_workout_medium/);
 assert.match(activity,/requestWorkoutNotificationPermission/);
+assert.match(activity,/openWorkoutNotificationSettings/);
+assert.match(activity,/KEY_NOTIFICATION_PERMISSION_REQUESTED/);
 assert.match(activity,/handleNativeWorkoutTimerAction/);
 assert.match(features,/nativeWorkoutSettings/);
+for(const contract of ['gymNativeTimerMode','gymShowWorkoutLock','gymShowWeightLock','gymShowRecordLock','gymLockVisibility','requestWorkoutNotificationPermission'])assert.ok(features.includes(contract),`Falta ajuste nativo contextual: ${contract}`);
 assert.match(features,/nativeShareTargets/);
 assert.match(features,/nativeSyncState/);
 assert.match(features,/syncNativeTimerFromBridge/);

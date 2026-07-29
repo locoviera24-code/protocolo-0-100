@@ -54,10 +54,21 @@ public class MainActivity extends Activity {
     public static final String ACTION_WIDGET_NEXT_EXERCISE = "com.protocolo.cien.ACTION_WIDGET_NEXT_EXERCISE";
     private static final int SPEECH_REQUEST_CODE = 4100;
     private static final int NOTIFICATION_PERMISSION_REQUEST_CODE = 4101;
+    private static final String NATIVE_PERMISSION_PREFS = "native_workout_permission_v1";
+    private static final String KEY_NOTIFICATION_PERMISSION_REQUESTED = "notification_requested";
     private static final String APP_HOST = "appassets.androidplatform.net";
     private static final String APP_URL = "https://" + APP_HOST + "/assets/index.html";
     private WebView webView;
     private Intent pendingWidgetIntent;
+
+    private String workoutNotificationPermissionStateValue() {
+        if (Build.VERSION.SDK_INT < 33) return WorkoutControlNotificationManager.hasPermission(this) ? "granted" : "blocked";
+        if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) return "granted";
+        boolean requested = getSharedPreferences(NATIVE_PERMISSION_PREFS, Context.MODE_PRIVATE)
+                .getBoolean(KEY_NOTIFICATION_PERMISSION_REQUESTED, false);
+        if (!requested) return "prompt";
+        return shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS) ? "denied" : "blocked";
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -285,17 +296,33 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public String workoutNotificationPermissionState() {
-            if (Build.VERSION.SDK_INT < 33) return WorkoutControlNotificationManager.hasPermission(activity) ? "granted" : "blocked";
-            return activity.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED ? "granted" : "prompt";
+            return activity.workoutNotificationPermissionStateValue();
         }
 
         @JavascriptInterface
         public String requestWorkoutNotificationPermission() {
             if (Build.VERSION.SDK_INT < 33) return WorkoutControlNotificationManager.hasPermission(activity) ? "granted" : "blocked";
             if (activity.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) return "granted";
+            activity.getSharedPreferences(NATIVE_PERMISSION_PREFS, Context.MODE_PRIVATE).edit()
+                    .putBoolean(KEY_NOTIFICATION_PERMISSION_REQUESTED, true).apply();
             activity.runOnUiThread(() -> activity.requestPermissions(
                     new String[]{Manifest.permission.POST_NOTIFICATIONS}, NOTIFICATION_PERMISSION_REQUEST_CODE));
             return "requested";
+        }
+
+        @JavascriptInterface
+        public boolean openWorkoutNotificationSettings() {
+            try {
+                Intent intent = Build.VERSION.SDK_INT >= 26
+                        ? new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                                .putExtra(Settings.EXTRA_APP_PACKAGE, activity.getPackageName())
+                        : new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                                .setData(Uri.parse("package:" + activity.getPackageName()));
+                activity.startActivity(intent);
+                return true;
+            } catch (Exception ignored) {
+                return false;
+            }
         }
 
         @JavascriptInterface

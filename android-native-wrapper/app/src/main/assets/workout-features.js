@@ -90,7 +90,10 @@
   let restTimerInterval=null;
   let restTimerEndsAt=0;
   let nativeTimerStatus='idle';
+  let nativeTimerMode='rest_countdown';
   let nativeTimerPausedSeconds=0;
+  let nativeTimerElapsedBaseMs=0;
+  let nativeTimerStartedAt=0;
   let importingNativeWidgetState=false;
   let nativeMutationImportPromise=null;
 
@@ -163,7 +166,7 @@
     return ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][jsDay];
   }
   function settings(){
-    return {...{widgetEnabled:true,showRir:true,unit:'kg',mode:'simple',showRestDays:true,restTimerEnabled:false,restSeconds:90,hapticEnabled:true,timerSound:false,showWorkoutOnLockScreen:true,showWeightOnLockScreen:true,showRecordOnLockScreen:true,lockScreenVisibility:'private'},...readStore(keys.gymSettings,{})};
+    return {...{widgetEnabled:true,showRir:true,unit:'kg',mode:'simple',showRestDays:true,restTimerEnabled:false,restSeconds:90,timerMode:'rest_countdown',hapticEnabled:true,timerSound:false,showWorkoutOnLockScreen:true,showWeightOnLockScreen:true,showRecordOnLockScreen:true,lockScreenVisibility:'private'},...readStore(keys.gymSettings,{})};
   }
   const LB_PER_KG=2.2046226218;
   function displayWeight(weightKg,unit=settings().unit){
@@ -667,6 +670,7 @@
     if(!tab || document.getElementById('todayWorkoutPanel')) return;
     const hero=tab.querySelector('.moduleHero');
     const insertionAnchor=tab.querySelector('.gymSectionNav')||hero;
+    const nativeControlsAvailable=!!(window.APP_FEATURE_FLAGS?.isEnabled?.('nativeWorkoutControlsV1')&&(window.AndroidBridge||window.APP_FEATURE_FLAGS?.isEnabled?.('lockScreenWorkoutControls')));
     insertionAnchor.insertAdjacentHTML('afterend',`
       <div class="moduleCard" id="todayWorkoutPanel">
         <div class="actionFocusTop"><div><h3 id="todayWorkoutTitle">Entrenamiento de hoy</h3><div class="muted small" id="todayWorkoutSummary"></div></div><span class="statusChip good" id="todayWorkoutScore">Gym</span></div>
@@ -740,6 +744,20 @@
           <label class="check"><input type="checkbox" id="gymRestTimerEnabled"><span>Iniciar cronómetro de descanso al guardar.</span></label>
           <div class="field"><label>Descanso (segundos)</label><input type="text" inputmode="decimal" id="gymRestSeconds" value="90"></div>
           <label class="check"><input type="checkbox" id="gymHapticEnabled"><span>Vibración breve al guardar (si el dispositivo permite).</span></label>
+          ${nativeControlsAvailable?`<details class="advancedDetails" id="nativeWorkoutControlSettings">
+            <summary>Controles Android y pantalla bloqueada</summary>
+            <p class="muted small">Durante una sesión podés ajustar repeticiones, guardar una serie y controlar el tiempo sin abrir la app. Activá la notificación solo cuando quieras usarla.</p>
+            <div class="formGrid">
+              <div class="field"><label for="gymNativeTimerMode">Temporizador</label><select id="gymNativeTimerMode"><option value="rest_countdown">Descanso con cuenta regresiva</option><option value="stopwatch">Cronómetro ascendente</option></select></div>
+              <label class="check"><input type="checkbox" id="gymTimerSound"><span>Sonido al terminar el descanso.</span></label>
+              <label class="check"><input type="checkbox" id="gymShowWorkoutLock"><span>Mostrar controles durante el bloqueo.</span></label>
+              <label class="check"><input type="checkbox" id="gymShowWeightLock"><span>Mostrar el peso en la pantalla bloqueada.</span></label>
+              <label class="check"><input type="checkbox" id="gymShowRecordLock"><span>Mostrar la última carga y el mejor registro.</span></label>
+              <div class="field"><label for="gymLockVisibility">Privacidad de la notificación</label><select id="gymLockVisibility"><option value="private">Privada</option><option value="public">Visible</option><option value="hidden">Oculta al bloquear</option></select></div>
+            </div>
+            <div class="buttons"><button type="button" class="secondary" id="enableWorkoutNotificationBtn">Activar controles en bloqueo</button></div>
+            <div class="muted small" id="workoutNotificationPermissionStatus" role="status" aria-live="polite"></div>
+          </details>`:''}
           <div class="field"><label>Día a editar</label><select id="planEditorDay"></select></div>
           <div class="field"><label>Nombre de rutina</label><input type="text" id="planEditorName"></div>
           <div class="field"><label>Músculos principales</label><input type="text" id="planEditorMuscles" placeholder="Pecho · Espalda"></div>
@@ -854,8 +872,10 @@
     document.getElementById('planEditorCards')?.addEventListener('click',handlePlanExerciseAction);
     document.getElementById('resetDefaultPlanBtn')?.addEventListener('click',resetDefaultPlan);
     document.getElementById('refreshWorkoutWidgetBtn')?.addEventListener('click',()=>{syncWorkoutWidget();flash('Widget actualizado manualmente.');});
-    ['gymWidgetEnabled','gymShowRir','gymShowRestDays','gymRestTimerEnabled','gymHapticEnabled'].forEach(id=>document.getElementById(id)?.addEventListener('change',saveSettingsFromUi));
-    ['gymUnit','gymMode','gymRestSeconds'].forEach(id=>document.getElementById(id)?.addEventListener('change',saveSettingsFromUi));
+    ['gymWidgetEnabled','gymShowRir','gymShowRestDays','gymRestTimerEnabled','gymHapticEnabled','gymTimerSound','gymShowWorkoutLock','gymShowWeightLock','gymShowRecordLock'].forEach(id=>document.getElementById(id)?.addEventListener('change',saveSettingsFromUi));
+    ['gymUnit','gymMode','gymRestSeconds','gymNativeTimerMode','gymLockVisibility'].forEach(id=>document.getElementById(id)?.addEventListener('change',saveSettingsFromUi));
+    document.getElementById('enableWorkoutNotificationBtn')?.addEventListener('click',requestWorkoutNotificationPermission);
+    window.addEventListener('native-workout-notification-permission',renderWorkoutNotificationPermissionStatus);
     window.applyCurrentRouteView?.();
   }
   function renderWorkoutDashboard(){
@@ -996,15 +1016,19 @@
   function updateRestTimerDisplay(){
     const box=document.getElementById('quickRestTimer'),value=document.getElementById('quickRestTimerValue'); if(!box||!value)return;
     const nativeEnabled=nativeTimerEnabled();
+    const label=box.querySelector('span');if(label)label.textContent=nativeTimerMode==='stopwatch'?'Tiempo':'Descanso';
     if(nativeTimerStatus==='paused'){
       box.classList.remove('hidden');
-      value.textContent=`${Math.floor(nativeTimerPausedSeconds/60)}:${String(nativeTimerPausedSeconds%60).padStart(2,'0')}`;
+      const pausedSeconds=nativeTimerMode==='stopwatch'?Math.floor(nativeTimerElapsedBaseMs/1000):nativeTimerPausedSeconds;
+      value.textContent=`${Math.floor(pausedSeconds/60)}:${String(pausedSeconds%60).padStart(2,'0')}`;
       const start=document.getElementById('quickTimerStartBtn'),pause=document.getElementById('quickTimerPauseBtn');if(start)start.textContent='Continuar';if(pause)pause.disabled=true;
       return;
     }
     const remaining=Math.max(0,Math.ceil((restTimerEndsAt-Date.now())/1000));
+    const elapsed=Math.max(0,Math.floor((nativeTimerElapsedBaseMs+(nativeTimerStartedAt?Date.now()-nativeTimerStartedAt:0))/1000));
+    const shown=nativeTimerMode==='stopwatch'?elapsed:remaining;
     box.classList.toggle('hidden',!nativeEnabled&&nativeTimerStatus!=='running'&&(!restTimerEndsAt||remaining<=0));
-    value.textContent=`${Math.floor(remaining/60)}:${String(remaining%60).padStart(2,'0')}`;
+    value.textContent=`${Math.floor(shown/60)}:${String(shown%60).padStart(2,'0')}`;
     const start=document.getElementById('quickTimerStartBtn'),pause=document.getElementById('quickTimerPauseBtn');if(start)start.textContent='Iniciar';if(pause)pause.disabled=nativeEnabled&&nativeTimerStatus!=='running';
     if(restTimerEndsAt&&remaining<=0){restTimerEndsAt=0;nativeTimerStatus='finished';if(restTimerInterval){clearInterval(restTimerInterval);restTimerInterval=null;}if(settings().hapticEnabled&&navigator.vibrate)navigator.vibrate([40,40,40]);}
   }
@@ -1014,9 +1038,12 @@
     try{
       const payload=JSON.parse(String(window.AndroidBridge.getNativeWorkoutControlData()||'{}')),runtime=payload.timerRuntime||{},timer=payload.state?.timer||{};
       nativeTimerStatus=String(runtime.timerStatus||timer.timerStatus||'idle');
+      nativeTimerMode=String(runtime.timerMode||timer.timerMode||'rest_countdown')==='stopwatch'?'stopwatch':'rest_countdown';
       const remainingMs=Math.max(0,Number(runtime.remainingMs)||0);
+      nativeTimerElapsedBaseMs=Math.max(0,Number(runtime.elapsedMs)||0);
+      nativeTimerStartedAt=nativeTimerStatus==='running'&&nativeTimerMode==='stopwatch'?Date.now():0;
       nativeTimerPausedSeconds=Math.ceil(remainingMs/1000);
-      restTimerEndsAt=nativeTimerStatus==='running'?Date.now()+remainingMs:0;
+      restTimerEndsAt=nativeTimerStatus==='running'&&nativeTimerMode==='rest_countdown'?Date.now()+remainingMs:0;
       if(restTimerInterval)clearInterval(restTimerInterval);
       if(nativeTimerStatus==='running')restTimerInterval=setInterval(updateRestTimerDisplay,1000);
       updateRestTimerDisplay();return true;
@@ -1640,10 +1667,27 @@
     if(rest) rest.checked=!!s.showRestDays;
     const timer=document.getElementById('gymRestTimerEnabled'),seconds=document.getElementById('gymRestSeconds'),haptic=document.getElementById('gymHapticEnabled');
     if(timer)timer.checked=!!s.restTimerEnabled;if(seconds)seconds.value=Math.max(15,Number(s.restSeconds)||90);if(haptic)haptic.checked=!!s.hapticEnabled;
+    const nativeMode=document.getElementById('gymNativeTimerMode'),sound=document.getElementById('gymTimerSound'),showWorkout=document.getElementById('gymShowWorkoutLock'),showWeight=document.getElementById('gymShowWeightLock'),showRecord=document.getElementById('gymShowRecordLock'),visibility=document.getElementById('gymLockVisibility');
+    if(nativeMode)nativeMode.value=s.timerMode==='stopwatch'?'stopwatch':'rest_countdown';if(sound)sound.checked=!!s.timerSound;if(showWorkout)showWorkout.checked=s.showWorkoutOnLockScreen!==false;if(showWeight)showWeight.checked=s.showWeightOnLockScreen!==false;if(showRecord)showRecord.checked=s.showRecordOnLockScreen!==false;if(visibility)visibility.value=['public','private','hidden'].includes(s.lockScreenVisibility)?s.lockScreenVisibility:'private';
+    renderWorkoutNotificationPermissionStatus();
   }
   function saveSettingsFromUi(){
-    saveSettings({widgetEnabled:document.getElementById('gymWidgetEnabled').checked,showRir:document.getElementById('gymShowRir').checked,unit:document.getElementById('gymUnit').value,mode:document.getElementById('gymMode').value,showRestDays:document.getElementById('gymShowRestDays').checked,restTimerEnabled:document.getElementById('gymRestTimerEnabled').checked,restSeconds:Math.max(15,numeric(document.getElementById('gymRestSeconds').value,90)),hapticEnabled:document.getElementById('gymHapticEnabled').checked});
+    const next={widgetEnabled:document.getElementById('gymWidgetEnabled').checked,showRir:document.getElementById('gymShowRir').checked,unit:document.getElementById('gymUnit').value,mode:document.getElementById('gymMode').value,showRestDays:document.getElementById('gymShowRestDays').checked,restTimerEnabled:document.getElementById('gymRestTimerEnabled').checked,restSeconds:Math.max(15,numeric(document.getElementById('gymRestSeconds').value,90)),hapticEnabled:document.getElementById('gymHapticEnabled').checked};
+    const nativeMode=document.getElementById('gymNativeTimerMode');if(nativeMode)Object.assign(next,{timerMode:nativeMode.value==='stopwatch'?'stopwatch':'rest_countdown',timerSound:!!document.getElementById('gymTimerSound')?.checked,showWorkoutOnLockScreen:!!document.getElementById('gymShowWorkoutLock')?.checked,showWeightOnLockScreen:!!document.getElementById('gymShowWeightLock')?.checked,showRecordOnLockScreen:!!document.getElementById('gymShowRecordLock')?.checked,lockScreenVisibility:document.getElementById('gymLockVisibility')?.value||'private'});
+    saveSettings(next);
+    syncWorkoutWidget();
     renderQuickLogger();
+  }
+  function renderWorkoutNotificationPermissionStatus(){
+    const target=document.getElementById('workoutNotificationPermissionStatus');if(!target)return;
+    if(!window.AndroidBridge?.workoutNotificationPermissionState){target.textContent='Disponible solamente en el APK Android.';return;}
+    try{const state=String(window.AndroidBridge.workoutNotificationPermissionState()),button=document.getElementById('enableWorkoutNotificationBtn');target.textContent=state==='granted'?'Controles de bloqueo habilitados.':state==='blocked'?'Las notificaciones están bloqueadas. Podés habilitarlas en los ajustes de Android.':state==='denied'?'El permiso fue rechazado. Podés volver a solicitarlo cuando quieras.':'Android pedirá permiso cuando pulses Activar.';if(button)button.textContent=state==='blocked'?'Abrir ajustes de Android':state==='granted'?'Permiso concedido':'Activar controles en bloqueo';}
+    catch{target.textContent='No se pudo consultar el permiso.';}
+  }
+  function requestWorkoutNotificationPermission(){
+    if(!window.AndroidBridge?.requestWorkoutNotificationPermission){renderWorkoutNotificationPermissionStatus();return;}
+    try{const state=String(window.AndroidBridge.workoutNotificationPermissionState?.()||'prompt');if(state==='blocked'&&window.AndroidBridge.openWorkoutNotificationSettings)window.AndroidBridge.openWorkoutNotificationSettings();else window.AndroidBridge.requestWorkoutNotificationPermission();setTimeout(renderWorkoutNotificationPermissionStatus,250);}
+    catch(error){window.APP_ERROR_BOUNDARY?.capture?.(error,{source:'native-workout-notification-permission'});flash('No se pudo solicitar el permiso de notificación.');}
   }
   function planDraftId(dayKey=currentPlanEditorDay){return `gym-routine:${dayKey}`;}
   function capturePlanDraft(){
@@ -1961,6 +2005,7 @@
       featureFlags:window.APP_FEATURE_FLAGS?.all?.()||{schemaVersion:1,nativeWorkoutControlsV1:false,lockScreenWorkoutControls:false,nativeRestTimer:false,multiPartyWorkoutSharing:false},
       nativeWorkoutSettings:{
         restSeconds:Math.max(15,Number(s.restSeconds)||90),
+        timerMode:s.timerMode==='stopwatch'?'stopwatch':'rest_countdown',
         autoStartRestTimer:!!s.restTimerEnabled,
         timerVibration:s.hapticEnabled!==false,
         timerSound:!!s.timerSound,

@@ -3983,3 +3983,44 @@ segundo login ni WorkManager con credenciales Firebase.
 Siguiente acción exacta: cerrar privacidad/estados visuales del control nativo,
 añadir política de reinicio del temporizador, ejecutar la regresión completa y
 documentar el proyecto antes del push beta.
+
+## 89. Privacidad y temporizador nativo recuperable
+
+`WorkoutTimerController` usa ahora schema 2. Dentro del mismo arranque mantiene
+`SystemClock.elapsedRealtime()` como reloj canónico; además persiste
+`startedAtEpochMs`, `endsAtEpochMs` y una referencia `bootEpochMs` para detectar
+un reinicio y reconstruir el estado monotónico sin incrementar contadores cada
+segundo. `WorkoutControlReceiver` escucha `BOOT_COMPLETED` y
+`MY_PACKAGE_REPLACED`, reprograma únicamente la alarma pendiente y actualiza
+widget/notificación. El estado se confirma en SharedPreferences antes de
+programar la alarma. No se agregó foreground service.
+
+Se implementaron los dos modos declarados: `rest_countdown` y `stopwatch`.
+Cuenta regresiva permite iniciar, pausar, continuar, detener y ajustar ±15 s;
+cronómetro conserva tiempo acumulado al pausar y al reiniciar Android. Widget,
+notificación y WebView leen el mismo estado. El recurso
+`widget_workout_large` selecciona explícitamente la superficie completa cuando
+el host ofrece al menos 300 × 220 dp; es un alias mantenible del layout medium,
+que ya contiene todos los controles, carga comparable, récord, series y estado.
+
+La configuración aparece solo cuando `nativeWorkoutControlsV1` está activa.
+Permite elegir modo, sonido, contenido en bloqueo, visibilidad de peso, récord y
+visibilidad pública/privada/oculta. `POST_NOTIFICATIONS` se solicita desde el
+botón contextual, no al iniciar. Se distingue permiso inicial, rechazo y
+bloqueo permanente; en el último caso se abre la pantalla de ajustes Android.
+Ocultar peso también elimina la carga anterior y el récord del texto expandido.
+La notificación y el widget muestran estados privados comprensibles y únicamente
+conteos de grupos, nunca alias, nombres de salas, invitaciones, emails ni IDs.
+
+Pruebas aprobadas: contratos nativos, orientación de carga, importador,
+Workout, datos y límites modulares. Los E2E de privacidad/ajustes nativos y de
+Gym Party multigrupo aprobaron en Android Chromium, iPhone WebKit y escritorio
+(6/6). Artifact web: 86 recursos, precache: 85, sin 404 y con paridad Android.
+La compilación Android real, reinicio físico, pantalla bloqueada y recepción de
+`BOOT_COMPLETED` siguen pendientes del quality gate/dispositivo porque el equipo
+local no dispone de JDK, Gradle ni Android SDK.
+
+Siguiente acción exacta: ejecutar la regresión completa del repositorio,
+actualizar README con alcance y limitaciones de app cerrada, confirmar el bloque
+de documentación, pushear la rama y ejecutar el quality gate remoto sin publicar
+stable ni fusionar a `main`.

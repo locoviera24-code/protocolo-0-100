@@ -183,10 +183,13 @@ public final class NativeWorkoutControlRepository {
     public static synchronized String bridgePayload(Context context) {
         JSONObject payload = new JSONObject();
         JSONObject state = readControlState(context);
-        JSONObject timer = state.optJSONObject("timer");
+        JSONObject timer = WorkoutTimerController.currentState(context);
+        put(state, "timer", cloneObject(timer));
         JSONObject timerRuntime = new JSONObject();
         put(timerRuntime, "timerStatus", timer == null ? "idle" : timer.optString("timerStatus", "idle"));
         put(timerRuntime, "remainingMs", WorkoutTimerController.remainingMs(timer));
+        put(timerRuntime, "elapsedMs", WorkoutTimerController.elapsedMs(timer));
+        put(timerRuntime, "timerMode", timer == null ? "rest_countdown" : timer.optString("timerMode", "rest_countdown"));
         put(payload, "schemaVersion", SCHEMA_VERSION);
         put(payload, "state", state);
         put(payload, "timerRuntime", timerRuntime);

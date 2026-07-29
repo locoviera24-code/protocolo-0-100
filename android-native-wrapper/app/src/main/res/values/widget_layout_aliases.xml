@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The medium layout already exposes the complete control surface. -->
+    <item name="widget_workout_large" type="layout">@layout/widget_workout_medium</item>
+</resources>
