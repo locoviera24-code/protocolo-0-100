@@ -3821,3 +3821,35 @@ quality gate remoto y la prueba física de permiso, bloqueo, alarma y acciones.
 Siguiente acción exacta: añadir `WorkoutLoadGuidance` compartido, snapshots
 comparables de última serie y récord, y mostrarlos en widget/notificación sin
 duplicar las reglas de Progreso.
+
+## 85. Última carga y récord comparables
+
+`gym/workout-load-guidance.js` es el servicio compartido para orientación de
+carga. Reutiliza `WORKOUT_EQUIPMENT.comparisonKey`, `WORKOUT_METRICS` y
+`WORKOUT_SET_MODEL`; no replica la agregación general de Progreso. Exige mismo
+`exerciseId`, modalidad, modo de carga, equipo, gimnasio, lateralidad y modo de
+repeticiones. Excluye calentamientos, series incompletas, series no elegibles
+para récord y anomalías pendientes.
+
+El servicio devuelve `lastComparableSet`, `historicalLoadRecord`, `recordKind`,
+`comparisonLabel`, confianza y `loadGuidanceSnapshot` con `policyVersion 1`.
+La semántica varía por modalidad: mayor carga externa, máximas reps de peso
+corporal, mayor lastre, menor asistencia, mayor duración o mayor distancia. El
+widget mediano y la notificación muestran etiquetas compactas de última serie y
+mejor registro. El widget pequeño conserva una jerarquía reducida.
+
+`NativeWorkoutControlRepository` conserva el snapshot y, después de un guardado
+nativo, actualiza una orientación provisional con la misma `comparisonKey`.
+Esta marca `provisional: true`; la WebView debe validarla al importar antes de
+considerarla definitiva. Una máquina no se mezcla con barra, Smith, carga por
+mano o carga por lado.
+
+Pruebas aprobadas: `test-workout-load-guidance.mjs`, controles nativos, Workout,
+métricas, Progreso, límites modulares, diseño, quality-gate contract, precache,
+artifact web y validación con paridad Android. El artifact local contiene 83
+recursos y el precache 82. La compilación Android sigue pendiente del gate
+remoto.
+
+Siguiente acción exacta: importar las mutaciones `save_set` a
+`workoutSessions` por `setId`, reconocer duplicados, confirmar al bridge y
+validar nuevamente el snapshot de orientación.

@@ -81,6 +81,17 @@
             android:textColor="#98f5c2"
             android:textSize="10sp" />
 
+        <TextView
+            android:id="@+id/widgetLoadGuidance"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="Última: sin datos · Mejor: sin datos"
+            android:textColor="#dbeaff"
+            android:textSize="9sp" />
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="34dp"
