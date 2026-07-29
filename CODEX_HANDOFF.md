@@ -3867,6 +3867,31 @@ Validacion local:
 - caso afectado repetido cinco veces en escritorio: 5/5;
 - caso afectado en Android Chromium, iPhone WebKit y escritorio: 3/3.
 
-Siguiente accion exacta: enviar el commit y esperar un quality gate completo.
-No marcar Firestore, artifacts ni Android remotos como aprobados hasta que el
-nuevo run alcance esos pasos.
+El commit con esta correccion se envio y el siguiente gate completo alcanzo los
+pasos que los dos runs anteriores no habian podido ejecutar.
+
+## 86. Quality gate beta aprobado y artifacts remotos
+
+El run remoto definitivo del codigo fue `30484923207`, sobre el commit
+`6c3e63d`. Termino aprobado en 18 minutos y 6 segundos:
+
+- axe: 27 escenarios aprobados;
+- E2E funcional: 352 aprobados y 14 omitidos ya documentados;
+- Firestore Emulator: aprobado;
+- artifact web final y service worker: aprobados;
+- Android debug y release de prueba: aprobados;
+- paridad de assets: aprobada.
+
+Artifacts del run:
+
+- `protocolo-web-beta`, artifact `8737724132`, 539.956 bytes comprimidos;
+- `protocolo-android-debug-beta`, artifact `8737724993`, 1.824.188 bytes
+  comprimidos;
+- APK descargado `protocolo-0-100-debug.apk`: 1.872.205 bytes, SHA-256
+  `82646530DD7F4D146618484D9FDDE99281CE41061637FBFFD2948F0639F495F7`.
+
+El pull request numero 1 permanece borrador. La rama no se fusiono, la etiqueta
+`baseline-stable-2.7` no se movio y stable build 89 no se publico de nuevo. No
+hubo hardware ADB conectado: todas las pruebas fisicas de widget, launcher,
+bloqueo, notificacion, reinicio y actualizacion continúan pendientes en
+`docs/physical-test-checklist.md`.
