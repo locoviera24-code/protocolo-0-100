@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="widget_workout_small" type="layout">@layout/widget_workout_compact</item>
+    <item name="widget_workout_medium" type="layout">@layout/widget_workout_standard</item>
+    <item name="widget_workout_large" type="layout">@layout/widget_workout_expanded</item>
+</resources>

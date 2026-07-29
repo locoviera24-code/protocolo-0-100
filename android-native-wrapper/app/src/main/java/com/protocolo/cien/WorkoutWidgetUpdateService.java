@@ -6,6 +6,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Build;
 import android.os.SystemClock;
@@ -25,6 +26,9 @@ public final class WorkoutWidgetUpdateService {
     public static final String KEY_STATE_JSON = "state_json";
 
     private static final int REQUEST_REFRESH = 1004;
+    private static final int LAYOUT_COMPACT = 1;
+    private static final int LAYOUT_STANDARD = 2;
+    private static final int LAYOUT_EXPANDED = 3;
     private static final double WEIGHT_STEP = 0.5;
     private static final double WEIGHT_FAST_STEP = 5.0;
 
@@ -47,84 +51,99 @@ public final class WorkoutWidgetUpdateService {
     }
 
     public static synchronized boolean handleWidgetAction(Context context, String action) {
-        if (!isDirectAction(action)) return false;
-        JSONObject state = readStateJson(context);
-        applyDirectAction(context, state, action);
-        saveStateJson(context, state);
-        NativeWorkoutControlRepository.syncFromWidgetState(context, state);
-        if (MainActivity.ACTION_WIDGET_SAVE_SET.equals(action)
-                && state.optString("lastWidgetActionText", "").startsWith("Serie guardada:")) {
-            WorkoutTimerController.startAfterSavedSetIfEnabled(context);
-        }
-        updateAll(context);
-        WorkoutControlNotificationManager.update(context);
-        return true;
+        return WorkoutQuickActionReducer.dispatch(context, action, WorkoutQuickActionReducer.SOURCE_WIDGET, "").handled;
+    }
+
+    public static synchronized boolean handleWidgetAction(Context context, Intent intent, String source) {
+        if (intent == null) return false;
+        return WorkoutQuickActionReducer.dispatch(context, intent.getAction(), source, intent.getStringExtra("deliveryId")).handled;
     }
 
     static WidgetState readState(Context context) {
         return WidgetState.fromJson(readStateJson(context));
     }
 
-    private static JSONObject readStateJson(Context context) {
-        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        String raw = prefs.getString(KEY_STATE_JSON, "");
-        if (raw != null && raw.trim().length() > 0) {
-            try {
-                JSONObject json = new JSONObject(raw);
-                if (!todayDate().equals(json.optString("date", todayDate()))) return jsonForTodayFromSource(json);
-                return json;
-            } catch (Exception ignored) {
-            }
+    static JSONObject readStateJson(Context context) {
+        JSONObject json = WorkoutNativeRepository.readWidgetSnapshot(context);
+        if (json.length() > 0) {
+            if (!todayDate().equals(json.optString("date", todayDate()))) return jsonForTodayFromSource(json);
+            return json;
         }
         return defaultJsonForToday();
     }
 
-    private static void saveStateJson(Context context, JSONObject state) {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                .edit()
-                .putString(KEY_STATE_JSON, state == null ? "" : state.toString())
-                .apply();
+    static void saveStateJson(Context context, JSONObject state) {
+        WorkoutNativeRepository.writeWidgetSnapshot(context, state);
     }
 
     private static RemoteViews buildViews(Context context, AppWidgetManager manager, int widgetId, WidgetState state) {
-        Bundle options = manager.getAppWidgetOptions(widgetId);
-        int minWidth = options == null ? 0 : options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0);
-        int layout = minWidth > 0 && minWidth < 230 ? R.layout.widget_workout_small : R.layout.widget_workout_medium;
+        int kind = selectLayout(manager.getAppWidgetOptions(widgetId));
+        int layout = kind == LAYOUT_COMPACT ? R.layout.widget_workout_compact
+                : kind == LAYOUT_STANDARD ? R.layout.widget_workout_standard : R.layout.widget_workout_expanded;
         RemoteViews views = new RemoteViews(context.getPackageName(), layout);
 
-        views.setTextViewText(R.id.widgetTitle, state.title);
-        views.setTextViewText(R.id.widgetSummary, state.summary);
-        views.setTextViewText(R.id.widgetExercises, state.exerciseText);
-        views.setTextViewText(R.id.widgetProgress, state.progressText);
         views.setTextViewText(R.id.widgetCurrentExercise, state.currentExerciseName);
         views.setTextViewText(R.id.widgetSetStats, state.setStatsText);
-        views.setTextViewText(R.id.widgetLoadGuidance, state.loadGuidanceText);
         views.setTextViewText(R.id.widgetQuickReps, state.quickRepsText);
         views.setTextViewText(R.id.widgetQuickWeight, state.quickWeightText);
+        views.setContentDescription(R.id.widgetQuickReps, state.quickRepsDescription);
+        views.setContentDescription(R.id.widgetQuickWeight, state.quickWeightDescription);
         views.setTextViewText(R.id.widgetActionStatus, state.actionStatus);
-        bindTimer(context, views, state);
+        bindTimer(context, views, state, kind != LAYOUT_STANDARD);
 
         boolean restDay = "rest".equals(state.type);
-        views.setViewVisibility(R.id.widgetDirectPanel, restDay ? View.GONE : View.VISIBLE);
-        views.setViewVisibility(R.id.widgetQuickButton, restDay ? View.GONE : View.VISIBLE);
-        views.setTextViewText(R.id.widgetQuickButton, restDay ? "Descanso" : "Abrir registro");
-
+        views.setViewVisibility(R.id.widgetDirectPanel, View.VISIBLE);
         views.setOnClickPendingIntent(R.id.widgetRoot, openIntent(context, MainActivity.ACTION_OPEN_TODAY_WORKOUT, state.currentExerciseId));
-        views.setOnClickPendingIntent(R.id.widgetOpenButton, openIntent(context, MainActivity.ACTION_OPEN_TODAY_WORKOUT, state.currentExerciseId));
-        views.setOnClickPendingIntent(R.id.widgetQuickButton, openIntent(context, MainActivity.ACTION_QUICK_LOG_SET, state.currentExerciseId));
-        views.setOnClickPendingIntent(R.id.widgetRefreshButton, refreshIntent(context));
+        views.setOnClickPendingIntent(R.id.widgetSaveSetButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_SAVE_SET, state.nativeRevision, widgetId));
+        if (kind != LAYOUT_STANDARD) {
+            views.setTextViewText(R.id.widgetQuickButton, restDay ? "Abrir actividad" : "Editar");
+            views.setOnClickPendingIntent(R.id.widgetQuickButton, openIntent(context, MainActivity.ACTION_QUICK_LOG_SET, state.currentExerciseId));
+        }
 
-        views.setOnClickPendingIntent(R.id.widgetRepsMinusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_REPS_DOWN));
-        views.setOnClickPendingIntent(R.id.widgetRepsPlusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_REPS_UP));
-        views.setOnClickPendingIntent(R.id.widgetWeightMinusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_WEIGHT_DOWN));
-        views.setOnClickPendingIntent(R.id.widgetWeightPlusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_WEIGHT_UP));
-        views.setOnClickPendingIntent(R.id.widgetWeightFastMinusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_WEIGHT_FAST_DOWN));
-        views.setOnClickPendingIntent(R.id.widgetWeightFastPlusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_WEIGHT_FAST_UP));
-        views.setOnClickPendingIntent(R.id.widgetSaveSetButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_SAVE_SET));
-        views.setOnClickPendingIntent(R.id.widgetRepeatButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_REPEAT_LAST));
-        views.setOnClickPendingIntent(R.id.widgetPreviousButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_PREVIOUS_EXERCISE));
-        views.setOnClickPendingIntent(R.id.widgetNextButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_NEXT_EXERCISE));
+        if (kind >= LAYOUT_STANDARD) {
+            views.setTextViewText(R.id.widgetLoadGuidance, state.loadGuidanceText);
+            int adjustmentVisibility = state.requiresEditor ? View.GONE : View.VISIBLE;
+            views.setViewVisibility(R.id.widgetRepsMinusButton, adjustmentVisibility);
+            views.setViewVisibility(R.id.widgetRepsPlusButton, adjustmentVisibility);
+            views.setViewVisibility(R.id.widgetWeightMinusButton, adjustmentVisibility);
+            views.setViewVisibility(R.id.widgetWeightPlusButton, adjustmentVisibility);
+            if (!state.requiresEditor) {
+                views.setOnClickPendingIntent(R.id.widgetRepsMinusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_REPS_DOWN, state.nativeRevision, widgetId));
+                views.setOnClickPendingIntent(R.id.widgetRepsPlusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_REPS_UP, state.nativeRevision, widgetId));
+                views.setOnClickPendingIntent(R.id.widgetWeightMinusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_WEIGHT_DOWN, state.nativeRevision, widgetId));
+                views.setOnClickPendingIntent(R.id.widgetWeightPlusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_WEIGHT_UP, state.nativeRevision, widgetId));
+            }
+            String contextualAction = state.requiresEditor ? MainActivity.ACTION_QUICK_LOG_SET
+                    : state.canUndo ? MainActivity.ACTION_WIDGET_UNDO_LAST_SET : MainActivity.ACTION_WIDGET_REPEAT_LAST;
+            views.setTextViewText(R.id.widgetRepeatButton, state.requiresEditor ? "Editar" : state.canUndo ? "Deshacer" : "Repetir");
+            views.setOnClickPendingIntent(R.id.widgetRepeatButton, state.requiresEditor
+                    ? openIntent(context, contextualAction, state.currentExerciseId)
+                    : widgetActionIntent(context, contextualAction, state.nativeRevision, widgetId));
+            views.setOnClickPendingIntent(R.id.widgetNextButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_NEXT_EXERCISE, state.nativeRevision, widgetId));
+        }
+        if (kind == LAYOUT_EXPANDED) {
+            views.setTextViewText(R.id.widgetTitle, state.title);
+            views.setTextViewText(R.id.widgetProgress, state.progressText);
+            views.setOnClickPendingIntent(R.id.widgetOpenButton, openIntent(context, MainActivity.ACTION_OPEN_TODAY_WORKOUT, state.currentExerciseId));
+            views.setOnClickPendingIntent(R.id.widgetWeightFastMinusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_WEIGHT_FAST_DOWN, state.nativeRevision, widgetId));
+            views.setOnClickPendingIntent(R.id.widgetWeightFastPlusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_WEIGHT_FAST_UP, state.nativeRevision, widgetId));
+            views.setViewVisibility(R.id.widgetWeightFastMinusButton, state.requiresEditor ? View.GONE : View.VISIBLE);
+            views.setViewVisibility(R.id.widgetWeightFastPlusButton, state.requiresEditor ? View.GONE : View.VISIBLE);
+            views.setOnClickPendingIntent(R.id.widgetPreviousButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_PREVIOUS_EXERCISE, state.nativeRevision, widgetId));
+        }
         return views;
+    }
+
+    static int selectLayout(Bundle options) {
+        int minWidth = options == null ? 0 : options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0);
+        int maxWidth = options == null ? 0 : options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, minWidth);
+        int minHeight = options == null ? 0 : options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0);
+        int maxHeight = options == null ? 0 : options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, minHeight);
+        int width = Math.max(minWidth, maxWidth);
+        int height = Math.max(minHeight, maxHeight);
+        if ((width > 0 && width < 240) || (height > 0 && height < 170)) return LAYOUT_COMPACT;
+        if ((width > 0 && width < 320) || (height > 0 && height < 250)) return LAYOUT_STANDARD;
+        return LAYOUT_EXPANDED;
     }
 
     private static PendingIntent openIntent(Context context, String action, String exerciseId) {
@@ -142,14 +161,17 @@ public final class WorkoutWidgetUpdateService {
         return PendingIntent.getBroadcast(context, REQUEST_REFRESH, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
-    private static PendingIntent widgetActionIntent(Context context, String action) {
+    private static PendingIntent widgetActionIntent(Context context, String action, long revision, int widgetId) {
         Intent intent = new Intent(context, WorkoutWidgetProvider.class);
         intent.setAction(action);
+        String deliveryId = WorkoutQuickActionReducer.SOURCE_WIDGET + ":" + action + ":" + widgetId + ":" + revision;
+        intent.setData(Uri.parse("protocolo://workout-action/" + Uri.encode(deliveryId)));
+        intent.putExtra("deliveryId", deliveryId);
         int requestCode = Math.abs(action.hashCode());
         return PendingIntent.getBroadcast(context, requestCode, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
-    private static boolean isDirectAction(String action) {
+    static boolean isDirectAction(String action) {
         return MainActivity.ACTION_WIDGET_REPS_DOWN.equals(action)
                 || MainActivity.ACTION_WIDGET_REPS_UP.equals(action)
                 || MainActivity.ACTION_WIDGET_WEIGHT_DOWN.equals(action)
@@ -159,15 +181,19 @@ public final class WorkoutWidgetUpdateService {
                 || MainActivity.ACTION_WIDGET_SAVE_SET.equals(action)
                 || MainActivity.ACTION_WIDGET_REPEAT_LAST.equals(action)
                 || MainActivity.ACTION_WIDGET_PREVIOUS_EXERCISE.equals(action)
-                || MainActivity.ACTION_WIDGET_NEXT_EXERCISE.equals(action);
+                || MainActivity.ACTION_WIDGET_NEXT_EXERCISE.equals(action)
+                || MainActivity.ACTION_WIDGET_UNDO_LAST_SET.equals(action)
+                || MainActivity.ACTION_WIDGET_COMPLETE_TIME_SET.equals(action);
     }
 
-    private static void applyDirectAction(Context context, JSONObject state, String action) {
+    static String applyDirectAction(Context context, JSONObject state, String action) {
+        if (!isDirectAction(action)) return "unhandled";
         if ("rest".equals(state.optString("type", "workout"))) {
             put(state, "lastWidgetActionText", "Hoy toca descanso. La recuperacion tambien cuenta.");
             touchDirect(state);
-            return;
+            return "rest-day";
         }
+        String code = "updated";
         if (MainActivity.ACTION_WIDGET_REPS_DOWN.equals(action)) {
             adjustQuick(state, "reps", -1);
         } else if (MainActivity.ACTION_WIDGET_REPS_UP.equals(action)) {
@@ -182,14 +208,20 @@ public final class WorkoutWidgetUpdateService {
             adjustQuick(state, "weight", WEIGHT_FAST_STEP);
         } else if (MainActivity.ACTION_WIDGET_REPEAT_LAST.equals(action)) {
             repeatLast(state);
+            code = "repeated";
         } else if (MainActivity.ACTION_WIDGET_PREVIOUS_EXERCISE.equals(action)) {
             moveToPreviousExercise(state);
+            code = "previous-exercise";
         } else if (MainActivity.ACTION_WIDGET_NEXT_EXERCISE.equals(action)) {
             moveToNextExercise(state);
-        } else if (MainActivity.ACTION_WIDGET_SAVE_SET.equals(action)) {
-            saveSet(context, state);
+            code = "next-exercise";
+        } else if (MainActivity.ACTION_WIDGET_SAVE_SET.equals(action) || MainActivity.ACTION_WIDGET_COMPLETE_TIME_SET.equals(action)) {
+            code = saveSet(context, state);
+        } else if (MainActivity.ACTION_WIDGET_UNDO_LAST_SET.equals(action)) {
+            code = undoLastSet(context, state);
         }
         touchDirect(state);
+        return code;
     }
 
     private static void adjustQuick(JSONObject state, String key, double delta) {
@@ -221,39 +253,63 @@ public final class WorkoutWidgetUpdateService {
         put(state, "lastWidgetActionText", "Ultima serie cargada. Toca Guardar serie para repetirla.");
     }
 
-    private static void saveSet(Context context, JSONObject state) {
+    private static String saveSet(Context context, JSONObject state) {
         JSONObject session = ensureSession(state);
         JSONObject exercise = currentExercise(state, session);
         if (session == null || exercise == null) {
             put(state, "lastWidgetActionText", "No hay ejercicio activo para registrar.");
-            return;
+            return "missing-context";
         }
         JSONObject quick = ensureQuickLog(state, exercise);
         int reps = Math.max(0, quick.optInt("reps", 8));
         double displayWeight = roundHalf(Math.max(0, quick.optDouble("weight", 0)));
         double weight = canonicalWeight(state, displayWeight);
-        if (reps <= 0) {
+        String measurementMode = quick.optString("measurementMode", exercise.optString("measurementMode", "reps"));
+        double durationSeconds = Math.max(0, quick.optDouble("durationSeconds", 0));
+        double distanceMeters = Math.max(0, quick.optDouble("distanceMeters", 0));
+        if (("reps".equals(measurementMode) || "assistance".equals(measurementMode)) && reps <= 0) {
             put(state, "lastWidgetActionText", "Subi las repeticiones antes de guardar.");
-            return;
+            return "invalid-reps";
+        }
+        if ("time".equals(measurementMode) && durationSeconds <= 0) {
+            put(state, "lastWidgetActionText", "Abri el registro para indicar la duracion.");
+            return "requires-editor";
+        }
+        if ("distance".equals(measurementMode) && distanceMeters <= 0) {
+            put(state, "lastWidgetActionText", "Abri el registro para indicar la distancia.");
+            return "requires-editor";
         }
 
         JSONArray sets = exercise.optJSONArray("sets");
         if (sets == null) sets = new JSONArray();
         int setNumber = sets.length() + 1;
-        NativeWorkoutControlRepository.EnqueueResult nativeResult = NativeWorkoutControlRepository.enqueueSaveSet(context, state, session, exercise, quick, weight);
+        String source = state.optString("_nativeActionSource", WorkoutQuickActionReducer.SOURCE_WIDGET);
+        long expectedRevision = state.optLong("_nativeExpectedRevision", WorkoutNativeRepository.revision(state));
+        put(quick, "barWeightKg", canonicalWeight(state, quick.optDouble("barWeight", 0)));
+        NativeWorkoutControlRepository.EnqueueResult nativeResult = NativeWorkoutControlRepository.enqueueSaveSet(context, state, session, exercise, quick, weight, source, expectedRevision);
         if (!nativeResult.disabled && !nativeResult.ok) {
             put(state, "lastWidgetActionText", "No se pudo guardar en el telefono. Intenta nuevamente.");
-            return;
+            return nativeResult.error.length() == 0 ? "mutation-write-failed" : nativeResult.error;
         }
         if (nativeResult.duplicate) {
             put(state, "lastWidgetActionText", "La serie ya se guardo. Se ignoro el toque repetido.");
-            return;
+            return "duplicate";
         }
         JSONObject set = new JSONObject();
         put(set, "id", nativeResult.ok ? nativeResult.setId() : "set_android_" + System.currentTimeMillis());
         put(set, "setNumber", setNumber);
         put(set, "reps", reps);
         put(set, "weight", weight);
+        put(set, "weightKg", weight);
+        put(set, "measurementMode", measurementMode);
+        put(set, "loadMode", quick.optString("loadMode", quick.optBoolean("bodyweight", false) ? "bodyweight" : "total"));
+        put(set, "equipmentId", quick.optString("equipmentId", exercise.optString("equipmentId", "")));
+        put(set, "barWeightKg", Math.max(0, quick.optDouble("barWeightKg", canonicalWeight(state, quick.optDouble("barWeight", 0)))));
+        put(set, "laterality", quick.optString("laterality", "bilateral"));
+        put(set, "durationSeconds", durationSeconds);
+        put(set, "distanceMeters", distanceMeters);
+        if ("assistance".equals(set.optString("loadMode", ""))) put(set, "assistanceKg", weight);
+        if ("addedLoad".equals(set.optString("loadMode", ""))) put(set, "addedLoadKg", weight);
         put(set, "rir", JSONObject.NULL);
         put(set, "rpe", JSONObject.NULL);
         put(set, "bodyweight", quick.optBoolean("bodyweight", exercise.optBoolean("bodyweight", false)));
@@ -277,7 +333,53 @@ public final class WorkoutWidgetUpdateService {
         put(state, "workoutSession", session);
         updateHistory(state, session, exercise);
         refreshStateFromSession(state, session, exercise);
-        put(state, "lastWidgetActionText", "Serie guardada: " + shortName(exercise.optString("name", "Ejercicio")) + " · " + reps + " reps · " + formatWeight(displayWeight) + " " + state.optString("unit", "kg") + ".");
+        String valueText = "time".equals(measurementMode) ? formatDuration(Math.round(durationSeconds * 1000d))
+                : "distance".equals(measurementMode) ? formatWeight(distanceMeters) + " m"
+                : reps + " reps" + (set.optBoolean("bodyweight", false) && weight <= 0 ? "" : " · " + formatWeight(displayWeight) + " " + state.optString("unit", "kg"));
+        put(state, "lastWidgetActionText", "Serie " + setNumber + " guardada · " + valueText + " · Deshacer disponible");
+        return "saved";
+    }
+
+    private static String undoLastSet(Context context, JSONObject state) {
+        String source = state.optString("_nativeActionSource", WorkoutQuickActionReducer.SOURCE_WIDGET);
+        long expectedRevision = state.optLong("_nativeExpectedRevision", WorkoutNativeRepository.revision(state));
+        NativeWorkoutControlRepository.EnqueueResult result = NativeWorkoutControlRepository.enqueueUndoLastSet(context, state, source, expectedRevision);
+        if (!result.ok) {
+            put(state, "lastWidgetActionText", "undo-expired".equals(result.error) ? "La ventana para deshacer ya termino." : "No hay una serie reciente para deshacer.");
+            return result.error.length() == 0 ? "nothing-to-undo" : result.error;
+        }
+        JSONObject payload = result.mutation.optJSONObject("payload");
+        String targetSetId = payload == null ? "" : payload.optString("targetSetId", "");
+        JSONObject session = state.optJSONObject("workoutSession");
+        JSONObject affectedExercise = null;
+        if (session != null) {
+            JSONArray exercises = session.optJSONArray("exercises");
+            for (int exerciseIndex = 0; exercises != null && exerciseIndex < exercises.length(); exerciseIndex++) {
+                JSONObject exercise = exercises.optJSONObject(exerciseIndex);
+                JSONArray sets = exercise == null ? null : exercise.optJSONArray("sets");
+                for (int setIndex = sets == null ? -1 : sets.length() - 1; setIndex >= 0; setIndex--) {
+                    JSONObject set = sets.optJSONObject(setIndex);
+                    if (set != null && targetSetId.equals(set.optString("id", ""))) {
+                        sets.remove(setIndex);
+                        affectedExercise = exercise;
+                        break;
+                    }
+                }
+                if (affectedExercise != null) break;
+            }
+            put(session, "summary", sessionSummary(session));
+            put(state, "workoutSession", session);
+        }
+        JSONObject previousHistory = payload == null ? null : payload.optJSONObject("previousHistory");
+        String exerciseId = payload == null ? "" : payload.optString("exerciseId", "");
+        JSONObject history = state.optJSONObject("exerciseHistory");
+        if (history == null) history = new JSONObject();
+        if (previousHistory != null && previousHistory.length() > 0) put(history, exerciseId, previousHistory);
+        else history.remove(exerciseId);
+        put(state, "exerciseHistory", history);
+        if (affectedExercise != null) refreshStateFromSession(state, session, affectedExercise);
+        put(state, "lastWidgetActionText", "Serie eliminada · Guardado en el dispositivo");
+        return "undone";
     }
 
     private static void moveToNextExercise(JSONObject state) {
@@ -384,6 +486,13 @@ public final class WorkoutWidgetUpdateService {
             put(quick, "reps", last == null ? 8 : Math.max(0, last.optInt("reps", last.optInt("lastReps", 8))));
             put(quick, "weight", last == null ? 0 : displayWeight(state, last.optDouble("weight", last.optDouble("lastWeight", 0))));
             put(quick, "bodyweight", last == null ? (exercise != null && exercise.optBoolean("bodyweight", false)) : last.optBoolean("bodyweight", exercise != null && exercise.optBoolean("bodyweight", false)));
+            put(quick, "measurementMode", last == null ? (exercise == null ? "reps" : exercise.optString("measurementMode", "reps")) : last.optString("measurementMode", "reps"));
+            put(quick, "loadMode", last == null ? (exercise == null ? "total" : exercise.optString("defaultLoadMode", exercise.optBoolean("bodyweight", false) ? "bodyweight" : "total")) : last.optString("loadMode", "total"));
+            put(quick, "durationSeconds", last == null ? 60 : Math.max(0, last.optDouble("durationSeconds", 60)));
+            put(quick, "distanceMeters", last == null ? 1000 : Math.max(0, last.optDouble("distanceMeters", 1000)));
+            put(quick, "equipmentId", last == null ? (exercise == null ? "" : exercise.optString("equipmentId", "")) : last.optString("equipmentId", ""));
+            put(quick, "barWeight", last == null ? 0 : displayWeight(state, last.optDouble("barWeightKg", 0)));
+            put(quick, "laterality", last == null ? "bilateral" : last.optString("laterality", "bilateral"));
         }
         put(quick, "currentExerciseId", currentId);
         put(quick, "exerciseName", exercise == null ? "Ejercicio actual" : exercise.optString("name", "Ejercicio actual"));
@@ -442,7 +551,7 @@ public final class WorkoutWidgetUpdateService {
         return PendingIntent.getBroadcast(context, requestCode, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
-    private static void bindTimer(Context context, RemoteViews views, WidgetState state) {
+    private static void bindTimer(Context context, RemoteViews views, WidgetState state, boolean interactive) {
         views.setViewVisibility(R.id.widgetTimerPanel, state.timerEnabled ? View.VISIBLE : View.GONE);
         if (!state.timerEnabled) return;
         String status = state.timerStatus;
@@ -453,20 +562,28 @@ public final class WorkoutWidgetUpdateService {
             } else {
                 views.setTextViewText(R.id.widgetTimerChronometer, "Descanso " + formatDuration(Math.max(0L, state.timerEndsAtElapsed - SystemClock.elapsedRealtime())));
             }
-            views.setTextViewText(R.id.widgetTimerButton, "Pausar");
-            views.setOnClickPendingIntent(R.id.widgetTimerButton, timerActionIntent(context, WorkoutTimerController.ACTION_TIMER_PAUSE));
+            if (interactive) {
+                views.setTextViewText(R.id.widgetTimerButton, "Pausar");
+                views.setOnClickPendingIntent(R.id.widgetTimerButton, timerActionIntent(context, WorkoutTimerController.ACTION_TIMER_PAUSE));
+            }
         } else if ("paused".equals(status)) {
             views.setTextViewText(R.id.widgetTimerChronometer, "Pausa " + formatDuration(state.timerPausedRemainingMs));
-            views.setTextViewText(R.id.widgetTimerButton, "Continuar");
-            views.setOnClickPendingIntent(R.id.widgetTimerButton, timerActionIntent(context, WorkoutTimerController.ACTION_TIMER_RESUME));
+            if (interactive) {
+                views.setTextViewText(R.id.widgetTimerButton, "Continuar");
+                views.setOnClickPendingIntent(R.id.widgetTimerButton, timerActionIntent(context, WorkoutTimerController.ACTION_TIMER_RESUME));
+            }
         } else if ("finished".equals(status)) {
             views.setTextViewText(R.id.widgetTimerChronometer, "Descanso listo");
-            views.setTextViewText(R.id.widgetTimerButton, "Reiniciar");
-            views.setOnClickPendingIntent(R.id.widgetTimerButton, timerActionIntent(context, WorkoutTimerController.ACTION_TIMER_START));
+            if (interactive) {
+                views.setTextViewText(R.id.widgetTimerButton, "Reiniciar");
+                views.setOnClickPendingIntent(R.id.widgetTimerButton, timerActionIntent(context, WorkoutTimerController.ACTION_TIMER_START));
+            }
         } else {
             views.setTextViewText(R.id.widgetTimerChronometer, "Descanso " + formatDuration(state.timerConfiguredSeconds * 1000L));
-            views.setTextViewText(R.id.widgetTimerButton, "Iniciar");
-            views.setOnClickPendingIntent(R.id.widgetTimerButton, timerActionIntent(context, WorkoutTimerController.ACTION_TIMER_START));
+            if (interactive) {
+                views.setTextViewText(R.id.widgetTimerButton, "Iniciar");
+                views.setOnClickPendingIntent(R.id.widgetTimerButton, timerActionIntent(context, WorkoutTimerController.ACTION_TIMER_START));
+            }
         }
     }
 
@@ -995,6 +1112,8 @@ public final class WorkoutWidgetUpdateService {
         String setStatsText;
         String quickRepsText;
         String quickWeightText;
+        String quickRepsDescription;
+        String quickWeightDescription;
         String actionStatus;
         String loadGuidanceText;
         String type;
@@ -1003,10 +1122,14 @@ public final class WorkoutWidgetUpdateService {
         long timerEndsAtElapsed;
         long timerPausedRemainingMs;
         int timerConfiguredSeconds;
+        long nativeRevision;
+        boolean canUndo;
+        boolean requiresEditor;
 
         static WidgetState fromJson(JSONObject json) {
             WidgetState state = new WidgetState();
             state.title = opt(json, "title", "Entrenamiento de hoy");
+            state.nativeRevision = WorkoutNativeRepository.revision(json);
             state.type = opt(json, "type", "workout");
             state.currentExerciseId = opt(json, "currentExerciseId", "");
             state.currentExerciseName = opt(json, "currentExerciseName", "Ejercicio actual");
@@ -1028,12 +1151,37 @@ public final class WorkoutWidgetUpdateService {
             JSONObject quick = json.optJSONObject("quickLog");
             if (quick != null) {
                 state.currentExerciseName = opt(quick, "exerciseName", state.currentExerciseName);
-                state.quickRepsText = quick.optInt("reps", 8) + " reps";
-                state.quickWeightText = formatWeight(quick.optDouble("weight", 0)) + " " + opt(quick, "unit", json.optString("unit", "kg"));
+                String mode = quick.optString("measurementMode", "reps");
+                String loadMode = quick.optString("loadMode", quick.optBoolean("bodyweight", false) ? "bodyweight" : "total");
+                state.requiresEditor = "time".equals(mode) || "distance".equals(mode);
+                if ("time".equals(mode)) {
+                    state.quickRepsText = formatDuration(Math.round(Math.max(0, quick.optDouble("durationSeconds", 0)) * 1000d));
+                    state.quickWeightText = "Duracion";
+                    state.quickRepsDescription = "Duracion preparada " + state.quickRepsText;
+                    state.quickWeightDescription = "Ejercicio medido por tiempo";
+                } else if ("distance".equals(mode)) {
+                    state.quickRepsText = formatWeight(quick.optDouble("distanceMeters", 0)) + " m";
+                    state.quickWeightText = quick.optDouble("durationSeconds", 0) > 0
+                            ? formatDuration(Math.round(quick.optDouble("durationSeconds", 0) * 1000d)) : "Distancia";
+                    state.quickRepsDescription = "Distancia preparada " + state.quickRepsText;
+                    state.quickWeightDescription = "Duracion opcional " + state.quickWeightText;
+                } else {
+                    state.quickRepsText = quick.optInt("reps", 8) + " reps";
+                    double weight = Math.max(0, quick.optDouble("weight", 0));
+                    String unit = opt(quick, "unit", json.optString("unit", "kg"));
+                    if ((quick.optBoolean("bodyweight", false) || "bodyweight".equals(loadMode)) && weight <= 0) state.quickWeightText = "Peso corporal";
+                    else if ("assistance".equals(loadMode)) state.quickWeightText = formatWeight(weight) + " " + unit + " asistencia";
+                    else if ("addedLoad".equals(loadMode)) state.quickWeightText = "+" + formatWeight(weight) + " " + unit;
+                    else state.quickWeightText = formatWeight(weight) + " " + unit;
+                    state.quickRepsDescription = "Repeticiones preparadas " + state.quickRepsText;
+                    state.quickWeightDescription = "Carga preparada " + state.quickWeightText;
+                }
                 state.setStatsText = setStatsText(json, quick);
             } else {
                 state.quickRepsText = "8 reps";
                 state.quickWeightText = "0 " + json.optString("unit", "kg");
+                state.quickRepsDescription = "Repeticiones preparadas 8";
+                state.quickWeightDescription = "Carga preparada " + state.quickWeightText;
             }
             state.actionStatus = opt(json, "lastWidgetActionText", "Ajusta reps/kg y guarda desde el widget.");
             state.loadGuidanceText = loadGuidanceText(json);
@@ -1056,6 +1204,7 @@ public final class WorkoutWidgetUpdateService {
             timerEndsAtElapsed = timer == null ? 0L : timer.optLong("endsAtElapsedRealtime", 0L);
             timerPausedRemainingMs = timer == null ? 0L : timer.optLong("pausedRemainingMs", 0L);
             timerConfiguredSeconds = timer == null ? 90 : Math.max(15, timer.optInt("configuredSeconds", 90));
+            canUndo = control != null && System.currentTimeMillis() <= control.optLong("undoUntilEpochMs", 0L);
         }
 
         private static String setStatsText(JSONObject state, JSONObject quick) {
