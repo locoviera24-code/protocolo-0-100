@@ -82,6 +82,7 @@
     entry('demoData','protocolo_0_100_gym_party_demo_data_v1','gymParty',{defaultValue:null,validator:value=>value===null||Array.isArray(value)||validators.object(value),backupField:'gymPartyDemoData'}),
 
     entry('uiPreferences','protocolo_0_100_ui_preferences_v1','settings',{defaultValue:{},validator:validators.object,backupField:'uiPreferences'}),
+    entry('featureFlags','protocolo_0_100_feature_flags_v1','settings',{schemaVersion:1,defaultValue:{schemaVersion:1,nativeWorkoutControlsV1:false,lockScreenWorkoutControls:false,nativeRestTimer:false,multiPartyWorkoutSharing:false},validator:validators.object,backupField:'featureFlags',versionField:'schemaVersion'}),
     entry('backupMeta','protocolo_0_100_backup_meta_v1','settings',{defaultValue:{},validator:validators.object,backup:false,resetGroup:'backup'}),
     entry('activeModule','protocolo_0_100_active_module_v1','settings',{defaultValue:null,validator:validators.nullableString,backupField:'activeModule',storageMode:'local',mirrorEnabled:false,serialization:'raw'}),
     entry('onboardingComplete','protocolo_0_100_onboarding_complete_v1','settings',{defaultValue:null,validator:validators.nullableString,backup:false,storageMode:'local',mirrorEnabled:false,serialization:'raw',resetGroup:'onboarding'}),

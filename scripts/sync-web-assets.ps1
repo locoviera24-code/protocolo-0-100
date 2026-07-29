@@ -17,6 +17,7 @@ $relativeFiles = @(
     'app/numbers.js',
     'app/drafts.js',
     'app/dates.js',
+    'app/feature-flags.js',
     'data/schema-registry.js',
     'data/indexeddb.js',
     'data/repositories.js',

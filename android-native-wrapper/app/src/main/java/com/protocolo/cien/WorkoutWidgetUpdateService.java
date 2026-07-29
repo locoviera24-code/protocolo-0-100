@@ -43,11 +43,12 @@ public final class WorkoutWidgetUpdateService {
         }
     }
 
-    public static boolean handleWidgetAction(Context context, String action) {
+    public static synchronized boolean handleWidgetAction(Context context, String action) {
         if (!isDirectAction(action)) return false;
         JSONObject state = readStateJson(context);
-        applyDirectAction(state, action);
+        applyDirectAction(context, state, action);
         saveStateJson(context, state);
+        NativeWorkoutControlRepository.syncFromWidgetState(context, state);
         updateAll(context);
         return true;
     }
@@ -151,7 +152,7 @@ public final class WorkoutWidgetUpdateService {
                 || MainActivity.ACTION_WIDGET_NEXT_EXERCISE.equals(action);
     }
 
-    private static void applyDirectAction(JSONObject state, String action) {
+    private static void applyDirectAction(Context context, JSONObject state, String action) {
         if ("rest".equals(state.optString("type", "workout"))) {
             put(state, "lastWidgetActionText", "Hoy toca descanso. La recuperacion tambien cuenta.");
             touchDirect(state);
@@ -176,7 +177,7 @@ public final class WorkoutWidgetUpdateService {
         } else if (MainActivity.ACTION_WIDGET_NEXT_EXERCISE.equals(action)) {
             moveToNextExercise(state);
         } else if (MainActivity.ACTION_WIDGET_SAVE_SET.equals(action)) {
-            saveSet(state);
+            saveSet(context, state);
         }
         touchDirect(state);
     }
@@ -210,7 +211,7 @@ public final class WorkoutWidgetUpdateService {
         put(state, "lastWidgetActionText", "Ultima serie cargada. Toca Guardar serie para repetirla.");
     }
 
-    private static void saveSet(JSONObject state) {
+    private static void saveSet(Context context, JSONObject state) {
         JSONObject session = ensureSession(state);
         JSONObject exercise = currentExercise(state, session);
         if (session == null || exercise == null) {
@@ -229,8 +230,17 @@ public final class WorkoutWidgetUpdateService {
         JSONArray sets = exercise.optJSONArray("sets");
         if (sets == null) sets = new JSONArray();
         int setNumber = sets.length() + 1;
+        NativeWorkoutControlRepository.EnqueueResult nativeResult = NativeWorkoutControlRepository.enqueueSaveSet(context, state, session, exercise, quick, weight);
+        if (!nativeResult.disabled && !nativeResult.ok) {
+            put(state, "lastWidgetActionText", "No se pudo guardar en el telefono. Intenta nuevamente.");
+            return;
+        }
+        if (nativeResult.duplicate) {
+            put(state, "lastWidgetActionText", "La serie ya se guardo. Se ignoro el toque repetido.");
+            return;
+        }
         JSONObject set = new JSONObject();
-        put(set, "id", "set_android_" + System.currentTimeMillis());
+        put(set, "id", nativeResult.ok ? nativeResult.setId() : "set_android_" + System.currentTimeMillis());
         put(set, "setNumber", setNumber);
         put(set, "reps", reps);
         put(set, "weight", weight);
@@ -243,6 +253,10 @@ public final class WorkoutWidgetUpdateService {
         put(set, "excludeFromProgression", false);
         put(set, "note", "Guardado desde widget Android");
         put(set, "savedAt", nowIso());
+        if (nativeResult.ok) {
+            put(set, "nativeMutationId", nativeResult.mutation.optString("id", ""));
+            put(set, "privateImportState", "pending");
+        }
         put(set, "volume", Math.round(reps * weight));
         sets.put(set);
         put(exercise, "sets", sets);
