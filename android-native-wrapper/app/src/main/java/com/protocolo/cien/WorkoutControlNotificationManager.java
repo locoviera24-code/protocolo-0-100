@@ -8,13 +8,14 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.SystemClock;
 
 import org.json.JSONObject;
 
 public final class WorkoutControlNotificationManager {
-    public static final String CHANNEL_ID = "workout_controls_v1";
+    public static final String CHANNEL_ID = "workout_controls_v3";
     private static final String CHANNEL_TIMER_VIBRATE = "workout_timer_vibrate_v1";
     private static final String CHANNEL_TIMER_SOUND = "workout_timer_sound_v1";
     private static final int NOTIFICATION_ID = 7100;
@@ -38,8 +39,7 @@ public final class WorkoutControlNotificationManager {
         }
         JSONObject control = NativeWorkoutControlRepository.readControlState(context);
         JSONObject timer = WorkoutTimerController.currentState(context);
-        boolean activeTimer = "running".equals(timer.optString("timerStatus")) || "paused".equals(timer.optString("timerStatus"));
-        if (!"en progreso".equals(control.optString("sessionStatus", "")) && !activeTimer) {
+        if (!"en progreso".equals(control.optString("sessionStatus", ""))) {
             cancel(context);
             return;
         }
@@ -66,7 +66,8 @@ public final class WorkoutControlNotificationManager {
                 .setAutoCancel(false)
                 .setOngoing(false)
                 .setCategory(Notification.CATEGORY_ALARM)
-                .setVisibility(lockVisibility(context))
+                .setVisibility(Notification.VISIBILITY_PRIVATE)
+                .setPublicVersion(publicVersion(context))
                 .setOnlyAlertOnce(false);
         if (settings.optBoolean("timerVibration", true)) builder.setVibrate(new long[]{0, 180, 100, 180});
         if (!settings.optBoolean("timerSound", false)) builder.setSound(null);
@@ -101,25 +102,33 @@ public final class WorkoutControlNotificationManager {
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)
                 .setCategory(Build.VERSION.SDK_INT >= 31 ? Notification.CATEGORY_STOPWATCH : Notification.CATEGORY_STATUS)
-                .setVisibility(lockVisibility(context));
+                .setVisibility(Notification.VISIBILITY_PRIVATE)
+                .setPublicVersion(publicVersion(context));
 
         String timerStatus = timer.optString("timerStatus", "idle");
         if ("running".equals(timerStatus)) {
             long end = timer.optLong("endsAtElapsedRealtime", SystemClock.elapsedRealtime());
             builder.setWhen(System.currentTimeMillis() + Math.max(0L, end - SystemClock.elapsedRealtime()))
-                    .setUsesChronometer(true)
-                    .addAction(0, "-15 s", actionIntent(context, WorkoutTimerController.ACTION_TIMER_SUBTRACT_15))
-                    .addAction(0, "Pausar", actionIntent(context, WorkoutTimerController.ACTION_TIMER_PAUSE))
-                    .addAction(0, "+15 s", actionIntent(context, WorkoutTimerController.ACTION_TIMER_ADD_15));
+                    .setUsesChronometer(true);
             if (Build.VERSION.SDK_INT >= 24) builder.setChronometerCountDown(true);
+        }
+        boolean canUndo = System.currentTimeMillis() <= control.optLong("undoUntilEpochMs", 0L);
+        if (canUndo) {
+            builder.addAction(0, "Deshacer", actionIntent(context, MainActivity.ACTION_WIDGET_UNDO_LAST_SET, control))
+                    .addAction(0, "Guardar", actionIntent(context, MainActivity.ACTION_WIDGET_SAVE_SET, control))
+                    .addAction(0, "Siguiente", actionIntent(context, MainActivity.ACTION_WIDGET_NEXT_EXERCISE, control));
+        } else if ("running".equals(timerStatus)) {
+            builder.addAction(0, "Guardar", actionIntent(context, MainActivity.ACTION_WIDGET_SAVE_SET, control))
+                    .addAction(0, "Pausar", actionIntent(context, WorkoutTimerController.ACTION_TIMER_PAUSE, control))
+                    .addAction(0, "Siguiente", actionIntent(context, MainActivity.ACTION_WIDGET_NEXT_EXERCISE, control));
         } else if ("paused".equals(timerStatus)) {
-            builder.addAction(0, "-15 s", actionIntent(context, WorkoutTimerController.ACTION_TIMER_SUBTRACT_15))
-                    .addAction(0, "Continuar", actionIntent(context, WorkoutTimerController.ACTION_TIMER_RESUME))
-                    .addAction(0, "+15 s", actionIntent(context, WorkoutTimerController.ACTION_TIMER_ADD_15));
+            builder.addAction(0, "Guardar", actionIntent(context, MainActivity.ACTION_WIDGET_SAVE_SET, control))
+                    .addAction(0, "Continuar", actionIntent(context, WorkoutTimerController.ACTION_TIMER_RESUME, control))
+                    .addAction(0, "Siguiente", actionIntent(context, MainActivity.ACTION_WIDGET_NEXT_EXERCISE, control));
         } else {
-            builder.addAction(0, "Reps -", actionIntent(context, MainActivity.ACTION_WIDGET_REPS_DOWN))
-                    .addAction(0, "Guardar", actionIntent(context, MainActivity.ACTION_WIDGET_SAVE_SET))
-                    .addAction(0, "Reps +", actionIntent(context, MainActivity.ACTION_WIDGET_REPS_UP));
+            builder.addAction(0, "Guardar", actionIntent(context, MainActivity.ACTION_WIDGET_SAVE_SET, control))
+                    .addAction(0, "+1 rep", actionIntent(context, MainActivity.ACTION_WIDGET_REPS_UP, control))
+                    .addAction(0, "Siguiente", actionIntent(context, MainActivity.ACTION_WIDGET_NEXT_EXERCISE, control));
         }
         return builder.build();
     }
@@ -146,11 +155,9 @@ public final class WorkoutControlNotificationManager {
     private static String syncText(JSONObject control) {
         String privateState = control.optString("privateImportState", "pending");
         int pending = Math.max(0, control.optInt("pendingMutationCount", 0));
-        String privateText = "imported".equals(privateState) ? "Privado ✓" : pending > 0 ? "Privado pendiente" : "Privado local";
-        JSONObject sync = control.optJSONObject("syncState");
-        int total = sync == null ? 0 : Math.max(0, sync.optInt("total", 0));
-        int done = sync == null ? 0 : Math.max(0, sync.optInt("synced", 0));
-        return total > 0 ? privateText + " · Grupos " + done + "/" + total : privateText;
+        if ("error".equals(privateState)) return "Necesita atencion";
+        if (pending > 0) return "Guardado en el dispositivo · Pendiente de importar";
+        return "imported".equals(privateState) ? "Incorporado al historial" : "Guardado en el dispositivo";
     }
 
     private static int lockVisibility(Context context) {
@@ -188,10 +195,23 @@ public final class WorkoutControlNotificationManager {
         manager.createNotificationChannel(sound);
     }
 
-    private static PendingIntent actionIntent(Context context, String action) {
+    private static PendingIntent actionIntent(Context context, String action, JSONObject control) {
         Intent intent = new Intent(context, WorkoutControlReceiver.class).setAction(action);
+        String deliveryId = WorkoutNativeRepository.deliveryId(control, WorkoutQuickActionReducer.SOURCE_NOTIFICATION, action, NOTIFICATION_ID);
+        intent.setData(Uri.parse("protocolo://notification-action/" + Uri.encode(deliveryId)));
+        intent.putExtra("deliveryId", deliveryId);
         return PendingIntent.getBroadcast(context, stableRequestCode(action), intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    }
+
+    private static Notification publicVersion(Context context) {
+        return builder(context, CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_workout_notification)
+                .setContentTitle("Entrenamiento en curso")
+                .setContentText("Controles disponibles al desbloquear")
+                .setCategory(Notification.CATEGORY_STATUS)
+                .setVisibility(Notification.VISIBILITY_PUBLIC)
+                .build();
     }
 
     private static PendingIntent openIntent(Context context, String exerciseId) {

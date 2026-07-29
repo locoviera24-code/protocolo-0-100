@@ -63,11 +63,15 @@ public final class WorkoutTimerController {
     public static synchronized void start(Context context, int seconds) {
         int safeSeconds = Math.max(MIN_SECONDS, Math.min(MAX_SECONDS, seconds));
         long now = SystemClock.elapsedRealtime();
+        long nowEpoch = System.currentTimeMillis();
         JSONObject timer = baseState();
         put(timer, "timerMode", "rest_countdown");
         put(timer, "timerStatus", "running");
         put(timer, "startedAtElapsedRealtime", now);
         put(timer, "endsAtElapsedRealtime", now + safeSeconds * 1000L);
+        put(timer, "startedAtEpochMs", nowEpoch);
+        put(timer, "endsAtEpochMs", nowEpoch + safeSeconds * 1000L);
+        put(timer, "bootEpochMs", nowEpoch - now);
         put(timer, "pausedRemainingMs", 0L);
         put(timer, "configuredSeconds", safeSeconds);
         put(timer, "updatedAtElapsedRealtime", now);
@@ -79,6 +83,7 @@ public final class WorkoutTimerController {
     public static JSONObject currentState(Context context) {
         JSONObject timer = NativeWorkoutControlRepository.readControlState(context).optJSONObject("timer");
         JSONObject value = timer == null ? baseState() : cloneObject(timer);
+        restoreClockAfterBoot(value);
         if ("running".equals(value.optString("timerStatus")) && remainingMs(value) <= 0) {
             put(value, "timerStatus", "finished");
             put(value, "pausedRemainingMs", 0L);
@@ -86,6 +91,18 @@ public final class WorkoutTimerController {
             NativeWorkoutControlRepository.updateTimer(context, value);
         }
         return value;
+    }
+
+    public static synchronized void restoreAfterBoot(Context context) {
+        JSONObject timer = NativeWorkoutControlRepository.readControlState(context).optJSONObject("timer");
+        if (timer == null) return;
+        JSONObject restored = cloneObject(timer);
+        boolean changed = restoreClockAfterBoot(restored);
+        if (changed) NativeWorkoutControlRepository.updateTimer(context, restored);
+        if ("running".equals(restored.optString("timerStatus")) && remainingMs(restored) > 0) {
+            scheduleFinish(context, restored.optLong("endsAtElapsedRealtime", 0L));
+        }
+        refreshSurfaces(context);
     }
 
     public static long remainingMs(JSONObject timer) {
@@ -109,9 +126,13 @@ public final class WorkoutTimerController {
         if (!"paused".equals(timer.optString("timerStatus"))) return;
         long remaining = Math.max(1_000L, timer.optLong("pausedRemainingMs", configuredSeconds(context) * 1000L));
         long now = SystemClock.elapsedRealtime();
+        long nowEpoch = System.currentTimeMillis();
         put(timer, "timerStatus", "running");
         put(timer, "startedAtElapsedRealtime", now);
         put(timer, "endsAtElapsedRealtime", now + remaining);
+        put(timer, "startedAtEpochMs", nowEpoch);
+        put(timer, "endsAtEpochMs", nowEpoch + remaining);
+        put(timer, "bootEpochMs", nowEpoch - now);
         put(timer, "pausedRemainingMs", 0L);
         put(timer, "updatedAtElapsedRealtime", now);
         NativeWorkoutControlRepository.updateTimer(context, timer);
@@ -142,8 +163,10 @@ public final class WorkoutTimerController {
         String status = timer.optString("timerStatus", "idle");
         if ("running".equals(status)) {
             long now = SystemClock.elapsedRealtime();
+            long nowEpoch = System.currentTimeMillis();
             long nextEnd = Math.max(now + 1_000L, timer.optLong("endsAtElapsedRealtime", now) + deltaMs);
             put(timer, "endsAtElapsedRealtime", nextEnd);
+            put(timer, "endsAtEpochMs", nowEpoch + Math.max(0L, nextEnd - now));
             put(timer, "updatedAtElapsedRealtime", now);
             NativeWorkoutControlRepository.updateTimer(context, timer);
             scheduleFinish(context, nextEnd);
@@ -162,16 +185,41 @@ public final class WorkoutTimerController {
     }
 
     private static JSONObject baseState() {
+        long nowElapsed = SystemClock.elapsedRealtime();
+        long nowEpoch = System.currentTimeMillis();
         JSONObject timer = new JSONObject();
-        put(timer, "schemaVersion", 1);
+        put(timer, "schemaVersion", 2);
         put(timer, "timerMode", "rest_countdown");
         put(timer, "timerStatus", "idle");
         put(timer, "startedAtElapsedRealtime", 0L);
         put(timer, "endsAtElapsedRealtime", 0L);
+        put(timer, "startedAtEpochMs", 0L);
+        put(timer, "endsAtEpochMs", 0L);
+        put(timer, "bootEpochMs", nowEpoch - nowElapsed);
         put(timer, "pausedRemainingMs", 0L);
         put(timer, "configuredSeconds", DEFAULT_SECONDS);
-        put(timer, "updatedAtElapsedRealtime", SystemClock.elapsedRealtime());
+        put(timer, "updatedAtElapsedRealtime", nowElapsed);
+        put(timer, "updatedAtEpochMs", nowEpoch);
         return timer;
+    }
+
+    private static boolean restoreClockAfterBoot(JSONObject timer) {
+        if (timer == null || !"running".equals(timer.optString("timerStatus", ""))) return false;
+        long nowElapsed = SystemClock.elapsedRealtime();
+        long nowEpoch = System.currentTimeMillis();
+        long currentBootEpoch = nowEpoch - nowElapsed;
+        long storedBootEpoch = timer.optLong("bootEpochMs", 0L);
+        if (storedBootEpoch > 0L && Math.abs(storedBootEpoch - currentBootEpoch) < 60_000L
+                && timer.optLong("startedAtElapsedRealtime", 0L) <= nowElapsed) return false;
+        long endsEpoch = timer.optLong("endsAtEpochMs", 0L);
+        long remaining = endsEpoch > 0L ? Math.max(0L, endsEpoch - nowEpoch) : 0L;
+        put(timer, "startedAtElapsedRealtime", nowElapsed);
+        put(timer, "endsAtElapsedRealtime", nowElapsed + remaining);
+        put(timer, "bootEpochMs", currentBootEpoch);
+        put(timer, "updatedAtElapsedRealtime", nowElapsed);
+        put(timer, "updatedAtEpochMs", nowEpoch);
+        if (remaining <= 0L) put(timer, "timerStatus", "finished");
+        return true;
     }
 
     private static void scheduleFinish(Context context, long triggerAtElapsed) {

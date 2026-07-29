@@ -3831,3 +3831,59 @@ APK instalado y actualización desde APK anterior, widget en launcher, voz y
 Gym Party entre dos teléfonos. La checklist exacta está en
 `docs/physical-test-checklist.md`. No debe atribuirse ningún resultado físico
 hasta completarla.
+
+## 82. Controles Android de acceso rapido V1 en rama beta
+
+La rama `codex/android-quick-access-v1` parte de `main` build 89 y no modifica
+la referencia estable `baseline-stable-2.7`. El bloque P0 reemplaza la logica
+monolitica del widget por tres responsabilidades nativas:
+
+- `WorkoutQuickActionReducer` procesa las mismas acciones para widget y
+  notificacion;
+- `WorkoutNativeRepository` conserva snapshot, revision y entregas procesadas;
+- `WorkoutMutationQueue` mantiene hasta 200 mutaciones durables `pending`,
+  `imported`, `rejected` o `undone` con UUID y cuarentena de entradas corruptas.
+
+`NativeWorkoutControlRepository` escribe `save_set` antes de actualizar la UI,
+valida la revision esperada, bloquea doble toque accidental durante 650 ms y
+crea `undo_set` compensatorio durante diez segundos. Una confirmacion tardia
+solo puede importar mutaciones que continuen `pending`, por lo que no reactiva
+una serie ya deshecha. `gym/native-workout-importer.js` aplica y deshace por
+`setId` de forma idempotente; despues de importar prepara la sincronizacion
+existente de Gym Party, sin introducir Firebase nativo.
+
+El widget usa `widget_workout_compact.xml`,
+`widget_workout_standard.xml` y `widget_workout_expanded.xml`; los nombres
+small/medium se conservan como aliases. La seleccion combina ancho y alto del
+launcher. No hay controles de 1 dp, los botones funcionales miden 48 dp, el
+compacto tiene hasta cuatro acciones y el estandar siete. Peso corporal no
+muestra `0 kg`; tiempo y distancia abren el editor cuando no pueden corregirse
+con seguridad desde `RemoteViews`.
+
+`MainActivity.AndroidBridge` expone JSON estructurado para capacidades,
+instalacion mediante `requestPinAppWidget`, cola pendiente, confirmacion por IDs
+y ciclo de la notificacion. Gym contiene **Acceso rapido durante el
+entrenamiento**; en web explica que se requiere el APK y en Android ofrece
+**Agregar widget** y **Activar controles**. El permiso de notificaciones se
+solicita solo desde esa accion; si ya fue rechazado se abren Ajustes de Android.
+
+La notificacion usa canal de importancia baja, maximo tres acciones,
+`VISIBILITY_PRIVATE` y una version publica que solo indica **Entrenamiento en
+curso**. No usa full-screen intent ni declara widget keyguard. El descanso usa
+reloj monotonico y `AlarmManager`; se recalibra tras reinicio. Fecha, zona
+horaria y reemplazo de paquete refrescan las superficies.
+
+Verificacion real del bloque hasta este punto:
+
+- `scripts/test-native-workout-controls.mjs`: aprobado; ejecuta importacion,
+  reentrega, deduplicacion, Deshacer y Deshacer repetido, ademas de contratos
+  Android y layouts;
+- importador nativo, guia de carga y `test-workout-features`: aprobados;
+- Android `:app:assembleDebug` con JDK 17/Gradle 8.10.2: aprobado en 67 s;
+- previews de los tres layouts en `docs/previews/`;
+- hardware fisico: no disponible, todas las pruebas de launcher, bloqueo,
+  permiso y reinicio siguen pendientes y no se consideran aprobadas.
+
+Antes de cerrar la rama faltan sincronizar assets web/Android, incrementar una
+sola vez el build beta, ejecutar gate completo, producir artifacts, actualizar
+la checklist fisica, enviar la rama y abrir el pull request. No publicar stable.
