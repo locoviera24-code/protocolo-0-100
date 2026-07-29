@@ -38,6 +38,7 @@ public final class NativeWorkoutControlRepository {
         JSONObject session = widgetState.optJSONObject("workoutSession");
         put(control, "schemaVersion", SCHEMA_VERSION);
         put(control, "sessionId", session == null ? "" : session.optString("id", ""));
+        put(control, "sessionStatus", session == null ? "" : session.optString("status", ""));
         put(control, "exerciseId", widgetState.optString("currentExerciseId", ""));
         put(control, "exerciseName", widgetState.optString("currentExerciseName", ""));
         put(control, "setNumber", quick == null ? 1 : Math.max(1, quick.optInt("setNumber", 1)));
@@ -47,7 +48,8 @@ public final class NativeWorkoutControlRepository {
         put(control, "lastComparableSet", cloneObject(widgetState.optJSONObject("lastComparableSet")));
         put(control, "historicalLoadRecord", cloneObject(widgetState.optJSONObject("historicalLoadRecord")));
         put(control, "loadGuidanceSnapshot", cloneObject(widgetState.optJSONObject("loadGuidanceSnapshot")));
-        put(control, "timer", cloneObject(widgetState.optJSONObject("nativeTimer")));
+        put(control, "featureFlags", cloneObject(widgetState.optJSONObject("featureFlags")));
+        put(control, "settings", cloneObject(widgetState.optJSONObject("nativeWorkoutSettings")));
         put(control, "shareTargets", cloneArray(widgetState.optJSONArray("nativeShareTargets")));
         put(control, "syncState", cloneObject(widgetState.optJSONObject("nativeSyncState")));
         put(control, "pendingMutationCount", pendingCount(readMutations(context)));
@@ -163,8 +165,14 @@ public final class NativeWorkoutControlRepository {
 
     public static synchronized String bridgePayload(Context context) {
         JSONObject payload = new JSONObject();
+        JSONObject state = readControlState(context);
+        JSONObject timer = state.optJSONObject("timer");
+        JSONObject timerRuntime = new JSONObject();
+        put(timerRuntime, "timerStatus", timer == null ? "idle" : timer.optString("timerStatus", "idle"));
+        put(timerRuntime, "remainingMs", WorkoutTimerController.remainingMs(timer));
         put(payload, "schemaVersion", SCHEMA_VERSION);
-        put(payload, "state", readControlState(context));
+        put(payload, "state", state);
+        put(payload, "timerRuntime", timerRuntime);
         put(payload, "mutations", readMutations(context));
         put(payload, "generatedAt", nowIso());
         return payload.toString();
@@ -200,6 +208,22 @@ public final class NativeWorkoutControlRepository {
         String raw = preferences(context).getString(KEY_CONTROL_STATE, "");
         try { return raw == null || raw.length() == 0 ? defaultControlState() : new JSONObject(raw); }
         catch (Exception ignored) { return defaultControlState(); }
+    }
+
+    static synchronized boolean updateTimer(Context context, JSONObject timer) {
+        JSONObject control = readControlState(context);
+        put(control, "timer", cloneObject(timer));
+        put(control, "updatedAt", nowIso());
+        return preferences(context).edit().putString(KEY_CONTROL_STATE, control.toString()).commit();
+    }
+
+    static boolean featureEnabled(Context context, String name) {
+        JSONObject flags = readControlState(context).optJSONObject("featureFlags");
+        return flags != null && flags.optBoolean(name, false);
+    }
+
+    static JSONObject nativeSettings(Context context) {
+        return cloneObject(readControlState(context).optJSONObject("settings"));
     }
 
     static synchronized JSONArray readMutations(Context context) {
