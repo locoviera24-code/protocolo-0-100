@@ -32,7 +32,7 @@ test('artifact publicado carga modulos, rutas y service worker sin errores',asyn
     routeStates.push({name,state});
   }
 
-  for(const asset of ['/app/numbers.js','/app/drafts.js','/app/dates.js','/gym/set-model.js','/manifest.webmanifest','/icons/icon-192.png','/icons/icon-maskable-192.png','/icons/shortcut-nutrition-96.png','/screenshots/mobile-home-390x844.png','/screenshots/desktop-gym-1440x900.png','/offline.html','/precache-manifest.js']){
+  for(const asset of ['/artifact-channel.js','/app/numbers.js','/app/drafts.js','/app/dates.js','/gym/set-model.js','/manifest.webmanifest','/icons/icon-192.png','/icons/icon-maskable-192.png','/icons/shortcut-nutrition-96.png','/screenshots/mobile-home-390x844.png','/screenshots/desktop-gym-1440x900.png','/offline.html','/precache-manifest.js']){
     const response=await request.get(asset);
     expect(response.status(),`${asset} debe responder 200`).toBe(200);
   }
@@ -48,6 +48,16 @@ test('artifact publicado carga modulos, rutas y service worker sin errores',asyn
   });
   expect(cacheDiagnostic.missingRequired).toEqual([]);
   expect(cacheDiagnostic.build).toBe(await page.evaluate(()=>window.APP_VERSION_INFO.build));
+  const channelState=await page.evaluate(async()=>({
+    channel:window.APP_ARTIFACT_CHANNEL,
+    buildChannel:(await window.APP_BUILD_INFO.active()).channel,
+    flags:window.APP_FEATURE_FLAGS.all()
+  }));
+  expect(channelState.channel).toBe(channelState.buildChannel);
+  expect(channelState.flags.nativeWorkoutControlsV1).toBe(channelState.channel==='beta');
+  expect(channelState.flags.lockScreenWorkoutControls).toBe(channelState.channel==='beta');
+  expect(channelState.flags.nativeRestTimer).toBe(channelState.channel==='beta');
+  expect(channelState.flags.multiPartyWorkoutSharing).toBe(channelState.channel==='beta');
   expect(consoleErrors).toEqual([]);
   expect(pageErrors).toEqual([]);
   expect(failedRequests).toEqual([]);

@@ -514,9 +514,11 @@ La PWA/GitHub Pages no puede crear widgets nativos. El widget real vive en el AP
 La rama `feature/native-workout-controls-v1` amplía el widget con una
 notificación persistente de entrenamiento y un temporizador nativo. Las flags
 `nativeWorkoutControlsV1`, `lockScreenWorkoutControls`, `nativeRestTimer` y
-`multiPartyWorkoutSharing` permanecen apagadas por defecto, por lo que el canal
-stable conserva exactamente el comportamiento 2.7.0. Este proyecto no se
-publica ni se fusiona a `main` hasta aprobar el gate beta y las pruebas físicas.
+`multiPartyWorkoutSharing` permanecen apagadas por defecto en desarrollo y
+`stable`, por lo que el canal estable conserva exactamente el comportamiento
+2.7.0. Un artifact identificado como `beta` las activa al iniciar solamente si
+todavía no existe una preferencia guardada; una elección previa del usuario
+siempre prevalece y se puede volver a apagar sin borrar datos.
 
 La app web sincroniza `weeklyWorkoutPlan`, `workoutSessions`, `exerciseHistory`, `exerciseLibrary`, `gymSettings` y `workoutWidgetState` mediante `AndroidBridge.saveWorkoutWidgetData(json)`. Si todavia no hay datos, Android usa la rutina predeterminada segun el dia actual.
 

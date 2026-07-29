@@ -29,3 +29,7 @@ export function createBuildInfo(version,{env=process.env}={}){
 }
 
 export function renderBuildInfo(info){return`${JSON.stringify(info,null,2)}\n`;}
+export function renderArtifactChannel(channel){
+  const value=CHANNELS.has(String(channel))?String(channel):'development';
+  return `(function(root){\n  'use strict';\n  root.APP_ARTIFACT_CHANNEL=${JSON.stringify(value)};\n})(globalThis);\n`;
+}

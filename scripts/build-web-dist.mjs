@@ -2,7 +2,7 @@ import {cp,mkdir,readFile,rm,stat,writeFile} from 'node:fs/promises';
 import {dirname,extname,relative,resolve,sep} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {PRECACHE_FILE,createPrecacheManifest,normalizePrecacheData,renderPrecacheManifest,sha256} from './precache-manifest.mjs';
-import {createBuildInfo,renderBuildInfo} from './build-info.mjs';
+import {createBuildInfo,renderArtifactChannel,renderBuildInfo} from './build-info.mjs';
 
 export const repoRoot=resolve(fileURLToPath(new URL('../',import.meta.url)));
 export const distRoot=resolve(repoRoot,process.env.WEB_DIST_DIR||'dist-pages');
@@ -98,7 +98,9 @@ export async function buildWebDist(){
   if(!insideRoot(distRoot)||distRoot===repoRoot)throw new Error(`Directorio de salida inseguro: ${distRoot}`);
   const assets=await discoverWebAssets();
   const version=JSON.parse(await readFile(resolve(repoRoot,'app-version.json'),'utf8'));
-  const generatedBuildInfo=Buffer.from(renderBuildInfo(createBuildInfo(version)),'utf8');
+  const buildInfo=createBuildInfo(version);
+  const generatedBuildInfo=Buffer.from(renderBuildInfo(buildInfo),'utf8');
+  const generatedArtifactChannel=Buffer.from(renderArtifactChannel(buildInfo.channel),'utf8');
   await rm(distRoot,{recursive:true,force:true});
   await mkdir(distRoot,{recursive:true});
   const inventory=[];
@@ -108,6 +110,7 @@ export async function buildWebDist(){
     try{if(!(await stat(source)).isFile())throw new Error();}catch{throw new Error(`Falta la fuente de build para ${asset}: ${source}`);}
     await mkdir(dirname(target),{recursive:true});
     if(asset==='build-info.json')await writeFile(target,generatedBuildInfo);
+    else if(asset==='artifact-channel.js')await writeFile(target,generatedArtifactChannel);
     else await cp(source,target);
     const copiedData=await readFile(target),data=normalizePrecacheData(asset,copiedData);
     if(!data.equals(copiedData))await writeFile(target,data);

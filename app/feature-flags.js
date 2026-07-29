@@ -11,6 +11,16 @@
   });
   const FLAG_NAMES=Object.freeze(Object.keys(DEFAULTS).filter(key=>key!=='schemaVersion'));
 
+  function channelDefaults(){
+    if(global.APP_ARTIFACT_CHANNEL!=='beta')return normalize(DEFAULTS);
+    return normalize({
+      ...DEFAULTS,
+      nativeWorkoutControlsV1:true,
+      lockScreenWorkoutControls:true,
+      nativeRestTimer:true,
+      multiPartyWorkoutSharing:true
+    });
+  }
   function normalize(value={}){
     const next={schemaVersion:1};
     FLAG_NAMES.forEach(name=>{next[name]=value?.[name]===true;});
@@ -21,8 +31,8 @@
       const value=global.APP_DATA?.read?.(KEY,null);
       if(value&&typeof value==='object'&&!Array.isArray(value))return normalize(value);
       const raw=global.localStorage?.getItem?.(KEY);
-      return raw?normalize(JSON.parse(raw)):normalize(DEFAULTS);
-    }catch(error){return normalize(DEFAULTS);}
+      return raw?normalize(JSON.parse(raw)):channelDefaults();
+    }catch(error){return channelDefaults();}
   }
   function write(value){
     const next=normalize(value);
@@ -36,5 +46,5 @@
   function set(patch={}){return write({...read(),...Object.fromEntries(FLAG_NAMES.filter(name=>Object.hasOwn(patch,name)).map(name=>[name,patch[name]===true]))});}
   function reset(){return write(DEFAULTS);}
 
-  global.APP_FEATURE_FLAGS=Object.freeze({KEY,DEFAULTS,FLAG_NAMES,all,isEnabled,set,reset,normalize});
+  global.APP_FEATURE_FLAGS=Object.freeze({KEY,DEFAULTS,FLAG_NAMES,all,isEnabled,set,reset,normalize,channelDefaults});
 })(window);

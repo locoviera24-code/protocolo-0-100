@@ -4139,3 +4139,30 @@ cola nativa es durable y se importa/sincroniza cuando vuelve a ejecutarse WebVie
 
 Siguiente accion exacta: confirmar este cierre documental, pushear y ejecutar el
 quality gate beta final sobre el HEAD documental exacto. No publicar stable.
+
+## 94. Artifact beta instalable con controles activos
+
+El artifact de validacion anterior incluia los controles, pero las cuatro flags
+seguian apagadas tambien en beta. Eso era correcto para proteger stable, pero no
+proporcionaba una descarga util para probar el widget y la pantalla bloqueada.
+
+`artifact-channel.js` identifica de forma sincrona `development`, `beta` o
+`stable`. `generate-build-info.mjs` lo genera junto con `build-info.json`; el
+artifact web tambien lo deriva del mismo canal. `app/feature-flags.js` mantiene
+los defaults apagados en desarrollo y stable, y los activa en beta unicamente
+cuando no existe una preferencia persistida. Configuraciones anteriores siempre
+prevalecen, por lo que no se sobrescriben decisiones ni backups.
+
+El workflow de APK release ahora propaga `QUALITY_CHANNEL` y genera metadatos
+antes de sincronizar Android. Una ejecucion manual con `prerelease=true` produce
+un APK firmado con los Secrets existentes, pasa por el quality gate comun y crea
+una GitHub prerelease descargable. No publica stable ni fusiona `main`.
+
+Archivos principales: `artifact-channel.js`, `app/feature-flags.js`,
+`scripts/build-info.mjs`, `scripts/generate-build-info.mjs`,
+`scripts/build-web-dist.mjs`, `scripts/sync-web-assets.ps1`, `index.html`,
+`.github/workflows/build-release-apk.yml` y pruebas de version/flags/gate.
+
+Siguiente accion exacta: regenerar precache, sincronizar Android, ejecutar las
+pruebas afectadas, confirmar el bloque y despachar `build-release-apk.yml` con
+tag beta y `prerelease=true`. Verificar el enlace publico antes de entregarlo.

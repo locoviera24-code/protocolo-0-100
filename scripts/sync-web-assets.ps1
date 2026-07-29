@@ -11,6 +11,7 @@ $relativeFiles = @(
     'offline.html',
     'app-version.js',
     'build-info.json',
+    'artifact-channel.js',
     'precache-manifest.js',
     'app/build-guard.js',
     'app/build-info.js',

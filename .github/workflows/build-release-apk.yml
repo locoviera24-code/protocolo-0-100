@@ -31,6 +31,8 @@ jobs:
     name: Compilar APK firmado y publicar checksum
     needs: quality
     runs-on: ubuntu-latest
+    env:
+      QUALITY_CHANNEL: ${{ inputs.prerelease && 'beta' || 'stable' }}
 
     steps:
       - name: Descargar repositorio
@@ -67,6 +69,7 @@ jobs:
       - name: Sincronizar y validar app web
         shell: pwsh
         run: |
+          node ./scripts/generate-build-info.mjs
           npm run build:precache
           ./scripts/sync-web-assets.ps1
           ./scripts/validate-app.ps1 -CheckAndroidAssets
