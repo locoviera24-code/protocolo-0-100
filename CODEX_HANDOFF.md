@@ -3,8 +3,8 @@
 Ultima actualizacion: 2026-07-29
 Rama esperada: `codex/android-quick-access-v1`
 Version actual: `2.7.0` (fuente unica: `app-version.json`)
-Android: `versionCode 34`, `versionName "2.7.0"`
-Service worker cache: `protocolo-0-100-pwa-2.7.0-b90`
+Android: `versionCode 35`, `versionName "2.7.0"`
+Service worker cache: `protocolo-0-100-pwa-2.7.0-b91`
 Backup consolidado: `schemaVersion: 3`
 
 Leer primero este archivo y luego `README.md`, `index.html`,
@@ -4003,3 +4003,64 @@ El pull request numero 1 permanece borrador. La rama no se fusiono, la etiqueta
 hubo hardware ADB conectado: todas las pruebas fisicas de widget, launcher,
 bloqueo, notificacion, reinicio y actualizacion continúan pendientes en
 `docs/physical-test-checklist.md`.
+
+## 87. Correccion de widget estable y controles de bloqueo, beta 91
+
+La correccion parte de `285eeef` y mantiene la rama
+`codex/android-quick-access-v1`. Se incremento una sola vez el paquete beta a
+version `2.7.0`, build web/PWA `91` y Android `versionCode 35`; stable continua
+en build 89 y no se modifica la referencia `baseline-stable-2.7`.
+
+Problemas confirmados y solucionados:
+
+- `ensureSession()` creaba la sesion web pero no ejecutaba
+  `syncWorkoutWidget()`. Android conservaba `sessionStatus: sin iniciar` y
+  `WorkoutControlNotificationManager` cancelaba la notificacion. Ahora tocar
+  **Empezar entrenamiento** publica inmediatamente `en progreso`.
+- `WorkoutWidgetUpdateService.selectLayout()` usaba el maximo entre tamaños de
+  orientaciones. El primer toque podia reconstruir un compacto como expandido.
+  La seleccion usa el tamaño actual/minimo y reserva expandido para una altura y
+  anchura realmente grandes.
+- compacto queda en -5, Guardar, +5 y temporizador; estandar y expandido usan
+  -5/+5 para carga. El expandido elimina Anterior, Abrir, Editar y la segunda
+  pareja de ajustes rápidos. No hay controles de 1 dp ni botones menores a
+  48 dp.
+- `getWorkoutWidgetStatus()` diferencia `disabled`, `permission-required`,
+  `waiting-for-session`, `active` y `not-posted`. El ultimo se basa en
+  `NotificationManager.getActiveNotifications()`, no solo en tener permiso.
+  **Revisar notificacion** abre directamente el canal Android **Controles de
+  entrenamiento**.
+
+Archivos funcionales principales: `workout-features.js`, `MainActivity.java`,
+`WorkoutControlNotificationManager.java`, `WorkoutWidgetUpdateService.java` y
+los layouts `widget_workout_compact.xml`, `widget_workout_standard.xml` y
+`widget_workout_expanded.xml`. Los assets WebView están sincronizados; previews,
+README, documentación Android y checklist física reflejan la interfaz nueva.
+
+Resultados locales reales:
+
+- version alineada: 2.7.0, Android 35, cache
+  `protocolo-0-100-pwa-2.7.0-b91`;
+- contratos nativos, guia de carga e importador idempotente: aprobados;
+- artifact web: 84 recursos con hash y sin recursos faltantes;
+- `validate-app.ps1 -CheckAndroidAssets`: aprobado, 496 IDs y paridad exacta;
+- acceso rapido: 6/6 en Android Chromium, iPhone WebKit y escritorio Chromium;
+- Android `:app:clean :app:assembleDebug`: aprobado con Java 17 y Gradle
+  8.10.2; APK local de 1.875.449 bytes y SHA-256
+  `7D7B9A80E3ED3587B987E55BE292A920440A22ED9A2DE58D17D9CC4E2B4CCE9E`.
+
+El primer intento de compilacion detecto una referencia inexistente a `unit` en
+el modelo visual; se agrego el campo derivado del snapshot y la recompilacion
+paso. El primer validador general tambien conservaba la expectativa obsoleta de
+`widgetPreviousButton`; ahora valida `widgetNextButton` y los limites reales.
+
+No se detecto hardware con `adb devices -l`. Launcher, pantalla bloqueada,
+canal OEM, reinicio y actualizacion desde APK anterior siguen pendientes de
+prueba fisica. Para probar: instalar el APK, abrir **Gym > Rutina > Acceso rapido
+durante el entrenamiento**, tocar **Activar controles**, aceptar notificaciones,
+tocar **Empezar entrenamiento** y bloquear el telefono. Si aparece **Revisar
+notificacion**, habilitar el canal en los ajustes que abre la app.
+
+Al escribir esta seccion, el quality gate remoto del commit beta 91 y su APK
+firmado de prueba todavía están pendientes. No afirmar que existe un artifact
+remoto nuevo hasta verificar el run y la descarga publica.

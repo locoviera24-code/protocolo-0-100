@@ -541,6 +541,9 @@
     const list=sessions();
     list.push(created);
     saveSessions(list);
+    // Android only exposes workout controls for an active session. Publish
+    // the new session now instead of waiting for the first saved set.
+    syncWorkoutWidget();
     return created;
   }
   function replaceSession(session){
@@ -1773,6 +1776,12 @@
       flash('Los controles de pantalla de bloqueo requieren el APK Android.');
       return;
     }
+    const currentStatus=nativeBridgeJson('getWorkoutWidgetStatus');
+    if(currentStatus?.notificationCode==='not-posted'&&window.AndroidBridge?.openWorkoutNotificationSettings){
+      nativeBridgeJson('openWorkoutNotificationSettings');
+      flash('Revisá que el canal Controles de entrenamiento pueda mostrarse en la pantalla de bloqueo.');
+      return;
+    }
     enableNativeWorkoutFeatures({notification:true});
     const state=window.AndroidBridge.requestWorkoutNotificationPermission();
     if(state==='granted')flash('Controles activados para la sesión en curso.');
@@ -1815,11 +1824,19 @@
     widgetStatus.textContent=instances>0?`Widget agregado (${instances}).`:(capabilities.pinWidgetSupported?'Widget no agregado. Podés instalarlo ahora.':'El launcher requiere agregarlo manualmente.');
     if(addButton){setStateDisabled(addButton,instances>0);addButton.textContent=instances>0?'Widget agregado':'Agregar widget';}
     const permission=capabilities.notificationPermission||'unknown';
-    if(lockEnabled&&permission==='granted')lockStatus.textContent='Disponible en este dispositivo durante una sesión activa.';
+    const notificationCode=status?.notificationCode||'';
+    if(notificationCode==='active')lockStatus.textContent='Controles visibles durante el entrenamiento. Bloqueá el teléfono para comprobarlos.';
+    else if(notificationCode==='not-posted')lockStatus.textContent='Android no está mostrando los controles. Revisá el canal de notificaciones.';
+    else if(notificationCode==='waiting-for-session')lockStatus.textContent='Controles activados. Iniciá un entrenamiento para que aparezcan.';
+    else if(lockEnabled&&permission==='granted')lockStatus.textContent='Controles activados. Iniciá un entrenamiento para que aparezcan.';
     else if(permission==='blocked'||permission==='denied')lockStatus.textContent='Notificaciones desactivadas. Podés habilitarlas desde Ajustes de Android.';
     else lockStatus.textContent='Puede depender de tu versión de Android y del fabricante.';
-    if(notificationStatus)notificationStatus.textContent=permission==='granted'?'Controles privados habilitados para sesiones activas.':permission==='blocked'||permission==='denied'?'Permiso denegado; Gym continúa funcionando sin notificación.':'Disponible en esta beta Android cuando inicies una sesión y concedas permiso.';
-    if(enableButton){setStateDisabled(enableButton,lockEnabled&&permission==='granted');enableButton.textContent=lockEnabled&&permission==='granted'?'Controles activos':'Activar controles';}
+    if(notificationStatus)notificationStatus.textContent=notificationCode==='active'?'Controles privados activos durante la sesión.':notificationCode==='not-posted'?'Android no está mostrando la notificación privada; revisá el canal.':notificationCode==='waiting-for-session'?'Controles preparados; aparecerán al iniciar una sesión.':permission==='blocked'||permission==='denied'?'Permiso denegado; Gym continúa funcionando sin notificación.':'Disponible en esta beta Android cuando inicies una sesión y concedas permiso.';
+    if(enableButton){
+      const needsNotificationReview=notificationCode==='not-posted';
+      setStateDisabled(enableButton,lockEnabled&&permission==='granted'&&!needsNotificationReview);
+      enableButton.textContent=needsNotificationReview?'Revisar notificación':lockEnabled&&permission==='granted'?'Controles activos':'Activar controles';
+    }
     const queue=status?.queue||{};
     const pending=Math.max(0,Number(queue.pending||0));
     const rejected=Math.max(0,Number(queue.rejected||0));

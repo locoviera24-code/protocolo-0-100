@@ -11,6 +11,7 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.SystemClock;
+import android.service.notification.StatusBarNotification;
 
 import org.json.JSONObject;
 
@@ -27,6 +28,19 @@ public final class WorkoutControlNotificationManager {
                 && context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return false;
         NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         return manager != null && (Build.VERSION.SDK_INT < 24 || manager.areNotificationsEnabled());
+    }
+
+    public static boolean isPosted(Context context) {
+        NotificationManager manager = manager(context);
+        if (manager == null) return false;
+        if (Build.VERSION.SDK_INT < 23) return hasPermission(context);
+        try {
+            for (StatusBarNotification notification : manager.getActiveNotifications()) {
+                if (notification.getId() == NOTIFICATION_ID) return true;
+            }
+        } catch (Exception ignored) {
+        }
+        return false;
     }
 
     public static void update(Context context) {

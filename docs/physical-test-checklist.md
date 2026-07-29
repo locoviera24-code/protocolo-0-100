@@ -1,7 +1,7 @@
 # Checklist de pruebas físicas
 
-Referencia objetivo beta: Protocolo 0->100 `2.7.0`, build web/PWA `90`, Android
-`versionCode 34`, rama `codex/android-quick-access-v1`.
+Referencia objetivo beta: Protocolo 0->100 `2.7.0`, build web/PWA `91`, Android
+`versionCode 35`, rama `codex/android-quick-access-v1`.
 
 Este documento separa resultados automatizados de pruebas sobre hardware real.
 No marcar una prueba física por inferencia a partir de Playwright, Gradle o un
@@ -77,6 +77,8 @@ pruebas físicas.
 - [ ] Tocar **Agregar widget** y comprobar el dialogo del launcher, si es compatible.
 - [ ] Verificar el fallback manual en un launcher sin `requestPinAppWidget`.
 - [ ] Agregar y redimensionar los widgets compacto, estandar y expandido.
+- [ ] Pulsar -5/+5 repetidamente y confirmar que el widget no cambia de layout.
+- [ ] Confirmar que el compacto conserva solo -5, Guardar, +5 y temporizador.
 - [ ] Confirmar que ningun control queda oculto o truncado con fuente aumentada.
 - [ ] Corregir reps y carga hacia abajo y hacia arriba desde el widget.
 - [ ] Registrar una serie con un toque y comprobar actualizacion de progreso.
@@ -88,7 +90,9 @@ pruebas físicas.
 - [ ] Probar kg, lb, peso corporal, lastre, asistencia, tiempo y distancia.
 - [ ] Probar dia de descanso y ausencia de sesion.
 - [ ] Activar controles y aceptar `POST_NOTIFICATIONS` desde la accion contextual.
+- [ ] Tocar **Empezar entrenamiento** y confirmar que aparece la notificacion sin guardar antes una serie.
 - [ ] Repetir con permiso denegado y comprobar acceso a Ajustes de Android.
+- [ ] Bloquear el canal, comprobar **Revisar notificacion** y abrir sus ajustes.
 - [ ] Bloquear el telefono y verificar la notificacion privada de entrenamiento.
 - [ ] Confirmar que la version publica solo dice **Entrenamiento en curso**.
 - [ ] Probar Guardar, Deshacer, Siguiente y temporizador desde la notificacion.

@@ -349,9 +349,24 @@ public class MainActivity extends Activity {
             try {
                 AppWidgetManager manager = AppWidgetManager.getInstance(activity);
                 int[] ids = manager.getAppWidgetIds(new ComponentName(activity, WorkoutWidgetProvider.class));
+                JSONObject control = NativeWorkoutControlRepository.readControlState(activity);
+                JSONObject nativeSettings = NativeWorkoutControlRepository.nativeSettings(activity);
+                boolean sessionActive = "en progreso".equals(control.optString("sessionStatus", ""));
+                boolean notificationEnabled = NativeWorkoutControlRepository.featureEnabled(activity, "lockScreenWorkoutControls")
+                        && nativeSettings.optBoolean("showWorkoutOnLockScreen", true);
+                boolean notificationPermission = WorkoutControlNotificationManager.hasPermission(activity);
+                boolean notificationPosted = sessionActive && notificationPermission
+                        && WorkoutControlNotificationManager.isPosted(activity);
+                String notificationCode = !notificationEnabled ? "disabled"
+                        : !notificationPermission ? "permission-required"
+                        : !sessionActive ? "waiting-for-session"
+                        : notificationPosted ? "active" : "not-posted";
                 output.put("code", ids != null && ids.length > 0 ? "widget-added" : "widget-not-added");
                 output.put("instances", ids == null ? 0 : ids.length);
                 output.put("queue", WorkoutMutationQueue.summary(activity));
+                output.put("notificationCode", notificationCode);
+                output.put("sessionActive", sessionActive);
+                output.put("notificationPosted", notificationPosted);
             } catch (Exception error) {
                 try { output.put("code", "status-unavailable"); output.put("instances", 0); } catch (Exception ignored) {}
             }
@@ -451,6 +466,29 @@ public class MainActivity extends Activity {
             activity.runOnUiThread(() -> activity.requestPermissions(
                     new String[]{Manifest.permission.POST_NOTIFICATIONS}, NOTIFICATION_PERMISSION_REQUEST_CODE));
             return "requested";
+        }
+
+        @JavascriptInterface
+        public String openWorkoutNotificationSettings() {
+            JSONObject output = new JSONObject();
+            try {
+                Intent settings;
+                if (Build.VERSION.SDK_INT >= 26) {
+                    settings = new Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
+                            .putExtra(Settings.EXTRA_APP_PACKAGE, activity.getPackageName())
+                            .putExtra(Settings.EXTRA_CHANNEL_ID, WorkoutControlNotificationManager.CHANNEL_ID);
+                } else {
+                    settings = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                            .putExtra(Settings.EXTRA_APP_PACKAGE, activity.getPackageName());
+                }
+                activity.startActivity(settings);
+                output.put("ok", true);
+                output.put("code", "notification-settings-opened");
+            } catch (Exception error) {
+                try { output.put("ok", false); output.put("code", "notification-settings-unavailable"); }
+                catch (Exception ignored) {}
+            }
+            return output.toString();
         }
 
         @JavascriptInterface

@@ -76,9 +76,25 @@
             android:orientation="horizontal">
 
             <Button
+                android:id="@+id/widgetWeightFastMinusButton"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="@drawable/widget_button_secondary"
+                android:contentDescription="Disminuir carga 5 kilos"
+                android:gravity="center"
+                android:minWidth="48dp"
+                android:minHeight="48dp"
+                android:text="-5"
+                android:textAllCaps="false"
+                android:textColor="#eef5ff"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <Button
                 android:id="@+id/widgetSaveSetButton"
                 android:layout_width="0dp"
                 android:layout_height="48dp"
+                android:layout_marginHorizontal="8dp"
                 android:layout_weight="1.4"
                 android:background="@drawable/widget_button"
                 android:contentDescription="Guardar serie preparada"
@@ -91,19 +107,19 @@
                 android:textStyle="bold" />
 
             <Button
-                android:id="@+id/widgetQuickButton"
-                android:layout_width="0dp"
+                android:id="@+id/widgetWeightFastPlusButton"
+                android:layout_width="48dp"
                 android:layout_height="48dp"
-                android:layout_marginStart="8dp"
-                android:layout_weight="1"
                 android:background="@drawable/widget_button_secondary"
-                android:contentDescription="Editar valores en el registro rapido"
+                android:contentDescription="Aumentar carga 5 kilos"
                 android:gravity="center"
+                android:minWidth="48dp"
                 android:minHeight="48dp"
-                android:text="Editar"
+                android:text="+5"
                 android:textAllCaps="false"
                 android:textColor="#eef5ff"
-                android:textSize="13sp" />
+                android:textSize="14sp"
+                android:textStyle="bold" />
         </LinearLayout>
 
         <TextView
