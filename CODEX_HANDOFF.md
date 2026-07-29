@@ -4247,3 +4247,13 @@ Pendiente: quality gate remoto para compilar Android debug/release y publicar
 una prerelease beta.2 firmada. La validacion fisica de bloqueo, acciones y
 temporizador sigue siendo manual y no debe darse por aprobada hasta instalar
 ese APK en un telefono.
+
+El primer intento beta.2, ejecucion `30463652732` sobre `7f92b3a`, se detuvo en
+`test-quality-gate.mjs` antes de la matriz: el contrato exigia que
+`.github/stable-release.json` tuviera siempre el mismo build activo. Eso
+impedia que una rama beta avanzara a build 90 sin solicitar accidentalmente una
+publicacion estable. El test ahora usa `QUALITY_CHANNEL`: stable exige igualdad
+exacta, mientras beta/desarrollo permiten que el build estable solicitado sea
+anterior o igual al activo. Se comprobo que beta y desarrollo aprueban y que
+stable sigue bloqueado correctamente mientras su solicitud permanezca en build
+89. No se modifico `.github/stable-release.json` ni se publico stable.
