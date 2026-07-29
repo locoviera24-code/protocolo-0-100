@@ -1946,6 +1946,19 @@
     const quickHint=h
       ? `Ultima vez: ${h.name} — ${displayWeight(h.lastWeight,s.unit)} ${s.unit} x ${h.lastReps||0} reps.`
       : 'Ajusta reps/kg y guarda desde el widget.';
+    const candidateSet={
+      reps:Math.max(0,Math.round(quickReps)),
+      weightKg:window.WORKOUT_EQUIPMENT?.kgFromDisplay?.(quickWeight,s.unit)??quickWeight,
+      bodyweight:quickBodyweight,
+      measurementMode:normalizedLast.measurementMode||current?.measurementMode||'reps',
+      loadMode:normalizedLast.loadMode||(quickBodyweight?'bodyweight':'total'),
+      equipmentId:normalizedLast.equipmentId||current?.equipmentId||'',
+      equipmentName:normalizedLast.equipmentName||'',
+      barWeightKg:normalizedLast.barWeightKg||0,
+      laterality:normalizedLast.laterality||'bilateral',
+      repsMode:normalizedLast.repsMode||'total'
+    };
+    const guidance=current&&window.WORKOUT_LOAD_GUIDANCE?.calculate?.({sessions:sessions(),exercise:current,candidateSet})||null;
     return {
       schemaVersion:3,
       featureFlags:window.APP_FEATURE_FLAGS?.all?.()||{schemaVersion:1,nativeWorkoutControlsV1:false,lockScreenWorkoutControls:false,nativeRestTimer:false,multiPartyWorkoutSharing:false},
@@ -1996,6 +2009,19 @@
       currentExerciseSets,
       currentMuscleSets,
       currentMuscleName:current?.muscle||'',
+      lastComparableSet:guidance?.lastComparableSet||null,
+      historicalLoadRecord:guidance?.historicalLoadRecord||null,
+      loadGuidanceSnapshot:guidance?{
+        exerciseId:guidance.exerciseId,
+        comparisonKey:guidance.comparisonKey,
+        last:guidance.lastComparableSet,
+        record:guidance.historicalLoadRecord,
+        recordKind:guidance.recordKind,
+        comparisonLabel:guidance.comparisonLabel,
+        confidence:guidance.confidence,
+        calculatedAt:guidance.calculatedAt,
+        policyVersion:guidance.policyVersion
+      }:null,
       quickLog:{
         currentExerciseId:currentId,
         exerciseName:current?.name||'',
@@ -2004,10 +2030,10 @@
         weight:Math.max(0,Math.round(quickWeight*2)/2),
         setType:'working',
         bodyweight:quickBodyweight,
-        measurementMode:normalizedLast.measurementMode||'reps',
-        loadMode:normalizedLast.loadMode||(quickBodyweight?'bodyweight':'total'),
-        equipmentId:normalizedLast.equipmentId||current?.equipmentId||'',
-        equipmentName:normalizedLast.equipmentName||'',
+        measurementMode:candidateSet.measurementMode,
+        loadMode:candidateSet.loadMode,
+        equipmentId:candidateSet.equipmentId,
+        equipmentName:candidateSet.equipmentName,
         barWeight:displayWeight(normalizedLast.barWeightKg||0,s.unit),
         laterality:normalizedLast.laterality||'bilateral',
         unit:s.unit,

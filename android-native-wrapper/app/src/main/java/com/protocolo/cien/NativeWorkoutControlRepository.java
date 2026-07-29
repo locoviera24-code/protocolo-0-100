@@ -108,6 +108,10 @@ public final class NativeWorkoutControlRepository {
         put(set, "completed", true);
         put(set, "excludeFromRecords", false);
         put(set, "excludeFromProgression", false);
+        String comparisonKey = comparisonKey(widgetState, exerciseId, quick);
+        put(set, "comparisonKey", comparisonKey);
+        put(set, "recordEligible", true);
+        put(set, "progressionEligible", true);
         put(set, "note", "Guardado desde control nativo Android");
         put(set, "savedAt", nowIso());
 
@@ -150,6 +154,7 @@ public final class NativeWorkoutControlRepository {
         put(control, "draftReps", reps);
         put(control, "draftWeight", quick.optDouble("weight", 0));
         put(control, "unit", widgetState.optString("unit", "kg"));
+        updateProvisionalGuidance(control, set, exerciseId, comparisonKey, payload.optString("date", ""));
         put(control, "privateImportState", "pending");
         put(control, "pendingMutationCount", pendingCount(queue));
         put(control, "updatedAt", nowIso());
@@ -280,6 +285,82 @@ public final class NativeWorkoutControlRepository {
     private static String validImportState(String value) {
         if ("imported".equals(value) || "error".equals(value) || "pending".equals(value)) return value;
         return "pending";
+    }
+
+    private static String comparisonKey(JSONObject widgetState, String exerciseId, JSONObject quick) {
+        JSONObject snapshot = widgetState.optJSONObject("loadGuidanceSnapshot");
+        if (snapshot != null && exerciseId.equals(snapshot.optString("exerciseId", ""))) {
+            String existing = snapshot.optString("comparisonKey", "");
+            if (existing.length() > 0) return existing;
+        }
+        return exerciseId + "|" + quick.optString("measurementMode", "reps") + "|"
+                + quick.optString("loadMode", quick.optBoolean("bodyweight", false) ? "bodyweight" : "total") + "|"
+                + quick.optString("equipmentId", "unspecified") + "||"
+                + quick.optString("laterality", "bilateral") + "|" + quick.optString("repsMode", "total");
+    }
+
+    private static void updateProvisionalGuidance(JSONObject control, JSONObject set, String exerciseId, String comparisonKey, String date) {
+        JSONObject compact = new JSONObject();
+        String mode = set.optString("loadMode", set.optBoolean("bodyweight", false) ? "bodyweight" : "total");
+        int reps = Math.max(0, set.optInt("reps", 0));
+        double weight = Math.max(0, set.optDouble("weightKg", set.optDouble("weight", 0)));
+        put(compact, "setId", set.optString("id", ""));
+        put(compact, "exerciseId", exerciseId);
+        put(compact, "comparisonKey", comparisonKey);
+        put(compact, "date", date);
+        put(compact, "reps", reps);
+        put(compact, "weightKg", weight);
+        put(compact, "addedLoadKg", "addedLoad".equals(mode) ? weight : 0);
+        put(compact, "assistanceKg", "assistance".equals(mode) ? weight : 0);
+        put(compact, "measurementMode", set.optString("measurementMode", "reps"));
+        put(compact, "loadMode", mode);
+        put(compact, "equipmentId", set.optString("equipmentId", ""));
+        put(compact, "equipmentName", set.optString("equipmentName", ""));
+        put(compact, "laterality", set.optString("laterality", "bilateral"));
+        put(compact, "label", provisionalLabel(mode, weight, reps));
+        put(control, "lastComparableSet", compact);
+
+        JSONObject snapshot = control.optJSONObject("loadGuidanceSnapshot");
+        JSONObject previousRecord = snapshot != null && comparisonKey.equals(snapshot.optString("comparisonKey", ""))
+                ? snapshot.optJSONObject("record") : null;
+        JSONObject record = isBetterRecord(compact, previousRecord) ? compact : cloneObject(previousRecord);
+        put(control, "historicalLoadRecord", record);
+        JSONObject nextSnapshot = snapshot == null ? new JSONObject() : cloneObject(snapshot);
+        put(nextSnapshot, "exerciseId", exerciseId);
+        put(nextSnapshot, "comparisonKey", comparisonKey);
+        put(nextSnapshot, "last", compact);
+        put(nextSnapshot, "record", record);
+        put(nextSnapshot, "calculatedAt", nowIso());
+        put(nextSnapshot, "policyVersion", 1);
+        put(nextSnapshot, "provisional", true);
+        put(control, "loadGuidanceSnapshot", nextSnapshot);
+    }
+
+    private static boolean isBetterRecord(JSONObject candidate, JSONObject previous) {
+        if (candidate == null) return false;
+        if (previous == null || previous.length() == 0) return true;
+        String mode = candidate.optString("loadMode", "total");
+        if ("assistance".equals(mode)) {
+            double current = candidate.optDouble("assistanceKg", 0);
+            double before = previous.optDouble("assistanceKg", 0);
+            return current > 0 && (before <= 0 || current < before || current == before && candidate.optInt("reps", 0) > previous.optInt("reps", 0));
+        }
+        if ("bodyweight".equals(mode)) return candidate.optInt("reps", 0) > previous.optInt("reps", 0);
+        double current = candidate.optDouble("weightKg", 0);
+        double before = previous.optDouble("weightKg", 0);
+        return current > before || current == before && candidate.optInt("reps", 0) > previous.optInt("reps", 0);
+    }
+
+    private static String provisionalLabel(String mode, double weight, int reps) {
+        if ("bodyweight".equals(mode)) return reps + " reps · peso corporal";
+        if ("assistance".equals(mode)) return formatWeight(weight) + " kg de asistencia × " + reps;
+        String suffix = "perHand".equals(mode) ? " por mano" : "perSide".equals(mode) ? " por lado" : "addedLoad".equals(mode) ? " de lastre" : "";
+        return formatWeight(weight) + " kg" + suffix + " × " + reps;
+    }
+
+    private static String formatWeight(double value) {
+        double rounded = Math.round(Math.max(0, value) * 2d) / 2d;
+        return rounded == Math.rint(rounded) ? String.valueOf((long) rounded) : String.valueOf(rounded);
     }
 
     private static SharedPreferences preferences(Context context) {
