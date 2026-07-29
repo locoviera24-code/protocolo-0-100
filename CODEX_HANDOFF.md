@@ -3927,3 +3927,29 @@ Siguiente accion exacta: commit del build 90, push de
 `codex/android-quick-access-v1`, pull request draft, quality gate remoto beta y
 descarga de sus artifacts. No fusionar a `main` ni publicar stable desde este
 bloque.
+
+## 84. Pull request y correccion del primer gate remoto
+
+La rama se envio a GitHub y el pull request borrador es el numero 1,
+`Android: controles rapidos de entrenamiento v1`. El primer quality gate remoto
+fue el run `30481489857`. Completo correctamente contratos, PWA, axe y 349
+escenarios E2E, con 14 omisiones documentadas, pero fallo antes de Firestore y
+Android por tres ejecuciones del mismo escenario de borradores.
+
+La causa no fue una regresion funcional: `tests/e2e/drafts-time.spec.mjs`
+seleccionaba todos los `summary` descendientes de `planAdvancedEditor`. Tras
+incorporar paneles anidados, el locator dejo de ser estricto. Ademas, la recarga
+usada para probar persistencia vuelve a plegar el `details`, por lo que el test
+intentaba pulsar un boton oculto. El escenario ahora selecciona el `summary`
+directo con `:scope > summary` y reabre el panel despues de `page.reload()`.
+
+Validacion local de la correccion:
+
+- escenario afectado: 3/3 en Android Chromium, iPhone WebKit y escritorio;
+- archivo completo `drafts-time.spec.mjs`: 18/18 en los tres proyectos;
+- no se cambio la aplicacion ni se relajo la comprobacion de restauracion y
+  limpieza del borrador.
+
+Siguiente accion exacta: enviar este commit correctivo, esperar el nuevo quality
+gate hasta Firestore, artifact web y Android, y registrar los artifacts. Las
+pruebas fisicas siguen pendientes; no fusionar ni publicar stable.

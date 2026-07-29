@@ -86,12 +86,14 @@ test('serie Gym y formulario de Gym Party sobreviven una recarga',async({page})=
 test('rutina y privacidad de Gym Party restauran y limpian sus borradores',async({page})=>{
   await reset(page,'/index.html?module=gym&view=routine');
   const config=page.locator('#workoutConfigPanel details.planAdvancedEditor').first();
-  if(!(await config.evaluate(element=>element.open)))await config.locator('summary').click();
+  if(!(await config.evaluate(element=>element.open)))await config.locator(':scope > summary').click();
   await page.locator('#planEditorDay').selectOption('tuesday');
   await page.locator('#planEditorName').fill('Torso A ajustado');
   await page.locator('#planCustomExerciseName').fill('Remo de prueba');
   await page.evaluate(()=>window.APP_DRAFTS.flushAll());
   await page.reload();
+  const restoredConfig=page.locator('#workoutConfigPanel details.planAdvancedEditor').first();
+  if(!(await restoredConfig.evaluate(element=>element.open)))await restoredConfig.locator(':scope > summary').click();
   await expect(page.locator('#planEditorDay')).toHaveValue('tuesday');
   await expect(page.locator('#planEditorName')).toHaveValue('Torso A ajustado');
   await expect(page.locator('#planCustomExerciseName')).toHaveValue('Remo de prueba');
