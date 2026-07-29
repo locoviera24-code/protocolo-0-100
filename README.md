@@ -15,7 +15,7 @@ PWA y APK Android para medir habitos, atencion, actividad fisica y nutricion con
 
 ## Navegacion y diseno
 
-La version actual `v2.7.0` (build web `89`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
+La version actual `v2.7.0` (build web `90`, Android `34`) usa una barra inferior movil con cinco destinos: **Inicio**,
 **Gym**, **Nutricion**, **Progreso** y **Mas**. En escritorio usa una barra
 lateral compacta. Gym Party se abre desde **Gym > Grupo**, desde un acceso
 discreto en Inicio o mediante un enlace `gymPartyCode`; ya no ocupa un boton
@@ -548,10 +548,15 @@ o subir repeticiones, guardar la serie y controlar el temporizador. Muestra
 ejercicio, serie, reps, peso opcional, última carga comparable, mejor registro y
 solo el conteo de destinos Gym Party. Nunca muestra alias, nombres de salas,
 códigos, miembros, emails, notas ni IDs. El permiso de notificaciones se pide
-desde **Gym > Configurar rutina semanal y widget Android > Controles Android y
-pantalla bloqueada**, después de una explicación; no se solicita al arrancar.
+desde el acceso visible **Gym > Controles en pantalla bloqueada** o desde **Gym
+> Widget, pantalla bloqueada y rutina > Controles Android y pantalla
+bloqueada**, después de una explicación; no se solicita al arrancar. La pantalla
+incluye un interruptor explícito para reactivar los controles si una instalación
+anterior conservó las flags beta apagadas, sin borrar datos ni reinstalar.
 Desde allí también se puede ocultar peso/récord o hacer privada u oculta la
-notificación.
+notificación. El estado diferencia permiso pendiente o rechazado, canal Android
+bloqueado y ausencia de una sesión activa. La notificación aparece durante un
+entrenamiento en progreso o mientras el temporizador está activo.
 
 El temporizador ofrece cuenta regresiva de descanso y cronómetro ascendente.
 Usa el reloj monotónico mientras el teléfono está encendido y referencias de

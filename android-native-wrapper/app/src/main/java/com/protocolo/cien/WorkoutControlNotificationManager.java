@@ -14,7 +14,7 @@ import android.os.SystemClock;
 import org.json.JSONObject;
 
 public final class WorkoutControlNotificationManager {
-    public static final String CHANNEL_ID = "workout_controls_v1";
+    public static final String CHANNEL_ID = "workout_controls_v2";
     private static final String CHANNEL_TIMER_VIBRATE = "workout_timer_vibrate_v1";
     private static final String CHANNEL_TIMER_SOUND = "workout_timer_sound_v1";
     private static final int NOTIFICATION_ID = 7100;
@@ -26,6 +26,40 @@ public final class WorkoutControlNotificationManager {
                 && context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return false;
         NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         return manager != null && (Build.VERSION.SDK_INT < 24 || manager.areNotificationsEnabled());
+    }
+
+    public static boolean channelEnabled(Context context) {
+        NotificationManager manager = manager(context);
+        if (manager == null) return false;
+        if (Build.VERSION.SDK_INT < 26) return true;
+        NotificationChannel channel = manager.getNotificationChannel(CHANNEL_ID);
+        return channel == null || channel.getImportance() != NotificationManager.IMPORTANCE_NONE;
+    }
+
+    public static JSONObject status(Context context) {
+        JSONObject settings = NativeWorkoutControlRepository.nativeSettings(context);
+        JSONObject control = NativeWorkoutControlRepository.readControlState(context);
+        JSONObject timer = WorkoutTimerController.currentState(context);
+        boolean featureEnabled = NativeWorkoutControlRepository.featureEnabled(context, "lockScreenWorkoutControls");
+        boolean showWorkout = settings.optBoolean("showWorkoutOnLockScreen", true);
+        boolean permissionGranted = hasPermission(context);
+        boolean channelEnabled = channelEnabled(context);
+        boolean activeSession = "en progreso".equals(control.optString("sessionStatus", ""));
+        boolean activeTimer = "running".equals(timer.optString("timerStatus"))
+                || "paused".equals(timer.optString("timerStatus"));
+        JSONObject out = new JSONObject();
+        try {
+            out.put("featureEnabled", featureEnabled);
+            out.put("showWorkoutOnLockScreen", showWorkout);
+            out.put("permissionGranted", permissionGranted);
+            out.put("channelEnabled", channelEnabled);
+            out.put("activeSession", activeSession);
+            out.put("activeTimer", activeTimer);
+            out.put("visible", featureEnabled && showWorkout && permissionGranted && channelEnabled
+                    && (activeSession || activeTimer));
+        } catch (Exception ignored) {
+        }
+        return out;
     }
 
     public static void update(Context context) {
@@ -46,6 +80,10 @@ public final class WorkoutControlNotificationManager {
         NotificationManager manager = manager(context);
         if (manager == null) return;
         createChannel(manager);
+        if (!channelEnabled(context)) {
+            cancel(context);
+            return;
+        }
         manager.notify(NOTIFICATION_ID, build(context, control, timer));
     }
 
@@ -195,7 +233,7 @@ public final class WorkoutControlNotificationManager {
         if (Build.VERSION.SDK_INT < 26) return;
         NotificationChannel channel = new NotificationChannel(CHANNEL_ID, "Controles de entrenamiento", NotificationManager.IMPORTANCE_LOW);
         channel.setDescription("Serie actual y temporizador de descanso");
-        channel.setLockscreenVisibility(Notification.VISIBILITY_PRIVATE);
+        channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
         channel.setSound(null, null);
         channel.enableVibration(false);
         manager.createNotificationChannel(channel);

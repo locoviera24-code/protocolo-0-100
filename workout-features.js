@@ -670,7 +670,8 @@
     if(!tab || document.getElementById('todayWorkoutPanel')) return;
     const hero=tab.querySelector('.moduleHero');
     const insertionAnchor=tab.querySelector('.gymSectionNav')||hero;
-    const nativeControlsAvailable=!!(window.APP_FEATURE_FLAGS?.isEnabled?.('nativeWorkoutControlsV1')&&(window.AndroidBridge||window.APP_FEATURE_FLAGS?.isEnabled?.('lockScreenWorkoutControls')));
+    const nativeBridgeAvailable=typeof window.AndroidBridge?.workoutNotificationPermissionState==='function';
+    const nativeControlsAvailable=nativeBridgeAvailable||!!(window.APP_FEATURE_FLAGS?.isEnabled?.('nativeWorkoutControlsV1')&&window.APP_FEATURE_FLAGS?.isEnabled?.('lockScreenWorkoutControls'));
     insertionAnchor.insertAdjacentHTML('afterend',`
       <div class="moduleCard" id="todayWorkoutPanel">
         <div class="actionFocusTop"><div><h3 id="todayWorkoutTitle">Entrenamiento de hoy</h3><div class="muted small" id="todayWorkoutSummary"></div></div><span class="statusChip good" id="todayWorkoutScore">Gym</span></div>
@@ -686,6 +687,7 @@
               <button type="button" class="good" id="startTodayWorkoutBtn">Empezar entrenamiento</button>
               <button type="button" class="secondary" id="openQuickLoggerBtn">Registrar serie</button>
               <button type="button" class="secondary" id="manualWidgetUpdateBtn">Actualizar widget</button>
+              ${nativeBridgeAvailable?'<button type="button" class="secondary" id="openNativeControlsSettingsBtn">Controles en pantalla bloqueada</button>':''}
             </div>
             <div class="widgetStatus" id="workoutWidgetStatus">El APK Android sincroniza este resumen con el widget nativo cuando existe el puente Android.</div>
           </div>
@@ -733,8 +735,8 @@
         </div>
       </div>
       <div class="moduleCard" id="workoutConfigPanel">
-        <details class="planAdvancedEditor">
-        <summary>Configurar rutina semanal y widget Android</summary>
+        <details class="planAdvancedEditor" id="workoutConfigDetails">
+        <summary>Widget, pantalla bloqueada y rutina</summary>
         <div class="formGrid">
           <label class="check"><input type="checkbox" id="gymWidgetEnabled"><span>Activar resumen para widget interno/nativo.</span></label>
           <label class="check"><input type="checkbox" id="gymShowRir"><span>Mostrar RIR/RPE en registro rápido.</span></label>
@@ -747,6 +749,7 @@
           ${nativeControlsAvailable?`<details class="advancedDetails" id="nativeWorkoutControlSettings">
             <summary>Controles Android y pantalla bloqueada</summary>
             <p class="muted small">Durante una sesión podés ajustar repeticiones, guardar una serie y controlar el tiempo sin abrir la app. Activá la notificación solo cuando quieras usarla.</p>
+            <label class="check"><input type="checkbox" id="gymNativeControlsEnabled"><span>Activar controles nativos de entrenamiento.</span></label>
             <div class="formGrid">
               <div class="field"><label for="gymNativeTimerMode">Temporizador</label><select id="gymNativeTimerMode"><option value="rest_countdown">Descanso con cuenta regresiva</option><option value="stopwatch">Cronómetro ascendente</option></select></div>
               <label class="check"><input type="checkbox" id="gymTimerSound"><span>Sonido al terminar el descanso.</span></label>
@@ -831,6 +834,7 @@
     document.getElementById('startTodayWorkoutBtn')?.addEventListener('click',()=>openQuickSetLogger());
     document.getElementById('openQuickLoggerBtn')?.addEventListener('click',()=>openQuickSetLogger());
     document.getElementById('manualWidgetUpdateBtn')?.addEventListener('click',()=>{syncWorkoutWidget();flash('Widget actualizado con los datos actuales.');});
+    document.getElementById('openNativeControlsSettingsBtn')?.addEventListener('click',openNativeWorkoutControlSettings);
     document.getElementById('quickExerciseSelect')?.addEventListener('change',event=>{editingQuickSetId='';selectQuickExerciseValue(event.target.value);});
     document.getElementById('quickExerciseSearch')?.addEventListener('input',renderQuickLogger);
     document.getElementById('saveQuickSetBtn')?.addEventListener('click',saveQuickSet);
@@ -872,7 +876,7 @@
     document.getElementById('planEditorCards')?.addEventListener('click',handlePlanExerciseAction);
     document.getElementById('resetDefaultPlanBtn')?.addEventListener('click',resetDefaultPlan);
     document.getElementById('refreshWorkoutWidgetBtn')?.addEventListener('click',()=>{syncWorkoutWidget();flash('Widget actualizado manualmente.');});
-    ['gymWidgetEnabled','gymShowRir','gymShowRestDays','gymRestTimerEnabled','gymHapticEnabled','gymTimerSound','gymShowWorkoutLock','gymShowWeightLock','gymShowRecordLock'].forEach(id=>document.getElementById(id)?.addEventListener('change',saveSettingsFromUi));
+    ['gymWidgetEnabled','gymShowRir','gymShowRestDays','gymRestTimerEnabled','gymHapticEnabled','gymTimerSound','gymShowWorkoutLock','gymShowWeightLock','gymShowRecordLock','gymNativeControlsEnabled'].forEach(id=>document.getElementById(id)?.addEventListener('change',saveSettingsFromUi));
     ['gymUnit','gymMode','gymRestSeconds','gymNativeTimerMode','gymLockVisibility'].forEach(id=>document.getElementById(id)?.addEventListener('change',saveSettingsFromUi));
     document.getElementById('enableWorkoutNotificationBtn')?.addEventListener('click',requestWorkoutNotificationPermission);
     window.addEventListener('native-workout-notification-permission',renderWorkoutNotificationPermissionStatus);
@@ -1667,26 +1671,55 @@
     if(rest) rest.checked=!!s.showRestDays;
     const timer=document.getElementById('gymRestTimerEnabled'),seconds=document.getElementById('gymRestSeconds'),haptic=document.getElementById('gymHapticEnabled');
     if(timer)timer.checked=!!s.restTimerEnabled;if(seconds)seconds.value=Math.max(15,Number(s.restSeconds)||90);if(haptic)haptic.checked=!!s.hapticEnabled;
-    const nativeMode=document.getElementById('gymNativeTimerMode'),sound=document.getElementById('gymTimerSound'),showWorkout=document.getElementById('gymShowWorkoutLock'),showWeight=document.getElementById('gymShowWeightLock'),showRecord=document.getElementById('gymShowRecordLock'),visibility=document.getElementById('gymLockVisibility');
+    const nativeEnabled=document.getElementById('gymNativeControlsEnabled'),nativeMode=document.getElementById('gymNativeTimerMode'),sound=document.getElementById('gymTimerSound'),showWorkout=document.getElementById('gymShowWorkoutLock'),showWeight=document.getElementById('gymShowWeightLock'),showRecord=document.getElementById('gymShowRecordLock'),visibility=document.getElementById('gymLockVisibility');
+    if(nativeEnabled)nativeEnabled.checked=!!(window.APP_FEATURE_FLAGS?.isEnabled?.('nativeWorkoutControlsV1')&&window.APP_FEATURE_FLAGS?.isEnabled?.('lockScreenWorkoutControls')&&window.APP_FEATURE_FLAGS?.isEnabled?.('nativeRestTimer'));
     if(nativeMode)nativeMode.value=s.timerMode==='stopwatch'?'stopwatch':'rest_countdown';if(sound)sound.checked=!!s.timerSound;if(showWorkout)showWorkout.checked=s.showWorkoutOnLockScreen!==false;if(showWeight)showWeight.checked=s.showWeightOnLockScreen!==false;if(showRecord)showRecord.checked=s.showRecordOnLockScreen!==false;if(visibility)visibility.value=['public','private','hidden'].includes(s.lockScreenVisibility)?s.lockScreenVisibility:'private';
     renderWorkoutNotificationPermissionStatus();
   }
   function saveSettingsFromUi(){
+    const nativeEnabled=document.getElementById('gymNativeControlsEnabled');
+    if(nativeEnabled)window.APP_FEATURE_FLAGS?.set?.({nativeWorkoutControlsV1:nativeEnabled.checked,lockScreenWorkoutControls:nativeEnabled.checked,nativeRestTimer:nativeEnabled.checked});
     const next={widgetEnabled:document.getElementById('gymWidgetEnabled').checked,showRir:document.getElementById('gymShowRir').checked,unit:document.getElementById('gymUnit').value,mode:document.getElementById('gymMode').value,showRestDays:document.getElementById('gymShowRestDays').checked,restTimerEnabled:document.getElementById('gymRestTimerEnabled').checked,restSeconds:Math.max(15,numeric(document.getElementById('gymRestSeconds').value,90)),hapticEnabled:document.getElementById('gymHapticEnabled').checked};
     const nativeMode=document.getElementById('gymNativeTimerMode');if(nativeMode)Object.assign(next,{timerMode:nativeMode.value==='stopwatch'?'stopwatch':'rest_countdown',timerSound:!!document.getElementById('gymTimerSound')?.checked,showWorkoutOnLockScreen:!!document.getElementById('gymShowWorkoutLock')?.checked,showWeightOnLockScreen:!!document.getElementById('gymShowWeightLock')?.checked,showRecordOnLockScreen:!!document.getElementById('gymShowRecordLock')?.checked,lockScreenVisibility:document.getElementById('gymLockVisibility')?.value||'private'});
     saveSettings(next);
     syncWorkoutWidget();
     renderQuickLogger();
   }
+  function openNativeWorkoutControlSettings(){
+    const config=document.getElementById('workoutConfigDetails'),native=document.getElementById('nativeWorkoutControlSettings');
+    if(config)config.open=true;if(native)native.open=true;
+    native?.scrollIntoView({behavior:window.preferredMotionBehavior?.()||'auto',block:'start'});
+    requestAnimationFrame(()=>document.getElementById('gymNativeControlsEnabled')?.focus({preventScroll:true}));
+  }
+  function nativeNotificationStatus(){
+    if(!window.AndroidBridge?.workoutNotificationStatus)return null;
+    try{return JSON.parse(String(window.AndroidBridge.workoutNotificationStatus()||'{}'));}catch{return null;}
+  }
   function renderWorkoutNotificationPermissionStatus(){
     const target=document.getElementById('workoutNotificationPermissionStatus');if(!target)return;
     if(!window.AndroidBridge?.workoutNotificationPermissionState){target.textContent='Disponible solamente en el APK Android.';return;}
-    try{const state=String(window.AndroidBridge.workoutNotificationPermissionState()),button=document.getElementById('enableWorkoutNotificationBtn');target.textContent=state==='granted'?'Controles de bloqueo habilitados.':state==='blocked'?'Las notificaciones están bloqueadas. Podés habilitarlas en los ajustes de Android.':state==='denied'?'El permiso fue rechazado. Podés volver a solicitarlo cuando quieras.':'Android pedirá permiso cuando pulses Activar.';if(button)button.textContent=state==='blocked'?'Abrir ajustes de Android':state==='granted'?'Permiso concedido':'Activar controles en bloqueo';}
+    try{
+      const state=String(window.AndroidBridge.workoutNotificationPermissionState()),status=nativeNotificationStatus(),button=document.getElementById('enableWorkoutNotificationBtn'),enabled=document.getElementById('gymNativeControlsEnabled')?.checked!==false;
+      if(!enabled)target.textContent='Activá los controles nativos para usar la pantalla bloqueada.';
+      else if(state==='blocked'||status?.channelEnabled===false)target.textContent='Las notificaciones de entrenamiento están bloqueadas. Abrí los ajustes de Android para habilitarlas.';
+      else if(state==='denied')target.textContent='El permiso fue rechazado. Podés volver a solicitarlo cuando quieras.';
+      else if(state!=='granted')target.textContent='Android pedirá permiso cuando pulses Activar.';
+      else if(status&&!status.activeSession&&!status.activeTimer)target.textContent='Permiso concedido. Empezá un entrenamiento para mostrar los controles.';
+      else target.textContent='Controles de bloqueo activos.';
+      if(button)button.textContent=state==='blocked'||status?.channelEnabled===false?'Abrir ajustes de Android':state==='granted'?'Actualizar controles':'Activar controles en bloqueo';
+    }
     catch{target.textContent='No se pudo consultar el permiso.';}
   }
   function requestWorkoutNotificationPermission(){
     if(!window.AndroidBridge?.requestWorkoutNotificationPermission){renderWorkoutNotificationPermissionStatus();return;}
-    try{const state=String(window.AndroidBridge.workoutNotificationPermissionState?.()||'prompt');if(state==='blocked'&&window.AndroidBridge.openWorkoutNotificationSettings)window.AndroidBridge.openWorkoutNotificationSettings();else window.AndroidBridge.requestWorkoutNotificationPermission();setTimeout(renderWorkoutNotificationPermissionStatus,250);}
+    try{
+      const toggle=document.getElementById('gymNativeControlsEnabled');if(toggle&&!toggle.checked){toggle.checked=true;saveSettingsFromUi();}
+      const state=String(window.AndroidBridge.workoutNotificationPermissionState?.()||'prompt'),status=nativeNotificationStatus();
+      if((state==='blocked'||status?.channelEnabled===false)&&window.AndroidBridge.openWorkoutNotificationSettings)window.AndroidBridge.openWorkoutNotificationSettings();
+      else if(state!=='granted')window.AndroidBridge.requestWorkoutNotificationPermission();
+      else window.AndroidBridge.refreshWorkoutNotification?.();
+      setTimeout(renderWorkoutNotificationPermissionStatus,250);
+    }
     catch(error){window.APP_ERROR_BOUNDARY?.capture?.(error,{source:'native-workout-notification-permission'});flash('No se pudo solicitar el permiso de notificación.');}
   }
   function planDraftId(dayKey=currentPlanEditorDay){return `gym-routine:${dayKey}`;}

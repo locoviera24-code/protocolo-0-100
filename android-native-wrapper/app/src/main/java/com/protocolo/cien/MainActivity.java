@@ -300,6 +300,17 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
+        public String workoutNotificationStatus() {
+            return WorkoutControlNotificationManager.status(activity).toString();
+        }
+
+        @JavascriptInterface
+        public boolean refreshWorkoutNotification() {
+            WorkoutControlNotificationManager.update(activity);
+            return WorkoutControlNotificationManager.status(activity).optBoolean("visible", false);
+        }
+
+        @JavascriptInterface
         public String requestWorkoutNotificationPermission() {
             if (Build.VERSION.SDK_INT < 33) return WorkoutControlNotificationManager.hasPermission(activity) ? "granted" : "blocked";
             if (activity.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) return "granted";
@@ -313,11 +324,17 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public boolean openWorkoutNotificationSettings() {
             try {
-                Intent intent = Build.VERSION.SDK_INT >= 26
-                        ? new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                boolean appPermissionBlocked = Build.VERSION.SDK_INT >= 33
+                        && activity.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED;
+                Intent intent = Build.VERSION.SDK_INT >= 26 && !appPermissionBlocked
+                        ? new Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
                                 .putExtra(Settings.EXTRA_APP_PACKAGE, activity.getPackageName())
-                        : new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-                                .setData(Uri.parse("package:" + activity.getPackageName()));
+                                .putExtra(Settings.EXTRA_CHANNEL_ID, WorkoutControlNotificationManager.CHANNEL_ID)
+                        : Build.VERSION.SDK_INT >= 26
+                                ? new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                                        .putExtra(Settings.EXTRA_APP_PACKAGE, activity.getPackageName())
+                                : new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                                        .setData(Uri.parse("package:" + activity.getPackageName()));
                 activity.startActivity(intent);
                 return true;
             } catch (Exception ignored) {

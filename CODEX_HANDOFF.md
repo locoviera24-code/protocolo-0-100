@@ -1,10 +1,10 @@
 # CODEX_HANDOFF - Protocolo 0->100
 
-Ultima actualizacion: 2026-07-28
-Rama esperada: `main`
+Ultima actualizacion: 2026-07-29
+Rama esperada: `feature/native-workout-controls-v1`
 Version actual: `2.7.0` (fuente unica: `app-version.json`)
-Android: `versionCode 33`, `versionName "2.7.0"`
-Service worker cache: `protocolo-0-100-pwa-2.7.0-b89`
+Android: `versionCode 34`, `versionName "2.7.0"`
+Service worker cache: `protocolo-0-100-pwa-2.7.0-b90`
 Backup consolidado: `schemaVersion: 3`
 
 Leer primero este archivo y luego `README.md`, `index.html`,
@@ -24,7 +24,7 @@ Estado actual:
 - Gym Party implementado como modulo web/PWA opcional.
 - Nutricion local/FDC opcional.
 - Backups JSON `schemaVersion: 3`.
-- PWA offline con cache derivada `protocolo-0-100-pwa-2.7.0-b89` y
+- PWA offline con cache derivada `protocolo-0-100-pwa-2.7.0-b90` y
   actualizacion consentida desde el aviso visible.
 - APK con widget Android y permiso `INTERNET` para Firebase/Gym Party.
 
@@ -86,7 +86,7 @@ Web:
   tombstones, backoff y contexto horario.
 - `gym-party.js`: modulo Gym Party, registro rapido, graficas y edicion/eliminacion de series.
 - `advanced-features.js`: version `2.7.0`, backup/importacion Gym Party.
-- `sw.js`: cache derivada del build 89, actualización atómica consentida y sin mezcla de assets; evita
+- `sw.js`: cache derivada del build 90, actualización atómica consentida y sin mezcla de assets; evita
   persistir una configuracion Firebase obsoleta.
 - `README.md`: documenta Gym Party, demo, Firebase, privacidad y pruebas.
 - `CODEX_HANDOFF.md`: este handoff.
@@ -105,7 +105,7 @@ Android:
 - `android-native-wrapper/app/src/main/java/com/protocolo/cien/MainActivity.java`:
   usa `WebViewAssetLoader` sobre HTTPS interno, bloquea file/content/universal
   access y mixed content, activa Safe Browsing y limita origenes remotos.
-- `android-native-wrapper/app/build.gradle`: `versionCode 33`,
+- `android-native-wrapper/app/build.gradle`: `versionCode 34`,
   `versionName 2.7.0`, firma release solo desde variables seguras.
 - `android-native-wrapper/app/src/main/assets/*`: sincronizado desde raiz.
 
@@ -4196,3 +4196,54 @@ permiso de notificaciones, controles con pantalla bloqueada, temporizador con
 pantalla apagada, widget del launcher y actualizacion desde una instalacion
 anterior. La cola privada funciona con la app cerrada; la incorporacion a
 IndexedDB y el fan-out Firebase ocurren al volver a abrir la WebView.
+
+## 96. Auditoria de activacion en pantalla bloqueada
+
+La prueba fisica de la primera prerelease revelo un defecto de descubrimiento y
+reactivacion. Si una instalacion anterior conservaba
+`protocolo_0_100_feature_flags_v1` con las flags nativas apagadas,
+`workout-features.js` ocultaba todo `nativeWorkoutControlSettings`. No existia
+ningun control visible para volver a activarlas sin borrar datos. El APK beta.1
+si contenia `artifact-channel.js` con canal `beta`; el problema era la
+precedencia deliberada de la preferencia persistida combinada con la ausencia
+de un interruptor de recuperacion.
+
+El build 90 corrige el contrato:
+
+- `Gym` muestra un acceso directo `Controles en pantalla bloqueada` cuando
+  existe el bridge Android;
+- la configuracion nativa permanece visible en el APK aunque las flags esten
+  apagadas;
+- `gymNativeControlsEnabled` activa o desactiva conjuntamente controles,
+  bloqueo y temporizador, y sincroniza el nuevo estado con SharedPreferences;
+- no exige desinstalar, limpiar almacenamiento ni perder sesiones;
+- el estado diferencia permiso pendiente/rechazado, canal Android bloqueado,
+  ausencia de sesion/temporizador y controles realmente activos;
+- `WorkoutControlNotificationManager.status()` expone solamente estado tecnico
+  no sensible al WebView;
+- el bridge permite refrescar la notificacion y abre el ajuste del canal cuando
+  corresponde, o el ajuste general de la app si falta `POST_NOTIFICATIONS`;
+- el canal corregido `workout_controls_v2` permite contenido visible en bloqueo
+  y cada notificacion sigue aplicando privacidad publica, privada u oculta.
+
+Se incremento solamente el paquete instalable: version `2.7.0`, build/cache
+`90`, Android `versionCode 34`. Esto permite actualizar la beta anterior con la
+misma firma sin desinstalar. No se cambio el schema de datos ni se retiro
+localStorage.
+
+Validacion local aprobada:
+
+- contratos nativos, orientacion de carga e importador idempotente;
+- version, precache, build guard y paridad web/Android;
+- datos, backups y feature flags;
+- release Android estatico;
+- 6/6 E2E del ajuste nativo en Android Chromium, iPhone WebKit y escritorio,
+  incluidos datos persistidos con flags apagadas;
+- artifact beta: 87 recursos, hashes y rutas correctas;
+- smoke del artifact: 1/1, sin 404 ni errores de pagina y service worker
+  instalable.
+
+Pendiente: quality gate remoto para compilar Android debug/release y publicar
+una prerelease beta.2 firmada. La validacion fisica de bloqueo, acciones y
+temporizador sigue siendo manual y no debe darse por aprobada hasta instalar
+ese APK en un telefono.
