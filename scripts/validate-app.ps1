@@ -726,7 +726,7 @@ foreach ($contract in @(
 )) {
     Assert-True (($widgetProvider + $widgetUpdater + $mainActivity).Contains($contract)) "Falta contrato nativo de widget: $contract"
 }
-foreach ($contract in @('widgetPreviousButton', 'widgetSetStats', 'widgetWeightFastPlusButton', 'WEIGHT_STEP = 0.5', 'WEIGHT_FAST_STEP = 5.0', 'currentExerciseSets', 'currentMuscleSets')) {
+foreach ($contract in @('widgetNextButton', 'widgetSetStats', 'widgetWeightFastPlusButton', 'WEIGHT_STEP = 0.5', 'WEIGHT_FAST_STEP = 5.0', 'currentExerciseSets', 'currentMuscleSets')) {
     Assert-True ($widgetUpdater.Contains($contract)) "Falta contrato de widget directo: $contract"
 }
 

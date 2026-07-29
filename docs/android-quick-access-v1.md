@@ -50,13 +50,15 @@ deshecha.
 
 ## Layouts
 
-- Compacto: valor preparado, Guardar y Editar; maximo cuatro acciones.
+- Compacto: valores preparados, -5, Guardar y +5; maximo cuatro acciones.
 - Estandar: controles simetricos de reps y carga, Guardar, Repetir/Deshacer y
   Siguiente; maximo siete acciones.
-- Expandido: agrega ajustes rapidos, Anterior, Siguiente y acceso a Gym.
+- Expandido: conserva los mismos siete controles directos y agrega solamente
+  contexto de rutina, progreso y guia de carga.
 
-La seleccion usa ancho y alto minimos/maximos del launcher. Todos los botones
-funcionales miden al menos 48 dp. Tiempo y distancia no reutilizan controles de
+La seleccion usa el ancho y alto actuales informados por el launcher; las
+dimensiones maximas de otra orientacion no pueden cambiar el layout tras un
+toque. Todos los botones funcionales miden al menos 48 dp. Tiempo y distancia no reutilizan controles de
 repeticiones: muestran la metrica y abren el editor si hace falta corregirla.
 Peso corporal sin lastre muestra **Peso corporal**, no `0 kg`.
 
@@ -81,6 +83,9 @@ full-screen intents, no abre la actividad sobre el bloqueo y no expone grupos,
 miembros, codigos, emails, notas o Firebase IDs. El permiso
 `POST_NOTIFICATIONS` se solicita solo al tocar **Activar controles**. Si fue
 rechazado, el mismo control abre los ajustes de notificaciones de Android.
+La sesion web se envia a Android en el mismo momento en que se toca **Empezar
+entrenamiento**. El estado comprueba ademas si la notificacion quedo realmente
+publicada; si Android bloquea el canal, **Revisar notificacion** abre sus ajustes.
 
 ## Compatibilidad y rollback
 

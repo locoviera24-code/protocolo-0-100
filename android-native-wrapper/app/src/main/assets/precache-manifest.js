@@ -1,8 +1,8 @@
 globalThis.PRECACHE_MANIFEST=Object.freeze({
   "schemaVersion": 1,
   "version": "2.7.0",
-  "build": 90,
-  "cacheName": "protocolo-0-100-pwa-2.7.0-b90",
+  "build": 91,
+  "cacheName": "protocolo-0-100-pwa-2.7.0-b91",
   "required": [
     {
       "url": "./advanced-features.js",
@@ -12,12 +12,12 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     {
       "url": "./app-version.js",
       "bytes": 358,
-      "sha256": "2a2a312fc1ba4417c3ab4fdbe45ccdaeb1c553b5e0c8ab18968ff591d462e9e6"
+      "sha256": "beb06a0c5886b81b76ed535cddb1c7af5cb9fb7bcc4e7ad0b4cce47d482be337"
     },
     {
       "url": "./app/build-guard.js",
       "bytes": 1811,
-      "sha256": "dc511ce47b4acbde16f5235ed4b4c1e92ce96fbb7097a2ec2f63a8975a79e3b5"
+      "sha256": "2f80e6e094cf9ed1eff82a3a8131bbdbacc6a4b41c0e5b9d6e557dd86ed0eac7"
     },
     {
       "url": "./app/build-info.js",
@@ -47,7 +47,7 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     {
       "url": "./build-info.json",
       "bytes": 189,
-      "sha256": "0b4466ea79cd55763353796d7396d1ad942c985df1de289770ab0de661d20316"
+      "sha256": "7ab88198b48523b60a59ed5ba5b84c74175a7388f95c2571165cbd5429de043e"
     },
     {
       "url": "./data/backup-service.js",
@@ -321,8 +321,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     },
     {
       "url": "./workout-features.js",
-      "bytes": 175397,
-      "sha256": "75665b4cba7affd56e695e0a88f732a567c1ce3bf8d80557200a579a7909ffa0"
+      "bytes": 176605,
+      "sha256": "07efc54d88ba17b299469bf9617e4d62c16cb6f0a891569acd0c006e6c754295"
     },
     {
       "url": "./workout-metrics.js",
@@ -354,7 +354,7 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     {
       "url": "./app-version.json",
       "bytes": 90,
-      "sha256": "e3630ea3d3b6116f435c853b7e200c81c4bbc549cb2c7bb144421706c937a45d"
+      "sha256": "d56edd594c738ad24455facc971b5b50157b83e356439b5b36ab371f11d3f42e"
     },
     {
       "url": "./icons/icon-192.png",

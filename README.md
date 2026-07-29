@@ -15,7 +15,7 @@ PWA y APK Android para medir habitos, atencion, actividad fisica y nutricion con
 
 ## Navegacion y diseno
 
-La version actual `v2.7.0` (build web `90`, Android `34`) usa una barra inferior movil con cinco destinos: **Inicio**,
+La version actual `v2.7.0` (build web `91`, Android `35`) usa una barra inferior movil con cinco destinos: **Inicio**,
 **Gym**, **Nutricion**, **Progreso** y **Mas**. En escritorio usa una barra
 lateral compacta. Gym Party se abre desde **Gym > Grupo**, desde un acceso
 discreto en Inicio o mediante un enlace `gymPartyCode`; ya no ocupa un boton
@@ -512,12 +512,14 @@ confirmacion; en otros launchers la app explica la ruta manual: mantener
 presionada la pantalla de inicio, entrar a **Widgets** y elegir **Protocolo
 0->100 · Gym**. La PWA muestra claramente que se requiere el APK.
 
-Los layouts compacto, estandar y expandido se eligen por ancho y alto. Ningun
-control funcional se oculta en 1 dp y todos los botones principales miden al
-menos 48 dp. El compacto prioriza Guardar y Editar; el estandar ofrece controles
-simetricos de reps/carga, Guardar, Repetir o Deshacer y Siguiente; el expandido
-agrega ajustes rapidos y navegacion. Peso corporal, lastre, asistencia, tiempo y
-distancia muestran su semantica correspondiente.
+Los layouts compacto, estandar y expandido se eligen por el tamaño actual del
+widget, sin usar las dimensiones máximas de otra orientación. Por eso tocar un
+control ya no despliega de pronto otro layout. Ningun control funcional se
+oculta en 1 dp y todos los botones principales miden al menos 48 dp. El
+compacto mantiene una sola fila con **-5**, **Guardar** y **+5**; el estandar y
+el expandido ofrecen correccion simetrica de reps, peso en pasos de 5 unidades,
+Guardar, Repetir o Deshacer y Siguiente. Peso corporal, lastre, asistencia,
+tiempo y distancia muestran su semantica correspondiente.
 
 El widget y la notificacion reutilizan `WorkoutQuickActionReducer`. Cada serie
 produce una mutacion durable con UUID antes de actualizar la interfaz. El
@@ -533,6 +535,12 @@ durante una sesion activa, usa `VISIBILITY_PRIVATE` y su version publica solo
 muestra **Entrenamiento en curso**. No se promete un widget de keyguard: la
 compatibilidad depende de Android y del fabricante. La app completa se abre
 respetando el desbloqueo del sistema.
+
+Después de activar los controles hay que tocar **Empezar entrenamiento**. La
+sesion se publica inmediatamente a Android y la app distingue **esperando
+entrenamiento**, **controles visibles** y **notificacion no publicada**. En este
+ultimo caso, **Revisar notificacion** abre directamente el canal **Controles de
+entrenamiento** para habilitar su visibilidad en la pantalla de bloqueo.
 
 `RemoteViews` no reemplaza el editor completo para RIR/RPE, notas o una metrica
 que no pueda corregirse con seguridad. En esos casos **Editar** abre Registro

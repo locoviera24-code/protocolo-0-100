@@ -7,41 +7,236 @@
     android:orientation="vertical"
     android:padding="14dp">
 
-    <TextView android:id="@+id/widgetTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:ellipsize="end" android:maxLines="1" android:text="Entrenamiento de hoy" android:textColor="#eef5ff" android:textSize="16sp" android:textStyle="bold" />
-    <TextView android:id="@+id/widgetProgress" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:ellipsize="end" android:maxLines="1" android:text="0 series" android:textColor="#98f5c2" android:textSize="11sp" />
+    <TextView
+        android:id="@+id/widgetTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:text="Entrenamiento de hoy"
+        android:textColor="#eef5ff"
+        android:textSize="16sp"
+        android:textStyle="bold" />
 
-    <LinearLayout android:id="@+id/widgetDirectPanel" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:orientation="vertical">
-        <TextView android:id="@+id/widgetCurrentExercise" android:layout_width="match_parent" android:layout_height="wrap_content" android:ellipsize="end" android:maxLines="1" android:text="Ejercicio actual" android:textColor="#ffffff" android:textSize="16sp" android:textStyle="bold" />
-        <TextView android:id="@+id/widgetSetStats" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:ellipsize="end" android:maxLines="1" android:text="Serie 1" android:textColor="#98f5c2" android:textSize="11sp" />
-        <TextView android:id="@+id/widgetLoadGuidance" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:ellipsize="end" android:maxLines="1" android:text="Ultima y mejor carga" android:textColor="#dbeaff" android:textSize="10sp" />
+    <TextView
+        android:id="@+id/widgetProgress"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:text="0 series"
+        android:textColor="#98f5c2"
+        android:textSize="11sp" />
 
-        <LinearLayout android:layout_width="match_parent" android:layout_height="48dp" android:layout_marginTop="6dp" android:orientation="horizontal">
-            <Button android:id="@+id/widgetRepsMinusButton" android:layout_width="48dp" android:layout_height="48dp" android:background="@drawable/widget_button_secondary" android:contentDescription="Disminuir repeticiones" android:minWidth="48dp" android:minHeight="48dp" android:text="−" android:textColor="#eef5ff" android:textSize="20sp" />
-            <TextView android:id="@+id/widgetQuickReps" android:layout_width="0dp" android:layout_height="48dp" android:layout_marginHorizontal="6dp" android:layout_weight="1" android:background="@drawable/widget_button_secondary" android:contentDescription="Repeticiones preparadas" android:gravity="center" android:text="8 reps" android:textColor="#eef5ff" android:textSize="15sp" android:textStyle="bold" />
-            <Button android:id="@+id/widgetRepsPlusButton" android:layout_width="48dp" android:layout_height="48dp" android:background="@drawable/widget_button_secondary" android:contentDescription="Aumentar repeticiones" android:minWidth="48dp" android:minHeight="48dp" android:text="+" android:textColor="#eef5ff" android:textSize="20sp" />
-            <Button android:id="@+id/widgetWeightMinusButton" android:layout_width="48dp" android:layout_height="48dp" android:layout_marginStart="8dp" android:background="@drawable/widget_button_secondary" android:contentDescription="Disminuir carga" android:minWidth="48dp" android:minHeight="48dp" android:text="−" android:textColor="#eef5ff" android:textSize="20sp" />
-            <TextView android:id="@+id/widgetQuickWeight" android:layout_width="0dp" android:layout_height="48dp" android:layout_marginHorizontal="6dp" android:layout_weight="1" android:background="@drawable/widget_button_secondary" android:contentDescription="Carga preparada" android:gravity="center" android:text="0 kg" android:textColor="#eef5ff" android:textSize="15sp" android:textStyle="bold" />
-            <Button android:id="@+id/widgetWeightPlusButton" android:layout_width="48dp" android:layout_height="48dp" android:background="@drawable/widget_button_secondary" android:contentDescription="Aumentar carga" android:minWidth="48dp" android:minHeight="48dp" android:text="+" android:textColor="#eef5ff" android:textSize="20sp" />
+    <LinearLayout
+        android:id="@+id/widgetDirectPanel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/widgetCurrentExercise"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="Ejercicio actual"
+            android:textColor="#ffffff"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/widgetSetStats"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="Serie 1"
+            android:textColor="#98f5c2"
+            android:textSize="11sp" />
+
+        <TextView
+            android:id="@+id/widgetLoadGuidance"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="Ultima y mejor carga"
+            android:textColor="#dbeaff"
+            android:textSize="10sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="6dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/widgetRepsMinusButton"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="@drawable/widget_button_secondary"
+                android:contentDescription="Disminuir repeticiones"
+                android:minWidth="48dp"
+                android:minHeight="48dp"
+                android:text="-"
+                android:textColor="#eef5ff"
+                android:textSize="20sp" />
+
+            <TextView
+                android:id="@+id/widgetQuickReps"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_marginHorizontal="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/widget_button_secondary"
+                android:contentDescription="Repeticiones preparadas"
+                android:gravity="center"
+                android:text="8 reps"
+                android:textColor="#eef5ff"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/widgetRepsPlusButton"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="@drawable/widget_button_secondary"
+                android:contentDescription="Aumentar repeticiones"
+                android:minWidth="48dp"
+                android:minHeight="48dp"
+                android:text="+"
+                android:textColor="#eef5ff"
+                android:textSize="20sp" />
         </LinearLayout>
 
-        <LinearLayout android:layout_width="match_parent" android:layout_height="48dp" android:layout_marginTop="6dp" android:orientation="horizontal">
-            <Button android:id="@+id/widgetWeightFastMinusButton" android:layout_width="0dp" android:layout_height="48dp" android:layout_weight="1" android:background="@drawable/widget_button_secondary" android:contentDescription="Disminuir cinco unidades de carga" android:minHeight="48dp" android:text="−5" android:textAllCaps="false" android:textColor="#eef5ff" android:textSize="13sp" />
-            <Button android:id="@+id/widgetSaveSetButton" android:layout_width="0dp" android:layout_height="48dp" android:layout_marginStart="6dp" android:layout_weight="1.4" android:background="@drawable/widget_button" android:contentDescription="Guardar serie preparada" android:minHeight="48dp" android:text="Guardar" android:textAllCaps="false" android:textColor="#06111f" android:textSize="13sp" android:textStyle="bold" />
-            <Button android:id="@+id/widgetWeightFastPlusButton" android:layout_width="0dp" android:layout_height="48dp" android:layout_marginStart="6dp" android:layout_weight="1" android:background="@drawable/widget_button_secondary" android:contentDescription="Aumentar cinco unidades de carga" android:minHeight="48dp" android:text="+5" android:textAllCaps="false" android:textColor="#eef5ff" android:textSize="13sp" />
-            <Button android:id="@+id/widgetRepeatButton" android:layout_width="0dp" android:layout_height="48dp" android:layout_marginStart="6dp" android:layout_weight="1" android:background="@drawable/widget_button_secondary" android:contentDescription="Repetir o deshacer la ultima serie" android:minHeight="48dp" android:text="Repetir" android:textAllCaps="false" android:textColor="#eef5ff" android:textSize="12sp" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="6dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/widgetWeightMinusButton"
+                android:layout_width="56dp"
+                android:layout_height="48dp"
+                android:background="@drawable/widget_button_secondary"
+                android:contentDescription="Disminuir carga 5 kilos"
+                android:minWidth="48dp"
+                android:minHeight="48dp"
+                android:text="-5"
+                android:textColor="#eef5ff"
+                android:textSize="15sp" />
+
+            <TextView
+                android:id="@+id/widgetQuickWeight"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_marginHorizontal="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/widget_button_secondary"
+                android:contentDescription="Carga preparada"
+                android:gravity="center"
+                android:text="0 kg"
+                android:textColor="#eef5ff"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/widgetWeightPlusButton"
+                android:layout_width="56dp"
+                android:layout_height="48dp"
+                android:background="@drawable/widget_button_secondary"
+                android:contentDescription="Aumentar carga 5 kilos"
+                android:minWidth="48dp"
+                android:minHeight="48dp"
+                android:text="+5"
+                android:textColor="#eef5ff"
+                android:textSize="15sp" />
         </LinearLayout>
 
-        <LinearLayout android:layout_width="match_parent" android:layout_height="48dp" android:layout_marginTop="6dp" android:orientation="horizontal">
-            <Button android:id="@+id/widgetPreviousButton" android:layout_width="0dp" android:layout_height="48dp" android:layout_weight="1" android:background="@drawable/widget_button_secondary" android:contentDescription="Ir al ejercicio anterior" android:minHeight="48dp" android:text="Anterior" android:textAllCaps="false" android:textColor="#eef5ff" android:textSize="12sp" />
-            <Button android:id="@+id/widgetNextButton" android:layout_width="0dp" android:layout_height="48dp" android:layout_marginStart="6dp" android:layout_weight="1" android:background="@drawable/widget_button_secondary" android:contentDescription="Ir al siguiente ejercicio" android:minHeight="48dp" android:text="Siguiente" android:textAllCaps="false" android:textColor="#eef5ff" android:textSize="12sp" />
-            <Button android:id="@+id/widgetQuickButton" android:layout_width="0dp" android:layout_height="48dp" android:layout_marginStart="6dp" android:layout_weight="1" android:background="@drawable/widget_button_secondary" android:contentDescription="Editar valores en el registro rapido" android:minHeight="48dp" android:text="Editar" android:textAllCaps="false" android:textColor="#eef5ff" android:textSize="12sp" />
-            <Button android:id="@+id/widgetOpenButton" android:layout_width="0dp" android:layout_height="48dp" android:layout_marginStart="6dp" android:layout_weight="1" android:background="@drawable/widget_button_secondary" android:contentDescription="Abrir entrenamiento completo" android:minHeight="48dp" android:text="Abrir" android:textAllCaps="false" android:textColor="#eef5ff" android:textSize="12sp" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/widgetSaveSetButton"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1.35"
+                android:background="@drawable/widget_button"
+                android:contentDescription="Guardar serie preparada"
+                android:minHeight="48dp"
+                android:text="Guardar"
+                android:textAllCaps="false"
+                android:textColor="#06111f"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/widgetRepeatButton"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/widget_button_secondary"
+                android:contentDescription="Repetir o deshacer la ultima serie"
+                android:minHeight="48dp"
+                android:text="Repetir"
+                android:textAllCaps="false"
+                android:textColor="#eef5ff"
+                android:textSize="12sp" />
+
+            <Button
+                android:id="@+id/widgetNextButton"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/widget_button_secondary"
+                android:contentDescription="Ir al siguiente ejercicio"
+                android:minHeight="48dp"
+                android:text="Siguiente"
+                android:textAllCaps="false"
+                android:textColor="#eef5ff"
+                android:textSize="12sp" />
         </LinearLayout>
 
-        <TextView android:id="@+id/widgetActionStatus" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:ellipsize="end" android:maxLines="1" android:text="Guardado en el dispositivo" android:textColor="#ffd36e" android:textSize="10sp" />
-        <LinearLayout android:id="@+id/widgetTimerPanel" android:layout_width="match_parent" android:layout_height="48dp" android:layout_marginTop="6dp" android:orientation="horizontal" android:visibility="gone">
-            <Chronometer android:id="@+id/widgetTimerChronometer" android:layout_width="0dp" android:layout_height="48dp" android:layout_weight="1" android:background="@drawable/widget_button_secondary" android:contentDescription="Temporizador de descanso" android:gravity="center" android:textColor="#eef5ff" android:textSize="13sp" android:textStyle="bold" />
-            <Button android:id="@+id/widgetTimerButton" android:layout_width="96dp" android:layout_height="48dp" android:layout_marginStart="8dp" android:background="@drawable/widget_button_secondary" android:contentDescription="Controlar temporizador" android:minHeight="48dp" android:text="Iniciar" android:textAllCaps="false" android:textColor="#eef5ff" android:textSize="12sp" />
+        <TextView
+            android:id="@+id/widgetActionStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="Guardado en el dispositivo"
+            android:textColor="#ffd36e"
+            android:textSize="10sp" />
+
+        <LinearLayout
+            android:id="@+id/widgetTimerPanel"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="6dp"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <Chronometer
+                android:id="@+id/widgetTimerChronometer"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:background="@drawable/widget_button_secondary"
+                android:contentDescription="Temporizador de descanso"
+                android:gravity="center"
+                android:textColor="#eef5ff"
+                android:textSize="13sp"
+                android:textStyle="bold" />
         </LinearLayout>
     </LinearLayout>
 </LinearLayout>

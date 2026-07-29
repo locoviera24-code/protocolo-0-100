@@ -89,15 +89,20 @@ public final class WorkoutWidgetUpdateService {
         views.setContentDescription(R.id.widgetQuickReps, state.quickRepsDescription);
         views.setContentDescription(R.id.widgetQuickWeight, state.quickWeightDescription);
         views.setTextViewText(R.id.widgetActionStatus, state.actionStatus);
-        bindTimer(context, views, state, kind != LAYOUT_STANDARD);
+        bindTimer(context, views, state, kind == LAYOUT_COMPACT);
 
-        boolean restDay = "rest".equals(state.type);
         views.setViewVisibility(R.id.widgetDirectPanel, View.VISIBLE);
         views.setOnClickPendingIntent(R.id.widgetRoot, openIntent(context, MainActivity.ACTION_OPEN_TODAY_WORKOUT, state.currentExerciseId));
         views.setOnClickPendingIntent(R.id.widgetSaveSetButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_SAVE_SET, state.nativeRevision, widgetId));
-        if (kind != LAYOUT_STANDARD) {
-            views.setTextViewText(R.id.widgetQuickButton, restDay ? "Abrir actividad" : "Editar");
-            views.setOnClickPendingIntent(R.id.widgetQuickButton, openIntent(context, MainActivity.ACTION_QUICK_LOG_SET, state.currentExerciseId));
+        if (kind == LAYOUT_COMPACT) {
+            views.setTextViewText(R.id.widgetWeightFastMinusButton, "-5");
+            views.setTextViewText(R.id.widgetWeightFastPlusButton, "+5");
+            views.setContentDescription(R.id.widgetWeightFastMinusButton, "Disminuir carga 5 " + state.unit);
+            views.setContentDescription(R.id.widgetWeightFastPlusButton, "Aumentar carga 5 " + state.unit);
+            views.setOnClickPendingIntent(R.id.widgetWeightFastMinusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_WEIGHT_FAST_DOWN, state.nativeRevision, widgetId));
+            views.setOnClickPendingIntent(R.id.widgetWeightFastPlusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_WEIGHT_FAST_UP, state.nativeRevision, widgetId));
+            views.setOnClickPendingIntent(R.id.widgetQuickReps, openIntent(context, MainActivity.ACTION_QUICK_LOG_SET, state.currentExerciseId));
+            views.setOnClickPendingIntent(R.id.widgetQuickWeight, openIntent(context, MainActivity.ACTION_QUICK_LOG_SET, state.currentExerciseId));
         }
 
         if (kind >= LAYOUT_STANDARD) {
@@ -110,8 +115,12 @@ public final class WorkoutWidgetUpdateService {
             if (!state.requiresEditor) {
                 views.setOnClickPendingIntent(R.id.widgetRepsMinusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_REPS_DOWN, state.nativeRevision, widgetId));
                 views.setOnClickPendingIntent(R.id.widgetRepsPlusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_REPS_UP, state.nativeRevision, widgetId));
-                views.setOnClickPendingIntent(R.id.widgetWeightMinusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_WEIGHT_DOWN, state.nativeRevision, widgetId));
-                views.setOnClickPendingIntent(R.id.widgetWeightPlusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_WEIGHT_UP, state.nativeRevision, widgetId));
+                views.setTextViewText(R.id.widgetWeightMinusButton, "-5");
+                views.setTextViewText(R.id.widgetWeightPlusButton, "+5");
+                views.setContentDescription(R.id.widgetWeightMinusButton, "Disminuir carga 5 " + state.unit);
+                views.setContentDescription(R.id.widgetWeightPlusButton, "Aumentar carga 5 " + state.unit);
+                views.setOnClickPendingIntent(R.id.widgetWeightMinusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_WEIGHT_FAST_DOWN, state.nativeRevision, widgetId));
+                views.setOnClickPendingIntent(R.id.widgetWeightPlusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_WEIGHT_FAST_UP, state.nativeRevision, widgetId));
             }
             String contextualAction = state.requiresEditor ? MainActivity.ACTION_QUICK_LOG_SET
                     : state.canUndo ? MainActivity.ACTION_WIDGET_UNDO_LAST_SET : MainActivity.ACTION_WIDGET_REPEAT_LAST;
@@ -124,12 +133,6 @@ public final class WorkoutWidgetUpdateService {
         if (kind == LAYOUT_EXPANDED) {
             views.setTextViewText(R.id.widgetTitle, state.title);
             views.setTextViewText(R.id.widgetProgress, state.progressText);
-            views.setOnClickPendingIntent(R.id.widgetOpenButton, openIntent(context, MainActivity.ACTION_OPEN_TODAY_WORKOUT, state.currentExerciseId));
-            views.setOnClickPendingIntent(R.id.widgetWeightFastMinusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_WEIGHT_FAST_DOWN, state.nativeRevision, widgetId));
-            views.setOnClickPendingIntent(R.id.widgetWeightFastPlusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_WEIGHT_FAST_UP, state.nativeRevision, widgetId));
-            views.setViewVisibility(R.id.widgetWeightFastMinusButton, state.requiresEditor ? View.GONE : View.VISIBLE);
-            views.setViewVisibility(R.id.widgetWeightFastPlusButton, state.requiresEditor ? View.GONE : View.VISIBLE);
-            views.setOnClickPendingIntent(R.id.widgetPreviousButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_PREVIOUS_EXERCISE, state.nativeRevision, widgetId));
         }
         return views;
     }
@@ -139,10 +142,12 @@ public final class WorkoutWidgetUpdateService {
         int maxWidth = options == null ? 0 : options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, minWidth);
         int minHeight = options == null ? 0 : options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0);
         int maxHeight = options == null ? 0 : options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, minHeight);
-        int width = Math.max(minWidth, maxWidth);
-        int height = Math.max(minHeight, maxHeight);
+        // maxWidth/maxHeight can describe another orientation. Using them made
+        // the first action replace a compact widget with the expanded layout.
+        int width = minWidth > 0 ? minWidth : maxWidth;
+        int height = minHeight > 0 ? minHeight : maxHeight;
         if ((width > 0 && width < 240) || (height > 0 && height < 170)) return LAYOUT_COMPACT;
-        if ((width > 0 && width < 320) || (height > 0 && height < 250)) return LAYOUT_STANDARD;
+        if ((width > 0 && width < 360) || (height > 0 && height < 320)) return LAYOUT_STANDARD;
         return LAYOUT_EXPANDED;
     }
 
@@ -1112,6 +1117,7 @@ public final class WorkoutWidgetUpdateService {
         String setStatsText;
         String quickRepsText;
         String quickWeightText;
+        String unit;
         String quickRepsDescription;
         String quickWeightDescription;
         String actionStatus;
@@ -1131,6 +1137,7 @@ public final class WorkoutWidgetUpdateService {
             state.title = opt(json, "title", "Entrenamiento de hoy");
             state.nativeRevision = WorkoutNativeRepository.revision(json);
             state.type = opt(json, "type", "workout");
+            state.unit = opt(json, "unit", "kg");
             state.currentExerciseId = opt(json, "currentExerciseId", "");
             state.currentExerciseName = opt(json, "currentExerciseName", "Ejercicio actual");
             state.progressText = opt(json, "progressText", "Sin progreso registrado");
@@ -1168,7 +1175,8 @@ public final class WorkoutWidgetUpdateService {
                 } else {
                     state.quickRepsText = quick.optInt("reps", 8) + " reps";
                     double weight = Math.max(0, quick.optDouble("weight", 0));
-                    String unit = opt(quick, "unit", json.optString("unit", "kg"));
+                    String unit = opt(quick, "unit", state.unit);
+                    state.unit = unit;
                     if ((quick.optBoolean("bodyweight", false) || "bodyweight".equals(loadMode)) && weight <= 0) state.quickWeightText = "Peso corporal";
                     else if ("assistance".equals(loadMode)) state.quickWeightText = formatWeight(weight) + " " + unit + " asistencia";
                     else if ("addedLoad".equals(loadMode)) state.quickWeightText = "+" + formatWeight(weight) + " " + unit;

@@ -18,13 +18,13 @@ test('la web explica el requisito APK sin mostrar diagnostico tecnico',async({pa
 
 test('el APK simulado instala y activa controles solo desde acciones explicitas',async({page})=>{
   await page.addInitScript(()=>{
-    window.__quickAccessCalls={pin:0,permission:0,saves:0};
+    window.__quickAccessCalls={pin:0,permission:0,saves:0,states:[]};
     window.AndroidBridge={
       getWorkoutQuickAccessCapabilities:()=>JSON.stringify({platform:'android-apk',widgetInstances:0,pinWidgetSupported:true,notificationPermission:'prompt'}),
-      getWorkoutWidgetStatus:()=>JSON.stringify({code:'widget-not-added',instances:0,queue:{pending:0,rejected:0}}),
+      getWorkoutWidgetStatus:()=>JSON.stringify({code:'widget-not-added',instances:0,notificationCode:'waiting-for-session',queue:{pending:0,rejected:0}}),
       requestPinWorkoutWidget:()=>{window.__quickAccessCalls.pin++;return JSON.stringify({ok:true,code:'pin-requested'});},
       requestWorkoutNotificationPermission:()=>{window.__quickAccessCalls.permission++;return'requested';},
-      saveWorkoutWidgetData:()=>{window.__quickAccessCalls.saves++;},
+      saveWorkoutWidgetData:json=>{window.__quickAccessCalls.saves++;window.__quickAccessCalls.states.push(JSON.parse(json));},
       updateWorkoutWidget:()=>{}
     };
   });
@@ -39,4 +39,9 @@ test('el APK simulado instala y activa controles solo desde acciones explicitas'
   expect(result.flags.nativeWorkoutControlsV1).toBe(true);
   expect(result.flags.nativeRestTimer).toBe(true);
   expect(result.flags.lockScreenWorkoutControls).toBe(true);
+
+  await page.locator('#startTodayWorkoutBtn').click();
+  const active=await page.evaluate(()=>window.__quickAccessCalls.states.at(-1));
+  expect(active.status).toBe('en progreso');
+  expect(active.workoutSession?.status).toBe('en progreso');
 });
