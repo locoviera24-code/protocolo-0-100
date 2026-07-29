@@ -92,6 +92,7 @@
   let nativeTimerStatus='idle';
   let nativeTimerPausedSeconds=0;
   let importingNativeWidgetState=false;
+  let nativeMutationImportPromise=null;
 
   function ex(id,name,aliases,muscle,type,unit,primary,secondary,notes,options={}){
     return {id,name,aliases,group:muscle,type,unit,primaryMuscles:primary,secondaryMuscles:secondary,notes,...options};
@@ -375,6 +376,10 @@
   }
   function maybeImportWidgetStateFromAndroid(){
     if(importingNativeWidgetState) return false;
+    if(window.APP_FEATURE_FLAGS?.isEnabled?.('nativeWorkoutControlsV1')&&typeof window.AndroidBridge?.getNativeWorkoutControlData==='function'){
+      importNativeWorkoutMutationsFromAndroid();
+      return true;
+    }
     if(!window.AndroidBridge || typeof window.AndroidBridge.getWorkoutWidgetData!=='function') return false;
     try{
       const raw=window.AndroidBridge.getWorkoutWidgetData();
@@ -399,6 +404,64 @@
     });
     next.summary=sessionSummary(next);
     return next;
+  }
+  function protectNativeSet(rawSet,exercise){
+    const detector=window.WORKOUT_ANOMALY_DETECTOR,set=clone(rawSet);
+    if(!detector?.analyze||!detector?.markPending||set.anomalyReview?.status)return set;
+    const analysis=detector.analyze({candidate:set,history:historicalSetsForExercise(exercise,set.id),exercise});
+    return analysis.suspicious?detector.markPending(set,analysis):set;
+  }
+  async function importNativeWorkoutMutationsFromAndroid(payloadOverride=null){
+    if(nativeMutationImportPromise)return nativeMutationImportPromise;
+    nativeMutationImportPromise=(async()=>{
+      let payload=payloadOverride;
+      if(!payload){
+        if(typeof window.AndroidBridge?.getNativeWorkoutControlData!=='function')return{ok:false,reason:'bridge-unavailable'};
+        payload=JSON.parse(String(window.AndroidBridge.getNativeWorkoutControlData()||'{}'));
+      }
+      const mutations=(Array.isArray(payload?.mutations)?payload.mutations:[]).filter(item=>item&&item.privateImportState!=='imported');
+      if(!mutations.length)return{ok:true,imported:0,duplicates:0,invalid:0};
+      let nextSessions=sessions(),nextHistory=history();
+      const imported=[],duplicates=[],invalid=[],affected=new Set();
+      for(const mutation of mutations){
+        const result=window.NATIVE_WORKOUT_IMPORTER?.apply?.(nextSessions,mutation,{protectSet:protectNativeSet});
+        if(!result||result.status==='invalid'){invalid.push({mutation,error:result?.error||'importer-unavailable'});continue;}
+        if(result.status==='duplicate'){duplicates.push(mutation);continue;}
+        nextSessions=result.sessions;imported.push(mutation);affected.add(result.sessionId);
+      }
+      for(const sessionId of affected){
+        const session=nextSessions.find(item=>item.id===sessionId);if(!session)continue;
+        session.summary=sessionSummary(session);
+        nextHistory=exerciseHistoryAfterSession(session,nextHistory);
+      }
+      if(imported.length){
+        const changes={[keys.workoutSessions]:nextSessions,[keys.exerciseHistory]:nextHistory};
+        const result=window.APP_REPOSITORIES?.workout?.replace
+          ?await window.APP_REPOSITORIES.workout.replace(changes,'native-workout-import')
+          :(saveSessions(nextSessions),saveHistory(nextHistory),{ok:true});
+        if(!result?.ok)throw new Error(result?.error?.message||result?.error||'native-import-write-failed');
+      }
+      const acknowledge=(mutation,state,error='')=>{
+        try{return typeof window.AndroidBridge?.acknowledgeNativeWorkoutMutation==='function'&&window.AndroidBridge.acknowledgeNativeWorkoutMutation(String(mutation.id||''),state,String(error||'').slice(0,300));}
+        catch{return false;}
+      };
+      [...imported,...duplicates].forEach(mutation=>acknowledge(mutation,'imported'));
+      invalid.forEach(item=>acknowledge(item.mutation,'error',item.error));
+      if(imported.length){
+        const latest=nextSessions.find(item=>affected.has(item.id));
+        if(latest)currentQuickExerciseId=latest.exercises?.[latest.currentExerciseIndex||0]?.id||currentQuickExerciseId;
+        syncWorkoutWidget();
+      }
+      return{ok:true,imported:imported.length,duplicates:duplicates.length,invalid:invalid.length};
+    })().catch(error=>{
+      try{
+        const payload=payloadOverride||JSON.parse(String(window.AndroidBridge?.getNativeWorkoutControlData?.()||'{}'));
+        (payload.mutations||[]).filter(item=>item?.privateImportState!=='imported').forEach(item=>window.AndroidBridge?.acknowledgeNativeWorkoutMutation?.(String(item.id||''),'error',String(error?.message||'error').slice(0,300)));
+      }catch{}
+      window.APP_ERROR_BOUNDARY?.capture?.(error,{source:'native-workout-import'});
+      return{ok:false,reason:'write-failed'};
+    }).finally(()=>{nativeMutationImportPromise=null;});
+    return nativeMutationImportPromise;
   }
   function importWidgetStateFromAndroid(state){
     if(!state || typeof state!=='object') return false;
@@ -552,8 +615,8 @@
       subjectiveNote:session.subjectiveNote||''
     };
   }
-  function updateExerciseHistory(session){
-    const map=history();
+  function exerciseHistoryAfterSession(session,baseMap={}){
+    const map=clone(baseMap||{});
     (session.exercises||[]).forEach(exercise=>{
       const sets=(exercise.sets||[]).map(set=>normalizeSet(set,exercise));
       if(!sets.length) return;
@@ -588,7 +651,10 @@
         bodyweight:!!exercise.bodyweight
       };
     });
-    saveHistory(map);
+    return map;
+  }
+  function updateExerciseHistory(session){
+    saveHistory(exerciseHistoryAfterSession(session,history()));
   }
   function injectWorkoutUi(){
     const tab=document.getElementById('tab-gym');
@@ -2004,7 +2070,7 @@
     else if(action===actionWidgetSaveSet){syncWorkoutWidget();openGymToday();}
   }
 
-  window.WORKOUT_FEATURES={keys,dayOrder,defaultWeeklyPlan:clone(defaultWeeklyPlan),exerciseLibrary:clone(exerciseLibrary),EXERCISE_LIBRARY_VERSION,ready:()=>initializeWorkoutFeatures(),getExerciseLibrary:()=>clone(libraryData()),getPendingMuscleClassifications:()=>clone(pendingMuscleClassifications()),confirmExerciseClassificationPayload,previewHistoricalClassificationMigration,applyHistoricalClassificationMigration,undoHistoricalClassificationMigration,getWeeklyWorkoutPlan:()=>clone(weeklyPlan()),getEquipmentProfiles:()=>clone(equipmentProfiles()),getGymSettings:()=>clone(settings()),updateGymSettings:next=>{saveSettings(next||{});return clone(settings());},displayWeight,canonicalWeight,displayVolume,migrateExerciseLibrary,migrateLegacyGymSessions,dayKeyForDate,planForDate,rankExercisesForContext,getQuickWorkoutState,addManualExercisePayload,saveQuickSetPayload,updateQuickSetPayload,reviewAnomalousSetResult,deleteQuickSetPayload,undoDeleteQuickSetPayload,canUndoQuickSetDelete:()=>!!lastDeletedQuickSet,replaceSessionPayload,completeQuickExercisePayload,finishWorkoutPayload,buildWorkoutWidgetState,syncWorkoutWidget,importWidgetStateFromAndroid};
+  window.WORKOUT_FEATURES={keys,dayOrder,defaultWeeklyPlan:clone(defaultWeeklyPlan),exerciseLibrary:clone(exerciseLibrary),EXERCISE_LIBRARY_VERSION,ready:()=>initializeWorkoutFeatures(),getExerciseLibrary:()=>clone(libraryData()),getPendingMuscleClassifications:()=>clone(pendingMuscleClassifications()),confirmExerciseClassificationPayload,previewHistoricalClassificationMigration,applyHistoricalClassificationMigration,undoHistoricalClassificationMigration,getWeeklyWorkoutPlan:()=>clone(weeklyPlan()),getEquipmentProfiles:()=>clone(equipmentProfiles()),getGymSettings:()=>clone(settings()),updateGymSettings:next=>{saveSettings(next||{});return clone(settings());},displayWeight,canonicalWeight,displayVolume,migrateExerciseLibrary,migrateLegacyGymSessions,dayKeyForDate,planForDate,rankExercisesForContext,getQuickWorkoutState,addManualExercisePayload,saveQuickSetPayload,updateQuickSetPayload,reviewAnomalousSetResult,deleteQuickSetPayload,undoDeleteQuickSetPayload,canUndoQuickSetDelete:()=>!!lastDeletedQuickSet,replaceSessionPayload,completeQuickExercisePayload,finishWorkoutPayload,buildWorkoutWidgetState,syncWorkoutWidget,importWidgetStateFromAndroid,importNativeWorkoutMutationsFromAndroid};
   window.openGymToday=openGymToday;
   window.openQuickSetLogger=openQuickSetLogger;
   window.handleAndroidWidgetIntent=(action,payload)=>handleAndroidWidgetIntent(action,payload||{});
