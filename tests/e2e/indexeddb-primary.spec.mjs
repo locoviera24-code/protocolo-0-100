@@ -67,7 +67,8 @@ test('la cache nutricional se recupera y permite rollback sin tocar historiales'
     window.APP_DATA.write(foodsKey,[{id:'fdc-44',fdcId:44,name:'Cache recuperable',cachedAt:new Date().toISOString()}]);
     await window.APP_DATA.flush();localStorage.removeItem(foodsKey);
   },{foodsKey:FDC_FOODS_KEY,nutritionKey:NUTRITION_KEY});
-  await page.reload();await page.evaluate(()=>window.APP_DATA.ready());
+  await page.reload();
+  await waitForAppReady(page);
   const recovered=await page.evaluate(async ({foodsKey,nutritionKey})=>({foods:window.APP_DATA.readResult(foodsKey),local:JSON.parse(localStorage.getItem(foodsKey)),nutrition:window.APP_DATA.readResult(nutritionKey),status:await window.APP_DATA.primaryDomainStatus('nutritionCache')}),{foodsKey:FDC_FOODS_KEY,nutritionKey:NUTRITION_KEY});
   expect(recovered.foods.value[0].fdcId).toBe(44);
   expect(recovered.local[0].fdcId).toBe(44);

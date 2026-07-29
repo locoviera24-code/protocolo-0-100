@@ -3845,3 +3845,28 @@ Validacion local de la correccion:
 Siguiente accion exacta: enviar este commit correctivo, esperar el nuevo quality
 gate hasta Firestore, artifact web y Android, y registrar los artifacts. Las
 pruebas fisicas siguen pendientes; no fusionar ni publicar stable.
+
+## 85. Carrera de inicializacion IndexedDB detectada por CI
+
+El segundo quality gate remoto fue el run `30483471213`. La correccion de
+borradores quedo validada y la matriz avanzo a 351 escenarios aprobados con 14
+omisiones, pero una ejecucion de escritorio fallo al recuperar la cache
+nutricional. El fallo fue `Execution context was destroyed` entre
+`page.reload()` y una llamada directa a `window.APP_DATA.ready()`; no hubo una
+divergencia ni perdida de datos.
+
+`tests/e2e/indexeddb-primary.spec.mjs` ya importaba el helper comun
+`waitForAppReady`, que reintenta de forma acotada cuando una navegacion sustituye
+el contexto. La recarga afectada ahora usa ese helper en lugar de una llamada
+directa vulnerable a la carrera. Se mantienen todas las expectativas sobre
+recuperacion, copia compatible en localStorage, aislamiento del historial y
+rollback.
+
+Validacion local:
+
+- caso afectado repetido cinco veces en escritorio: 5/5;
+- caso afectado en Android Chromium, iPhone WebKit y escritorio: 3/3.
+
+Siguiente accion exacta: enviar el commit y esperar un quality gate completo.
+No marcar Firestore, artifacts ni Android remotos como aprobados hasta que el
+nuevo run alcance esos pasos.
