@@ -38,6 +38,7 @@ assert.doesNotMatch(debug,/\n  push:/,'El APK manual no debe duplicar el gate au
 assert.doesNotMatch(debug,/gh release/);
 assert.match(release,/needs: quality/);
 assert.match(release,/gh release create/);
+assert.match(release,/gh release create[^\n]*--target "\$GITHUB_SHA"/,'La release debe apuntar al commit exacto validado por el workflow');
 assert.match(release,/QUALITY_CHANNEL: \$\{\{ inputs\.prerelease && 'beta' \|\| 'stable' \}\}/);
 assert.match(release,/node \.\/scripts\/generate-build-info\.mjs/);
 assert.match(playwright,/retries:process\.env\.CI\?1:0/,'CI debe reintentar una sola vez los fallos E2E transitorios');
