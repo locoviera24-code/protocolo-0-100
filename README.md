@@ -500,35 +500,49 @@ Gym Party permite exportar CSV comparativo de la sala y JSON con mis datos
 compartidos. El CSV no incluye datos privados de nutricion, sueno, ansiedad,
 pantalla ni notas personales.
 
-## Widget Android de gimnasio
+## Acceso rapido Android para Gym
 
-La PWA/GitHub Pages no puede crear widgets nativos. El widget real vive en el APK Android y usa `AppWidgetProvider`, `AppWidgetManager`, `RemoteViews` y `SharedPreferences`.
+La PWA/GitHub Pages no puede crear widgets ni controles de pantalla de bloqueo.
+Estas funciones viven en el APK y usan `AppWidgetProvider`, `AppWidgetManager`,
+`RemoteViews`, `PendingIntent` y una notificacion privada de entrenamiento.
 
-La app web sincroniza `weeklyWorkoutPlan`, `workoutSessions`, `exerciseHistory`, `exerciseLibrary`, `gymSettings` y `workoutWidgetState` mediante `AndroidBridge.saveWorkoutWidgetData(json)`. Si todavia no hay datos, Android usa la rutina predeterminada segun el dia actual.
+Desde **Gym > Acceso rapido durante el entrenamiento** se puede tocar **Agregar
+widget**. Cuando el launcher admite `requestPinAppWidget`, Android muestra su
+confirmacion; en otros launchers la app explica la ruta manual: mantener
+presionada la pantalla de inicio, entrar a **Widgets** y elegir **Protocolo
+0->100 · Gym**. La PWA muestra claramente que se requiere el APK.
 
-Desde la pantalla de inicio el widget permite:
+Los layouts compacto, estandar y expandido se eligen por ancho y alto. Ningun
+control funcional se oculta en 1 dp y todos los botones principales miden al
+menos 48 dp. El compacto prioriza Guardar y Editar; el estandar ofrece controles
+simetricos de reps/carga, Guardar, Repetir o Deshacer y Siguiente; el expandido
+agrega ajustes rapidos y navegacion. Peso corporal, lastre, asistencia, tiempo y
+distancia muestran su semantica correspondiente.
 
-- ver el entrenamiento del dia;
-- ver el ejercicio actual;
-- ver series del ejercicio actual y total de series del musculo activo por separado;
-- subir/bajar repeticiones;
-- subir/bajar kilos siempre en pasos de 0.5 kg;
-- usar ajuste rapido de peso de 5 kg para evitar muchos taps en cargas altas;
-- tocar **Guardar serie** sin abrir la app;
-- tocar **Repetir** para cargar la ultima serie conocida;
-- tocar **Atras** para volver al ejercicio anterior;
-- tocar **Siguiente** para avanzar de ejercicio;
-- abrir Gym / Entrenamiento de hoy o Registro rapido cuando hace falta una edicion completa.
+El widget y la notificacion reutilizan `WorkoutQuickActionReducer`. Cada serie
+produce una mutacion durable con UUID antes de actualizar la interfaz. El
+WebView la incorpora una sola vez a `workoutSessions` y confirma el ID. Un doble
+toque o una reentrega de `PendingIntent` no duplica la serie; durante diez
+segundos se puede crear un Deshacer compensatorio incluso con la WebView
+cerrada. **Guardado en el dispositivo** no se presenta como sincronizado: Gym
+Party se prepara despues de la importacion privada.
 
-Limitacion practica: `RemoteViews` no ofrece un formulario libre comodo con teclado, RIR/RPE y notas largas. Para eso el boton de abrir registro rapido sigue entrando directo a la pantalla completa. El registro directo del widget cubre el flujo estable de gimnasio: reps, kilos, ajustes rapidos de peso, guardar, repetir, atras y siguiente.
+Los controles de entrenamiento se activan de forma explicita y solicitan
+`POST_NOTIFICATIONS` solo en ese momento. La notificacion existe unicamente
+durante una sesion activa, usa `VISIBILITY_PRIVATE` y su version publica solo
+muestra **Entrenamiento en curso**. No se promete un widget de keyguard: la
+compatibilidad depende de Android y del fabricante. La app completa se abre
+respetando el desbloqueo del sistema.
 
-El APK tiene permiso de Internet para que Gym Party/Firebase pueda sincronizar
-desde el WebView. En iPhone se usa la PWA/Safari; no hay dependencia del widget
-Android.
+`RemoteViews` no reemplaza el editor completo para RIR/RPE, notas o una metrica
+que no pueda corregirse con seguridad. En esos casos **Editar** abre Registro
+rapido directamente en el ejercicio actual. La arquitectura, migracion,
+privacidad, previews y limites estan en
+[docs/android-quick-access-v1.md](docs/android-quick-access-v1.md).
 
-Para agregarlo: instala el APK, manten presionada la pantalla de inicio, entra a **Widgets**, busca **Protocolo 0->100 · Gym** y agregalo. El widget pequeno ofrece guardado rapido minimo; el mediano muestra controles completos.
-
-Rutina predeterminada: lunes Torso A, martes Pierna A, miercoles Torso B, jueves Pierna B, viernes Torso C, sabado descanso o actividad suave y domingo descanso o revision semanal. Dentro de **Gym** se puede editar la rutina semanal, copiar un dia a otro, restablecer la rutina predeterminada exacta, cambiar kg/lb, activar RIR/RPE y actualizar manualmente el widget.
+El APK conserva Internet para Gym Party/Firebase desde el WebView. iPhone usa
+Safari/PWA y no depende de estos controles Android. La rutina semanal sigue
+siendo la misma fuente del widget y del registro web.
 
 Los ejercicios oficiales conservan una clasificación muscular validada. Al
 crear un ejercicio personalizado se pueden elegir varios músculos principales y

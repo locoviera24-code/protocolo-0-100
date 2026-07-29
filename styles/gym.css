@@ -316,6 +316,46 @@
   color: var(--color-text);
   margin-top: 10px;
 }
+.workoutQuickAccess {
+  display: grid;
+  gap: var(--space-4);
+}
+.workoutQuickAccess > div:first-child p {
+  margin: var(--space-1) 0 0;
+  max-width: 66ch;
+}
+.workoutQuickAccessGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+.workoutQuickAccessItem {
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface-glass-soft);
+}
+.workoutQuickAccessItem p {
+  margin: var(--space-1) 0 0;
+}
+.workoutQuickAccessItem button {
+  width: fit-content;
+  min-height: var(--touch-target);
+}
+.workoutQuickAccessState {
+  padding: var(--space-3);
+  border: 1px solid var(--state-info-border);
+  border-radius: var(--radius-control);
+  background: var(--state-info-soft);
+  color: var(--color-text);
+}
+.workoutQuickAccessDiagnostics {
+  margin-top: 0;
+}
 @media (max-width: 850px) {
   .workoutTodayGrid {
     grid-template-columns: 1fr;
@@ -339,6 +379,12 @@
   }
 }
 @media (max-width: 520px) {
+  .workoutQuickAccessGrid {
+    grid-template-columns: 1fr;
+  }
+  .workoutQuickAccessItem button {
+    width: 100%;
+  }
   .planExerciseFields {
     grid-template-columns: 1fr;
   }
