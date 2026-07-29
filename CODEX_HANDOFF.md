@@ -4166,3 +4166,33 @@ Archivos principales: `artifact-channel.js`, `app/feature-flags.js`,
 Siguiente accion exacta: regenerar precache, sincronizar Android, ejecutar las
 pruebas afectadas, confirmar el bloque y despachar `build-release-apk.yml` con
 tag beta y `prerelease=true`. Verificar el enlace publico antes de entregarlo.
+
+## 95. Prerelease Android firmada y descarga publica
+
+El workflow `build-release-apk.yml` se ejecuto sobre el commit `a5e98e0` con el
+tag `v2.7.0-native-controls-v1-beta.1` y `prerelease=true`. El primer intento
+tuvo un fallo intermitente de WebKit en
+`nutrition-numbers-targets.spec.mjs`; el escenario aprobo 10/10 repeticiones
+locales. La repeticion de jobs fallidos, intento 2 de la ejecucion
+`30456343009`, completo correctamente el quality gate, la firma y la publicacion
+de la prerelease.
+
+APK publico:
+
+- archivo: `protocolo-0-100-v2.7.0-release.apk`;
+- tamano: 1.534.365 bytes;
+- SHA-256:
+  `ecc9158e6ef16b3bde936d0ffac82ee4f09e08c5aa740afb4ba7ac729310c718`;
+- descarga:
+  `https://github.com/locoviera24-code/protocolo-0-100/releases/download/v2.7.0-native-controls-v1-beta.1/protocolo-0-100-v2.7.0-release.apk`.
+
+La descarga se verifico sin credenciales y el hash coincide con el archivo
+`.sha256` publicado. Es una beta firmada: activa los cuatro controles nativos
+cuando no existe una preferencia guardada que los desactive. Stable no fue
+publicada, `main` no fue fusionada y `baseline-stable-2.7` no se movio.
+
+Pendiente manual: instalar esta prerelease en un telefono Android real y validar
+permiso de notificaciones, controles con pantalla bloqueada, temporizador con
+pantalla apagada, widget del launcher y actualizacion desde una instalacion
+anterior. La cola privada funciona con la app cerrada; la incorporacion a
+IndexedDB y el fan-out Firebase ocurren al volver a abrir la WebView.
