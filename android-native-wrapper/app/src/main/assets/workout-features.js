@@ -89,6 +89,8 @@
   let planDraftSelectionHydrated=false;
   let restTimerInterval=null;
   let restTimerEndsAt=0;
+  let nativeTimerStatus='idle';
+  let nativeTimerPausedSeconds=0;
   let importingNativeWidgetState=false;
 
   function ex(id,name,aliases,muscle,type,unit,primary,secondary,notes,options={}){
@@ -160,7 +162,7 @@
     return ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][jsDay];
   }
   function settings(){
-    return {...{widgetEnabled:true,showRir:true,unit:'kg',mode:'simple',showRestDays:true,restTimerEnabled:false,restSeconds:90,hapticEnabled:true},...readStore(keys.gymSettings,{})};
+    return {...{widgetEnabled:true,showRir:true,unit:'kg',mode:'simple',showRestDays:true,restTimerEnabled:false,restSeconds:90,hapticEnabled:true,timerSound:false,showWorkoutOnLockScreen:true,showWeightOnLockScreen:true,showRecordOnLockScreen:true,lockScreenVisibility:'private'},...readStore(keys.gymSettings,{})};
   }
   const LB_PER_KG=2.2046226218;
   function displayWeight(weightKg,unit=settings().unit){
@@ -632,7 +634,7 @@
             <button type="button" class="secondary" id="repeatLastSetBtn">Repetir última</button>
             <button type="button" class="secondary" id="undoQuickSetDeleteBtn" disabled>Deshacer</button>
           </div>
-          <div class="quickRestTimer hidden" id="quickRestTimer" role="timer" aria-live="polite"><span>Descanso</span><strong id="quickRestTimerValue">0:00</strong></div>
+          <div class="quickRestTimer hidden" id="quickRestTimer" role="timer" aria-live="polite"><span>Descanso</span><strong id="quickRestTimerValue">0:00</strong><div class="quickTimerActions"><button type="button" class="secondary" id="quickTimerStartBtn">Iniciar</button><button type="button" class="secondary" id="quickTimerPauseBtn">Pausar</button><button type="button" class="secondary" id="quickTimerAddBtn">+15 s</button></div></div>
           <div class="auditItem" id="quickLastHint">Última vez: sin datos todavía.</div>
           <div class="auditItem" id="quickSetStats">Ejercicio: 0 series · músculo: 0 series.</div>
           <div class="quickLoggedSets" id="quickLoggedSets"></div>
@@ -743,6 +745,9 @@
     document.getElementById('quickExerciseSearch')?.addEventListener('input',renderQuickLogger);
     document.getElementById('saveQuickSetBtn')?.addEventListener('click',saveQuickSet);
     document.getElementById('repeatLastSetBtn')?.addEventListener('click',repeatLastSet);
+    document.getElementById('quickTimerStartBtn')?.addEventListener('click',()=>nativeTimerAction(nativeTimerStatus==='paused'?'com.protocolo.cien.ACTION_TIMER_RESUME':'com.protocolo.cien.ACTION_TIMER_START'));
+    document.getElementById('quickTimerPauseBtn')?.addEventListener('click',()=>nativeTimerAction('com.protocolo.cien.ACTION_TIMER_PAUSE'));
+    document.getElementById('quickTimerAddBtn')?.addEventListener('click',()=>nativeTimerAction('com.protocolo.cien.ACTION_TIMER_ADD_15'));
     document.getElementById('undoQuickSetDeleteBtn')?.addEventListener('click',undoDeletedQuickSet);
     document.getElementById('finishWorkoutBtn')?.addEventListener('click',finishWorkout);
     document.getElementById('quickSetLoggerPanel')?.addEventListener('click',handleQuickLoggerAction);
@@ -918,14 +923,51 @@
   }
   function updateRestTimerDisplay(){
     const box=document.getElementById('quickRestTimer'),value=document.getElementById('quickRestTimerValue'); if(!box||!value)return;
+    const nativeEnabled=nativeTimerEnabled();
+    if(nativeTimerStatus==='paused'){
+      box.classList.remove('hidden');
+      value.textContent=`${Math.floor(nativeTimerPausedSeconds/60)}:${String(nativeTimerPausedSeconds%60).padStart(2,'0')}`;
+      const start=document.getElementById('quickTimerStartBtn'),pause=document.getElementById('quickTimerPauseBtn');if(start)start.textContent='Continuar';if(pause)pause.disabled=true;
+      return;
+    }
     const remaining=Math.max(0,Math.ceil((restTimerEndsAt-Date.now())/1000));
-    box.classList.toggle('hidden',!restTimerEndsAt||remaining<=0);
+    box.classList.toggle('hidden',!nativeEnabled&&nativeTimerStatus!=='running'&&(!restTimerEndsAt||remaining<=0));
     value.textContent=`${Math.floor(remaining/60)}:${String(remaining%60).padStart(2,'0')}`;
-    if(restTimerEndsAt&&remaining<=0){restTimerEndsAt=0;if(restTimerInterval){clearInterval(restTimerInterval);restTimerInterval=null;}if(settings().hapticEnabled&&navigator.vibrate)navigator.vibrate([40,40,40]);}
+    const start=document.getElementById('quickTimerStartBtn'),pause=document.getElementById('quickTimerPauseBtn');if(start)start.textContent='Iniciar';if(pause)pause.disabled=nativeEnabled&&nativeTimerStatus!=='running';
+    if(restTimerEndsAt&&remaining<=0){restTimerEndsAt=0;nativeTimerStatus='finished';if(restTimerInterval){clearInterval(restTimerInterval);restTimerInterval=null;}if(settings().hapticEnabled&&navigator.vibrate)navigator.vibrate([40,40,40]);}
+  }
+  function nativeTimerEnabled(){return !!(window.APP_FEATURE_FLAGS?.isEnabled?.('nativeRestTimer')&&window.AndroidBridge?.handleNativeWorkoutTimerAction);}
+  function syncNativeTimerFromBridge(){
+    if(!nativeTimerEnabled()||!window.AndroidBridge?.getNativeWorkoutControlData)return false;
+    try{
+      const payload=JSON.parse(String(window.AndroidBridge.getNativeWorkoutControlData()||'{}')),runtime=payload.timerRuntime||{},timer=payload.state?.timer||{};
+      nativeTimerStatus=String(runtime.timerStatus||timer.timerStatus||'idle');
+      const remainingMs=Math.max(0,Number(runtime.remainingMs)||0);
+      nativeTimerPausedSeconds=Math.ceil(remainingMs/1000);
+      restTimerEndsAt=nativeTimerStatus==='running'?Date.now()+remainingMs:0;
+      if(restTimerInterval)clearInterval(restTimerInterval);
+      if(nativeTimerStatus==='running')restTimerInterval=setInterval(updateRestTimerDisplay,1000);
+      updateRestTimerDisplay();return true;
+    }catch(error){window.APP_ERROR_BOUNDARY?.capture?.(error,{source:'native-workout-timer'});return false;}
+  }
+  function nativeTimerAction(action){
+    if(nativeTimerEnabled()){
+      try{window.AndroidBridge.handleNativeWorkoutTimerAction(action);setTimeout(syncNativeTimerFromBridge,80);return;}
+      catch(error){window.APP_ERROR_BOUNDARY?.capture?.(error,{source:'native-workout-timer-action'});}
+    }
+    if(action.endsWith('ACTION_TIMER_PAUSE')&&restTimerEndsAt){nativeTimerPausedSeconds=Math.max(1,Math.ceil((restTimerEndsAt-Date.now())/1000));restTimerEndsAt=0;nativeTimerStatus='paused';if(restTimerInterval)clearInterval(restTimerInterval);restTimerInterval=null;updateRestTimerDisplay();return;}
+    if(action.endsWith('ACTION_TIMER_ADD_15')){if(nativeTimerStatus==='paused')nativeTimerPausedSeconds+=15;else if(restTimerEndsAt)restTimerEndsAt+=15000;updateRestTimerDisplay();return;}
+    if(action.endsWith('ACTION_TIMER_RESUME')&&nativeTimerStatus==='paused'){restTimerEndsAt=Date.now()+nativeTimerPausedSeconds*1000;nativeTimerStatus='running';if(restTimerInterval)clearInterval(restTimerInterval);restTimerInterval=setInterval(updateRestTimerDisplay,1000);updateRestTimerDisplay();return;}
+    if(action.endsWith('ACTION_TIMER_START'))startRestTimer();
   }
   function startRestTimer(){
     const current=settings(); if(!current.restTimerEnabled)return;
+    if(nativeTimerEnabled()){
+      try{window.AndroidBridge.handleNativeWorkoutTimerAction('com.protocolo.cien.ACTION_TIMER_START');setTimeout(syncNativeTimerFromBridge,80);return;}
+      catch(error){window.APP_ERROR_BOUNDARY?.capture?.(error,{source:'native-workout-timer-start'});}
+    }
     restTimerEndsAt=Date.now()+Math.max(15,Number(current.restSeconds)||90)*1000;
+    nativeTimerStatus='running';
     if(restTimerInterval)clearInterval(restTimerInterval);
     restTimerInterval=setInterval(updateRestTimerDisplay,1000);updateRestTimerDisplay();
   }
@@ -999,7 +1041,7 @@
     const logged=document.getElementById('quickLoggedSets'); if(logged)logged.innerHTML=quickSetRowsHtml(exercise);
     const save=document.getElementById('saveQuickSetBtn'); if(save)save.textContent=editingSet?'Guardar cambios':'Guardar serie';
     const undo=document.getElementById('undoQuickSetDeleteBtn'); if(undo)undo.disabled=!lastDeletedQuickSet;
-    updateRestTimerDisplay();
+    if(!syncNativeTimerFromBridge())updateRestTimerDisplay();
     const show=settings().showRir;
     ['quickRir','quickRpe'].forEach(id=>{const field=document.getElementById(id)?.closest('.field'); if(field) field.classList.toggle('hidden',!show);});
   }
@@ -1830,6 +1872,16 @@
     return {
       schemaVersion:3,
       featureFlags:window.APP_FEATURE_FLAGS?.all?.()||{schemaVersion:1,nativeWorkoutControlsV1:false,lockScreenWorkoutControls:false,nativeRestTimer:false,multiPartyWorkoutSharing:false},
+      nativeWorkoutSettings:{
+        restSeconds:Math.max(15,Number(s.restSeconds)||90),
+        autoStartRestTimer:!!s.restTimerEnabled,
+        timerVibration:s.hapticEnabled!==false,
+        timerSound:!!s.timerSound,
+        showWorkoutOnLockScreen:s.showWorkoutOnLockScreen!==false,
+        showWeightOnLockScreen:s.showWeightOnLockScreen!==false,
+        showRecordOnLockScreen:s.showRecordOnLockScreen!==false,
+        lockScreenVisibility:['public','private','hidden'].includes(s.lockScreenVisibility)?s.lockScreenVisibility:'private'
+      },
       date,
       dayKey:plan.dayKey,
       weekday:plan.weekday,

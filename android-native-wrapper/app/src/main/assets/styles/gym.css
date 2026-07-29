@@ -81,6 +81,7 @@
 }
 .quickRestTimer {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 10px;
   align-items: center;
@@ -92,6 +93,29 @@
 }
 .quickRestTimer.hidden {
   display: none;
+}
+
+.quickTimerActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+.quickTimerActions button {
+  min-height: 44px;
+  padding-inline: var(--space-3);
+}
+
+@media (max-width: 420px) {
+  .quickTimerActions {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .quickTimerActions button {
+    flex: 1 1 0;
+  }
 }
 .quickLoggedSets {
   display: grid;

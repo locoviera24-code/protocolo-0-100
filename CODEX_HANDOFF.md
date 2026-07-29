@@ -3778,3 +3778,46 @@ Siguiente acción exacta: implementar `WorkoutTimerController`,
 `WorkoutControlNotificationManager` y `WorkoutControlReceiver`, todos detrás de
 las flags correspondientes, sin introducir un foreground service salvo que los
 requisitos reales del target Android lo hagan necesario.
+
+## 84. Temporizador y notificación de entrenamiento
+
+`WorkoutTimerController.java` implementa `rest_countdown` con estados `idle`,
+`running`, `paused` y `finished`. Persiste `startedAtElapsedRealtime`,
+`endsAtElapsedRealtime`, `pausedRemainingMs`, `configuredSeconds` y
+`updatedAtElapsedRealtime`; no escribe un contador por segundo. Soporta iniciar,
+pausar, continuar, detener y ajustar 15 segundos. Widget, WebView y notificación
+leen el mismo estado en `NativeWorkoutControlRepository`.
+
+No se añadió foreground service. El widget y la notificación usan el cronómetro
+del sistema; `AlarmManager.setAndAllowWhileIdle` solicita el aviso final sin
+permisos de alarma exacta. Bajo Doze Android puede demorar el sonido o vibración,
+pero el tiempo mostrado se deriva de la referencia monotónica y no acumula
+desfase. El timer sobrevive a pantalla apagada, bloqueo, destrucción de WebView,
+cierre de actividad y actualización del widget. Un reinicio completo del
+teléfono invalida la referencia monotónica y todavía requiere una política de
+recuperación explícita.
+
+`WorkoutControlNotificationManager.java` crea una notificación ongoing solo con
+sesión `en progreso` o timer activo. En reposo muestra las acciones Reps -,
+Guardar y Reps +; durante el descanso cambia dinámicamente a -15 s, Pausar y
++15 s. No incluye nombres de grupos, miembros, códigos, emails ni IDs Firebase.
+Respeta `showWorkoutOnLockScreen`, `showWeightOnLockScreen`,
+`showRecordOnLockScreen` y visibilidad `public/private/hidden`. Android 13+
+solicita `POST_NOTIFICATIONS` únicamente mediante
+`requestWorkoutNotificationPermission()`, llamado desde contexto explicativo;
+no se solicita al primer arranque.
+
+`WorkoutControlReceiver.java` recibe solamente PendingIntents explícitos e
+inmutables. El widget small y medium incorporan `Chronometer` y control de
+inicio/pausa. La app principal reutiliza su panel de descanso y, con la flag
+nativa apagada o fuera del APK, conserva el timer web anterior. El sonido queda
+apagado y la vibración encendida por defecto.
+
+Pruebas aprobadas: controles nativos, Workout, equipo/modalidades, Progreso,
+manifest PWA, datos, precache, validación con paridad Android, seguridad WebView
+y contrato de release. Continúa pendiente la compilación Android real en el
+quality gate remoto y la prueba física de permiso, bloqueo, alarma y acciones.
+
+Siguiente acción exacta: añadir `WorkoutLoadGuidance` compartido, snapshots
+comparables de última serie y récord, y mostrarlos en widget/notificación sin
+duplicar las reglas de Progreso.

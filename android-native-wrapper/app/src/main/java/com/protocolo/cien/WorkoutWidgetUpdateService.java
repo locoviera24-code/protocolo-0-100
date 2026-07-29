@@ -7,6 +7,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.os.Build;
+import android.os.SystemClock;
 import android.view.View;
 import android.widget.RemoteViews;
 
@@ -37,6 +39,7 @@ public final class WorkoutWidgetUpdateService {
     public static void updateWidgets(Context context, AppWidgetManager manager, int[] ids) {
         if (ids == null || ids.length == 0) return;
         WidgetState state = WidgetState.fromJson(readStateJson(context));
+        state.applyNativeControl(NativeWorkoutControlRepository.readControlState(context));
         for (int id : ids) {
             RemoteViews views = buildViews(context, manager, id, state);
             manager.updateAppWidget(id, views);
@@ -49,7 +52,12 @@ public final class WorkoutWidgetUpdateService {
         applyDirectAction(context, state, action);
         saveStateJson(context, state);
         NativeWorkoutControlRepository.syncFromWidgetState(context, state);
+        if (MainActivity.ACTION_WIDGET_SAVE_SET.equals(action)
+                && state.optString("lastWidgetActionText", "").startsWith("Serie guardada:")) {
+            WorkoutTimerController.startAfterSavedSetIfEnabled(context);
+        }
         updateAll(context);
+        WorkoutControlNotificationManager.update(context);
         return true;
     }
 
@@ -93,6 +101,7 @@ public final class WorkoutWidgetUpdateService {
         views.setTextViewText(R.id.widgetQuickReps, state.quickRepsText);
         views.setTextViewText(R.id.widgetQuickWeight, state.quickWeightText);
         views.setTextViewText(R.id.widgetActionStatus, state.actionStatus);
+        bindTimer(context, views, state);
 
         boolean restDay = "rest".equals(state.type);
         views.setViewVisibility(R.id.widgetDirectPanel, restDay ? View.GONE : View.VISIBLE);
@@ -424,6 +433,45 @@ public final class WorkoutWidgetUpdateService {
         String value = set.optString("setType", "working");
         if (value.equals("warmup") || value.equals("working") || value.equals("backoff") || value.equals("drop") || value.equals("technique") || value.equals("failure") || value.equals("assisted")) return value;
         return "working";
+    }
+
+    private static PendingIntent timerActionIntent(Context context, String action) {
+        Intent intent = new Intent(context, WorkoutControlReceiver.class).setAction(action);
+        int requestCode = 6300 + Math.abs(action.hashCode() % 500);
+        return PendingIntent.getBroadcast(context, requestCode, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    }
+
+    private static void bindTimer(Context context, RemoteViews views, WidgetState state) {
+        views.setViewVisibility(R.id.widgetTimerPanel, state.timerEnabled ? View.VISIBLE : View.GONE);
+        if (!state.timerEnabled) return;
+        String status = state.timerStatus;
+        if ("running".equals(status)) {
+            if (Build.VERSION.SDK_INT >= 24) {
+                views.setChronometer(R.id.widgetTimerChronometer, state.timerEndsAtElapsed, "Descanso %s", true);
+                views.setChronometerCountDown(R.id.widgetTimerChronometer, true);
+            } else {
+                views.setTextViewText(R.id.widgetTimerChronometer, "Descanso " + formatDuration(Math.max(0L, state.timerEndsAtElapsed - SystemClock.elapsedRealtime())));
+            }
+            views.setTextViewText(R.id.widgetTimerButton, "Pausar");
+            views.setOnClickPendingIntent(R.id.widgetTimerButton, timerActionIntent(context, WorkoutTimerController.ACTION_TIMER_PAUSE));
+        } else if ("paused".equals(status)) {
+            views.setTextViewText(R.id.widgetTimerChronometer, "Pausa " + formatDuration(state.timerPausedRemainingMs));
+            views.setTextViewText(R.id.widgetTimerButton, "Continuar");
+            views.setOnClickPendingIntent(R.id.widgetTimerButton, timerActionIntent(context, WorkoutTimerController.ACTION_TIMER_RESUME));
+        } else if ("finished".equals(status)) {
+            views.setTextViewText(R.id.widgetTimerChronometer, "Descanso listo");
+            views.setTextViewText(R.id.widgetTimerButton, "Reiniciar");
+            views.setOnClickPendingIntent(R.id.widgetTimerButton, timerActionIntent(context, WorkoutTimerController.ACTION_TIMER_START));
+        } else {
+            views.setTextViewText(R.id.widgetTimerChronometer, "Descanso " + formatDuration(state.timerConfiguredSeconds * 1000L));
+            views.setTextViewText(R.id.widgetTimerButton, "Iniciar");
+            views.setOnClickPendingIntent(R.id.widgetTimerButton, timerActionIntent(context, WorkoutTimerController.ACTION_TIMER_START));
+        }
+    }
+
+    private static String formatDuration(long milliseconds) {
+        long totalSeconds = Math.max(0L, milliseconds / 1000L);
+        return String.format(Locale.US, "%02d:%02d", totalSeconds / 60L, totalSeconds % 60L);
     }
 
     private static boolean completedSet(JSONObject set) {
@@ -948,6 +996,11 @@ public final class WorkoutWidgetUpdateService {
         String quickWeightText;
         String actionStatus;
         String type;
+        boolean timerEnabled;
+        String timerStatus;
+        long timerEndsAtElapsed;
+        long timerPausedRemainingMs;
+        int timerConfiguredSeconds;
 
         static WidgetState fromJson(JSONObject json) {
             WidgetState state = new WidgetState();
@@ -982,6 +1035,16 @@ public final class WorkoutWidgetUpdateService {
             }
             state.actionStatus = opt(json, "lastWidgetActionText", "Ajusta reps/kg y guarda desde el widget.");
             return state;
+        }
+
+        void applyNativeControl(JSONObject control) {
+            JSONObject flags = control == null ? null : control.optJSONObject("featureFlags");
+            timerEnabled = flags != null && flags.optBoolean("nativeRestTimer", false);
+            JSONObject timer = control == null ? null : control.optJSONObject("timer");
+            timerStatus = timer == null ? "idle" : timer.optString("timerStatus", "idle");
+            timerEndsAtElapsed = timer == null ? 0L : timer.optLong("endsAtElapsedRealtime", 0L);
+            timerPausedRemainingMs = timer == null ? 0L : timer.optLong("pausedRemainingMs", 0L);
+            timerConfiguredSeconds = timer == null ? 90 : Math.max(15, timer.optInt("configuredSeconds", 90));
         }
 
         private static String setStatsText(JSONObject state, JSONObject quick) {
