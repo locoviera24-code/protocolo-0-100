@@ -3853,3 +3853,32 @@ remoto.
 Siguiente acción exacta: importar las mutaciones `save_set` a
 `workoutSessions` por `setId`, reconocer duplicados, confirmar al bridge y
 validar nuevamente el snapshot de orientación.
+
+## 86. Importación privada idempotente
+
+`gym/native-workout-importer.js` valida y fusiona cada mutación `save_set` por
+los IDs estables `sessionId`, `exerciseId` y `setId`. La deduplicación de
+`setId` es global: un reintento o una mutación repetida en otra sesión no agrega
+una segunda serie. El módulo no persiste por sí mismo y se prueba como función
+pura.
+
+`WORKOUT_FEATURES.importNativeWorkoutMutationsFromAndroid()` consume la cola del
+bridge, protege series anómalas, recalcula resumen e historial y escribe
+`workoutSessions` junto con `exerciseHistory` mediante una sola transacción de
+`WorkoutRepository.replace`. Solo después de `ok:true` confirma `imported` a
+Android. Si la serie ya existía también confirma `imported`; si el payload es
+inválido o la transacción falla marca `error` recuperable y conserva la cola.
+
+Con `nativeWorkoutControlsV1` activa ya no se usa el reemplazo completo por
+timestamp como transporte principal. El importador legacy permanece para flags
+apagadas y APK/backups anteriores. Tras importar se reconstruye el widget desde
+la fuente canónica, lo que valida el snapshot provisional de orientación.
+
+Pruebas aprobadas: aplicación nueva, segundo reintento, duplicado global,
+payload inconsistente, actualización de `exerciseHistory` y fallo transaccional
+sin escritura parcial. También aprobaron controles nativos, Workout, datos,
+módulos, precache y paridad Android. El precache contiene 83 recursos.
+
+Siguiente acción exacta: migrar la membresía singular de Gym Party a
+`gymPartyMembershipsV2` y `selectedPartyId`, con adaptador legacy y helpers
+`activeMemberships`, `selectedMembership` y `shareableMemberships`.
