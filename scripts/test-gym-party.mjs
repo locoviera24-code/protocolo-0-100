@@ -3,6 +3,7 @@ import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
 
 const source = await readFile(new URL('../gym-party.js', import.meta.url), 'utf8');
+const membershipsSource=await readFile(new URL('../gym-party-memberships.js',import.meta.url),'utf8');
 const equipmentSource=await readFile(new URL('../gym/equipment.js',import.meta.url),'utf8');
 const setModelSource=await readFile(new URL('../gym/set-model.js',import.meta.url),'utf8');
 const workoutMetricsSource=await readFile(new URL('../workout-metrics.js',import.meta.url),'utf8');
@@ -70,6 +71,7 @@ function createContext() {
   vm.runInContext(firebaseServiceSource,vmContext,{filename:'firebase-service.js'});
   vm.runInContext(syncSource,vmContext,{filename:'gym-party-sync.js'});
   vm.runInContext(metricsSource,vmContext,{filename:'gym-party-metrics.js'});
+  vm.runInContext(membershipsSource,vmContext,{filename:'gym-party-memberships.js'});
   vm.runInContext(uiSource,vmContext,{filename:'gym-party-ui.js'});
   vm.runInContext(source,vmContext,{filename:'gym-party.js'});
   return {context, store};
@@ -77,6 +79,17 @@ function createContext() {
 
 const {context} = createContext();
 const party = context.GYM_PARTY_FEATURES;
+const membershipModel=context.GYM_PARTY_MEMBERSHIPS;
+
+const normalizedMemberships=membershipModel.normalizeMemberships([
+  {partyId:'party_a',userId:'user',active:true,joinedAt:'2026-07-01',privacy:{shareGymData:true}},
+  {partyId:'party_a',userId:'user',active:true,joinedAt:'2026-07-02',privacy:{hideAbsoluteWeights:true}},
+  {partyId:'party_b',userId:'user',active:true,joinedAt:'2026-07-03',privacy:{shareGymData:false}}
+]);
+assert.equal(normalizedMemberships.length,2);
+assert.equal(normalizedMemberships.find(item=>item.partyId==='party_a').privacy.hideAbsoluteWeights,true);
+assert.equal(membershipModel.resolveSelectedPartyId(normalizedMemberships,'missing'),'party_b');
+assert.equal(membershipModel.shareable(normalizedMemberships).map(item=>item.partyId).join(','),'party_a');
 
 assert.equal(party.MAX_GYM_PARTY_MEMBERS, 10);
 assert.equal(context.GYM_PARTY_UI.syncState({backendMode:'local'}).id,'local');
@@ -182,11 +195,30 @@ assert.equal(Object.hasOwn(exported.gymPartySettings, 'firebaseConfig'), false);
 assert.equal(Object.hasOwn(exported.gymPartySettings, 'portableAccessEmail'), false);
 assert.equal(Object.hasOwn(exported.gymPartySettings, 'pendingInviteCode'), false);
 assert.equal(exported.gymPartyMembership.partyId, 'party_test');
+assert.equal(exported.gymPartyMembershipsV2.length,1);
+assert.equal(exported.selectedPartyId,'party_test');
 assert.equal(exported.sharedWorkoutSessions[0].id, 'session_test');
 assert.equal(exported.sharedWorkoutSets[0].id, 'set_test');
 assert.equal(exported.syncQueue[0].id, 'session:session_test');
 assert.equal(exported.lastGymPartyRemoteSyncAt,'2026-06-24T11:59:00.000Z');
 assert.equal(exported.gymPartyDemoData.party.id, 'demo_party');
+
+const {context: multiContext}=createContext();
+multiContext.APP_FEATURE_FLAGS={isEnabled:name=>name==='multiPartyWorkoutSharing'};
+const multiParty=multiContext.GYM_PARTY_FEATURES;
+multiParty.importState({
+  gymPartyMembershipsV2:[
+    {partyId:'party_one',userId:'user_multi',active:true,backendMode:'firebase',joinedAt:'2026-07-01',privacy:{shareGymData:true},party:{id:'party_one',name:'Uno'}},
+    {partyId:'party_two',userId:'user_multi',active:true,backendMode:'firebase',joinedAt:'2026-07-02',privacy:{shareGymData:false},party:{id:'party_two',name:'Dos'}}
+  ],
+  selectedPartyId:'party_one'
+});
+assert.equal(multiParty.activeMemberships().length,2);
+assert.equal(multiParty.selectedMembership().partyId,'party_one');
+assert.equal(multiParty.shareableMemberships().length,1);
+multiParty.selectMembership('party_two',{render:false});
+assert.equal(multiParty.selectedMembership().partyId,'party_two');
+assert.equal(multiParty.exportState().gymPartyMembership.partyId,'party_two');
 
 const {context: syncContext, store: syncStore} = createContext();
 const syncParty = syncContext.GYM_PARTY_FEATURES;

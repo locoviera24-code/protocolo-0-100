@@ -6,6 +6,8 @@
   const keys = {
     settings: 'protocolo_0_100_gym_party_settings_v1',
     membership: 'protocolo_0_100_gym_party_membership_v1',
+    memberships: 'protocolo_0_100_gym_party_memberships_v2',
+    selectedPartyId: 'protocolo_0_100_gym_party_selected_party_id_v1',
     sharedWorkoutSessions: 'protocolo_0_100_shared_workout_sessions_v1',
     sharedWorkoutSets: 'protocolo_0_100_shared_workout_sets_v1',
     syncQueue: 'protocolo_0_100_gym_party_sync_queue_v1',
@@ -99,6 +101,11 @@
     if(window.APP_DATA) return window.APP_DATA.write(key, value);
     localStorage.setItem(key, JSON.stringify(value));
     return value;
+  }
+  function remove(key,name=''){
+    if(window.APP_REPOSITORIES?.gymParty&&name) return window.APP_REPOSITORIES.gymParty.removeByName(name);
+    if(window.APP_DATA) return window.APP_DATA.remove(key);
+    localStorage.removeItem(key);
   }
   function safeArray(value){ return Array.isArray(value) ? value : []; }
   function clone(value){ return JSON.parse(JSON.stringify(value)); }
@@ -198,28 +205,92 @@
     if(hasFirebaseConfig(window.GYM_PARTY_FIREBASE_CONFIG || {})) return 'bundled';
     return 'missing';
   }
-  function membership(){ return read(keys.membership, null); }
-  function saveMembership(value){ return write(keys.membership, value); }
-  function clearMembership(){
-    if(window.APP_REPOSITORIES?.gymParty) window.APP_REPOSITORIES.gymParty.removeByName('membership');
-    else if(window.APP_DATA) window.APP_DATA.remove(keys.membership);
-    else localStorage.removeItem(keys.membership);
+  function membershipModel(){return window.GYM_PARTY_MEMBERSHIPS;}
+  function multiPartyEnabled(){return window.APP_FEATURE_FLAGS?.isEnabled?.('multiPartyWorkoutSharing')===true;}
+  function rawMemberships(){return safeArray(read(keys.memberships,[]));}
+  function selectedPartyId(){return String(read(keys.selectedPartyId,'')||'');}
+  function persistMemberships(values,requestedPartyId=''){
+    const model=membershipModel();
+    const next=model?model.normalizeMemberships(values):safeArray(values);
+    const selectedId=model?model.resolveSelectedPartyId(next,requestedPartyId):requestedPartyId;
+    write(keys.memberships,next);
+    if(selectedId)write(keys.selectedPartyId,selectedId);else remove(keys.selectedPartyId,'selectedPartyId');
+    const selected=model?model.selected(next,selectedId):next.find(item=>item.partyId===selectedId)||null;
+    if(selected)write(keys.membership,selected);else remove(keys.membership,'membership');
+    return next;
+  }
+  function memberships(){
+    const model=membershipModel();
+    const stored=rawMemberships(),legacy=read(keys.membership,null);
+    const next=model?model.normalizeMemberships(stored,legacy):stored.length?stored:(legacy?[legacy]:[]);
+    const nextSelected=model?model.resolveSelectedPartyId(next,selectedPartyId()):selectedPartyId();
+    if(JSON.stringify(stored)!==JSON.stringify(next)||selectedPartyId()!==nextSelected||(nextSelected&&legacy?.partyId!==nextSelected))persistMemberships(next,nextSelected);
+    return next;
+  }
+  function saveMemberships(values,{selectedPartyId:requestedPartyId=selectedPartyId()}={}){
+    return persistMemberships(values,requestedPartyId);
+  }
+  function membership(){return selectedMembership({includeInactive:true});}
+  function saveMembership(value,{select=true,closeComposer=false}={}){
+    const model=membershipModel(),current=memberships();
+    const next=model?model.upsert(current,value):[...current.filter(item=>item.partyId!==value?.partyId),value];
+    persistMemberships(next,select?value?.partyId:selectedPartyId());
+    if(closeComposer)saveSettings({partyComposerOpen:false});
+    return value;
+  }
+  function clearMembership(partyId=selectedPartyId()){
+    const model=membershipModel(),current=memberships(),selected=selectedMembership({includeInactive:true});
+    const targetPartyId=String(partyId||selected?.partyId||''),target=current.find(item=>item.partyId===targetPartyId);
+    const next=model?model.remove(current,targetPartyId,target?.userId||''):current.filter(item=>item.partyId!==targetPartyId);
+    persistMemberships(next,'');
     renderGymParty();
   }
-  function activeMembership(){
-    const value = membership();
-    return value && value.active ? value : null;
+  function activeMemberships(){
+    const model=membershipModel(),current=memberships();
+    return model?model.active(current):current.filter(value=>value?.active);
   }
+  function selectedMembership({includeInactive=false}={}){
+    const model=membershipModel(),current=memberships(),requested=selectedPartyId();
+    return model?model.selected(current,requested,includeInactive):(current.find(value=>value.partyId===requested&&(includeInactive||value.active))||null);
+  }
+  function selectMembership(partyId,{render=true}={}){
+    const model=membershipModel(),current=memberships(),resolved=model?model.resolveSelectedPartyId(current,partyId):partyId;
+    if(!resolved||resolved!==partyId)return null;
+    persistMemberships(current,resolved);
+    saveSettings({partyComposerOpen:false});
+    if(render)renderGymParty();
+    return selectedMembership();
+  }
+  function shareableMemberships(){
+    const model=membershipModel(),current=memberships();
+    return model?model.shareable(current):activeMemberships().filter(value=>value.privacy?.shareGymData!==false);
+  }
+  function activeMembership(){return selectedMembership();}
   function sharedSessions(){ return read(keys.sharedWorkoutSessions, []); }
   function saveSharedSessions(value){ return write(keys.sharedWorkoutSessions, value); }
   function sharedSets(){ return read(keys.sharedWorkoutSets, []); }
   function saveSharedSets(value){ return write(keys.sharedWorkoutSets, value); }
   function syncQueue(){ return read(keys.syncQueue, []); }
   function saveSyncQueue(value){ return write(keys.syncQueue, value); }
-  function setLastSync(value = nowIso()){ write(keys.lastSyncAt, value); return value; }
-  function lastSyncAt(){ return read(keys.lastSyncAt, ''); }
-  function lastRemoteSyncAt(){ return read(keys.lastRemoteSyncAt,''); }
-  function setLastRemoteSyncAt(value){ if(value) write(keys.lastRemoteSyncAt,value); return value; }
+  function setLastSync(value = nowIso()){
+    write(keys.lastSyncAt,value);
+    const m=activeMembership();
+    if(m)saveMembership({...m,lastSyncAt:value,syncState:'synced',lastError:''},{select:false});
+    return value;
+  }
+  function lastSyncAt(){return activeMembership()?.lastSyncAt||read(keys.lastSyncAt,'');}
+  function lastRemoteSyncAt(){
+    const m=activeMembership();
+    if(m?.lastRemoteSyncAt)return m.lastRemoteSyncAt;
+    return activeMemberships().length<=1?read(keys.lastRemoteSyncAt,''):'';
+  }
+  function setLastRemoteSyncAt(value){
+    if(!value)return value;
+    write(keys.lastRemoteSyncAt,value);
+    const m=activeMembership();
+    if(m)saveMembership({...m,lastRemoteSyncAt:value},{select:false});
+    return value;
+  }
 
   function privacyFromForm(prefix){
     return {
@@ -391,7 +462,7 @@
       members: [member]
     };
     saveSettings({backendMode: 'local',pendingInviteCode:'',localParties:{...s.localParties,[partyId]:party}});
-    saveMembership({partyId, inviteCode, userId, alias, role: 'owner', backendMode: 'local', active: true, privacy, joinedAt: nowIso(), party});
+    saveMembership({partyId, inviteCode, userId, alias, role: 'owner', backendMode: 'local', active: true, privacy, joinedAt: nowIso(), party},{closeComposer:true});
     window.APP_DRAFTS?.remove?.(partyFormDraftId('create'));
     syncFromLocalWorkouts({silent: true});
     renderGymParty();
@@ -423,7 +494,7 @@
     const userId = s.localUserId;
     if((party.members || []).some(member => member.userId === userId)){
       flashMessage('Este usuario ya está unido a la sala.');
-      saveMembership({partyId: party.id, inviteCode: party.inviteCode, userId, alias, role: 'member', backendMode: 'local', active: true, privacy, joinedAt: nowIso(), party});
+      saveMembership({partyId: party.id, inviteCode: party.inviteCode, userId, alias, role: 'member', backendMode: 'local', active: true, privacy, joinedAt: nowIso(), party},{closeComposer:true});
       window.APP_DRAFTS?.remove?.(partyFormDraftId('join'));
       renderGymParty();
       return;
@@ -432,7 +503,7 @@
     member.inviteCode = party.inviteCode;
     const nextParty = {...party, members: [...(party.members || []), member], membersCount: (party.members || []).length + 1,inviteUses:Number(party.inviteUses||0)+1};
     saveSettings({localParties: {...s.localParties, [party.id]: nextParty}});
-    saveMembership({partyId: party.id, inviteCode: party.inviteCode, userId, alias, role: 'member', backendMode: 'local', active: true, privacy, joinedAt: nowIso(), party: nextParty});
+    saveMembership({partyId: party.id, inviteCode: party.inviteCode, userId, alias, role: 'member', backendMode: 'local', active: true, privacy, joinedAt: nowIso(), party: nextParty},{closeComposer:true});
     window.APP_DRAFTS?.remove?.(partyFormDraftId('join'));
     saveSettings({pendingInviteCode:''});
     syncFromLocalWorkouts({silent: true});
@@ -564,7 +635,7 @@
       privacy: {...defaultPrivacy},
       joinedAt: nowIso(),
       party: demo.party
-    });
+    },{closeComposer:true});
     renderGymParty();
     flashMessage('Modo demo activado. Estos datos son ficticios.');
   }
@@ -1026,6 +1097,24 @@
       </div>
     `;
   }
+  function membershipLabel(value){
+    return value?.party?.name||settings().localParties?.[value?.partyId]?.name||value?.inviteCode||'Gym Party';
+  }
+  function partySwitcherHtml({composer=false}={}){
+    if(!multiPartyEnabled())return'';
+    const rows=activeMemberships(),selected=activeMembership();
+    if(!rows.length)return'';
+    return `<div class="partyRoomSwitcher" aria-label="Mis grupos">
+      <div class="partyRoomSwitcherHead"><strong>Mis grupos</strong><span class="muted small">${rows.length} activo(s)</span></div>
+      <div class="partyRoomSwitcherList" role="list">${rows.map(item=>{
+        const current=!composer&&item.partyId===selected?.partyId;
+        return `<button type="button" class="${current?'good':'secondary'}" data-gym-party-action="select-party" data-party-id="${escape(item.partyId)}" ${current?'aria-current="true"':''}>${escape(membershipLabel(item))}</button>`;
+      }).join('')}</div>
+      ${composer
+        ?`<button type="button" class="secondary" data-gym-party-action="back-to-party">Volver al grupo seleccionado</button>`
+        :`<button type="button" class="secondary" data-gym-party-action="new-room">Agregar otro grupo</button>`}
+    </div>`;
+  }
   function noRoomHtmlSimple(){
     const cfg = settings().firebaseConfig || {};
     const cfgText = Object.keys(cfg).length ? JSON.stringify(cfg, null, 2) : '';
@@ -1036,6 +1125,7 @@
     const pendingCode=normalizeCode(settings().pendingInviteCode||'');
     return `
       <div class="partySimpleShell">
+        ${partySwitcherHtml({composer:true})}
         <div class="moduleCard partyStartCard">
           <span class="partyStepPill">${escape(cfgStatus)}</span>
           <h2>Entrenar con un amigo</h2>
@@ -1825,7 +1915,8 @@
     const self = stats.find(row => row.member.userId === m?.userId) || stats[0] || {current: {}};
     const dateLabel = referenceDate === todayStr() ? 'Hoy' : referenceDate;
     const syncCounts=syncEngine()?.stateCounts?.([...safeArray(data.sessions),...safeArray(data.sets)])||{},currentSettings=settings();
-    const syncState=window.GYM_PARTY_UI?.syncState?.({backendMode:m.backendMode,pending:syncQueue().length,conflicts:syncCounts.conflict||0,error:currentSettings.syncLastError||'',syncing:!!currentSettings.syncInProgress,lastSyncAt:lastSyncAt(),online:navigator.onLine!==false,requiresAccess:!!currentSettings.syncRequiresAccess})||{id:'local',label:'Guardado localmente',detail:'',tone:'info',pending:syncQueue().length,last:'Todavía no se sincronizó.'};
+    const partyPending=syncQueue().filter(item=>item?.payload?.partyId===m.partyId).length;
+    const syncState=window.GYM_PARTY_UI?.syncState?.({backendMode:m.backendMode,pending:partyPending,conflicts:syncCounts.conflict||0,error:currentSettings.syncLastError||'',syncing:!!currentSettings.syncInProgress,lastSyncAt:m.lastSyncAt||lastSyncAt(),online:navigator.onLine!==false,requiresAccess:!!currentSettings.syncRequiresAccess})||{id:'local',label:'Guardado localmente',detail:'',tone:'info',pending:partyPending,last:'Todavía no se sincronizó.'};
     const inviteHint = members.length === 1
       ? `<div class="partyTip">Cuando quieras sumar a tu amigo, desplega este apartado y envia el codigo.</div>`
       : '';
@@ -1846,6 +1937,8 @@
         <div class="partySyncState" data-sync-state="${escape(syncState.id)}" data-tone="${escape(syncState.tone)}" role="status"><div><strong>${escape(syncState.label)}</strong><span>${escape(syncState.detail)}</span></div><small>${escape(syncState.last)} · ${syncState.pending} cambio(s) pendiente(s)</small>${syncState.id==='error'?'<button type="button" class="secondary" data-gym-party-action="sync">Reintentar</button>':''}</div>
         ${maxWarning}
       </div>
+
+      ${partySwitcherHtml()}
 
       <nav class="partySectionNav" aria-label="Secciones de Gym Party">
         <button type="button" class="active" data-gym-party-action="party-focus-section" data-party-section-target="partyTrainSection">Entrenar</button>
@@ -1952,7 +2045,7 @@
       return;
     }
     syncFromLocalWorkouts({silent: true, queue: false});
-    const data = partyData();
+    const data = multiPartyEnabled()&&settings().partyComposerOpen?null:partyData();
     const html=data?.party ? dashboardHtmlSimple(data) : noRoomHtmlSimple();
     if(window.GYM_PARTY_UI?.renderRoot) window.GYM_PARTY_UI.renderRoot(root,html,bindGymPartyActionButtons);
     else{root.innerHTML=html;bindGymPartyActionButtons(root);}
@@ -1991,6 +2084,8 @@
     else if(action === 'link-access') linkPortableAccess().catch(error => flashMessage(firebaseError(error)));
     else if(action === 'restore-access') restorePortableAccess().catch(error => flashMessage(firebaseError(error)));
     else if(action === 'new-room') newRoomFlow();
+    else if(action === 'select-party') selectMembership(event?.target?.closest?.('[data-party-id]')?.dataset?.partyId||'');
+    else if(action === 'back-to-party'){saveSettings({partyComposerOpen:false});renderGymParty();}
     else if(action === 'leave'||action === 'leave-device') leavePartyDevice();
     else if(action === 'leave-remote') deactivateFirebaseMembership().catch(error=>flashMessage(firebaseError(error)));
     else if(action === 'leave-delete-shared') deleteSharedDataAndLeave().catch(error=>flashMessage(firebaseError(error)));
@@ -2416,6 +2511,11 @@
     await deactivateFirebaseMembership({skipConfirm:true});
   }
   async function newRoomFlow(){
+    if(multiPartyEnabled()){
+      saveSettings({partyComposerOpen:true});
+      renderGymParty();
+      return;
+    }
     if(!(await window.APP_CONFIRMATION.ask({title:'Crear otra sala',message:'Saldrás de la sala actual solo en este dispositivo. Tus entrenamientos locales no se borran.',confirmLabel:'Crear sala nueva'})))return;
     clearMembership();
     flashMessage('Listo. Ahora podés crear una sala nueva y generar un código.');
@@ -2563,48 +2663,46 @@
       firestoreMod.collection(db, collections.members),
       firestoreMod.where('userId','==', uidValue),
       firestoreMod.where('active','==', true),
-      firestoreMod.limit(MAX_GYM_PARTY_MEMBERS)
+      firestoreMod.limit(25)
     );
     const memberSnap = await firestoreMod.getDocs(memberQuery);
-    const memberships = memberSnap.docs.map(docSnap => docSnap.data())
+    const remoteMemberships = memberSnap.docs.map(docSnap => docSnap.data())
       .sort((a,b) => String(b.joinedAt || '').localeCompare(String(a.joinedAt || '')));
-    const member = memberships[0];
-    if(!member) throw new Error('No encontre una Gym Party vinculada a este acceso.');
-    const partyRef = firestoreMod.doc(db, collections.parties, member.partyId);
-    const partySnap = await firestoreMod.getDoc(partyRef);
-    if(!partySnap.exists() || partySnap.data().active === false) throw new Error('PARTY_NOT_FOUND');
-    const membersQuery = firestoreMod.query(
-      firestoreMod.collection(db, collections.members),
-      firestoreMod.where('partyId','==', member.partyId),
-      firestoreMod.where('active','==', true),
-      firestoreMod.limit(MAX_GYM_PARTY_MEMBERS + 1)
-    );
-    const membersSnap = await firestoreMod.getDocs(membersQuery);
-    const members = membersSnap.docs.map(docSnap => docSnap.data());
-    const party = {
-      id: member.partyId,
-      ...partySnap.data(),
-      inviteCode: partySnap.data().inviteCode || member.inviteCode || '',
-      members,
-      membersCount: members.length,
-      maxMembers: partySnap.data().maxMembers || MAX_GYM_PARTY_MEMBERS
-    };
-    const privacy = privacyFromMember(member);
-    saveMembership({
-      partyId: member.partyId,
-      inviteCode: party.inviteCode,
-      userId: uidValue,
-      alias: member.aliasInParty || member.alias || cleanEmail(auth.currentUser.email || 'Atleta'),
-      role: member.role || 'member',
-      backendMode: 'firebase',
-      active: true,
-      privacy,
-      joinedAt: member.joinedAt || nowIso(),
-      party
-    });
+    if(!remoteMemberships.length) throw new Error('No encontre una Gym Party vinculada a este acceso.');
+    const restored=(await Promise.all(remoteMemberships.map(async member=>{
+      const partyRef=firestoreMod.doc(db,collections.parties,member.partyId);
+      const [partySnap,membersSnap]=await Promise.all([
+        firestoreMod.getDoc(partyRef),
+        firestoreMod.getDocs(firestoreMod.query(
+          firestoreMod.collection(db,collections.members),
+          firestoreMod.where('partyId','==',member.partyId),
+          firestoreMod.where('active','==',true),
+          firestoreMod.limit(MAX_GYM_PARTY_MEMBERS+1)
+        ))
+      ]);
+      if(!partySnap.exists()||partySnap.data().active===false)return null;
+      const members=membersSnap.docs.map(docSnap=>docSnap.data());
+      const party={id:member.partyId,...partySnap.data(),inviteCode:partySnap.data().inviteCode||member.inviteCode||'',members,membersCount:members.length,maxMembers:partySnap.data().maxMembers||MAX_GYM_PARTY_MEMBERS};
+      return {
+        partyId:member.partyId,
+        inviteCode:party.inviteCode,
+        userId:uidValue,
+        alias:member.aliasInParty||member.alias||cleanEmail(auth.currentUser.email||'Atleta'),
+        role:member.role||'member',
+        backendMode:'firebase',
+        active:true,
+        privacy:privacyFromMember(member),
+        joinedAt:member.joinedAt||nowIso(),
+        party
+      };
+    }))).filter(Boolean);
+    if(!restored.length)throw new Error('PARTY_NOT_FOUND');
+    const retained=memberships().filter(item=>item.backendMode!=='firebase'||item.userId!==uidValue);
+    saveMemberships([...retained,...restored],{selectedPartyId:restored[0].partyId});
+    saveSettings({partyComposerOpen:false});
     syncFromLocalWorkouts({silent: true});
     await syncFirebaseNow({silent: true});
-    return party;
+    return selectedMembership()?.party||restored[0].party;
   }
   async function createFirebaseParty({name, alias, privacy}){
     const runtime = await loadFirebaseRuntime();
@@ -2644,7 +2742,7 @@
     batch.set(firestoreMod.doc(db, collections.members, member.id), {...member,joinedAt:timestamp,updatedAt:timestamp});
     batch.set(firestoreMod.doc(db, collections.invites, inviteCode), {inviteCode,partyId,partyName:name,createdBy:uidValue,createdAt:timestamp,updatedAt:timestamp,active:true,membersCount:1,maxMembers:MAX_GYM_PARTY_MEMBERS,uses:0,membershipRevision:0});
     await batch.commit();
-    saveMembership({partyId, inviteCode, userId: uidValue, alias, role: 'owner', backendMode: 'firebase', active: true, privacy, joinedAt: nowIso(), party});
+    saveMembership({partyId, inviteCode, userId: uidValue, alias, role: 'owner', backendMode: 'firebase', active: true, privacy, joinedAt: nowIso(), party},{closeComposer:true});
     window.APP_DRAFTS?.remove?.(partyFormDraftId('create'));
     saveSettings({backendMode: 'firebase'});
     syncFromLocalWorkouts({silent: true});
@@ -2697,7 +2795,7 @@
     const party = {id: invite.partyId, ...partySnap.data(), inviteCode: code};
     const nextMembers = upsertById(members, [member]);
     const partyWithMembers = {...party, members: nextMembers, membersCount: nextMembers.length, maxMembers: party.maxMembers || MAX_GYM_PARTY_MEMBERS};
-    saveMembership({partyId: invite.partyId, inviteCode: code, userId: auth.currentUser.uid, alias, role: member.role, backendMode: 'firebase', active: true, privacy, joinedAt: nowIso(), party: partyWithMembers});
+    saveMembership({partyId: invite.partyId, inviteCode: code, userId: auth.currentUser.uid, alias, role: member.role, backendMode: 'firebase', active: true, privacy, joinedAt: nowIso(), party: partyWithMembers},{closeComposer:true});
     window.APP_DRAFTS?.remove?.(partyFormDraftId('join'));
     saveSettings({backendMode: 'firebase',pendingInviteCode:''});
     await syncFirebaseNow({silent: true});
@@ -2785,6 +2883,7 @@
   }
   async function syncFirebaseNow({silent=false,full=false,force=false}={}){
     const m=activeMembership(); if(!m||m.backendMode!=='firebase') return;
+    saveMembership({...m,syncState:'syncing',lastError:''},{select:false});
     let stage='cargar Firebase';
     try{
       const runtime=await loadFirebaseRuntime(),{db,auth,firestoreMod}=runtime;
@@ -2823,6 +2922,7 @@
         ? error
         : Object.assign(new Error(`${stage}: ${error?.message||error}`),{code:error?.code||'',gymPartyStage:stage,cause:error});
       saveSettings({syncLastError:String(traced.message).slice(0,300),syncLastFailedAt:nowIso(),syncLastFailedStage:traced.gymPartyStage||stage});
+      saveMembership({...m,syncState:'error',lastError:String(traced.message).slice(0,300)},{select:false});
       throw traced;
     }
   }
@@ -2845,6 +2945,8 @@
     return {
       gymPartySettings: exportableSettings(),
       gymPartyMembership: membership(),
+      gymPartyMembershipsV2: memberships(),
+      selectedPartyId: selectedPartyId()||null,
       sharedWorkoutSessions: sharedSessions(),
       sharedWorkoutSets: sharedSets(),
       syncQueue: syncQueue(),
@@ -2856,7 +2958,11 @@
   function importState(state){
     if(!state || typeof state !== 'object') return;
     if(state.gymPartySettings) write(keys.settings, importableSettings(state.gymPartySettings));
-    if(state.gymPartyMembership) write(keys.membership, state.gymPartyMembership);
+    if(Array.isArray(state.gymPartyMembershipsV2)){
+      persistMemberships(state.gymPartyMembershipsV2,state.selectedPartyId||state.gymPartyMembership?.partyId||'');
+    }else if(state.gymPartyMembership){
+      persistMemberships([state.gymPartyMembership],state.gymPartyMembership.partyId||'');
+    }
     if(Array.isArray(state.sharedWorkoutSessions)) write(keys.sharedWorkoutSessions, state.sharedWorkoutSessions);
     if(Array.isArray(state.sharedWorkoutSets)) write(keys.sharedWorkoutSets, state.sharedWorkoutSets);
     if(Array.isArray(state.syncQueue)) write(keys.syncQueue, state.syncQueue);
@@ -3005,7 +3111,13 @@
     privacyFromMember,
     sanitizeWorkoutSets,
     normalizeSessionsFromSets,
-    firestorePayload
+    firestorePayload,
+    memberships,
+    activeMemberships,
+    selectedMembership,
+    selectMembership,
+    shareableMemberships,
+    saveMemberships
   };
   window.renderGymParty = renderGymParty;
 

@@ -42,6 +42,8 @@ assert.ok(!registry.primaryGroupKeys().protocol.includes('protocolo_0_100_gym_se
 assert.deepEqual([...registry.primaryGroupKeys().gymParty],[
   'protocolo_0_100_gym_party_settings_v1',
   'protocolo_0_100_gym_party_membership_v1',
+  'protocolo_0_100_gym_party_memberships_v2',
+  'protocolo_0_100_gym_party_selected_party_id_v1',
   'protocolo_0_100_shared_workout_sessions_v1',
   'protocolo_0_100_shared_workout_sets_v1',
   'protocolo_0_100_gym_party_sync_queue_v1',
@@ -77,6 +79,8 @@ for(const repository of Object.values(window.APP_REPOSITORIES).filter(value=>val
 assert.throws(()=>window.APP_DATA.write('protocolo_0_100_unknown_v1',{}),/no registrada/);
 assert.equal(window.APP_REPOSITORIES.workout.keys.equipmentProfiles,'protocolo_0_100_equipment_profiles_v1');
 assert.equal(window.APP_REPOSITORIES.gymParty.keys.syncQueue,'protocolo_0_100_gym_party_sync_queue_v1');
+assert.equal(window.APP_REPOSITORIES.gymParty.keys.memberships,'protocolo_0_100_gym_party_memberships_v2');
+assert.equal(window.APP_REPOSITORIES.gymParty.keys.selectedPartyId,'protocolo_0_100_gym_party_selected_party_id_v1');
 assert.equal(window.APP_DATA.config().primaryDomains.gymParty,true);
 assert.equal(window.APP_DATA.config().primaryDomains.protocol,true);
 

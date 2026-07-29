@@ -3882,3 +3882,47 @@ módulos, precache y paridad Android. El precache contiene 83 recursos.
 Siguiente acción exacta: migrar la membresía singular de Gym Party a
 `gymPartyMembershipsV2` y `selectedPartyId`, con adaptador legacy y helpers
 `activeMemberships`, `selectedMembership` y `shareableMemberships`.
+
+## 87. Membresías múltiples de Gym Party
+
+`gym-party-memberships.js` define el modelo puro y versionado de membresías.
+La nueva clave `protocolo_0_100_gym_party_memberships_v2` conserva un array de
+salas y `protocolo_0_100_gym_party_selected_party_id_v1` identifica la sala
+visible. Ambas están registradas en `data/schema-registry.js`, se incluyen en
+backup y se replican mediante el repositorio Gym Party. La clave singular
+`protocolo_0_100_gym_party_membership_v1` no se elimina: queda como proyección
+compatible de la sala seleccionada para builds y backups anteriores.
+
+La migración legacy es idempotente y no borra salas. Los helpers públicos
+`memberships()`, `activeMemberships()`, `selectedMembership()`,
+`selectMembership()` y `shareableMemberships()` normalizan privacidad, evitan
+duplicados por `partyId + userId` y mantienen selección estable. Cada membresía
+conserva `backendMode`, rol, actividad, privacidad, `joinedAt`, `lastSyncAt`,
+`lastRemoteSyncAt` y `syncState`. El watermark remoto ya es por sala cuando hay
+más de una membresía, para que cambiar de grupo no omita cambios remotos.
+
+Con `multiPartyWorkoutSharing` apagada la interfaz conserva el flujo singular.
+Con la flag activa aparece `Mis grupos`, se puede cambiar la sala visible,
+agregar otra sin abandonar las existentes y volver al grupo seleccionado. La
+restauración de acceso portable recupera todas las membresías Firebase activas
+de la identidad, no solamente la más reciente. Salir o desactivar afecta solo
+la sala seleccionada y luego selecciona otra activa si existe.
+
+Archivos principales: `gym-party-memberships.js`, `gym-party.js`,
+`data/schema-registry.js`, `styles/gym-party.css`, `index.html`,
+`scripts/sync-web-assets.ps1`, `scripts/test-gym-party.mjs`,
+`scripts/test-schema-registry.mjs` y `tests/e2e/gym-party-multi.spec.mjs`.
+Los assets Android fueron sincronizados. El precache contiene 84 recursos y el
+artifact web local 85; versión y build permanecen en `2.7.0` / `89`.
+
+Pruebas aprobadas: contrato Gym Party, `test:data`, `test:modules`,
+`test:design`, build/precache, artifact sin 404, validación y paridad Android.
+El flujo multigrupo aprobó en Android Chromium, iPhone WebKit y escritorio.
+También aprobaron 11 regresiones de borradores, privacidad, anomalías y tipos
+de serie. No se compiló Android localmente porque el equipo sigue sin JDK,
+Gradle y Android SDK; esa comprobación queda para el quality gate remoto.
+
+Siguiente acción exacta: crear destinos `ShareTarget` por membresía activa,
+encolar el fan-out después de la importación privada y sincronizar cada sala de
+forma idempotente e independiente, sin revertir el historial privado si una
+sala falla.

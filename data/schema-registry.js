@@ -74,6 +74,8 @@
 
     entry('settings','protocolo_0_100_gym_party_settings_v1','gymParty',{defaultValue:{},validator:validators.object,backupField:'gymPartySettings',redaction:'firebase-config'}),
     entry('membership','protocolo_0_100_gym_party_membership_v1','gymParty',{defaultValue:null,validator:validators.nullableObject,backupField:'gymPartyMembership'}),
+    entry('memberships','protocolo_0_100_gym_party_memberships_v2','gymParty',{schemaVersion:2,defaultValue:[],validator:validators.recordArray,backupField:'gymPartyMembershipsV2'}),
+    entry('selectedPartyId','protocolo_0_100_gym_party_selected_party_id_v1','gymParty',{defaultValue:null,validator:validators.nullableString,backupField:'selectedPartyId'}),
     entry('sharedSessions','protocolo_0_100_shared_workout_sessions_v1','gymParty',{defaultValue:[],validator:validators.recordArray,backupField:'sharedWorkoutSessions'}),
     entry('sharedSets','protocolo_0_100_shared_workout_sets_v1','gymParty',{defaultValue:[],validator:validators.recordArray,backupField:'sharedWorkoutSets'}),
     entry('syncQueue','protocolo_0_100_gym_party_sync_queue_v1','gymParty',{defaultValue:[],validator:validators.recordArray,backupField:'syncQueue'}),

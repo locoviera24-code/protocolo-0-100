@@ -51,6 +51,7 @@ $relativeFiles = @(
     'firebase-service.js',
     'gym-party-sync.js',
     'gym-party-metrics.js',
+    'gym-party-memberships.js',
     'gym-party-ui.js',
     'gym-party.js',
     'advanced-features.js',

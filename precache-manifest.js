@@ -66,8 +66,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     },
     {
       "url": "./data/schema-registry.js",
-      "bytes": 15269,
-      "sha256": "462291d5b2dc635450745f8bcc85fbc1bc040b060e7d844cc26cbe0f506de9c8"
+      "bytes": 15628,
+      "sha256": "103dd8395d24328995a8b40c2ea73807275e8c6db56550d36207bfe0b7b11863"
     },
     {
       "url": "./fdc-client.js",
@@ -83,6 +83,11 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
       "url": "./firebase-service.js",
       "bytes": 1211,
       "sha256": "6817df93e282223b4995ab830162922e8feb301fd94d7033eb80fa8b797c8c46"
+    },
+    {
+      "url": "./gym-party-memberships.js",
+      "bytes": 3466,
+      "sha256": "8d0baa56cd4b77e921396e7e103d8bc8fcfa3c36c356f7ac4afd54c4ac4abc0e"
     },
     {
       "url": "./gym-party-metrics.js",
@@ -101,8 +106,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     },
     {
       "url": "./gym-party.js",
-      "bytes": 193546,
-      "sha256": "83adae2a81df41a259c48e0143606efb07ea9e0dd65cfa3ce4035eb1ebd8f88d"
+      "bytes": 200350,
+      "sha256": "8f3dbf28de8986f81a1c78e2d60a4254d393469379beac9c3423a179bfc42736"
     },
     {
       "url": "./gym/anomaly-detector.js",
@@ -136,8 +141,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     },
     {
       "url": "./index.html",
-      "bytes": 320080,
-      "sha256": "c5fd5d1909476307a31a55d6bc1d0acdda9ffb8661d06fdd3f0574647c0a95ad"
+      "bytes": 320129,
+      "sha256": "953df033182314c4af98f7b37e4398c3439431db679711189f56f641d680cc5d"
     },
     {
       "url": "./nutrition-data.js",
@@ -256,8 +261,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     },
     {
       "url": "./styles/gym-party.css",
-      "bytes": 16161,
-      "sha256": "6f3ae4b86e7825bf7562eea9c68f7ad88ab8ef4660b8fba3fc3e5ab18132a5a7"
+      "bytes": 16667,
+      "sha256": "c903808a11fea98b26081a7974b88b19c994e41008578b13faa28d653488554a"
     },
     {
       "url": "./styles/gym.css",
