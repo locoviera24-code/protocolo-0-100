@@ -4036,6 +4036,27 @@ la repeticion con margen termino completa. No habia dispositivo en `adb devices
 APK anterior siguen pendientes y no se marcan como aprobados. La checklist
 actualizada esta en `docs/physical-test-checklist.md`.
 
-Siguiente accion exacta: recompilar tras los ultimos textos XML, commit, push,
-quality gate beta remoto y prerelease beta con descarga directa. No publicar
-stable.
+El quality gate remoto `30504161727` valido el commit funcional `55c9cf2`. Sus
+dos primeros intentos encontraron dos timeouts intermitentes distintos y no
+relacionados de Nutricion en iPhone WebKit; las matrices restantes aprobaron y
+la repeticion local del archivo de recetas paso 30/30. El attempt 3 completo
+termino verde con 355 E2E aprobados, 14 omisiones documentadas, 27 axe,
+Firestore Emulator, artifact web, Android debug/release y paridad aprobados.
+
+Artifacts del run:
+
+- `protocolo-web-beta`, artifact `8745874268`, 541.783 bytes comprimidos;
+- `protocolo-android-debug-beta`, artifact `8745874673`, 1.830.720 bytes
+  comprimidos;
+- APK extraido: 1.878.673 bytes, SHA-256
+  `1EA9D7573653651F000CCA4675D6AAE53920A0682F1052C53477ECCD129B7E87`.
+
+La prerelease publica no estable es `v2.7.0-native-controls-v1-beta.5`. La
+descarga directa fue comprobada sin credenciales con HTTP 200 y el mismo hash:
+`https://github.com/locoviera24-code/protocolo-0-100/releases/download/v2.7.0-native-controls-v1-beta.5/protocolo-0-100-v2.7.0-build92-android-quick-access-beta.apk`.
+El tag apunta a `55c9cf2`; el pull request 1 sigue en borrador, no se fusiono a
+`main` y stable build 89 no fue modificado.
+
+Siguiente accion exacta: instalar beta 5 en hardware Android y completar las
+pruebas pendientes de launcher, visibilidad OEM en bloqueo, reinicio y
+actualizacion desde beta 4. No publicar stable hasta tener esa evidencia.
