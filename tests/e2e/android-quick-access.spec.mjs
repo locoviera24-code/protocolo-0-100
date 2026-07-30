@@ -7,7 +7,7 @@ test.beforeEach(async({page})=>{
 
 test('la web explica el requisito APK sin mostrar diagnostico tecnico',async({page})=>{
   await page.goto('/index.html?module=gym&view=routine');
-  await expect(page.getByRole('heading',{name:'Acceso rápido durante el entrenamiento'})).toBeVisible();
+  await expect(page.locator('#workoutQuickAccessTitle')).toContainText('Acceso rápido en Android');
   await expect(page.locator('#workoutWidgetInstallStatus')).toContainText('Requiere el APK Android');
   await expect(page.locator('#workoutLockScreenStatus')).toContainText('Requiere el APK Android');
   await expect(page.locator('#addWorkoutWidgetBtn')).toBeDisabled();
@@ -44,4 +44,29 @@ test('el APK simulado instala y activa controles solo desde acciones explicitas'
   const active=await page.evaluate(()=>window.__quickAccessCalls.states.at(-1));
   expect(active.status).toBe('en progreso');
   expect(active.workoutSession?.status).toBe('en progreso');
+});
+
+test('el registro mantiene paso de 0,5, ofrece paso rapido y cambia ejercicio directamente',async({page})=>{
+  await page.goto('/index.html?module=gym&view=train');
+  expect(await page.locator('#gymStats').evaluate(element=>getComputedStyle(element).display)).toBe('grid');
+  const start=page.locator('#startTodayWorkoutBtn');
+  if(await start.isVisible())await start.click();
+  const exercise=page.locator('#quickExerciseSelect');
+  await expect(exercise).toBeVisible();
+  await exercise.selectOption({label:'Press de banca'});
+  await expect(exercise.locator('option:checked')).toHaveText('Press de banca');
+
+  const weight=page.locator('#quickWeight');
+  await weight.fill('0');
+  await expect(page.locator('#quickWeightStepBtn')).toHaveText('Paso 0,5 kg');
+  await page.locator('#quickWeightPlusBtn').click();
+  await expect(weight).toHaveValue('0.5');
+  await page.locator('#quickWeightMinusBtn').click();
+  await expect(weight).toHaveValue('0');
+
+  await page.locator('#quickWeightStepBtn').click();
+  await expect(page.locator('#quickWeightStepBtn')).toHaveText('Paso 5 kg');
+  await page.locator('#quickWeightPlusBtn').click();
+  await expect(weight).toHaveValue('5');
+  await expect(page.locator('.quickWeightControls button')).toHaveCount(3);
 });

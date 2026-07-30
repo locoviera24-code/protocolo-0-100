@@ -5,6 +5,8 @@ import vm from 'node:vm';
 const source = await readFile(new URL('../workout-features.js', import.meta.url), 'utf8');
 const taxonomySource = await readFile(new URL('../progress/muscle-taxonomy.js', import.meta.url), 'utf8');
 const setModelSource = await readFile(new URL('../gym/set-model.js', import.meta.url), 'utf8');
+const equipmentSource = await readFile(new URL('../gym/equipment.js', import.meta.url), 'utf8');
+const loadGuidanceSource = await readFile(new URL('../gym/workout-load-guidance.js', import.meta.url), 'utf8');
 const metricsSource = await readFile(new URL('../workout-metrics.js', import.meta.url), 'utf8');
 const anomalySource = await readFile(new URL('../gym/anomaly-detector.js', import.meta.url), 'utf8');
 const nativeImporterSource = await readFile(new URL('../gym/native-workout-importer.js', import.meta.url), 'utf8');
@@ -26,7 +28,9 @@ assert.match(source,/addPlanLibraryExercise/);
 assert.match(source,/EXERCISE_LIBRARY_VERSION/);
 assert.match(source,/migrateExerciseLibrary/);
 assert.match(source,/exerciseLibraryEditor/);
-assert.match(source,/data-quick-adjust="weight:5"/);
+assert.match(source,/data-quick-adjust-step="weight:1"/);
+assert.match(source,/data-quick-weight-step/);
+assert.match(source,/quickWeightAdjustmentStep===0\.5\?5:0\.5/);
 assert.match(source,/quickStickyActions/);
 assert.match(source,/restTimerEnabled/);
 assert.match(source,/hapticEnabled/);
@@ -69,6 +73,7 @@ function createContext(preloaded = {}, today = '2026-06-22') {
   const vmContext=vm.createContext(context);
   vm.runInContext(taxonomySource, vmContext, {filename: 'progress/muscle-taxonomy.js'});
   vm.runInContext(setModelSource, vmContext, {filename: 'gym/set-model.js'});
+  vm.runInContext(equipmentSource, vmContext, {filename: 'gym/equipment.js'});
   vm.runInContext(storeSource, vmContext, {filename: 'workout-store.js'});
   vm.runInContext(planSource, vmContext, {filename: 'workout-plan.js'});
   vm.runInContext(metricsSource, vmContext, {filename: 'workout-metrics.js'});
@@ -76,6 +81,7 @@ function createContext(preloaded = {}, today = '2026-06-22') {
   vm.runInContext(nativeImporterSource, vmContext, {filename: 'gym/native-workout-importer.js'});
   vm.runInContext(uiSource, vmContext, {filename: 'workout-ui.js'});
   vm.runInContext(rankingSource, vmContext, {filename: 'workout-ranking.js'});
+  vm.runInContext(loadGuidanceSource, vmContext, {filename: 'gym/workout-load-guidance.js'});
   vm.runInContext(source, vmContext, {filename: 'workout-features.js'});
   return {context, store};
 }
@@ -102,12 +108,14 @@ assert.equal(widgetState.quickLog.reps, 8);
 assert.equal(widgetState.quickLog.unit, 'kg');
 assert.equal(widgetState.quickLog.weightStep, 0.5);
 assert.equal(widgetState.quickLog.weightFastStep, 5);
+assert.equal(widgetState.quickLog.weightAdjustmentStep, 0.5);
 assert.equal(widgetState.currentExerciseSets, 0);
 assert.equal(widgetState.currentMuscleSets, 0);
 assert.equal(widgetState.currentMuscleName, 'Pecho');
 assert.ok(widgetState.weeklyWorkoutPlan.monday);
 assert.ok(widgetState.exerciseHistory);
 assert.ok(widgetState.exercises.length >= 9);
+assert.ok(widgetState.exerciseLoadGuidance[widgetState.currentExerciseId]);
 assert.equal(widgetState.exercises[0].muscleClassificationSnapshot.classificationStatus,'official');
 assert.deepEqual(Array.from(widgetState.exercises[0].muscleClassificationSnapshot.primaryMuscles),['chest']);
 assert.equal(store.has(workout.keys.weeklyWorkoutPlan), true);
@@ -136,6 +144,9 @@ assert.equal(JSON.parse(quickStore.get(quickWorkout.keys.exercisePreferences)).e
 const quickAfterSave = quickWorkout.getQuickWorkoutState({date: '2026-06-22', exerciseId: quickState.currentExerciseId});
 assert.equal(quickAfterSave.currentExerciseSets, 1);
 assert.equal(quickAfterSave.currentSets.length, 1);
+const quickWidgetAfterSave=quickWorkout.buildWorkoutWidgetState('2026-06-22');
+assert.equal(quickWidgetAfterSave.exerciseLoadGuidance[quickState.currentExerciseId].lastComparableSet.weightKg,20.5);
+assert.equal(quickWidgetAfterSave.exerciseLoadGuidance[quickState.currentExerciseId].historicalLoadRecord.weightKg,20.5);
 const quickUpdated = quickWorkout.updateQuickSetPayload({
   date: '2026-06-22',
   exerciseId: quickState.currentExerciseId,

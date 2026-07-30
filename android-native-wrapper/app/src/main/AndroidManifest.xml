@@ -20,6 +20,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".WorkoutExercisePickerActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:theme="@style/WorkoutPickerTheme" />
         <receiver
             android:name=".WorkoutWidgetProvider"
             android:exported="false"
@@ -33,6 +38,8 @@
                 <action android:name="com.protocolo.cien.ACTION_WIDGET_WEIGHT_UP" />
                 <action android:name="com.protocolo.cien.ACTION_WIDGET_WEIGHT_FAST_DOWN" />
                 <action android:name="com.protocolo.cien.ACTION_WIDGET_WEIGHT_FAST_UP" />
+                <action android:name="com.protocolo.cien.ACTION_WIDGET_TOGGLE_WEIGHT_STEP" />
+                <action android:name="com.protocolo.cien.ACTION_WIDGET_SELECT_EXERCISE" />
                 <action android:name="com.protocolo.cien.ACTION_WIDGET_SAVE_SET" />
                 <action android:name="com.protocolo.cien.ACTION_WIDGET_REPEAT_LAST" />
                 <action android:name="com.protocolo.cien.ACTION_WIDGET_PREVIOUS_EXERCISE" />

@@ -14,9 +14,12 @@ En **Gym > Acceso rapido durante el entrenamiento** se puede:
 - abrir el diagnostico manual solo cuando sea necesario.
 
 La PWA explica que estas funciones requieren el APK. No promete widgets de
-keyguard: Android y el fabricante pueden no permitirlos. La pantalla de bloqueo
-se cubre mediante una notificacion `VISIBILITY_PRIVATE` cuya version publica
-solo dice **Entrenamiento en curso**.
+keyguard: Android moderno no ofrece esa superficie de forma general. La pantalla
+de bloqueo se cubre mediante una notificacion persistente `VISIBILITY_PRIVATE`
+cuya version publica solo dice **Entrenamiento en curso**. El canal es silencioso
+y de importancia predeterminada para que los fabricantes no lo oculten por ser
+de prioridad baja; su visibilidad final sigue dependiendo de los ajustes del
+telefono.
 
 ## Flujo de datos
 
@@ -50,11 +53,18 @@ deshecha.
 
 ## Layouts
 
-- Compacto: valores preparados, -5, Guardar y +5; maximo cuatro acciones.
+- Compacto: valores preparados, -0,5, Guardar y +0,5; maximo cuatro acciones.
 - Estandar: controles simetricos de reps y carga, Guardar, Repetir/Deshacer y
-  Siguiente; maximo siete acciones.
+  selector de ejercicio; maximo siete acciones.
 - Expandido: conserva los mismos siete controles directos y agrega solamente
   contexto de rutina, progreso y guia de carga.
+
+El paso inicial siempre es 0,5 kg. Tocar el valor de peso alterna entre 0,5 y
+5 kg, sin cambiar de layout ni mostrar controles nuevos. Tocar el nombre del
+ejercicio o **Elegir** abre `WorkoutExercisePickerActivity`, una lista nativa de
+la rutina que selecciona cualquier ejercicio directamente. El snapshot publica
+`exerciseLoadGuidance` por ejercicio; al seleccionar se actualizan **Ultima** y
+**Max.** usando solamente series comparables por equipo, modalidad y carga.
 
 La seleccion usa el ancho y alto actuales informados por el launcher; las
 dimensiones maximas de otra orientacion no pueden cambiar el layout tras un
@@ -81,8 +91,9 @@ reprograma la alarma. Cambio de fecha y zona horaria actualizan el widget.
 La notificacion activa existe solo durante una sesion `en progreso`. No usa
 full-screen intents, no abre la actividad sobre el bloqueo y no expone grupos,
 miembros, codigos, emails, notas o Firebase IDs. El permiso
-`POST_NOTIFICATIONS` se solicita solo al tocar **Activar controles**. Si fue
-rechazado, el mismo control abre los ajustes de notificaciones de Android.
+`POST_NOTIFICATIONS` se solicita al tocar **Activar controles** o al iniciar el
+entrenamiento desde ese flujo. Si fue rechazado, el mismo control abre los
+ajustes del canal **Controles de entrenamiento**.
 La sesion web se envia a Android en el mismo momento en que se toca **Empezar
 entrenamiento**. El estado comprueba ademas si la notificacion quedo realmente
 publicada; si Android bloquea el canal, **Revisar notificacion** abre sus ajustes.

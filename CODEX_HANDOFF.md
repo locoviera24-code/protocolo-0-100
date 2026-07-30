@@ -3,8 +3,8 @@
 Ultima actualizacion: 2026-07-29
 Rama esperada: `codex/android-quick-access-v1`
 Version actual: `2.7.0` (fuente unica: `app-version.json`)
-Android: `versionCode 35`, `versionName "2.7.0"`
-Service worker cache: `protocolo-0-100-pwa-2.7.0-b91`
+Android: `versionCode 36`, `versionName "2.7.0"`
+Service worker cache: `protocolo-0-100-pwa-2.7.0-b92`
 Backup consolidado: `schemaVersion: 3`
 
 Leer primero este archivo y luego `README.md`, `index.html`,
@@ -4082,3 +4082,68 @@ credenciales con HTTP 200:
 `https://github.com/locoviera24-code/protocolo-0-100/releases/download/v2.7.0-native-controls-v1-beta.4/protocolo-0-100-v2.7.0-build91-android-quick-access-beta.apk`.
 La etiqueta apunta al commit funcional `20df644`; el pull request 1 permanece
 borrador, no se fusiono a main y stable build 89 no fue modificado.
+
+## 88. Selector directo, paso de carga estable y bloqueo, beta 92
+
+Este bloque mantiene `2.7.0`, incrementa una sola vez el build web/PWA a `92`
+y Android a `versionCode 36`. La rama sigue siendo
+`codex/android-quick-access-v1`; no se fusiono a `main`, no se movio
+`baseline-stable-2.7` y stable build 89 permanece intacto.
+
+Cambios funcionales:
+
+- `WorkoutExercisePickerActivity` abre una lista nativa de todos los ejercicios
+  de la rutina desde el nombre actual, desde **Elegir** en el widget y desde la
+  accion **Ejercicio** de la notificacion. La seleccion usa el reducer comun y
+  persiste el indice sin crear una serie ni abrir el WebView completo.
+- Los botones de carga vuelven a usar `0,5 kg` por defecto. Tocar el valor de
+  peso alterna el paso entre `0,5` y `5 kg`; no aparecen controles adicionales
+  ni cambia el layout. El mismo contrato se aplica al registro web de Gym.
+- `buildWorkoutWidgetState()` publica `exerciseLoadGuidance` por cada ejercicio.
+  Al seleccionarlo, Android actualiza **Ultima** y **Max.** usando la guia
+  comparable por ejercicio, equipo, modalidad y semantica de carga. El compacto
+  utiliza su linea breve para esa guia; estandar y expandido la muestran aparte.
+- La notificacion usa el canal nuevo `workout_controls_v4`, silencioso y de
+  `IMPORTANCE_DEFAULT`. Los canales Android son inmutables; cambiar el ID evita
+  heredar la prioridad baja de instalaciones anteriores. El permiso se solicita
+  al activar controles o iniciar una sesion desde ese flujo, y **Configurar
+  bloqueo** abre los ajustes exactos del canal.
+- Android moderno no expone un widget keyguard general. La experiencia de
+  bloqueo es la notificacion persistente `VISIBILITY_PRIVATE`, con version
+  publica generica. El fabricante todavia puede exigir habilitar notificaciones
+  en pantalla bloqueada; la app no afirma poder saltar esa politica.
+- Gym reduce carga visual: resumen superior 2x2 en movil, rutina del dia plegada,
+  registro primero, tres controles de carga, una sola accion primaria Guardar,
+  acciones contextuales compactas y configuracion Android/salud plegada.
+
+Archivos principales: `workout-features.js`, `styles/gym.css`,
+`WorkoutWidgetUpdateService.java`, `WorkoutQuickActionReducer.java`,
+`WorkoutControlNotificationManager.java`, `WorkoutExercisePickerActivity.java`,
+`AndroidManifest.xml`, los tres layouts RemoteViews, pruebas E2E/nativas y
+`docs/previews/widget-workout-*.svg`.
+
+Resultados locales reales del build 92:
+
+- contratos completos de Workout, datos, backup, PWA, Gym Party, Nutricion,
+  Progreso, seguridad Android y paridad: aprobados;
+- axe: 27/27 en Android Chromium, iPhone WebKit y escritorio;
+- E2E funcional: 355 aprobados, 14 omitidos por plataforma, 0 fallos, en 44 min;
+- Firestore Emulator: aprobado; los `PERMISSION_DENIED` corresponden a casos
+  negativos esperados por las reglas;
+- artifact web: 84 recursos con hash, cero faltantes y smoke del service worker
+  1/1;
+- Android `assembleDebug` y `assembleRelease`: aprobados con Java 17/Gradle
+  8.10.2. Debug final: 1.889.345 bytes, SHA-256
+  `1281ACDCF34322B06C983EE1BC86E4C0C8C730281ACF5567912D76CCDBC97D1E`;
+  release de prueba: 1.544.134 bytes, SHA-256
+  `F9E9C5102F1BCC65DA404329748C2D3026A250E8DE6BB8CB3BD20B91FD120BDC`.
+
+El primer intento E2E fue cortado por el limite local de 30 minutos sin resumen;
+la repeticion con margen termino completa. No habia dispositivo en `adb devices
+-l`: launcher real, visibilidad OEM en bloqueo, reinicio y actualizacion desde
+APK anterior siguen pendientes y no se marcan como aprobados. La checklist
+actualizada esta en `docs/physical-test-checklist.md`.
+
+Siguiente accion exacta: recompilar tras los ultimos textos XML, commit, push,
+quality gate beta remoto y prerelease beta con descarga directa. No publicar
+stable.
