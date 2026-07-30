@@ -124,9 +124,21 @@ usuarios finales.
 
 ## Registro de hardware de Controles Android V1
 
-Estado al 29 de julio de 2026: **pendiente completo**. En esta ejecucion no hay
+Estado al 30 de julio de 2026: **pendiente completo**. En esta ejecucion no hay
 un dispositivo Android conectado. Los tres SVG de `docs/previews/` son previews
 de jerarquia y no evidencia de launcher, pantalla de bloqueo o fabricante.
+
+Validacion especifica requerida para build 93:
+
+- [ ] Confirmar que -0,5, +0,5, -5 y +5 permanecen visibles sin cambiar de layout.
+- [ ] Tocar el nombre, elegir un ejercicio no adyacente y comprobar el cambio inmediato.
+- [ ] Confirmar que Ultima y Max. cambian con el ejercicio elegido.
+- [ ] Iniciar entrenamiento, aceptar permiso y bloquear el telefono.
+- [ ] Confirmar la notificacion publica `Entrenamiento en curso`.
+- [ ] Desbloquear contenido privado, desplegar la notificacion y probar ambos pasos de peso.
+- [ ] Rechazar el permiso y comprobar que `Activar` abre los ajustes correctos.
+- [ ] Ocultar el canal y comprobar que `Revisar` abre `Controles de entrenamiento`.
+- [ ] Quitar y volver a agregar el widget para aplicar sus nuevas dimensiones minimas.
 
 Al ejecutar, registrar aqui:
 

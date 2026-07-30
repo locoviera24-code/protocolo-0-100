@@ -82,8 +82,9 @@ public final class WorkoutWidgetUpdateService {
                 : kind == LAYOUT_STANDARD ? R.layout.widget_workout_standard : R.layout.widget_workout_expanded;
         RemoteViews views = new RemoteViews(context.getPackageName(), layout);
 
-        views.setTextViewText(R.id.widgetCurrentExercise, state.currentExerciseName);
-        views.setTextViewText(R.id.widgetSetStats, kind == LAYOUT_COMPACT ? state.loadGuidanceText : state.setStatsText);
+        views.setTextViewText(R.id.widgetCurrentExercise, "Elegir · " + state.currentExerciseName);
+        views.setTextViewText(R.id.widgetSetStats, state.setStatsText);
+        views.setTextViewText(R.id.widgetLoadGuidance, state.loadGuidanceText);
         views.setTextViewText(R.id.widgetQuickReps, state.quickRepsText);
         views.setTextViewText(R.id.widgetQuickWeight, state.quickWeightText);
         views.setContentDescription(R.id.widgetQuickReps, state.quickRepsDescription);
@@ -95,49 +96,51 @@ public final class WorkoutWidgetUpdateService {
         views.setOnClickPendingIntent(R.id.widgetRoot, openIntent(context, MainActivity.ACTION_OPEN_TODAY_WORKOUT, state.currentExerciseId));
         views.setContentDescription(R.id.widgetCurrentExercise, "Elegir ejercicio. Actual: " + state.currentExerciseName);
         views.setOnClickPendingIntent(R.id.widgetCurrentExercise, exercisePickerIntent(context, state.currentExerciseId, widgetId));
-        views.setOnClickPendingIntent(R.id.widgetSaveSetButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_SAVE_SET, state.nativeRevision, widgetId));
+        views.setOnClickPendingIntent(R.id.widgetSaveSetButton, state.requiresEditor
+                ? openIntent(context, MainActivity.ACTION_QUICK_LOG_SET, state.currentExerciseId)
+                : widgetActionIntent(context, MainActivity.ACTION_WIDGET_SAVE_SET, state.nativeRevision, widgetId));
+
+        int weightVisibility = state.requiresEditor ? View.GONE : View.VISIBLE;
+        views.setViewVisibility(R.id.widgetWeightMinusButton, weightVisibility);
+        views.setViewVisibility(R.id.widgetWeightPlusButton, weightVisibility);
+        views.setViewVisibility(R.id.widgetWeightFastMinusButton, weightVisibility);
+        views.setViewVisibility(R.id.widgetWeightFastPlusButton, weightVisibility);
+        if (!state.requiresEditor) {
+            views.setTextViewText(R.id.widgetWeightMinusButton, "-0,5");
+            views.setTextViewText(R.id.widgetWeightPlusButton, "+0,5");
+            views.setTextViewText(R.id.widgetWeightFastMinusButton, "-5");
+            views.setTextViewText(R.id.widgetWeightFastPlusButton, "+5");
+            views.setContentDescription(R.id.widgetWeightMinusButton, "Disminuir carga 0,5 " + state.unit);
+            views.setContentDescription(R.id.widgetWeightPlusButton, "Aumentar carga 0,5 " + state.unit);
+            views.setContentDescription(R.id.widgetWeightFastMinusButton, "Disminuir carga 5 " + state.unit);
+            views.setContentDescription(R.id.widgetWeightFastPlusButton, "Aumentar carga 5 " + state.unit);
+            views.setOnClickPendingIntent(R.id.widgetWeightMinusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_WEIGHT_DOWN, state.nativeRevision, widgetId));
+            views.setOnClickPendingIntent(R.id.widgetWeightPlusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_WEIGHT_UP, state.nativeRevision, widgetId));
+            views.setOnClickPendingIntent(R.id.widgetWeightFastMinusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_WEIGHT_FAST_DOWN, state.nativeRevision, widgetId));
+            views.setOnClickPendingIntent(R.id.widgetWeightFastPlusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_WEIGHT_FAST_UP, state.nativeRevision, widgetId));
+            views.setOnClickPendingIntent(R.id.widgetQuickWeight, openIntent(context, MainActivity.ACTION_QUICK_LOG_SET, state.currentExerciseId));
+        }
         if (kind == LAYOUT_COMPACT) {
-            views.setTextViewText(R.id.widgetWeightFastMinusButton, "-" + state.weightStepLabel);
-            views.setTextViewText(R.id.widgetWeightFastPlusButton, "+" + state.weightStepLabel);
-            views.setContentDescription(R.id.widgetWeightFastMinusButton, "Disminuir carga " + state.weightStepLabel + " " + state.unit);
-            views.setContentDescription(R.id.widgetWeightFastPlusButton, "Aumentar carga " + state.weightStepLabel + " " + state.unit);
-            views.setOnClickPendingIntent(R.id.widgetWeightFastMinusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_WEIGHT_DOWN, state.nativeRevision, widgetId));
-            views.setOnClickPendingIntent(R.id.widgetWeightFastPlusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_WEIGHT_UP, state.nativeRevision, widgetId));
             views.setOnClickPendingIntent(R.id.widgetQuickReps, openIntent(context, MainActivity.ACTION_QUICK_LOG_SET, state.currentExerciseId));
-            views.setContentDescription(R.id.widgetQuickWeight, state.quickWeightDescription + ". Toca para alternar paso 0,5 o 5 " + state.unit);
-            views.setOnClickPendingIntent(R.id.widgetQuickWeight, state.requiresEditor
-                    ? openIntent(context, MainActivity.ACTION_QUICK_LOG_SET, state.currentExerciseId)
-                    : widgetActionIntent(context, MainActivity.ACTION_WIDGET_TOGGLE_WEIGHT_STEP, state.nativeRevision, widgetId));
         }
 
         if (kind >= LAYOUT_STANDARD) {
-            views.setTextViewText(R.id.widgetLoadGuidance, state.loadGuidanceText);
             int adjustmentVisibility = state.requiresEditor ? View.GONE : View.VISIBLE;
             views.setViewVisibility(R.id.widgetRepsMinusButton, adjustmentVisibility);
             views.setViewVisibility(R.id.widgetRepsPlusButton, adjustmentVisibility);
-            views.setViewVisibility(R.id.widgetWeightMinusButton, adjustmentVisibility);
-            views.setViewVisibility(R.id.widgetWeightPlusButton, adjustmentVisibility);
             if (!state.requiresEditor) {
                 views.setOnClickPendingIntent(R.id.widgetRepsMinusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_REPS_DOWN, state.nativeRevision, widgetId));
                 views.setOnClickPendingIntent(R.id.widgetRepsPlusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_REPS_UP, state.nativeRevision, widgetId));
-                views.setTextViewText(R.id.widgetWeightMinusButton, "-" + state.weightStepLabel);
-                views.setTextViewText(R.id.widgetWeightPlusButton, "+" + state.weightStepLabel);
-                views.setContentDescription(R.id.widgetWeightMinusButton, "Disminuir carga " + state.weightStepLabel + " " + state.unit);
-                views.setContentDescription(R.id.widgetWeightPlusButton, "Aumentar carga " + state.weightStepLabel + " " + state.unit);
-                views.setOnClickPendingIntent(R.id.widgetWeightMinusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_WEIGHT_DOWN, state.nativeRevision, widgetId));
-                views.setOnClickPendingIntent(R.id.widgetWeightPlusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_WEIGHT_UP, state.nativeRevision, widgetId));
-                views.setContentDescription(R.id.widgetQuickWeight, state.quickWeightDescription + ". Toca para alternar paso 0,5 o 5 " + state.unit);
-                views.setOnClickPendingIntent(R.id.widgetQuickWeight, widgetActionIntent(context, MainActivity.ACTION_WIDGET_TOGGLE_WEIGHT_STEP, state.nativeRevision, widgetId));
             }
-            String contextualAction = state.requiresEditor ? MainActivity.ACTION_QUICK_LOG_SET
-                    : state.canUndo ? MainActivity.ACTION_WIDGET_UNDO_LAST_SET : MainActivity.ACTION_WIDGET_REPEAT_LAST;
-            views.setTextViewText(R.id.widgetRepeatButton, state.requiresEditor ? "Editar" : state.canUndo ? "Deshacer" : "Repetir");
-            views.setOnClickPendingIntent(R.id.widgetRepeatButton, state.requiresEditor
-                    ? openIntent(context, contextualAction, state.currentExerciseId)
-                    : widgetActionIntent(context, contextualAction, state.nativeRevision, widgetId));
-            views.setTextViewText(R.id.widgetNextButton, "Elegir");
-            views.setContentDescription(R.id.widgetNextButton, "Elegir cualquier ejercicio de la rutina");
-            views.setOnClickPendingIntent(R.id.widgetNextButton, exercisePickerIntent(context, state.currentExerciseId, widgetId));
+            int contextualVisibility = state.requiresEditor || state.canUndo ? View.VISIBLE : View.GONE;
+            views.setViewVisibility(R.id.widgetRepeatButton, contextualVisibility);
+            if (state.requiresEditor) {
+                views.setTextViewText(R.id.widgetRepeatButton, "Editar este ejercicio");
+                views.setOnClickPendingIntent(R.id.widgetRepeatButton, openIntent(context, MainActivity.ACTION_QUICK_LOG_SET, state.currentExerciseId));
+            } else if (state.canUndo) {
+                views.setTextViewText(R.id.widgetRepeatButton, "Deshacer ultima serie");
+                views.setOnClickPendingIntent(R.id.widgetRepeatButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_UNDO_LAST_SET, state.nativeRevision, widgetId));
+            }
         }
         if (kind == LAYOUT_EXPANDED) {
             views.setTextViewText(R.id.widgetTitle, state.title);
@@ -155,8 +158,8 @@ public final class WorkoutWidgetUpdateService {
         // the first action replace a compact widget with the expanded layout.
         int width = minWidth > 0 ? minWidth : maxWidth;
         int height = minHeight > 0 ? minHeight : maxHeight;
-        if ((width > 0 && width < 240) || (height > 0 && height < 170)) return LAYOUT_COMPACT;
-        if ((width > 0 && width < 360) || (height > 0 && height < 320)) return LAYOUT_STANDARD;
+        if ((width > 0 && width < 240) || (height > 0 && height < 270)) return LAYOUT_COMPACT;
+        if ((width > 0 && width < 360) || (height > 0 && height < 390)) return LAYOUT_STANDARD;
         return LAYOUT_EXPANDED;
     }
 
@@ -223,9 +226,9 @@ public final class WorkoutWidgetUpdateService {
         } else if (MainActivity.ACTION_WIDGET_REPS_UP.equals(action)) {
             adjustQuick(state, "reps", 1);
         } else if (MainActivity.ACTION_WIDGET_WEIGHT_DOWN.equals(action)) {
-            adjustQuick(state, "weight", -weightAdjustmentStep(state));
+            adjustQuick(state, "weight", -WEIGHT_STEP);
         } else if (MainActivity.ACTION_WIDGET_WEIGHT_UP.equals(action)) {
-            adjustQuick(state, "weight", weightAdjustmentStep(state));
+            adjustQuick(state, "weight", WEIGHT_STEP);
         } else if (MainActivity.ACTION_WIDGET_TOGGLE_WEIGHT_STEP.equals(action)) {
             toggleWeightAdjustmentStep(state);
             code = "weight-step-toggled";
@@ -561,11 +564,10 @@ public final class WorkoutWidgetUpdateService {
         put(quick, "setNumber", setNumber);
         put(quick, "setType", "working");
         put(quick, "unit", state.optString("unit", "kg"));
-        double adjustmentStep = weightAdjustmentStep(state);
         put(quick, "weightStep", WEIGHT_STEP);
         put(quick, "weightFastStep", WEIGHT_FAST_STEP);
-        put(quick, "weightAdjustmentStep", adjustmentStep);
-        put(state, "weightAdjustmentStep", adjustmentStep);
+        put(quick, "weightAdjustmentStep", WEIGHT_STEP);
+        put(state, "weightAdjustmentStep", WEIGHT_STEP);
         putCurrentSetStats(quick, state, exercise);
         put(quick, "hintText", "Ajusta reps/kg y guarda desde el widget.");
         put(state, "quickLog", quick);

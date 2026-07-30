@@ -83,7 +83,7 @@
 }
 .quickPrimaryInputs {
   display: grid;
-  grid-template-columns: 0.7fr 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   margin-top: 10px;
 }
@@ -117,7 +117,7 @@
 }
 .quickAdjustRow {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
   margin-top: 6px;
 }
@@ -128,13 +128,40 @@
 }
 .quickWeightControls {
   display: grid;
-  grid-template-columns: minmax(48px, 1fr) minmax(92px, 1.25fr) minmax(48px, 1fr);
+  grid-template-columns: repeat(4, minmax(44px, 1fr));
   gap: var(--space-2);
   margin-top: var(--space-2);
 }
 .quickWeightControls button {
   min-height: var(--touch-target);
-  padding-inline: var(--space-2);
+  padding-inline: var(--space-1);
+}
+.nativeWorkoutLiveBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: var(--space-3) 0;
+  padding: var(--space-3);
+  border: 1px solid var(--state-info-border);
+  border-radius: var(--radius-control);
+  background: var(--state-info-soft);
+}
+.nativeWorkoutLiveBar[hidden] {
+  display: none;
+}
+.nativeWorkoutLiveBar > div {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.nativeWorkoutLiveBar span {
+  color: var(--color-muted);
+  font-size: var(--font-label);
+}
+.nativeWorkoutLiveBar button {
+  flex: 0 0 auto;
+  min-height: var(--touch-target);
 }
 .quickStickyActions {
   position: sticky;
@@ -516,10 +543,7 @@
     grid-column: span 1;
   }
   .quickPrimaryInputs {
-    grid-template-columns: 1fr 1fr;
-  }
-  .quickPrimaryInputs .quickSetNumberField {
-    grid-column: span 2;
+    grid-template-columns: 1fr;
   }
   .quickStickyActions {
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -532,7 +556,14 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .quickWeightControls {
-    grid-template-columns: 48px minmax(88px, 1fr) 48px;
+    grid-template-columns: repeat(4, minmax(44px, 1fr));
+  }
+  .nativeWorkoutLiveBar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .nativeWorkoutLiveBar button {
+    width: 100%;
   }
   .workoutQuickAccess > summary {
     align-items: start;

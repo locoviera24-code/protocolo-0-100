@@ -1,17 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="360" height="190" viewBox="0 0 360 190" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="285" viewBox="0 0 360 285" role="img" aria-labelledby="title desc">
   <title id="title">Preview del widget compacto</title>
-  <desc id="desc">Ejercicio seleccionable, ultima carga, maximo comparable y controles simples de medio kilo.</desc>
-  <rect width="360" height="190" rx="24" fill="#0b1726"/>
-  <text x="22" y="34" fill="#ffffff" font-family="Arial,sans-serif" font-size="18" font-weight="700">Press de banca</text>
-  <text x="22" y="57" fill="#98f5c2" font-family="Arial,sans-serif" font-size="12">Ultima: 57,5 kg x 9 | Max.: 70 kg x 5</text>
-  <rect x="20" y="72" width="148" height="48" rx="12" fill="#172942"/>
-  <text x="94" y="102" text-anchor="middle" fill="#eef5ff" font-family="Arial,sans-serif" font-size="16" font-weight="700">8 reps</text>
-  <rect x="178" y="72" width="162" height="48" rx="12" fill="#172942"/>
-  <text x="259" y="102" text-anchor="middle" fill="#eef5ff" font-family="Arial,sans-serif" font-size="16" font-weight="700">60 kg</text>
-  <rect x="20" y="130" width="48" height="48" rx="12" fill="#172942"/>
-  <text x="44" y="160" text-anchor="middle" fill="#eef5ff" font-family="Arial,sans-serif" font-size="14" font-weight="700">-0,5</text>
-  <rect x="78" y="130" width="204" height="48" rx="12" fill="#68e6a4"/>
-  <text x="180" y="160" text-anchor="middle" fill="#06111f" font-family="Arial,sans-serif" font-size="15" font-weight="700">Guardar</text>
-  <rect x="292" y="130" width="48" height="48" rx="12" fill="#172942"/>
-  <text x="316" y="160" text-anchor="middle" fill="#eef5ff" font-family="Arial,sans-serif" font-size="14" font-weight="700">+0,5</text>
+  <desc id="desc">Selector directo de ejercicio, ultima carga, maximo y controles visibles de medio kilo y cinco kilos.</desc>
+  <rect width="360" height="285" rx="24" fill="#0b1726"/>
+  <rect x="18" y="16" width="324" height="48" rx="12" fill="#172942"/>
+  <text x="34" y="46" fill="#ffffff" font-family="Arial,sans-serif" font-size="16" font-weight="700">Elegir · Press de banca</text>
+  <text x="20" y="85" fill="#98f5c2" font-family="Arial,sans-serif" font-size="12">Serie 3 · 2 del ejercicio · 5 de pecho</text>
+  <text x="20" y="105" fill="#dbeaff" font-family="Arial,sans-serif" font-size="11">Ultima: 57,5 kg x 9 · Max.: 70 kg x 5</text>
+  <g font-family="Arial,sans-serif" text-anchor="middle">
+    <rect x="20" y="120" width="58" height="48" rx="12" fill="#172942"/><text x="49" y="150" fill="#eef5ff" font-size="14">-0,5</text>
+    <rect x="88" y="120" width="184" height="48" rx="12" fill="#172942"/><text x="180" y="150" fill="#eef5ff" font-size="16" font-weight="700">8 reps · 60 kg</text>
+    <rect x="282" y="120" width="58" height="48" rx="12" fill="#172942"/><text x="311" y="150" fill="#eef5ff" font-size="14">+0,5</text>
+    <rect x="20" y="180" width="58" height="48" rx="12" fill="#172942"/><text x="49" y="210" fill="#eef5ff" font-size="15">-5</text>
+    <rect x="88" y="180" width="184" height="48" rx="12" fill="#68e6a4"/><text x="180" y="210" fill="#06111f" font-size="15" font-weight="700">Guardar</text>
+    <rect x="282" y="180" width="58" height="48" rx="12" fill="#172942"/><text x="311" y="210" fill="#eef5ff" font-size="15">+5</text>
+  </g>
+  <text x="20" y="254" fill="#ffd36e" font-family="Arial,sans-serif" font-size="12">Listo para guardar en el dispositivo</text>
 </svg>

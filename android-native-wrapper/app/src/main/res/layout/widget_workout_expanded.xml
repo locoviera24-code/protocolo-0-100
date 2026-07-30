@@ -36,15 +36,21 @@
         android:layout_marginTop="6dp"
         android:orientation="vertical">
 
-        <TextView
+        <Button
             android:id="@+id/widgetCurrentExercise"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="48dp"
+            android:background="@drawable/widget_button_secondary"
+            android:contentDescription="Elegir ejercicio"
             android:ellipsize="end"
+            android:gravity="center_vertical"
             android:maxLines="1"
-            android:text="Ejercicio actual"
+            android:minHeight="48dp"
+            android:paddingHorizontal="12dp"
+            android:text="Elegir ejercicio"
+            android:textAllCaps="false"
             android:textColor="#ffffff"
-            android:textSize="16sp"
+            android:textSize="15sp"
             android:textStyle="bold" />
 
         <TextView
@@ -166,10 +172,24 @@
             android:orientation="horizontal">
 
             <Button
+                android:id="@+id/widgetWeightFastMinusButton"
+                android:layout_width="56dp"
+                android:layout_height="48dp"
+                android:background="@drawable/widget_button_secondary"
+                android:contentDescription="Disminuir carga 5 kilos"
+                android:minWidth="48dp"
+                android:minHeight="48dp"
+                android:text="-5"
+                android:textAllCaps="false"
+                android:textColor="#eef5ff"
+                android:textSize="15sp" />
+
+            <Button
                 android:id="@+id/widgetSaveSetButton"
                 android:layout_width="0dp"
                 android:layout_height="48dp"
-                android:layout_weight="1.35"
+                android:layout_marginHorizontal="6dp"
+                android:layout_weight="1"
                 android:background="@drawable/widget_button"
                 android:contentDescription="Guardar serie preparada"
                 android:minHeight="48dp"
@@ -180,33 +200,32 @@
                 android:textStyle="bold" />
 
             <Button
-                android:id="@+id/widgetRepeatButton"
-                android:layout_width="0dp"
+                android:id="@+id/widgetWeightFastPlusButton"
+                android:layout_width="56dp"
                 android:layout_height="48dp"
-                android:layout_marginStart="6dp"
-                android:layout_weight="1"
                 android:background="@drawable/widget_button_secondary"
-                android:contentDescription="Repetir o deshacer la ultima serie"
+                android:contentDescription="Aumentar carga 5 kilos"
+                android:minWidth="48dp"
                 android:minHeight="48dp"
-                android:text="Repetir"
+                android:text="+5"
                 android:textAllCaps="false"
                 android:textColor="#eef5ff"
-                android:textSize="12sp" />
-
-            <Button
-                android:id="@+id/widgetNextButton"
-                android:layout_width="0dp"
-                android:layout_height="48dp"
-                android:layout_marginStart="6dp"
-                android:layout_weight="1"
-                android:background="@drawable/widget_button_secondary"
-                android:contentDescription="Elegir ejercicio"
-                android:minHeight="48dp"
-                android:text="Elegir"
-                android:textAllCaps="false"
-                android:textColor="#eef5ff"
-                android:textSize="12sp" />
+                android:textSize="15sp" />
         </LinearLayout>
+
+        <Button
+            android:id="@+id/widgetRepeatButton"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="6dp"
+            android:background="@drawable/widget_button_secondary"
+            android:contentDescription="Deshacer la ultima serie"
+            android:minHeight="48dp"
+            android:text="Deshacer"
+            android:textAllCaps="false"
+            android:textColor="#eef5ff"
+            android:textSize="12sp"
+            android:visibility="gone" />
 
         <TextView
             android:id="@+id/widgetActionStatus"
