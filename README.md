@@ -514,9 +514,11 @@ presionada la pantalla de inicio, entrar a **Widgets** y elegir **Protocolo
 
 Los layouts compacto, estandar y expandido se eligen por ancho y alto. Ningun
 control funcional se oculta en 1 dp y todos los botones principales miden al
-menos 48 dp. El compacto prioriza Guardar y Editar; el estandar ofrece controles
-simetricos de reps/carga, Guardar, Repetir o Deshacer y Siguiente; el expandido
-agrega ajustes rapidos y navegacion. Peso corporal, lastre, asistencia, tiempo y
+menos 48 dp. El compacto tiene como maximo cuatro acciones y abre el editor
+cuando no caben correcciones simetricas. El estandar ofrece siete acciones:
+selector, reps -/+, carga -/+0,5, Guardar y una accion que cambia de Siguiente
+a Deshacer durante diez segundos. El expandido agrega -/+5 kg sin revelar
+botones despues de un toque. Peso corporal, lastre, asistencia, tiempo y
 distancia muestran su semantica correspondiente.
 
 El widget y la notificacion reutilizan `WorkoutQuickActionReducer`. Cada serie
@@ -529,9 +531,10 @@ Party se prepara despues de la importacion privada.
 
 Los controles de entrenamiento se activan de forma explicita y solicitan
 `POST_NOTIFICATIONS` solo en ese momento. La notificacion existe unicamente
-durante una sesion activa, usa `VISIBILITY_PRIVATE` y su version publica solo
-muestra **Entrenamiento en curso**. No se promete un widget de keyguard: la
-compatibilidad depende de Android y del fabricante. La app completa se abre
+durante una sesion activa, usa un canal silencioso de importancia baja, ofrece
+como maximo tres acciones y fuerza `VISIBILITY_PRIVATE`; su version publica
+solo muestra **Entrenamiento en curso**. No se promete un widget de keyguard:
+la compatibilidad depende de Android y del fabricante. La app completa se abre
 respetando el desbloqueo del sistema.
 
 `RemoteViews` no reemplaza el editor completo para RIR/RPE, notas o una metrica

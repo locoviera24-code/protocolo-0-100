@@ -3724,7 +3724,10 @@ Gym Party entre dos teléfonos. La checklist exacta está en
 `docs/physical-test-checklist.md`. No debe atribuirse ningún resultado físico
 hasta completarla.
 
-## 82. Controles Android de acceso rapido V1 en rama beta
+## 82. Registro historico del prototipo de controles Android
+
+Esta seccion describe la primera rama `codex/android-quick-access-v1` y queda
+superada por el estado P0 documentado en la seccion 84.
 
 La rama `codex/android-quick-access-v1` parte de `main` build 89 y no modifica
 la referencia estable `baseline-stable-2.7`. El bloque P0 reemplaza la logica
@@ -3780,7 +3783,10 @@ Antes de cerrar la rama faltan sincronizar assets web/Android, incrementar una
 sola vez el build beta, ejecutar gate completo, producir artifacts, actualizar
 la checklist fisica, enviar la rama y abrir el pull request. No publicar stable.
 
-## 83. Empaquetado beta 90 y validacion local
+## 83. Registro historico del primer empaquetado beta 90
+
+Los resultados de esta seccion pertenecen a la rama prototipo anterior. La
+validacion vigente del P0 se registra en la seccion 84.
 
 El bloque completo incrementa una sola vez `app-version.json`: version `2.7.0`,
 build web/PWA `90` y Android `versionCode 34`. La solicitud estable
@@ -3819,3 +3825,85 @@ Siguiente accion exacta: commit del build 90, push de
 `codex/android-quick-access-v1`, pull request draft, quality gate remoto beta y
 descarga de sus artifacts. No fusionar a `main` ni publicar stable desde este
 bloque.
+
+## 84. Acceso rapido Android P0
+
+Rama activa: `codex/android-quick-access-p0`, creada desde `main` en
+`1a9186e`. Version `2.7.0`, build web/PWA `90` y Android `versionCode 34`.
+`baseline-stable-2.7` y la solicitud stable permanecen sin cambios.
+
+La auditoria de `main` confirmo los catorce problemas del encargo: widget solo
+`home_screen`, dos layouts, seleccion solo por ancho, controles de 1 dp,
+objetivos de 30-34 dp, IDs temporales, falta de idempotencia, Deshacer, cola,
+pin, notificacion, bridge estructurado, textos tecnicos y pruebas fisicas.
+
+El P0 implementa:
+
+- reducer unico para widget y notificacion;
+- snapshot compatible, revisiones y ledger durable de `deliveryId`;
+- cola append-only con UUID, estados, limite, retencion y cuarentena;
+- guardado privado antes del render e importacion web por `setId`;
+- Deshacer compensatorio de diez segundos;
+- layouts compacto, estandar y expandido elegidos por ancho y alto;
+- selector directo de ejercicio desde el widget;
+- guia comparable de ultima carga y mejor registro;
+- `requestPinAppWidget` y estado real de instancias;
+- notificacion privada solo durante una sesion activa;
+- temporizador basado en reloj monotonico y `AlarmManager`;
+- ciclo de reinicio, reemplazo de APK, fecha y zona horaria.
+
+Presupuestos finales:
+
+- compacto: cuatro botones como maximo; selector, Guardar, Editar/Deshacer y
+  temporizador;
+- estandar: siete; selector, reps -/+, carga -/+0,5, Guardar y
+  Siguiente/Deshacer;
+- expandido: agrega -/+5 kg sin cambiar de layout tras un toque;
+- notificacion: tres acciones por estado, sin `RemoteViews` secundario oculto.
+
+El detalle de la notificacion fuerza `VISIBILITY_PRIVATE`; una preferencia
+legacy `public` no puede exponer ejercicio, peso o reps. La version publica solo
+muestra **Entrenamiento en curso**. El canal es silencioso, de importancia baja
+y sin full-screen intent. No se declara widget `keyguard`; el bloqueo usa la
+notificacion como fallback compatible.
+
+Pruebas ejecutadas:
+
+- `npm run test:native-controls`: aprobado;
+- `:app:testDebugUnitTest`: 8/8, incluyendo doble toque, dos guardados
+  posteriores, redelivery, confirmacion parcial, Deshacer, corrupcion,
+  seleccion de layout, temporizador y privacidad de notificacion;
+- 26 suites de contratos: aprobadas para Workout, datos, backups, PWA,
+  Gym Party, Progreso, Nutricion, seguridad Android y versionado;
+- artifact web: 84 recursos con hash, rutas profundas, cero 404 y smoke
+  service worker 1/1;
+- Playwright especifico P0: 9/9 en Android Chromium, iPhone WebKit y
+  escritorio;
+- axe: 27/27 sin infracciones graves;
+- E2E general: 353 aprobadas y 14 omisiones de plataforma. Dos escenarios de
+  Nutricion en WebKit fallaron de forma intermitente en la corrida de 49,3
+  minutos y aprobaron 4/4 al repetirse aislados;
+- Firestore Emulator: aprobado; los `PERMISSION_DENIED` registrados son casos
+  negativos esperados;
+- Android `testDebugUnitTest`, `assembleDebug`, `assembleRelease` y lint vital:
+  aprobados con Java 17 y Gradle 8.10.2;
+- paridad web/Android: aprobada, 496 IDs estaticos unicos.
+
+Artifacts locales finales:
+
+- debug: 2.040.516 bytes, SHA-256
+  `0CAFFB82133030A6165EF7ECEC8E8EA69225D0B6B17568350F33E9803BF5EA33`;
+- release de prueba: 1.544.688 bytes, SHA-256
+  `5AED7C01D85E5C7C5489F807B152A23ACA3D175781A52C5CD9698FA4567342BD`.
+
+El release local usa una firma efimera eliminada al terminar y no se distribuye.
+
+Los previews estructurales de tres widgets y las versiones privada/publica de
+la notificacion estan en `docs/previews/`. No son capturas fisicas. No hay
+hardware validado en este ciclo; launcher, bloqueo, permisos, reinicio,
+actualizacion y OEM permanecen pendientes en
+`docs/physical-test-checklist.md`.
+
+Siguiente accion exacta: confirmar los cambios, enviar
+`codex/android-quick-access-p0`, ejecutar el quality gate beta y abrir un pull
+request draft. No fusionar a `main` ni publicar stable.

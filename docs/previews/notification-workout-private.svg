@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="620" height="220" viewBox="0 0 620 220" role="img" aria-labelledby="title desc">
+  <title id="title">Vista previa privada de controles de entrenamiento</title>
+  <desc id="desc">Notificacion privada con ejercicio, serie, carga y tres acciones.</desc>
+  <rect width="620" height="220" rx="28" fill="#101923"/>
+  <circle cx="42" cy="42" r="18" fill="#58e6a9"/>
+  <text x="74" y="38" fill="#ffffff" font-family="sans-serif" font-size="19" font-weight="700">Press de banca · Serie 3</text>
+  <text x="74" y="65" fill="#dbeaff" font-family="sans-serif" font-size="16">8 reps · 80 kg</text>
+  <text x="24" y="98" fill="#a9bbcf" font-family="sans-serif" font-size="14">Ultima: 77,5 kg x 9 · Mejor: 90 kg x 5 · Pendiente de importar</text>
+  <rect x="20" y="128" width="180" height="64" rx="14" fill="#1b2a3b"/>
+  <rect x="220" y="128" width="180" height="64" rx="14" fill="#58e6a9"/>
+  <rect x="420" y="128" width="180" height="64" rx="14" fill="#1b2a3b"/>
+  <text x="110" y="168" fill="#eef5ff" text-anchor="middle" font-family="sans-serif" font-size="16">+1 rep</text>
+  <text x="310" y="168" fill="#06111f" text-anchor="middle" font-family="sans-serif" font-size="16" font-weight="700">Guardar</text>
+  <text x="510" y="168" fill="#eef5ff" text-anchor="middle" font-family="sans-serif" font-size="16">Siguiente</text>
+</svg>

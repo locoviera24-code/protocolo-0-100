@@ -1,100 +1,150 @@
-# Controles Android de acceso rapido V1
+# Acceso rapido Android P0
 
-Estado: beta en `codex/android-quick-access-v1`. No forma parte de la linea
-estable 2.7 hasta que se fusione y publique de forma explicita.
+Estado: candidato P0 en `codex/android-quick-access-p0`, version `2.7.0`,
+build web/PWA `90` y Android `versionCode 34`. No modifica
+`baseline-stable-2.7`, no esta fusionado en `main` y no publica stable.
 
 ## Experiencia
 
 En **Gym > Acceso rapido durante el entrenamiento** se puede:
 
-- solicitar al launcher que agregue el widget, cuando Android lo admite;
-- ver si ya existe una instancia;
-- activar la notificacion privada de entrenamiento de forma contextual;
-- consultar pendientes sin exponer detalles de almacenamiento;
-- abrir el diagnostico manual solo cuando sea necesario.
+- solicitar al launcher el widget mediante `requestPinAppWidget`;
+- comprobar si existe una instancia real;
+- activar controles privados durante una sesion;
+- ver si un cambio esta guardado en el dispositivo, pendiente de importar,
+  pendiente de sincronizar o necesita atencion.
 
-La PWA explica que estas funciones requieren el APK. No promete widgets de
-keyguard: Android y el fabricante pueden no permitirlos. La pantalla de bloqueo
-se cubre mediante una notificacion `VISIBILITY_PRIVATE` cuya version publica
-solo dice **Entrenamiento en curso**.
+La PWA explica que widget y controles nativos requieren el APK. Android moderno
+no ofrece un widget keyguard universal; esta version no declara `keyguard`. La
+superficie oficial en pantalla bloqueada es una notificacion privada y su
+disponibilidad final depende de la version de Android y del fabricante.
 
-## Flujo de datos
+## Arquitectura
 
-`WorkoutQuickActionReducer` es el unico punto que procesa acciones del widget y
-de `WorkoutControlReceiver`. Antes de ejecutar una accion reclama su
-`deliveryId`; una reentrega del mismo `PendingIntent` no vuelve a procesarse.
+Las responsabilidades quedan separadas:
 
-Una serie se guarda en este orden:
+- `WorkoutQuickActionReducer` procesa acciones del widget y la notificacion;
+- `WorkoutNativeRepository` conserva snapshot, revision y entregas procesadas;
+- `WorkoutMutationQueue` guarda la cola durable y su cuarentena;
+- `NativeWorkoutControlRepository` crea `save_set` y `undo_set`;
+- `WorkoutWidgetUpdateService` solo prepara y renderiza `RemoteViews`;
+- `WorkoutControlNotificationManager` construye la notificacion;
+- `gym/native-workout-importer.js` aplica la cola al historial canonico.
 
-1. `WorkoutMutationQueue` persiste una mutacion `save_set` con UUID, fuente,
-   revision esperada y payload.
-2. Se actualiza el snapshot compatible `state_json`.
-3. Se actualizan widget y notificacion.
-4. El WebView lee solamente mutaciones `pending`.
-5. `NATIVE_WORKOUT_IMPORTER` incorpora cada `setId` una sola vez en
-   `workoutSessions`.
-6. El bridge confirma por ID; la cola lo marca `imported`.
-7. Gym Party prepara su sincronizacion despues de la importacion privada.
+`state_json` se conserva como snapshot compatible. No es la cola ni un segundo
+historial. `workoutSessions` sigue siendo la fuente privada canonica.
 
-La cola es transporte durable, no un segundo historial. Conserva hasta 200
-mutaciones y retiene importadas durante siete dias. Una entrada corrupta se
-separa en una cuarentena nativa y no invalida las entradas sanas.
+## Cola e idempotencia
+
+Cada serie se guarda como una mutacion con UUID, `sessionId`, `exerciseId`,
+`setId`, revision esperada, fuente, payload, estado y fechas. Los estados son
+`pending`, `imported`, `rejected` y `undone`.
+
+El guardado sigue este orden:
+
+1. persistir `save_set` mediante `SharedPreferences.commit()`;
+2. actualizar el snapshot compatible y el estado visual;
+3. actualizar widget y notificacion;
+4. importar por `setId` al abrir o reactivar el WebView;
+5. confirmar individualmente cada `mutationId`;
+6. dejar que Gym Party use su sincronizacion web existente.
+
+La idempotencia combina:
+
+- UUID por mutacion;
+- `deliveryId` persistido antes de procesar cada `PendingIntent`;
+- revision esperada;
+- ventana de 650 ms para doble toque accidental;
+- deduplicacion global por `setId` en el importador.
+
+Una reentrega no crea otra serie. Dos guardados posteriores siguen siendo
+validos.
 
 ## Deshacer
 
-Durante diez segundos, `WorkoutMutationQueue.latestUndoableSave()` permite
-crear una mutacion compensatoria `undo_set`. Si la serie aun no se importo, la
-mutacion original queda `undone`; si ya se importo, el compensador elimina el
-`setId` canonico. Una confirmacion tardia no puede reactivar una mutacion
-deshecha.
+Durante diez segundos, la accion contextual crea una mutacion compensatoria
+`undo_set`. La serie original pasa a `undone` y no puede reactivarse mediante
+una confirmacion tardia. Si ya estaba importada, el WebView elimina exactamente
+su `setId`. La operacion no depende de que la WebView este abierta.
 
-## Layouts
+## Widgets
 
-- Compacto: valor preparado, Guardar y Editar; maximo cuatro acciones.
-- Estandar: controles simetricos de reps y carga, Guardar, Repetir/Deshacer y
-  Siguiente; maximo siete acciones.
-- Expandido: agrega ajustes rapidos, Anterior, Siguiente y acceso a Gym.
+- **Compacto:** selector, serie y valor preparados, Guardar, Editar o Deshacer
+  y temporizador. Maximo cuatro botones; el editor resuelve las correcciones que
+  no caben.
+- **Estandar:** selector, reps -/+, carga -/+0,5, Guardar y Siguiente, que se
+  convierte en Deshacer durante la ventana. Maximo siete acciones.
+- **Expandido:** agrega -/+5 kg, progreso breve y orientacion de carga.
 
-La seleccion usa ancho y alto minimos/maximos del launcher. Todos los botones
-funcionales miden al menos 48 dp. Tiempo y distancia no reutilizan controles de
-repeticiones: muestran la metrica y abren el editor si hace falta corregirla.
-Peso corporal sin lastre muestra **Peso corporal**, no `0 kg`.
+Los layouts usan ancho y alto actuales del launcher. No existen controles
+funcionales de 1 dp; todos los botones miden al menos 48 dp. El selector nativo
+permite saltar directamente a cualquier ejercicio de la rutina. La guia
+**Ultima** y **Mejor** respeta ejercicio, equipo, modalidad, semantica de carga,
+lateralidad, calentamientos, exclusiones y anomalias pendientes.
 
-Previews de estructura, no capturas fisicas:
+Peso corporal sin lastre no muestra `0 kg`. Asistencia conserva su campo
+positivo. Tiempo y distancia usan sus metricas; si no pueden editarse con
+seguridad en el widget, **Editar** abre el registro enfocado.
 
-- [compacto](previews/widget-workout-compact.svg)
-- [estandar](previews/widget-workout-standard.svg)
-- [expandido](previews/widget-workout-expanded.svg)
+Previews estructurales:
+
+- [widget compacto](previews/widget-workout-compact.svg)
+- [widget estandar](previews/widget-workout-standard.svg)
+- [widget expandido](previews/widget-workout-expanded.svg)
+
+## Notificacion y bloqueo
+
+La notificacion solo existe cuando hay una sesion `en progreso` y la persona
+activo los controles. En Android 13 o superior se solicita
+`POST_NOTIFICATIONS` desde esa accion, nunca al primer arranque.
+
+El canal **Controles de entrenamiento** es silencioso, sin heads-up y de
+importancia baja. Cada estado ofrece exactamente tres acciones:
+
+- normal: `+1 rep`, `Guardar`, `Siguiente`;
+- tras guardar: `Deshacer`, `Editar`, `Siguiente`.
+
+El contenido detallado fuerza `VISIBILITY_PRIVATE`, incluso si existe una
+preferencia legacy `public`. La version publica solo dice
+**Entrenamiento en curso** y **Controles disponibles al desbloquear**. No usa
+full-screen intents ni muestra peso, reps, notas, historial o Gym Party.
+
+Previews estructurales:
+
+- [notificacion privada](previews/notification-workout-private.svg)
+- [notificacion publica](previews/notification-workout-public.svg)
 
 ## Temporizador y ciclo de vida
 
-El descanso persiste tiempos monotónicos y referencias de reloj civil. No
-escribe un contador cada segundo. `AlarmManager` despierta al final del
-descanso; no se mantiene un foreground service innecesario. Tras reinicio o
-actualizacion del APK se recalibra el reloj, se actualizan superficies y se
-reprograma la alarma. Cambio de fecha y zona horaria actualizan el widget.
-
-## Privacidad
-
-La notificacion activa existe solo durante una sesion `en progreso`. No usa
-full-screen intents, no abre la actividad sobre el bloqueo y no expone grupos,
-miembros, codigos, emails, notas o Firebase IDs. El permiso
-`POST_NOTIFICATIONS` se solicita solo al tocar **Activar controles**. Si fue
-rechazado, el mismo control abre los ajustes de notificaciones de Android.
+El descanso usa referencias de `elapsedRealtime`; no persiste un contador por
+segundo ni inicia un foreground service. `AlarmManager` programa el final.
+Pausa, reanudacion y restauracion sobreviven al proceso. Reinicio,
+`MY_PACKAGE_REPLACED`, cambio de fecha y zona horaria recalculan las
+superficies necesarias.
 
 ## Compatibilidad y rollback
 
-`state_json` permanece disponible para APK y datos anteriores. Las feature
-flags `nativeWorkoutControlsV1`, `lockScreenWorkoutControls` y
-`nativeRestTimer` controlan la beta. Con las flags apagadas se conserva el
-comportamiento estable. `workoutSessions` sigue siendo la fuente canonica y los
-backups schema 3 no cambian.
+Las feature flags `nativeWorkoutControlsV1`, `lockScreenWorkoutControls` y
+`nativeRestTimer` estan apagadas por defecto. Con ellas apagadas permanece el
+comportamiento estable. No cambia backup schema 3, no se elimina `state_json`,
+no se agrega Firebase nativo y no se modifican Nutricion, Protocolo ni la
+publicacion estable.
 
-## Limites comprobables
+La cola conserva hasta 200 mutaciones; las importadas se retienen siete dias.
+Una entrada parcialmente corrupta se pone en cuarentena sin descartar las
+entradas sanas.
 
-- No hay Firebase nativo: Gym Party sincroniza despues de la importacion del
-  WebView o al recuperar conectividad.
-- No se declara compatibilidad de widget keyguard.
-- Los previews no sustituyen pruebas en launcher o pantalla de bloqueo real.
-- Las pruebas fisicas pendientes se enumeran en
-  [physical-test-checklist.md](physical-test-checklist.md).
+## Verificacion
+
+Automatizada:
+
+- `npm run test:native-controls`;
+- `gradle :app:testDebugUnitTest`;
+- `gradle :app:assembleDebug`;
+- Playwright para descubrimiento web y bridge simulado;
+- regresion Workout, datos, backup, Gym Party, PWA y paridad Android.
+
+Los SVG y PNG son previews, no capturas de un telefono. Las pruebas fisicas de
+launcher, bloqueo, permisos, reinicio y actualizacion permanecen pendientes
+hasta disponer de hardware, segun
+[physical-test-checklist.md](physical-test-checklist.md).

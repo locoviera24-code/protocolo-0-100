@@ -148,13 +148,13 @@ test('PWA controla offline, shortcuts y configuracion Firebase',async ({page,bro
   await page.goto('/index.html?module=gym');
   await page.waitForFunction(()=>navigator.serviceWorker?.ready);
   await page.reload();
-  await expect(page.getByRole('heading',{name:'Registro rápido de serie',exact:true})).toBeVisible();
+  await expect(page.getByRole('heading',{name:'Registrar serie',exact:true})).toBeVisible();
   const manifest=await page.evaluate(async()=>fetch('manifest.webmanifest').then(response=>response.json()));
   expect(manifest.shortcuts.map(shortcut=>shortcut.url)).toEqual(expect.arrayContaining(['./index.html?module=home&view=register','./index.html?module=gym&view=train','./index.html?module=gym&view=group','./index.html?module=gym&view=train&quickLog=1','./index.html?module=nutrition&view=meals']));
   const config=await page.evaluate(async()=>fetch('firebase-config.js',{cache:'no-store'}).then(response=>response.text()));
   expect(config).toContain('GYM_PARTY_FIREBASE_CONFIG');
   await context.setOffline(true);
   await page.reload();
-  await expect(page.getByRole('heading',{name:'Registro rápido de serie',exact:true})).toBeVisible();
+  await expect(page.getByRole('heading',{name:'Registrar serie',exact:true})).toBeVisible();
   await context.setOffline(false);
 });

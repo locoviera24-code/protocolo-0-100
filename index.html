@@ -2969,10 +2969,10 @@ function updatePhonePanel(){
   if(nativeBridgeAvailable()){
     if(nativeHasUsageAccess()){
       status.textContent='Android conectado · permiso activo'; status.classList.add('ok');
-      phoneMessage('ok','La app está conectada al puente Android. Podés sincronizar el uso real de hoy.');
+      phoneMessage('ok','La app está conectada con Android. Podés sincronizar el uso real de hoy.');
     }else{
       status.textContent='Android conectado · falta permiso'; status.classList.add('warn');
-      phoneMessage('warn','La app detectó el puente Android, pero falta conceder el permiso “Uso de apps”. Tocá “Conceder permiso de uso”.');
+      phoneMessage('warn','La app detectó la integración Android, pero falta conceder el permiso “Uso de apps”. Tocá “Conceder permiso de uso”.');
     }
   }else if(standalone){
     status.textContent='PWA instalada · modo manual'; status.classList.add('warn');
@@ -3017,7 +3017,7 @@ function renderNativeAppList(apps){
 }
 function syncAndroidUsageToday(){
   if(!nativeBridgeAvailable()){
-    phoneMessage('warn','No hay puente Android activo. Esta PWA no puede leer automáticamente el uso del teléfono; para eso usá la versión Android nativa o cargá el dato manualmente.');
+    phoneMessage('warn','No hay integración Android disponible. Esta PWA no puede leer automáticamente el uso del teléfono; para eso usá el APK o cargá el dato manualmente.');
     updatePhonePanel();
     return;
   }
@@ -3047,7 +3047,7 @@ function syncAndroidUsageToday(){
     phoneMessage('ok','Métricas importadas al registro diario. Revisá si el estimado “no esencial” coincide con tu criterio y guardá el día.');
     updateUI(); updatePhonePanel();
   }catch(e){
-    phoneMessage('warn','Error leyendo el puente Android: '+(e.message||e));
+    phoneMessage('warn','Error leyendo la integración Android: '+(e.message||e));
   }
 }
 function copyPhoneMetricsToForm(){

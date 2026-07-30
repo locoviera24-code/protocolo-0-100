@@ -11,11 +11,13 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.SystemClock;
-
+import android.service.notification.StatusBarNotification;
 import org.json.JSONObject;
 
 public final class WorkoutControlNotificationManager {
-    public static final String CHANNEL_ID = "workout_controls_v3";
+    // Channel settings are immutable after creation. V6 uses the final low-
+    // importance policy and avoids inheriting an older OEM channel.
+    public static final String CHANNEL_ID = "workout_controls_v6";
     private static final String CHANNEL_TIMER_VIBRATE = "workout_timer_vibrate_v1";
     private static final String CHANNEL_TIMER_SOUND = "workout_timer_sound_v1";
     private static final int NOTIFICATION_ID = 7100;
@@ -27,6 +29,32 @@ public final class WorkoutControlNotificationManager {
                 && context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return false;
         NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         return manager != null && (Build.VERSION.SDK_INT < 24 || manager.areNotificationsEnabled());
+    }
+
+    public static boolean isPosted(Context context) {
+        NotificationManager manager = manager(context);
+        if (manager == null) return false;
+        if (Build.VERSION.SDK_INT < 23) return hasPermission(context);
+        try {
+            for (StatusBarNotification notification : manager.getActiveNotifications()) {
+                if (notification.getId() == NOTIFICATION_ID) return true;
+            }
+        } catch (Exception ignored) {
+        }
+        return false;
+    }
+
+    public static void ensureChannel(Context context) {
+        NotificationManager manager = manager(context);
+        if (manager != null) createChannel(manager);
+    }
+
+    public static boolean isChannelEnabled(Context context) {
+        if (Build.VERSION.SDK_INT < 26) return hasPermission(context);
+        NotificationManager manager = manager(context);
+        if (manager == null) return false;
+        NotificationChannel channel = manager.getNotificationChannel(CHANNEL_ID);
+        return channel == null || channel.getImportance() != NotificationManager.IMPORTANCE_NONE;
     }
 
     public static void update(Context context) {
@@ -97,13 +125,15 @@ public final class WorkoutControlNotificationManager {
                 .setSmallIcon(R.drawable.ic_workout_notification)
                 .setContentTitle(exercise + " · Serie " + setNumber)
                 .setContentText(line)
-                .setStyle(new Notification.BigTextStyle().bigText(detail.length() == 0 ? line : line + "\n" + detail))
                 .setContentIntent(openIntent(context, control.optString("exerciseId", "")))
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)
+                .setPriority(Notification.PRIORITY_DEFAULT)
                 .setCategory(Build.VERSION.SDK_INT >= 31 ? Notification.CATEGORY_STOPWATCH : Notification.CATEGORY_STATUS)
-                .setVisibility(Notification.VISIBILITY_PRIVATE)
+                .setVisibility(lockVisibility(context))
                 .setPublicVersion(publicVersion(context));
+
+        builder.setStyle(new Notification.BigTextStyle().bigText(detail));
 
         String timerStatus = timer.optString("timerStatus", "idle");
         if ("running".equals(timerStatus)) {
@@ -115,19 +145,11 @@ public final class WorkoutControlNotificationManager {
         boolean canUndo = System.currentTimeMillis() <= control.optLong("undoUntilEpochMs", 0L);
         if (canUndo) {
             builder.addAction(0, "Deshacer", actionIntent(context, MainActivity.ACTION_WIDGET_UNDO_LAST_SET, control))
-                    .addAction(0, "Guardar", actionIntent(context, MainActivity.ACTION_WIDGET_SAVE_SET, control))
-                    .addAction(0, "Siguiente", actionIntent(context, MainActivity.ACTION_WIDGET_NEXT_EXERCISE, control));
-        } else if ("running".equals(timerStatus)) {
-            builder.addAction(0, "Guardar", actionIntent(context, MainActivity.ACTION_WIDGET_SAVE_SET, control))
-                    .addAction(0, "Pausar", actionIntent(context, WorkoutTimerController.ACTION_TIMER_PAUSE, control))
-                    .addAction(0, "Siguiente", actionIntent(context, MainActivity.ACTION_WIDGET_NEXT_EXERCISE, control));
-        } else if ("paused".equals(timerStatus)) {
-            builder.addAction(0, "Guardar", actionIntent(context, MainActivity.ACTION_WIDGET_SAVE_SET, control))
-                    .addAction(0, "Continuar", actionIntent(context, WorkoutTimerController.ACTION_TIMER_RESUME, control))
+                    .addAction(0, "Editar", openIntent(context, control.optString("exerciseId", "")))
                     .addAction(0, "Siguiente", actionIntent(context, MainActivity.ACTION_WIDGET_NEXT_EXERCISE, control));
         } else {
-            builder.addAction(0, "Guardar", actionIntent(context, MainActivity.ACTION_WIDGET_SAVE_SET, control))
-                    .addAction(0, "+1 rep", actionIntent(context, MainActivity.ACTION_WIDGET_REPS_UP, control))
+            builder.addAction(0, "+1 rep", actionIntent(context, MainActivity.ACTION_WIDGET_REPS_UP, control))
+                    .addAction(0, "Guardar", actionIntent(context, MainActivity.ACTION_WIDGET_SAVE_SET, control))
                     .addAction(0, "Siguiente", actionIntent(context, MainActivity.ACTION_WIDGET_NEXT_EXERCISE, control));
         }
         return builder.build();
@@ -162,7 +184,6 @@ public final class WorkoutControlNotificationManager {
 
     private static int lockVisibility(Context context) {
         String visibility = NativeWorkoutControlRepository.nativeSettings(context).optString("lockScreenVisibility", "private");
-        if ("public".equals(visibility)) return Notification.VISIBILITY_PUBLIC;
         if ("hidden".equals(visibility)) return Notification.VISIBILITY_SECRET;
         return Notification.VISIBILITY_PRIVATE;
     }
@@ -174,10 +195,11 @@ public final class WorkoutControlNotificationManager {
     private static void createChannel(NotificationManager manager) {
         if (Build.VERSION.SDK_INT < 26) return;
         NotificationChannel channel = new NotificationChannel(CHANNEL_ID, "Controles de entrenamiento", NotificationManager.IMPORTANCE_LOW);
-        channel.setDescription("Serie actual y temporizador de descanso");
+        channel.setDescription("Controles privados y silenciosos durante una sesion activa");
         channel.setLockscreenVisibility(Notification.VISIBILITY_PRIVATE);
         channel.setSound(null, null);
         channel.enableVibration(false);
+        channel.setShowBadge(false);
         manager.createNotificationChannel(channel);
 
         NotificationChannel vibrate = new NotificationChannel(CHANNEL_TIMER_VIBRATE, "Fin del descanso · vibración", NotificationManager.IMPORTANCE_DEFAULT);
@@ -201,6 +223,14 @@ public final class WorkoutControlNotificationManager {
         intent.setData(Uri.parse("protocolo://notification-action/" + Uri.encode(deliveryId)));
         intent.putExtra("deliveryId", deliveryId);
         return PendingIntent.getBroadcast(context, stableRequestCode(action), intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    }
+
+    private static PendingIntent exercisePickerIntent(Context context, JSONObject control) {
+        Intent intent = new Intent(context, WorkoutExercisePickerActivity.class)
+                .putExtra("exerciseId", control.optString("exerciseId", ""))
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        return PendingIntent.getActivity(context, 7299, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 

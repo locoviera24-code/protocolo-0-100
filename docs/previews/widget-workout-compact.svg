@@ -1,10 +1,20 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="360" height="190" viewBox="0 0 360 190" role="img" aria-labelledby="title desc">
-  <title id="title">Preview del widget compacto</title><desc id="desc">Ejercicio actual, serie preparada, valores, guardar y editar.</desc>
-  <rect width="360" height="190" rx="24" fill="#0b1726"/>
-  <text x="22" y="34" fill="#ffffff" font-family="Arial,sans-serif" font-size="18" font-weight="700">Press de banca</text>
-  <text x="22" y="57" fill="#98f5c2" font-family="Arial,sans-serif" font-size="13">Serie 3 · 2 del ejercicio · 5 de pecho</text>
-  <rect x="20" y="72" width="148" height="48" rx="12" fill="#172942"/><text x="94" y="102" text-anchor="middle" fill="#eef5ff" font-family="Arial,sans-serif" font-size="16" font-weight="700">8 reps</text>
-  <rect x="178" y="72" width="162" height="48" rx="12" fill="#172942"/><text x="259" y="102" text-anchor="middle" fill="#eef5ff" font-family="Arial,sans-serif" font-size="16" font-weight="700">60 kg</text>
-  <rect x="20" y="130" width="198" height="48" rx="12" fill="#68e6a4"/><text x="119" y="160" text-anchor="middle" fill="#06111f" font-family="Arial,sans-serif" font-size="15" font-weight="700">Guardar</text>
-  <rect x="228" y="130" width="112" height="48" rx="12" fill="#172942"/><text x="284" y="160" text-anchor="middle" fill="#eef5ff" font-family="Arial,sans-serif" font-size="15">Editar</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="390" viewBox="0 0 360 390" role="img" aria-labelledby="title desc">
+  <title id="title">Vista previa del widget compacto</title>
+  <desc id="desc">Selector de ejercicio, serie preparada, guardar, editar o deshacer y temporizador.</desc>
+  <rect width="360" height="390" rx="28" fill="#071321"/>
+  <rect x="18" y="18" width="324" height="58" rx="14" fill="#14263a"/>
+  <text x="36" y="53" fill="#fff" font-family="sans-serif" font-size="18" font-weight="700">Elegir · Press de banca</text>
+  <text x="22" y="98" fill="#98f5c2" font-family="sans-serif" font-size="14">Serie 3</text>
+  <text x="22" y="120" fill="#dbeaff" font-family="sans-serif" font-size="13">Ultima: 77,5 kg x 9 · Mejor: 90 kg x 5</text>
+  <rect x="18" y="140" width="157" height="58" rx="14" fill="#14263a"/>
+  <rect x="185" y="140" width="157" height="58" rx="14" fill="#14263a"/>
+  <text x="67" y="176" fill="#eef5ff" font-family="sans-serif" font-size="18" font-weight="700">8 reps</text>
+  <text x="235" y="176" fill="#eef5ff" font-family="sans-serif" font-size="18" font-weight="700">80 kg</text>
+  <rect x="18" y="210" width="157" height="58" rx="14" fill="#58e6a9"/>
+  <rect x="185" y="210" width="157" height="58" rx="14" fill="#14263a"/>
+  <text x="66" y="246" fill="#06111f" font-family="sans-serif" font-size="17" font-weight="700">Guardar</text>
+  <text x="237" y="246" fill="#eef5ff" font-family="sans-serif" font-size="17">Editar</text>
+  <text x="22" y="296" fill="#ffd36e" font-family="sans-serif" font-size="13">Listo para guardar</text>
+  <rect x="18" y="314" width="324" height="58" rx="14" fill="#14263a"/>
+  <text x="123" y="350" fill="#eef5ff" font-family="sans-serif" font-size="17">Descanso 01:12</text>
 </svg>

@@ -1,7 +1,7 @@
 # Checklist de pruebas físicas
 
-Referencia objetivo beta: Protocolo 0->100 `2.7.0`, build web/PWA `90`, Android
-`versionCode 34`, rama `codex/android-quick-access-v1`.
+Referencia objetivo P0: Protocolo 0->100 `2.7.0`, build web/PWA `90`, Android
+`versionCode 34`, rama `codex/android-quick-access-p0`.
 
 Este documento separa resultados automatizados de pruebas sobre hardware real.
 No marcar una prueba física por inferencia a partir de Playwright, Gradle o un
@@ -50,8 +50,15 @@ datos personales.
 - [ ] Tocar **Agregar widget** y comprobar el dialogo del launcher, si es compatible.
 - [ ] Verificar el fallback manual en un launcher sin `requestPinAppWidget`.
 - [ ] Agregar y redimensionar los widgets compacto, estandar y expandido.
+- [ ] Confirmar que el compacto tiene como maximo selector, Guardar, Editar/Deshacer y temporizador.
+- [ ] Tocar **Editar** en compacto y comprobar que abre el ejercicio actual sin recorrer toda la app.
+- [ ] Pulsar -0,5/+0,5 en estandar y confirmar que el widget no cambia de layout.
+- [ ] Pulsar -5/+5 en expandido y confirmar que no aparecen botones nuevos.
+- [ ] Confirmar que el estandar no supera siete acciones directas.
 - [ ] Confirmar que ningun control queda oculto o truncado con fuente aumentada.
 - [ ] Corregir reps y carga hacia abajo y hacia arriba desde el widget.
+- [ ] Tocar el nombre del ejercicio, elegir uno no contiguo y confirmar el cambio directo.
+- [ ] Confirmar que el ejercicio elegido muestra su ultima carga y su maximo comparable.
 - [ ] Registrar una serie con un toque y comprobar actualizacion de progreso.
 - [ ] Hacer doble toque accidental y confirmar que se guarda una sola serie.
 - [ ] Guardar dos series deliberadas consecutivas y confirmar que ambas existen.
@@ -61,10 +68,15 @@ datos personales.
 - [ ] Probar kg, lb, peso corporal, lastre, asistencia, tiempo y distancia.
 - [ ] Probar dia de descanso y ausencia de sesion.
 - [ ] Activar controles y aceptar `POST_NOTIFICATIONS` desde la accion contextual.
+- [ ] Tocar **Empezar entrenamiento** y confirmar que aparece la notificacion sin guardar antes una serie.
 - [ ] Repetir con permiso denegado y comprobar acceso a Ajustes de Android.
+- [ ] Bloquear el canal, comprobar **Revisar notificacion** y abrir sus ajustes.
 - [ ] Bloquear el telefono y verificar la notificacion privada de entrenamiento.
+- [ ] Confirmar en los ajustes OEM que **Controles de entrenamiento** puede mostrarse en bloqueo.
 - [ ] Confirmar que la version publica solo dice **Entrenamiento en curso**.
-- [ ] Probar Guardar, Deshacer, Siguiente y temporizador desde la notificacion.
+- [ ] Confirmar que la notificacion normal muestra solo +1 rep, Guardar y Siguiente.
+- [ ] Guardar y confirmar que la accion cambia a Deshacer sin superar tres acciones.
+- [ ] Probar Guardar, Deshacer y Siguiente desde la notificacion.
 - [ ] Finalizar/cancelar la sesion y confirmar que la notificacion desaparece.
 - [ ] Cambiar fecha y zona horaria; comprobar actualizacion del widget.
 - [ ] Actualizar desde APK anterior y comprobar cola, widget y preferencias.
@@ -89,9 +101,23 @@ usuarios finales.
 
 ## Registro de hardware de Controles Android V1
 
-Estado al 29 de julio de 2026: **pendiente completo**. En esta ejecucion no hay
-un dispositivo Android conectado. Los tres SVG de `docs/previews/` son previews
+Estado al 30 de julio de 2026: **pendiente completo**. `adb devices -l` no
+detecto ningun dispositivo Android. Los SVG/PNG de `docs/previews/` son previews
 de jerarquia y no evidencia de launcher, pantalla de bloqueo o fabricante.
+
+Validacion especifica requerida para build 90:
+
+- [ ] Confirmar que el compacto conserva su jerarquia y no revela otra botonera tras un toque.
+- [ ] Confirmar -0,5/+0,5 en estandar y -5/+5 en expandido.
+- [ ] Tocar el nombre, elegir un ejercicio no adyacente y comprobar el cambio inmediato.
+- [ ] Confirmar que Ultima y Max. cambian con el ejercicio elegido.
+- [ ] Iniciar entrenamiento, aceptar permiso y bloquear el telefono.
+- [ ] Confirmar la notificacion publica `Entrenamiento en curso`.
+- [ ] Desbloquear contenido privado y comprobar +1 rep, Guardar y Siguiente.
+- [ ] Guardar y comprobar Deshacer durante diez segundos.
+- [ ] Rechazar el permiso y comprobar que `Activar` abre los ajustes correctos.
+- [ ] Ocultar el canal y comprobar que `Revisar` abre `Controles de entrenamiento`.
+- [ ] Quitar y volver a agregar el widget para aplicar sus nuevas dimensiones minimas.
 
 Al ejecutar, registrar aqui:
 

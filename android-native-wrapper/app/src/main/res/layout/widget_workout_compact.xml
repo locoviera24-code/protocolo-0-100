@@ -5,7 +5,7 @@
     android:layout_height="match_parent"
     android:background="@drawable/widget_background"
     android:orientation="vertical"
-    android:padding="12dp">
+    android:padding="10dp">
 
     <LinearLayout
         android:id="@+id/widgetDirectPanel"
@@ -13,27 +13,44 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <TextView
+        <Button
             android:id="@+id/widgetCurrentExercise"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="48dp"
+            android:background="@drawable/widget_button_secondary"
+            android:contentDescription="Elegir ejercicio"
             android:ellipsize="end"
+            android:gravity="center_vertical"
             android:maxLines="1"
-            android:text="Ejercicio actual"
+            android:minHeight="48dp"
+            android:paddingHorizontal="10dp"
+            android:text="Elegir ejercicio"
+            android:textAllCaps="false"
             android:textColor="#ffffff"
-            android:textSize="16sp"
+            android:textSize="14sp"
             android:textStyle="bold" />
 
         <TextView
             android:id="@+id/widgetSetStats"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="Serie 1"
+            android:textColor="#98f5c2"
+            android:textSize="11sp" />
+
+        <TextView
+            android:id="@+id/widgetLoadGuidance"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
             android:ellipsize="end"
             android:maxLines="1"
-            android:text="Siguiente serie"
-            android:textColor="#98f5c2"
-            android:textSize="11sp" />
+            android:text="Última: sin datos · Mejor: sin datos"
+            android:textColor="#dbeaff"
+            android:textSize="10sp" />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -44,45 +61,44 @@
             <TextView
                 android:id="@+id/widgetQuickReps"
                 android:layout_width="0dp"
-                android:layout_height="match_parent"
+                android:layout_height="48dp"
                 android:layout_weight="1"
                 android:background="@drawable/widget_button_secondary"
                 android:contentDescription="Repeticiones preparadas"
                 android:gravity="center"
                 android:text="8 reps"
                 android:textColor="#eef5ff"
-                android:textSize="15sp"
+                android:textSize="14sp"
                 android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/widgetQuickWeight"
                 android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_marginStart="8dp"
+                android:layout_height="48dp"
+                android:layout_marginStart="6dp"
                 android:layout_weight="1"
                 android:background="@drawable/widget_button_secondary"
                 android:contentDescription="Carga preparada"
                 android:gravity="center"
                 android:text="0 kg"
                 android:textColor="#eef5ff"
-                android:textSize="15sp"
+                android:textSize="14sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="48dp"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="6dp"
             android:orientation="horizontal">
 
             <Button
                 android:id="@+id/widgetSaveSetButton"
                 android:layout_width="0dp"
                 android:layout_height="48dp"
-                android:layout_weight="1.4"
+                android:layout_weight="1"
                 android:background="@drawable/widget_button"
                 android:contentDescription="Guardar serie preparada"
-                android:gravity="center"
                 android:minHeight="48dp"
                 android:text="Guardar"
                 android:textAllCaps="false"
@@ -91,19 +107,18 @@
                 android:textStyle="bold" />
 
             <Button
-                android:id="@+id/widgetQuickButton"
+                android:id="@+id/widgetRepeatButton"
                 android:layout_width="0dp"
                 android:layout_height="48dp"
-                android:layout_marginStart="8dp"
+                android:layout_marginStart="6dp"
                 android:layout_weight="1"
                 android:background="@drawable/widget_button_secondary"
-                android:contentDescription="Editar valores en el registro rapido"
-                android:gravity="center"
+                android:contentDescription="Editar la serie preparada"
                 android:minHeight="48dp"
                 android:text="Editar"
                 android:textAllCaps="false"
                 android:textColor="#eef5ff"
-                android:textSize="13sp" />
+                android:textSize="12sp" />
         </LinearLayout>
 
         <TextView
@@ -113,7 +128,7 @@
             android:layout_marginTop="5dp"
             android:ellipsize="end"
             android:maxLines="1"
-            android:text="Guardado en el dispositivo"
+            android:text="Listo para guardar"
             android:textColor="#ffd36e"
             android:textSize="10sp" />
 
@@ -141,7 +156,7 @@
                 android:id="@+id/widgetTimerButton"
                 android:layout_width="96dp"
                 android:layout_height="48dp"
-                android:layout_marginStart="8dp"
+                android:layout_marginStart="6dp"
                 android:background="@drawable/widget_button_secondary"
                 android:contentDescription="Controlar temporizador"
                 android:minHeight="48dp"
