@@ -140,7 +140,7 @@ jobs:
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" "$APK" "$CHECKSUM" --clobber
           else
-            gh release create "$TAG" "$APK" "$CHECKSUM" --title "Protocolo 0-100 v$VERSION_NAME" --notes "APK Android release firmado. Verifica la descarga con el archivo SHA-256." "${FLAGS[@]}"
+            gh release create "$TAG" "$APK" "$CHECKSUM" --target "$GITHUB_SHA" --title "Protocolo 0-100 v$VERSION_NAME" --notes "APK Android release firmado. Verifica la descarga con el archivo SHA-256." "${FLAGS[@]}"
           fi
 
       - name: Eliminar keystore temporal

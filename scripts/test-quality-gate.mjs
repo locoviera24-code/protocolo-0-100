@@ -36,6 +36,7 @@ assert.doesNotMatch(debug,/\n  push:/,'El APK manual no debe duplicar el gate au
 assert.doesNotMatch(debug,/gh release/);
 assert.match(release,/needs: quality/);
 assert.match(release,/gh release create/);
+assert.match(release,/gh release create[^\n]+--target "\$GITHUB_SHA"/);
 
 for(const caller of callers)assert.doesNotMatch(caller,/npm run test:e2e/,'Las matrices no deben duplicarse fuera del gate');
 

@@ -4057,6 +4057,31 @@ descarga directa fue comprobada sin credenciales con HTTP 200 y el mismo hash:
 El tag apunta a `55c9cf2`; el pull request 1 sigue en borrador, no se fusiono a
 `main` y stable build 89 no fue modificado.
 
-Siguiente accion exacta: instalar beta 5 en hardware Android y completar las
-pruebas pendientes de launcher, visibilidad OEM en bloqueo, reinicio y
-actualizacion desde beta 4. No publicar stable hasta tener esa evidencia.
+Ese artifact debug quedo supersedido para instalacion por el APK release firmado
+descrito a continuacion. No publicar stable hasta tener evidencia fisica.
+
+### APK release firmado beta 6
+
+El artifact debug de beta 5 sirve para validacion, pero la instalacion destinada
+al usuario debe usar la firma release persistente. Se despacho
+`build-release-apk.yml` sobre la rama y el run `30507861678` termino verde:
+quality gate completo y job **Compilar APK firmado y publicar checksum**
+aprobados. Creo la prerelease `v2.7.0-native-controls-v1-beta.6` con:
+
+- APK firmado: 1.542.371 bytes;
+- SHA-256:
+  `F6D7AA50BC72D37DDBB5D8041FDB7BE6698825891162E398006624585FF26CB3`;
+- descarga directa comprobada sin credenciales con HTTP 200:
+  `https://github.com/locoviera24-code/protocolo-0-100/releases/download/v2.7.0-native-controls-v1-beta.6/protocolo-0-100-v2.7.0-release.apk`;
+- checksum publico:
+  `https://github.com/locoviera24-code/protocolo-0-100/releases/download/v2.7.0-native-controls-v1-beta.6/protocolo-0-100-v2.7.0-release.apk.sha256`.
+
+El workflow creo inicialmente el tag sobre la rama predeterminada aunque habia
+compilado el checkout correcto. Se movio el tag beta 6 a `a72266f` y se corrigio
+`build-release-apk.yml` para usar `gh release create --target "$GITHUB_SHA"` en
+futuros releases. Stable y `baseline-stable-2.7` siguen intactos.
+
+Siguiente accion exacta: instalar **beta 6 firmada** y completar en hardware las
+pruebas de launcher, bloqueo OEM, reinicio y actualizacion. Si Android rechaza
+la actualizacion desde una beta debug anterior por firma incompatible, exportar
+una copia antes de desinstalar; no borrar datos sin backup.
