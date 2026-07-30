@@ -26,6 +26,7 @@ assert.match(release,/sha256sum/);
 assert.match(release,/push:\s*[\s\S]*tags:/);
 assert.match(release,/workflow_dispatch:/);
 assert.match(release,/gh release create/);
+assert.match(release,/gh release create[^\n]+--target "\$GITHUB_SHA"/);
 assert.match(gradle,/signingConfigs/);
 assert.match(gradle,/releaseSigningConfigured/);
 assert.match(gradle,/groovy\.json\.JsonSlurper/);
