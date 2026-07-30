@@ -529,9 +529,10 @@ La PWA/GitHub Pages no puede crear widgets ni controles de pantalla de bloqueo.
 Estas funciones viven en el APK y usan `AppWidgetProvider`, `AppWidgetManager`,
 `RemoteViews`, `PendingIntent` y una notificacion privada de entrenamiento.
 
-La prerelease Android de este bloque es **2.7.0 beta build 93**. Su descarga
-firmada se publica en el tag `v2.7.0-native-controls-v1-beta.7` después de que
-termine el quality gate remoto.
+La prerelease Android de este bloque es **2.7.0 beta build 93**. El APK release
+firmado se descarga desde [beta 7](https://github.com/locoviera24-code/protocolo-0-100/releases/download/v2.7.0-native-controls-v1-beta.7/protocolo-0-100-v2.7.0-release.apk).
+Su SHA-256 es
+`94ED3476543B71C2642A1949E105C83D8BF50EF92EBB4E3A42780C4653DBA27C`.
 No reemplaza el canal estable ni mueve `baseline-stable-2.7`.
 
 Desde **Gym > Acceso rapido durante el entrenamiento** se puede tocar **Agregar

@@ -4256,6 +4256,24 @@ Resultados comprobados antes del gate final:
 - hardware Android conectado: ninguno; launcher, OEM y bloqueo real siguen
   expresamente pendientes en `docs/physical-test-checklist.md`.
 
-La prerelease firmada beta 7, su checksum y los resultados del quality gate se
-deben registrar aqui solamente despues de que GitHub Actions termine. No
-fusionar a `main` ni publicar stable.
+El workflow remoto `30555984931` valido el commit `8c5af8a` y termino en
+**Success**. El gate ejecuto 355 E2E funcionales, 27 auditorias axe, mantuvo 14
+omisiones documentadas y aprobo Firestore Emulator, artifact web, Android
+debug/release y paridad de assets. El job posterior genero el APK con la firma
+release persistente.
+
+La prerelease no estable es `v2.7.0-native-controls-v1-beta.7`:
+
+- tag y release apuntan a `8c5af8a4b72041c42fecb7f6a0f7e4e7fc3eff24`;
+- APK firmado: 1.546.198 bytes;
+- SHA-256:
+  `94ED3476543B71C2642A1949E105C83D8BF50EF92EBB4E3A42780C4653DBA27C`;
+- descarga publica comprobada sin credenciales con HTTP 200:
+  `https://github.com/locoviera24-code/protocolo-0-100/releases/download/v2.7.0-native-controls-v1-beta.7/protocolo-0-100-v2.7.0-release.apk`;
+- checksum publico:
+  `https://github.com/locoviera24-code/protocolo-0-100/releases/download/v2.7.0-native-controls-v1-beta.7/protocolo-0-100-v2.7.0-release.apk.sha256`.
+
+El checksum descargado coincide con el artifact. La rama sigue separada de
+`main`, el pull request permanece en borrador y stable no fue publicado. Las
+pruebas fisicas de launcher y pantalla de bloqueo siguen pendientes; no hay un
+dispositivo Android conectado a este entorno.
