@@ -1,7 +1,7 @@
 # Checklist de pruebas físicas
 
-Referencia objetivo beta: Protocolo 0->100 `2.7.0`, build web/PWA `91`, Android
-`versionCode 35`, rama `codex/android-quick-access-v1`.
+Referencia objetivo beta: Protocolo 0->100 `2.7.0`, build web/PWA `92`, Android
+`versionCode 36`, rama `codex/android-quick-access-v1`.
 
 Este documento separa resultados automatizados de pruebas sobre hardware real.
 No marcar una prueba física por inferencia a partir de Playwright, Gradle o un
@@ -50,10 +50,13 @@ datos personales.
 - [ ] Tocar **Agregar widget** y comprobar el dialogo del launcher, si es compatible.
 - [ ] Verificar el fallback manual en un launcher sin `requestPinAppWidget`.
 - [ ] Agregar y redimensionar los widgets compacto, estandar y expandido.
-- [ ] Pulsar -5/+5 repetidamente y confirmar que el widget no cambia de layout.
-- [ ] Confirmar que el compacto conserva solo -5, Guardar, +5 y temporizador.
+- [ ] Pulsar -0,5/+0,5 repetidamente y confirmar que el widget no cambia de layout.
+- [ ] Tocar el valor de carga, alternar a 5 kg y confirmar que no aparecen botones nuevos.
+- [ ] Confirmar que el compacto conserva solo -0,5, Guardar, +0,5 y temporizador.
 - [ ] Confirmar que ningun control queda oculto o truncado con fuente aumentada.
 - [ ] Corregir reps y carga hacia abajo y hacia arriba desde el widget.
+- [ ] Tocar el nombre del ejercicio, elegir uno no contiguo y confirmar el cambio directo.
+- [ ] Confirmar que el ejercicio elegido muestra su ultima carga y su maximo comparable.
 - [ ] Registrar una serie con un toque y comprobar actualizacion de progreso.
 - [ ] Hacer doble toque accidental y confirmar que se guarda una sola serie.
 - [ ] Guardar dos series deliberadas consecutivas y confirmar que ambas existen.
@@ -67,6 +70,7 @@ datos personales.
 - [ ] Repetir con permiso denegado y comprobar acceso a Ajustes de Android.
 - [ ] Bloquear el canal, comprobar **Revisar notificacion** y abrir sus ajustes.
 - [ ] Bloquear el telefono y verificar la notificacion privada de entrenamiento.
+- [ ] Confirmar en los ajustes OEM que **Controles de entrenamiento** puede mostrarse en bloqueo.
 - [ ] Confirmar que la version publica solo dice **Entrenamiento en curso**.
 - [ ] Probar Guardar, Deshacer, Siguiente y temporizador desde la notificacion.
 - [ ] Finalizar/cancelar la sesion y confirmar que la notificacion desaparece.

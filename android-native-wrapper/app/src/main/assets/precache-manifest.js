@@ -1,8 +1,8 @@
 globalThis.PRECACHE_MANIFEST=Object.freeze({
   "schemaVersion": 1,
   "version": "2.7.0",
-  "build": 91,
-  "cacheName": "protocolo-0-100-pwa-2.7.0-b91",
+  "build": 92,
+  "cacheName": "protocolo-0-100-pwa-2.7.0-b92",
   "required": [
     {
       "url": "./advanced-features.js",
@@ -12,12 +12,12 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     {
       "url": "./app-version.js",
       "bytes": 358,
-      "sha256": "beb06a0c5886b81b76ed535cddb1c7af5cb9fb7bcc4e7ad0b4cce47d482be337"
+      "sha256": "b99d530015565b8d7f584254f8233949d64a6377777488b042506c9e21c28ce0"
     },
     {
       "url": "./app/build-guard.js",
       "bytes": 1811,
-      "sha256": "2f80e6e094cf9ed1eff82a3a8131bbdbacc6a4b41c0e5b9d6e557dd86ed0eac7"
+      "sha256": "87f67928a0d9fe4393bf7ada85e976f395e7a772feb5df56dacecdb3271dd619"
     },
     {
       "url": "./app/build-info.js",
@@ -47,7 +47,7 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     {
       "url": "./build-info.json",
       "bytes": 189,
-      "sha256": "7ab88198b48523b60a59ed5ba5b84c74175a7388f95c2571165cbd5429de043e"
+      "sha256": "8cd1a49739bfdeb8e97a8455457b55b66d3d61087ba5a897cf2922ae4aa33be6"
     },
     {
       "url": "./data/backup-service.js",
@@ -261,8 +261,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     },
     {
       "url": "./styles/gym.css",
-      "bytes": 9344,
-      "sha256": "d4ecd3665aa799504e431e03ab79bfd7654c69aca9da5f069d341c1a96ebffe7"
+      "bytes": 12152,
+      "sha256": "2bafa86d12af390abef66dc0526702cd89414e52b6a4cb37a9e26b3b353f03c4"
     },
     {
       "url": "./styles/modules.css",
@@ -321,8 +321,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     },
     {
       "url": "./workout-features.js",
-      "bytes": 176605,
-      "sha256": "07efc54d88ba17b299469bf9617e4d62c16cb6f0a891569acd0c006e6c754295"
+      "bytes": 181995,
+      "sha256": "fdd871a6ad04bb91bfb9d8d3ecbf28957d6e0ed56498391d22fee55fda71329e"
     },
     {
       "url": "./workout-metrics.js",
@@ -354,7 +354,7 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     {
       "url": "./app-version.json",
       "bytes": 90,
-      "sha256": "d56edd594c738ad24455facc971b5b50157b83e356439b5b36ab371f11d3f42e"
+      "sha256": "7c7fc3d05510ecf86f2a07103df768b308a094552c4d36b7bd6ccc6e1e4e2d63"
     },
     {
       "url": "./icons/icon-192.png",

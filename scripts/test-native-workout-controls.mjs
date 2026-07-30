@@ -13,6 +13,7 @@ const paths={
   notification:'../android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutControlNotificationManager.java',
   provider:'../android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetProvider.java',
   receiver:'../android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutControlReceiver.java',
+  picker:'../android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutExercisePickerActivity.java',
   manifest:'../android-native-wrapper/app/src/main/AndroidManifest.xml',
   compact:'../android-native-wrapper/app/src/main/res/layout/widget_workout_compact.xml',
   standard:'../android-native-wrapper/app/src/main/res/layout/widget_workout_standard.xml',
@@ -29,7 +30,7 @@ assert.ok(source.state.includes('native_control_state_v1'),'Falta el estado de c
 for(const contract of ['native_mutation_queue_v1','pending','imported','rejected','undone','acknowledgeImported','MAX_MUTATIONS = 200'])assert.ok(source.queue.includes(contract),`Falta contrato de cola: ${contract}`);
 assert.match(source.queue,/if \(!"pending"\.equals\(status\(mutation\)\)\) continue;/,'Una confirmacion tardia no debe revivir una mutacion deshecha.');
 assert.match(source.state,/nativeRevision[^\n]+revision/,'La revision compacta debe aceptar el snapshot y el control nativo.');
-for(const action of ['ADJUST_REPS','ADJUST_WEIGHT','SAVE_SET','UNDO_LAST_SET','REPEAT_LAST_SET','PREVIOUS_EXERCISE','NEXT_EXERCISE','COMPLETE_TIME_SET'])assert.ok(source.reducer.includes(action),`Falta reducer ${action}`);
+for(const action of ['ADJUST_REPS','ADJUST_WEIGHT','SAVE_SET','UNDO_LAST_SET','REPEAT_LAST_SET','PREVIOUS_EXERCISE','NEXT_EXERCISE','SELECT_EXERCISE','TOGGLE_WEIGHT_STEP','COMPLETE_TIME_SET'])assert.ok(source.reducer.includes(action),`Falta reducer ${action}`);
 assert.match(source.reducer,/claimDelivery/);
 assert.match(source.provider,/handleWidgetAction\(context, intent, WorkoutQuickActionReducer\.SOURCE_WIDGET\)/);
 assert.match(source.receiver,/handleWidgetAction\(context, intent, WorkoutQuickActionReducer\.SOURCE_NOTIFICATION\)/);
@@ -65,17 +66,23 @@ assert.doesNotMatch(source.expanded,/widgetPreviousButton|widgetOpenButton|widge
 assert.match(source.compact,/widgetWeightFastMinusButton/);
 assert.match(source.compact,/widgetWeightFastPlusButton/);
 assert.doesNotMatch(source.compact,/widgetQuickButton/,'El compacto no debe abrir una segunda fila de acciones.');
-assert.match(source.widget,/widgetWeightMinusButton, widgetActionIntent\(context, MainActivity\.ACTION_WIDGET_WEIGHT_FAST_DOWN/);
-assert.match(source.widget,/widgetWeightPlusButton, widgetActionIntent\(context, MainActivity\.ACTION_WIDGET_WEIGHT_FAST_UP/);
+assert.match(source.widget,/widgetWeightMinusButton, widgetActionIntent\(context, MainActivity\.ACTION_WIDGET_WEIGHT_DOWN/);
+assert.match(source.widget,/widgetWeightPlusButton, widgetActionIntent\(context, MainActivity\.ACTION_WIDGET_WEIGHT_UP/);
+assert.match(source.widget,/ACTION_WIDGET_TOGGLE_WEIGHT_STEP/,'El valor de carga debe alternar el paso fino/rapido sin desplegar botones.');
+assert.match(source.widget,/weightAdjustmentStep/,'El paso 0,5 o 5 debe persistir en el snapshot rapido.');
+assert.match(source.widget,/exercisePickerIntent/,'El widget debe abrir un selector directo de ejercicio.');
+assert.match(source.picker,/setSingleChoiceItems/);
+assert.match(source.picker,/ACTION_WIDGET_SELECT_EXERCISE/);
+assert.match(source.features,/exerciseLoadGuidance/,'Cada ejercicio debe publicar su ultima carga y record comparables.');
 assert.match(source.widget,/int width = minWidth > 0 \? minWidth : maxWidth/,'El layout debe usar el tamaño actual, no el máximo de otra orientación.');
 assert.doesNotMatch(source.widget,/Math\.max\(minWidth, maxWidth\)/,'El tamaño máximo causaba saltos de layout tras un toque.');
 
-for(const contract of ['setOngoing(true)','VISIBILITY_PRIVATE','setPublicVersion(publicVersion(context))','Entrenamiento en curso','IMPORTANCE_LOW'])assert.ok(source.notification.includes(contract),`Falta privacidad de notificacion: ${contract}`);
+for(const contract of ['setOngoing(true)','VISIBILITY_PRIVATE','setPublicVersion(publicVersion(context))','Entrenamiento en curso','IMPORTANCE_DEFAULT','workout_controls_v4'])assert.ok(source.notification.includes(contract),`Falta privacidad o visibilidad de notificacion: ${contract}`);
 assert.match(source.notification,/getActiveNotifications/,'El estado debe distinguir permiso concedido de notificacion realmente publicada.');
 assert.doesNotMatch(source.notification,/setFullScreenIntent/);
 for(const contract of ['endsAtElapsedRealtime','startedAtElapsedRealtime','restoreAfterBoot','setAndAllowWhileIdle'])assert.ok(source.timer.includes(contract),`Falta timer durable: ${contract}`);
 assert.doesNotMatch(source.timer,/Thread\.sleep|setInterval|startForeground/);
-for(const text of ['Acceso rápido durante el entrenamiento','Agregar widget','Controles mientras entrenás','No disponible en la versión web'])assert.ok(source.features.includes(text),`Falta UX de descubrimiento: ${text}`);
+for(const text of ['Acceso rápido en Android','Agregar widget','Controles mientras entrenás','No disponible en la versión web'])assert.ok(source.features.includes(text),`Falta UX de descubrimiento: ${text}`);
 assert.doesNotMatch(source.features,/puente Android|widget interno\/nativo|Actualizar widget manualmente/i);
 
 const sandbox={window:{}};

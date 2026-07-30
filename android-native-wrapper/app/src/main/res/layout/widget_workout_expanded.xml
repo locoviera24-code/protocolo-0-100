@@ -125,10 +125,10 @@
                 android:layout_width="56dp"
                 android:layout_height="48dp"
                 android:background="@drawable/widget_button_secondary"
-                android:contentDescription="Disminuir carga 5 kilos"
+                android:contentDescription="Disminuir carga 0,5 kilos"
                 android:minWidth="48dp"
                 android:minHeight="48dp"
-                android:text="-5"
+                android:text="-0,5"
                 android:textColor="#eef5ff"
                 android:textSize="15sp" />
 
@@ -151,10 +151,10 @@
                 android:layout_width="56dp"
                 android:layout_height="48dp"
                 android:background="@drawable/widget_button_secondary"
-                android:contentDescription="Aumentar carga 5 kilos"
+                android:contentDescription="Aumentar carga 0,5 kilos"
                 android:minWidth="48dp"
                 android:minHeight="48dp"
-                android:text="+5"
+                android:text="+0,5"
                 android:textColor="#eef5ff"
                 android:textSize="15sp" />
         </LinearLayout>
@@ -200,9 +200,9 @@
                 android:layout_marginStart="6dp"
                 android:layout_weight="1"
                 android:background="@drawable/widget_button_secondary"
-                android:contentDescription="Ir al siguiente ejercicio"
+                android:contentDescription="Elegir ejercicio"
                 android:minHeight="48dp"
-                android:text="Siguiente"
+                android:text="Elegir"
                 android:textAllCaps="false"
                 android:textColor="#eef5ff"
                 android:textSize="12sp" />

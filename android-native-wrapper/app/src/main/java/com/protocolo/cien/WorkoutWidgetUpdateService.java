@@ -83,7 +83,7 @@ public final class WorkoutWidgetUpdateService {
         RemoteViews views = new RemoteViews(context.getPackageName(), layout);
 
         views.setTextViewText(R.id.widgetCurrentExercise, state.currentExerciseName);
-        views.setTextViewText(R.id.widgetSetStats, state.setStatsText);
+        views.setTextViewText(R.id.widgetSetStats, kind == LAYOUT_COMPACT ? state.loadGuidanceText : state.setStatsText);
         views.setTextViewText(R.id.widgetQuickReps, state.quickRepsText);
         views.setTextViewText(R.id.widgetQuickWeight, state.quickWeightText);
         views.setContentDescription(R.id.widgetQuickReps, state.quickRepsDescription);
@@ -93,16 +93,21 @@ public final class WorkoutWidgetUpdateService {
 
         views.setViewVisibility(R.id.widgetDirectPanel, View.VISIBLE);
         views.setOnClickPendingIntent(R.id.widgetRoot, openIntent(context, MainActivity.ACTION_OPEN_TODAY_WORKOUT, state.currentExerciseId));
+        views.setContentDescription(R.id.widgetCurrentExercise, "Elegir ejercicio. Actual: " + state.currentExerciseName);
+        views.setOnClickPendingIntent(R.id.widgetCurrentExercise, exercisePickerIntent(context, state.currentExerciseId, widgetId));
         views.setOnClickPendingIntent(R.id.widgetSaveSetButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_SAVE_SET, state.nativeRevision, widgetId));
         if (kind == LAYOUT_COMPACT) {
-            views.setTextViewText(R.id.widgetWeightFastMinusButton, "-5");
-            views.setTextViewText(R.id.widgetWeightFastPlusButton, "+5");
-            views.setContentDescription(R.id.widgetWeightFastMinusButton, "Disminuir carga 5 " + state.unit);
-            views.setContentDescription(R.id.widgetWeightFastPlusButton, "Aumentar carga 5 " + state.unit);
-            views.setOnClickPendingIntent(R.id.widgetWeightFastMinusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_WEIGHT_FAST_DOWN, state.nativeRevision, widgetId));
-            views.setOnClickPendingIntent(R.id.widgetWeightFastPlusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_WEIGHT_FAST_UP, state.nativeRevision, widgetId));
+            views.setTextViewText(R.id.widgetWeightFastMinusButton, "-" + state.weightStepLabel);
+            views.setTextViewText(R.id.widgetWeightFastPlusButton, "+" + state.weightStepLabel);
+            views.setContentDescription(R.id.widgetWeightFastMinusButton, "Disminuir carga " + state.weightStepLabel + " " + state.unit);
+            views.setContentDescription(R.id.widgetWeightFastPlusButton, "Aumentar carga " + state.weightStepLabel + " " + state.unit);
+            views.setOnClickPendingIntent(R.id.widgetWeightFastMinusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_WEIGHT_DOWN, state.nativeRevision, widgetId));
+            views.setOnClickPendingIntent(R.id.widgetWeightFastPlusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_WEIGHT_UP, state.nativeRevision, widgetId));
             views.setOnClickPendingIntent(R.id.widgetQuickReps, openIntent(context, MainActivity.ACTION_QUICK_LOG_SET, state.currentExerciseId));
-            views.setOnClickPendingIntent(R.id.widgetQuickWeight, openIntent(context, MainActivity.ACTION_QUICK_LOG_SET, state.currentExerciseId));
+            views.setContentDescription(R.id.widgetQuickWeight, state.quickWeightDescription + ". Toca para alternar paso 0,5 o 5 " + state.unit);
+            views.setOnClickPendingIntent(R.id.widgetQuickWeight, state.requiresEditor
+                    ? openIntent(context, MainActivity.ACTION_QUICK_LOG_SET, state.currentExerciseId)
+                    : widgetActionIntent(context, MainActivity.ACTION_WIDGET_TOGGLE_WEIGHT_STEP, state.nativeRevision, widgetId));
         }
 
         if (kind >= LAYOUT_STANDARD) {
@@ -115,12 +120,14 @@ public final class WorkoutWidgetUpdateService {
             if (!state.requiresEditor) {
                 views.setOnClickPendingIntent(R.id.widgetRepsMinusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_REPS_DOWN, state.nativeRevision, widgetId));
                 views.setOnClickPendingIntent(R.id.widgetRepsPlusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_REPS_UP, state.nativeRevision, widgetId));
-                views.setTextViewText(R.id.widgetWeightMinusButton, "-5");
-                views.setTextViewText(R.id.widgetWeightPlusButton, "+5");
-                views.setContentDescription(R.id.widgetWeightMinusButton, "Disminuir carga 5 " + state.unit);
-                views.setContentDescription(R.id.widgetWeightPlusButton, "Aumentar carga 5 " + state.unit);
-                views.setOnClickPendingIntent(R.id.widgetWeightMinusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_WEIGHT_FAST_DOWN, state.nativeRevision, widgetId));
-                views.setOnClickPendingIntent(R.id.widgetWeightPlusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_WEIGHT_FAST_UP, state.nativeRevision, widgetId));
+                views.setTextViewText(R.id.widgetWeightMinusButton, "-" + state.weightStepLabel);
+                views.setTextViewText(R.id.widgetWeightPlusButton, "+" + state.weightStepLabel);
+                views.setContentDescription(R.id.widgetWeightMinusButton, "Disminuir carga " + state.weightStepLabel + " " + state.unit);
+                views.setContentDescription(R.id.widgetWeightPlusButton, "Aumentar carga " + state.weightStepLabel + " " + state.unit);
+                views.setOnClickPendingIntent(R.id.widgetWeightMinusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_WEIGHT_DOWN, state.nativeRevision, widgetId));
+                views.setOnClickPendingIntent(R.id.widgetWeightPlusButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_WEIGHT_UP, state.nativeRevision, widgetId));
+                views.setContentDescription(R.id.widgetQuickWeight, state.quickWeightDescription + ". Toca para alternar paso 0,5 o 5 " + state.unit);
+                views.setOnClickPendingIntent(R.id.widgetQuickWeight, widgetActionIntent(context, MainActivity.ACTION_WIDGET_TOGGLE_WEIGHT_STEP, state.nativeRevision, widgetId));
             }
             String contextualAction = state.requiresEditor ? MainActivity.ACTION_QUICK_LOG_SET
                     : state.canUndo ? MainActivity.ACTION_WIDGET_UNDO_LAST_SET : MainActivity.ACTION_WIDGET_REPEAT_LAST;
@@ -128,7 +135,9 @@ public final class WorkoutWidgetUpdateService {
             views.setOnClickPendingIntent(R.id.widgetRepeatButton, state.requiresEditor
                     ? openIntent(context, contextualAction, state.currentExerciseId)
                     : widgetActionIntent(context, contextualAction, state.nativeRevision, widgetId));
-            views.setOnClickPendingIntent(R.id.widgetNextButton, widgetActionIntent(context, MainActivity.ACTION_WIDGET_NEXT_EXERCISE, state.nativeRevision, widgetId));
+            views.setTextViewText(R.id.widgetNextButton, "Elegir");
+            views.setContentDescription(R.id.widgetNextButton, "Elegir cualquier ejercicio de la rutina");
+            views.setOnClickPendingIntent(R.id.widgetNextButton, exercisePickerIntent(context, state.currentExerciseId, widgetId));
         }
         if (kind == LAYOUT_EXPANDED) {
             views.setTextViewText(R.id.widgetTitle, state.title);
@@ -176,6 +185,14 @@ public final class WorkoutWidgetUpdateService {
         return PendingIntent.getBroadcast(context, requestCode, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
+    private static PendingIntent exercisePickerIntent(Context context, String exerciseId, int widgetId) {
+        Intent intent = new Intent(context, WorkoutExercisePickerActivity.class)
+                .putExtra("exerciseId", exerciseId == null ? "" : exerciseId)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        return PendingIntent.getActivity(context, 8100 + Math.max(0, widgetId), intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    }
+
     static boolean isDirectAction(String action) {
         return MainActivity.ACTION_WIDGET_REPS_DOWN.equals(action)
                 || MainActivity.ACTION_WIDGET_REPS_UP.equals(action)
@@ -183,6 +200,8 @@ public final class WorkoutWidgetUpdateService {
                 || MainActivity.ACTION_WIDGET_WEIGHT_UP.equals(action)
                 || MainActivity.ACTION_WIDGET_WEIGHT_FAST_DOWN.equals(action)
                 || MainActivity.ACTION_WIDGET_WEIGHT_FAST_UP.equals(action)
+                || MainActivity.ACTION_WIDGET_TOGGLE_WEIGHT_STEP.equals(action)
+                || MainActivity.ACTION_WIDGET_SELECT_EXERCISE.equals(action)
                 || MainActivity.ACTION_WIDGET_SAVE_SET.equals(action)
                 || MainActivity.ACTION_WIDGET_REPEAT_LAST.equals(action)
                 || MainActivity.ACTION_WIDGET_PREVIOUS_EXERCISE.equals(action)
@@ -204,9 +223,12 @@ public final class WorkoutWidgetUpdateService {
         } else if (MainActivity.ACTION_WIDGET_REPS_UP.equals(action)) {
             adjustQuick(state, "reps", 1);
         } else if (MainActivity.ACTION_WIDGET_WEIGHT_DOWN.equals(action)) {
-            adjustQuick(state, "weight", -WEIGHT_STEP);
+            adjustQuick(state, "weight", -weightAdjustmentStep(state));
         } else if (MainActivity.ACTION_WIDGET_WEIGHT_UP.equals(action)) {
-            adjustQuick(state, "weight", WEIGHT_STEP);
+            adjustQuick(state, "weight", weightAdjustmentStep(state));
+        } else if (MainActivity.ACTION_WIDGET_TOGGLE_WEIGHT_STEP.equals(action)) {
+            toggleWeightAdjustmentStep(state);
+            code = "weight-step-toggled";
         } else if (MainActivity.ACTION_WIDGET_WEIGHT_FAST_DOWN.equals(action)) {
             adjustQuick(state, "weight", -WEIGHT_FAST_STEP);
         } else if (MainActivity.ACTION_WIDGET_WEIGHT_FAST_UP.equals(action)) {
@@ -220,6 +242,8 @@ public final class WorkoutWidgetUpdateService {
         } else if (MainActivity.ACTION_WIDGET_NEXT_EXERCISE.equals(action)) {
             moveToNextExercise(state);
             code = "next-exercise";
+        } else if (MainActivity.ACTION_WIDGET_SELECT_EXERCISE.equals(action)) {
+            code = selectExercise(state, state.optString("_nativeSelectedExerciseId", ""));
         } else if (MainActivity.ACTION_WIDGET_SAVE_SET.equals(action) || MainActivity.ACTION_WIDGET_COMPLETE_TIME_SET.equals(action)) {
             code = saveSet(context, state);
         } else if (MainActivity.ACTION_WIDGET_UNDO_LAST_SET.equals(action)) {
@@ -345,6 +369,23 @@ public final class WorkoutWidgetUpdateService {
         return "saved";
     }
 
+    private static double weightAdjustmentStep(JSONObject state) {
+        JSONObject quick = state.optJSONObject("quickLog");
+        double step = quick == null ? state.optDouble("weightAdjustmentStep", WEIGHT_STEP)
+                : quick.optDouble("weightAdjustmentStep", state.optDouble("weightAdjustmentStep", WEIGHT_STEP));
+        return Math.abs(step - WEIGHT_FAST_STEP) < 0.01 ? WEIGHT_FAST_STEP : WEIGHT_STEP;
+    }
+
+    private static void toggleWeightAdjustmentStep(JSONObject state) {
+        double next = weightAdjustmentStep(state) == WEIGHT_STEP ? WEIGHT_FAST_STEP : WEIGHT_STEP;
+        JSONObject quick = state.optJSONObject("quickLog");
+        if (quick == null) quick = new JSONObject();
+        put(quick, "weightAdjustmentStep", next);
+        put(state, "quickLog", quick);
+        put(state, "weightAdjustmentStep", next);
+        put(state, "lastWidgetActionText", "Paso de carga: " + formatWeight(next) + " " + state.optString("unit", "kg") + ".");
+    }
+
     private static String undoLastSet(Context context, JSONObject state) {
         String source = state.optString("_nativeActionSource", WorkoutQuickActionReducer.SOURCE_WIDGET);
         long expectedRevision = state.optLong("_nativeExpectedRevision", WorkoutNativeRepository.revision(state));
@@ -415,6 +456,22 @@ public final class WorkoutWidgetUpdateService {
         put(state, "workoutSession", session);
         refreshStateFromSession(state, session, previous);
         put(state, "lastWidgetActionText", "Ejercicio anterior: " + shortName(previous == null ? "" : previous.optString("name", "")) + ".");
+    }
+
+    private static String selectExercise(JSONObject state, String exerciseId) {
+        JSONObject session = ensureSession(state);
+        JSONArray exercises = session == null ? state.optJSONArray("exercises") : session.optJSONArray("exercises");
+        int index = indexOfExercise(exercises, exerciseId);
+        if (session == null || index < 0) {
+            put(state, "lastWidgetActionText", "No se encontro ese ejercicio en la rutina de hoy.");
+            return "missing-exercise";
+        }
+        JSONObject selected = exercises.optJSONObject(index);
+        put(session, "currentExerciseIndex", index);
+        put(state, "workoutSession", session);
+        refreshStateFromSession(state, session, selected);
+        put(state, "lastWidgetActionText", "Ejercicio elegido: " + shortName(selected == null ? "" : selected.optString("name", "")) + ".");
+        return "exercise-selected";
     }
 
     private static JSONObject ensureSession(JSONObject state) {
@@ -504,8 +561,11 @@ public final class WorkoutWidgetUpdateService {
         put(quick, "setNumber", setNumber);
         put(quick, "setType", "working");
         put(quick, "unit", state.optString("unit", "kg"));
+        double adjustmentStep = weightAdjustmentStep(state);
         put(quick, "weightStep", WEIGHT_STEP);
         put(quick, "weightFastStep", WEIGHT_FAST_STEP);
+        put(quick, "weightAdjustmentStep", adjustmentStep);
+        put(state, "weightAdjustmentStep", adjustmentStep);
         putCurrentSetStats(quick, state, exercise);
         put(quick, "hintText", "Ajusta reps/kg y guarda desde el widget.");
         put(state, "quickLog", quick);
@@ -527,6 +587,7 @@ public final class WorkoutWidgetUpdateService {
         if (selectedExercise == null) selectedExercise = currentExercise(state, session);
         put(state, "currentExerciseId", exerciseIdOf(selectedExercise));
         put(state, "currentExerciseName", selectedExercise == null ? "" : selectedExercise.optString("name", ""));
+        applyGuidanceForExercise(state, exerciseIdOf(selectedExercise));
         putCurrentSetStats(state, state, selectedExercise);
         put(state, "progressText", summary.optInt("completedExercises", 0) + "/" + summary.optInt("totalExercises", 0)
                 + " ejercicios · " + summary.optInt("totalSets", 0) + " series · "
@@ -769,10 +830,47 @@ public final class WorkoutWidgetUpdateService {
         return history == null || exerciseId == null ? null : history.optJSONObject(exerciseId);
     }
 
+    private static void applyGuidanceForExercise(JSONObject state, String exerciseId) {
+        JSONObject guidanceByExercise = state.optJSONObject("exerciseLoadGuidance");
+        JSONObject guidance = guidanceByExercise == null ? null : guidanceByExercise.optJSONObject(exerciseId);
+        if (guidance != null) {
+            put(state, "lastComparableSet", cloneJson(guidance.optJSONObject("lastComparableSet")));
+            put(state, "historicalLoadRecord", cloneJson(guidance.optJSONObject("historicalLoadRecord")));
+            put(state, "loadGuidanceSnapshot", cloneJson(guidance.optJSONObject("loadGuidanceSnapshot")));
+            return;
+        }
+        JSONObject history = historyForExercise(state, exerciseId);
+        if (history == null) {
+            state.remove("lastComparableSet");
+            state.remove("historicalLoadRecord");
+            state.remove("loadGuidanceSnapshot");
+            return;
+        }
+        JSONObject last = new JSONObject();
+        double lastWeight = Math.max(0, history.optDouble("lastWeight", 0));
+        int lastReps = Math.max(0, history.optInt("lastReps", 0));
+        put(last, "weightKg", lastWeight);
+        put(last, "reps", lastReps);
+        put(last, "label", formatWeight(displayWeight(state, lastWeight)) + " " + state.optString("unit", "kg") + (lastReps > 0 ? " x " + lastReps : ""));
+        JSONObject bestSource = history.optJSONObject("bestSet");
+        JSONObject record = new JSONObject();
+        double bestWeight = bestSource == null ? lastWeight : Math.max(0, bestSource.optDouble("weight", lastWeight));
+        int bestReps = bestSource == null ? lastReps : Math.max(0, bestSource.optInt("reps", lastReps));
+        put(record, "weightKg", bestWeight);
+        put(record, "reps", bestReps);
+        put(record, "label", formatWeight(displayWeight(state, bestWeight)) + " " + state.optString("unit", "kg") + (bestReps > 0 ? " x " + bestReps : ""));
+        put(state, "lastComparableSet", last);
+        put(state, "historicalLoadRecord", record);
+    }
+
     private static String exerciseIdOf(JSONObject exercise) {
         if (exercise == null) return "";
         String id = exercise.optString("id", "");
         return id.length() > 0 ? id : exercise.optString("exerciseId", "");
+    }
+
+    static String exerciseIdOfPublic(JSONObject exercise) {
+        return exerciseIdOf(exercise);
     }
 
     private static void touch(JSONObject state) {
@@ -1131,6 +1229,8 @@ public final class WorkoutWidgetUpdateService {
         long nativeRevision;
         boolean canUndo;
         boolean requiresEditor;
+        double weightStep;
+        String weightStepLabel;
 
         static WidgetState fromJson(JSONObject json) {
             WidgetState state = new WidgetState();
@@ -1185,12 +1285,16 @@ public final class WorkoutWidgetUpdateService {
                     state.quickWeightDescription = "Carga preparada " + state.quickWeightText;
                 }
                 state.setStatsText = setStatsText(json, quick);
+                state.weightStep = Math.abs(quick.optDouble("weightAdjustmentStep", WEIGHT_STEP) - WEIGHT_FAST_STEP) < 0.01
+                        ? WEIGHT_FAST_STEP : WEIGHT_STEP;
             } else {
                 state.quickRepsText = "8 reps";
                 state.quickWeightText = "0 " + json.optString("unit", "kg");
                 state.quickRepsDescription = "Repeticiones preparadas 8";
                 state.quickWeightDescription = "Carga preparada " + state.quickWeightText;
+                state.weightStep = WEIGHT_STEP;
             }
+            state.weightStepLabel = formatWeight(state.weightStep);
             state.actionStatus = opt(json, "lastWidgetActionText", "Ajusta reps/kg y guarda desde el widget.");
             state.loadGuidanceText = loadGuidanceText(json);
             return state;
@@ -1201,7 +1305,7 @@ public final class WorkoutWidgetUpdateService {
             JSONObject record = json.optJSONObject("historicalLoadRecord");
             String lastText = last == null ? "sin datos" : last.optString("label", "sin datos");
             String recordText = record == null ? "sin datos" : record.optString("label", "sin datos");
-            return "Última: " + lastText + " · Mejor: " + recordText;
+            return "Última: " + lastText + " · Máx: " + recordText;
         }
 
         void applyNativeControl(JSONObject control) {

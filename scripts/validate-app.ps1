@@ -308,7 +308,7 @@ foreach ($contract in @('helpButton','statCard','renderRoot','syncLabel')) { Ass
 foreach ($contract in @('calculateSetMetrics','calculateSetsMetrics','bodyweightReps','addedLoadVolume','estimatedOneRepMax','Sin series registradas')) {
     Assert-True ($workoutMetrics.Contains($contract)) "Falta contrato de metricas de gym: $contract"
 }
-foreach ($contract in @('quickStickyActions','data-quick-adjust="reps:1"','data-quick-adjust="weight:0.5"','data-quick-adjust="weight:2.5"','data-quick-adjust="weight:5"','undoDeleteQuickSetPayload','restTimerEnabled','hapticEnabled','quickDrafts','Finalizar entrenamiento')) {
+foreach ($contract in @('quickStickyActions','data-quick-adjust="reps:1"','data-quick-adjust-step="weight:-1"','data-quick-adjust-step="weight:1"','data-quick-weight-step','quickWeightAdjustmentStep===0.5?5:0.5','undoDeleteQuickSetPayload','restTimerEnabled','hapticEnabled','quickDrafts','Finalizar entrenamiento')) {
     Assert-True ($workout.Contains($contract)) "Falta UX de registro rapido Gym: $contract"
 }
 foreach ($contract in @('partyStickySave','data-party-adjust="reps:1"','data-party-adjust="weight:0.5"','data-party-adjust="weight:2.5"','data-party-adjust="weight:5"','partyQuickDrafts','party-undo-delete-set','Finalizar entrenamiento')) {
@@ -696,7 +696,7 @@ foreach ($contract in @(
     'migrateExerciseLibrary',
     'exerciseLibraryEditor',
     'handleExerciseLibraryAction',
-    'Registro r'
+    'Registrar serie'
 )) {
     Assert-True ($workout.Contains($contract)) "Falta contrato web gym/widget: $contract"
 }

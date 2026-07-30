@@ -13,6 +13,8 @@ public final class WorkoutQuickActionReducer {
     public static final String REPEAT_LAST_SET = "REPEAT_LAST_SET";
     public static final String PREVIOUS_EXERCISE = "PREVIOUS_EXERCISE";
     public static final String NEXT_EXERCISE = "NEXT_EXERCISE";
+    public static final String SELECT_EXERCISE = "SELECT_EXERCISE";
+    public static final String TOGGLE_WEIGHT_STEP = "TOGGLE_WEIGHT_STEP";
     public static final String COMPLETE_TIME_SET = "COMPLETE_TIME_SET";
     public static final String SOURCE_WIDGET = "android-widget";
     public static final String SOURCE_NOTIFICATION = "android-notification";
@@ -20,6 +22,10 @@ public final class WorkoutQuickActionReducer {
     private WorkoutQuickActionReducer() {}
 
     public static synchronized Result dispatch(Context context, String rawAction, String source, String deliveryId) {
+        return dispatch(context, rawAction, source, deliveryId, "");
+    }
+
+    public static synchronized Result dispatch(Context context, String rawAction, String source, String deliveryId, String exerciseId) {
         String action = normalize(rawAction);
         if (action.isEmpty()) return Result.unhandled();
         String safeSource = SOURCE_NOTIFICATION.equals(source) ? SOURCE_NOTIFICATION : SOURCE_WIDGET;
@@ -30,10 +36,12 @@ public final class WorkoutQuickActionReducer {
         put(state, "_nativeActionSource", safeSource);
         put(state, "_nativeExpectedRevision", expectedRevision);
         put(state, "_nativeReducerAction", action);
+        if (exerciseId != null && !exerciseId.trim().isEmpty()) put(state, "_nativeSelectedExerciseId", exerciseId.trim());
         String code = WorkoutWidgetUpdateService.applyDirectAction(context, state, rawAction);
         state.remove("_nativeActionSource");
         state.remove("_nativeExpectedRevision");
         state.remove("_nativeReducerAction");
+        state.remove("_nativeSelectedExerciseId");
         if ("unhandled".equals(code)) return Result.unhandled();
 
         long revision = WorkoutNativeRepository.advanceRevision(state);
@@ -60,6 +68,8 @@ public final class WorkoutQuickActionReducer {
         if (MainActivity.ACTION_WIDGET_REPEAT_LAST.equals(action)) return REPEAT_LAST_SET;
         if (MainActivity.ACTION_WIDGET_PREVIOUS_EXERCISE.equals(action)) return PREVIOUS_EXERCISE;
         if (MainActivity.ACTION_WIDGET_NEXT_EXERCISE.equals(action)) return NEXT_EXERCISE;
+        if (MainActivity.ACTION_WIDGET_SELECT_EXERCISE.equals(action)) return SELECT_EXERCISE;
+        if (MainActivity.ACTION_WIDGET_TOGGLE_WEIGHT_STEP.equals(action)) return TOGGLE_WEIGHT_STEP;
         if (MainActivity.ACTION_WIDGET_COMPLETE_TIME_SET.equals(action)) return COMPLETE_TIME_SET;
         return "";
     }

@@ -51,6 +51,8 @@ public class MainActivity extends Activity {
     public static final String ACTION_WIDGET_WEIGHT_UP = "com.protocolo.cien.ACTION_WIDGET_WEIGHT_UP";
     public static final String ACTION_WIDGET_WEIGHT_FAST_DOWN = "com.protocolo.cien.ACTION_WIDGET_WEIGHT_FAST_DOWN";
     public static final String ACTION_WIDGET_WEIGHT_FAST_UP = "com.protocolo.cien.ACTION_WIDGET_WEIGHT_FAST_UP";
+    public static final String ACTION_WIDGET_TOGGLE_WEIGHT_STEP = "com.protocolo.cien.ACTION_WIDGET_TOGGLE_WEIGHT_STEP";
+    public static final String ACTION_WIDGET_SELECT_EXERCISE = "com.protocolo.cien.ACTION_WIDGET_SELECT_EXERCISE";
     public static final String ACTION_WIDGET_SAVE_SET = "com.protocolo.cien.ACTION_WIDGET_SAVE_SET";
     public static final String ACTION_WIDGET_REPEAT_LAST = "com.protocolo.cien.ACTION_WIDGET_REPEAT_LAST";
     public static final String ACTION_WIDGET_PREVIOUS_EXERCISE = "com.protocolo.cien.ACTION_WIDGET_PREVIOUS_EXERCISE";

@@ -91,6 +91,7 @@
   let restTimerEndsAt=0;
   let nativeTimerStatus='idle';
   let nativeTimerPausedSeconds=0;
+  let quickWeightAdjustmentStep=0.5;
   let importingNativeWidgetState=false;
   let nativeMutationImportPromise=null;
 
@@ -681,43 +682,42 @@
     insertionAnchor.insertAdjacentHTML('afterend',`
       <div class="moduleCard" id="todayWorkoutPanel">
         <div class="actionFocusTop"><div><h3 id="todayWorkoutTitle">Entrenamiento de hoy</h3><div class="muted small" id="todayWorkoutSummary"></div></div><span class="statusChip good" id="todayWorkoutScore">Gym</span></div>
-        <div class="workoutTodayGrid">
-          <div>
-            <div class="entryList" id="todayWorkoutExercises"></div>
-            <div class="workoutSafety">Esta app no reemplaza asesoramiento de un entrenador, médico o profesional de salud. Ajustá cargas según técnica, dolor, fatiga y seguridad.</div>
-          </div>
-          <div>
-            <div class="quickStats" id="todayWorkoutProgress"></div>
-            <div class="auditItem good" id="physicalLever">Registrar pesos para medir progreso. Priorizar técnica antes que carga.</div>
-            <div class="buttons">
-              <button type="button" class="good" id="startTodayWorkoutBtn">Empezar entrenamiento</button>
-              <button type="button" class="secondary" id="openQuickLoggerBtn">Registrar serie</button>
-            </div>
+        <div class="workoutTodaySummary">
+          <div class="quickStats" id="todayWorkoutProgress"></div>
+          <p class="workoutLever" id="physicalLever">Registrar pesos permite medir progreso. Priorizá técnica antes que carga.</p>
+          <div class="buttons">
+            <button type="button" class="good" id="startTodayWorkoutBtn">Empezar entrenamiento</button>
+            <button type="button" class="secondary" id="openQuickLoggerBtn">Continuar entrenamiento</button>
           </div>
         </div>
+        <details class="todayExerciseDetails">
+          <summary>Ver rutina del día <span class="statusChip" id="todayWorkoutExerciseCount">0 ejercicios</span></summary>
+          <div class="todayExerciseDetailsBody">
+            <div class="entryList" id="todayWorkoutExercises"></div>
+            <details class="workoutSafety"><summary>Entrenar con seguridad</summary><p>Esta app no reemplaza asesoramiento profesional. Ajustá cargas según técnica, dolor, fatiga y seguridad.</p></details>
+          </div>
+        </details>
       </div>
       <div class="moduleCard" id="quickSetLoggerPanel">
-        <h3>Registro rápido de serie</h3>
+        <div class="quickLoggerHeading"><div><h3>Registrar serie</h3><p class="muted small">Elegí ejercicio, reps y carga. El resto es opcional.</p></div><span class="statusChip">Rápido</span></div>
         <div class="quickLogger">
-          <div class="formGrid">
-            <div class="field"><label>Buscar ejercicio</label><input type="search" id="quickExerciseSearch" autocomplete="off" placeholder="Nombre o alias"></div>
-            <div class="field"><label>Ejercicio actual</label><select id="quickExerciseSelect"></select></div>
+          <div class="quickExerciseChooser">
+            <div class="field"><label for="quickExerciseSelect">Ejercicio</label><select id="quickExerciseSelect"></select></div>
+            <details class="quickExerciseSearchDetails"><summary>Buscar otro ejercicio</summary><div class="field"><label for="quickExerciseSearch">Nombre o alias</label><input type="search" id="quickExerciseSearch" autocomplete="off" placeholder="Ej. press, dominadas…"></div></details>
           </div>
           <div class="quickPrimaryInputs">
             <div class="field quickSetNumberField"><label>Serie</label><input type="text" inputmode="decimal" id="quickSetNumber" value="1"></div>
             <div class="field" id="quickRepsField"><label>Repeticiones</label><input type="text" inputmode="decimal" id="quickReps" value="8"><div class="quickAdjustRow"><button type="button" class="secondary" data-quick-adjust="reps:-1">-1</button><button type="button" class="secondary" data-quick-adjust="reps:1">+1</button></div></div>
-            <div class="field" id="quickWeightField"><label id="quickWeightLabel">Kilos / lastre</label><input type="text" inputmode="decimal" id="quickWeight" value="0"><div class="quickAdjustRow"><button type="button" class="secondary" data-quick-adjust="weight:-0.5">-0.5</button><button type="button" class="secondary" data-quick-adjust="weight:0.5">+0.5</button><button type="button" class="secondary" data-quick-adjust="weight:-2.5">-2.5</button><button type="button" class="secondary" data-quick-adjust="weight:2.5">+2.5</button><button type="button" class="secondary" data-quick-adjust="weight:-5">-5</button><button type="button" class="secondary" data-quick-adjust="weight:5">+5</button></div></div>
+            <div class="field" id="quickWeightField"><label id="quickWeightLabel">Kilos / lastre</label><input type="text" inputmode="decimal" id="quickWeight" value="0"><div class="quickWeightControls"><button type="button" class="secondary" id="quickWeightMinusBtn" data-quick-adjust-step="weight:-1">-0,5</button><button type="button" class="quiet" id="quickWeightStepBtn" data-quick-weight-step>Paso 0,5 kg</button><button type="button" class="secondary" id="quickWeightPlusBtn" data-quick-adjust-step="weight:1">+0,5</button></div></div>
             <div class="field hidden" id="quickDurationField"><label>Duracion (segundos)</label><input type="text" inputmode="decimal" id="quickDurationSeconds" value="60"></div>
             <div class="field hidden" id="quickDistanceField"><label>Distancia (metros)</label><input type="text" inputmode="decimal" id="quickDistanceMeters" value="1000"></div>
           </div>
           <div class="quickStickyActions">
             <button type="button" class="good" id="saveQuickSetBtn">Guardar serie</button>
-            <button type="button" class="secondary" id="repeatLastSetBtn">Repetir última</button>
-            <button type="button" class="secondary" id="undoQuickSetDeleteBtn" disabled>Deshacer</button>
           </div>
           <div class="quickRestTimer hidden" id="quickRestTimer" role="timer" aria-live="polite"><span>Descanso</span><strong id="quickRestTimerValue">0:00</strong><div class="quickTimerActions"><button type="button" class="secondary" id="quickTimerStartBtn">Iniciar</button><button type="button" class="secondary" id="quickTimerPauseBtn">Pausar</button><button type="button" class="secondary" id="quickTimerAddBtn">+15 s</button></div></div>
-          <div class="auditItem" id="quickLastHint">Última vez: sin datos todavía.</div>
-          <div class="auditItem" id="quickSetStats">Ejercicio: 0 series · músculo: 0 series.</div>
+          <div class="quickContextSummary"><p id="quickLastHint">Última vez: sin datos todavía.</p><p id="quickSetStats">Ejercicio: 0 series · músculo: 0 series.</p></div>
+          <div class="quickContextActions"><button type="button" class="quiet" id="repeatLastSetBtn">Repetir última</button><button type="button" class="quiet" id="undoQuickSetDeleteBtn" disabled>Deshacer</button></div>
           <div class="quickLoggedSets" id="quickLoggedSets"></div>
           <details class="quickSecondaryDetails">
             <summary>Opcional y finalizar</summary>
@@ -738,11 +738,9 @@
         </div>
       </div>
       <div class="moduleCard" id="workoutConfigPanel">
-        <section class="workoutQuickAccess" aria-labelledby="workoutQuickAccessTitle">
-          <div>
-            <h3 id="workoutQuickAccessTitle">Acceso rápido durante el entrenamiento</h3>
-            <p class="muted">Registrá una serie sin recorrer toda la app. El widget y los controles de entrenamiento conservan los cambios en el dispositivo hasta incorporarlos al historial.</p>
-          </div>
+        <div class="workoutQuickAccessShell"><details class="workoutQuickAccess" aria-labelledby="workoutQuickAccessTitle">
+          <summary><span id="workoutQuickAccessTitle">Acceso rápido en Android</span><small>Widget y pantalla de bloqueo</small></summary>
+          <p class="muted">Registrá una serie sin abrir toda la app.</p>
           <div class="workoutQuickAccessGrid">
             <article class="workoutQuickAccessItem">
               <div><strong>Widget de pantalla de inicio</strong><p class="muted small" id="workoutWidgetInstallStatus" role="status">Comprobando disponibilidad…</p></div>
@@ -761,7 +759,7 @@
             <p class="muted small" id="workoutQuickAccessDiagnostic">Sin datos técnicos disponibles en la versión web.</p>
             <button type="button" class="secondary" id="refreshWorkoutWidgetBtn">Actualizar acceso rápido</button>
           </details>
-        </section>
+        </details></div>
         <details class="planAdvancedEditor">
         <summary>Rutina y preferencias</summary>
         <div class="formGrid">
@@ -920,6 +918,8 @@
   function renderTodayWorkout(date=todayStr()){
     const plan=planForDate(date),session=latestSessionForDate(date),summary=session?sessionSummary(session):null;
     const title=document.getElementById('todayWorkoutTitle'),subtitle=document.getElementById('todayWorkoutSummary'),list=document.getElementById('todayWorkoutExercises'),progress=document.getElementById('todayWorkoutProgress'),score=document.getElementById('todayWorkoutScore'),lever=document.getElementById('physicalLever');
+    const startButton=document.getElementById('startTodayWorkoutBtn'),continueButton=document.getElementById('openQuickLoggerBtn');
+    const exerciseCount=document.getElementById('todayWorkoutExerciseCount');
     if(!title||!subtitle||!list||!progress) return;
     title.textContent=`${plan.weekday} — ${plan.name}`;
     subtitle.textContent=plan.type==='rest'?plan.message:(plan.muscles||[]).join(' · ');
@@ -930,20 +930,27 @@
       progress.innerHTML=[['Estado','Descanso'],['Sugerencia','Movilidad'],['Registro',session?'Hecho':'Opcional'],['Widget',settingsValue.widgetEnabled?'Activo':'Pausado']].map(statCard).join('');
       if(score) score.textContent='Recuperación';
       if(lever) lever.textContent='Hoy toca descanso: recuperación también cuenta.';
+      if(startButton)startButton.hidden=true;
+      if(continueButton)continueButton.hidden=true;
+      if(exerciseCount)exerciseCount.textContent='Recuperación';
       return;
     }
     const exercises=session?.exercises||plan.exercises;
+    if(exerciseCount)exerciseCount.textContent=`${exercises.length} ejercicios`;
     const current=currentExercise(session)||exercises.find(x=>!x.completed)||exercises[0];
     list.innerHTML=exercises.map(exercise=>{
       const sets=exercise.sets?.length||0,done=!!exercise.completed,cur=current && (current.id===exercise.id || current.exerciseId===exercise.exerciseId);
       return `<div class="workoutExerciseCard ${done?'done':''} ${cur?'current':''}"><strong>${escapeHtml(exercise.name)}</strong><div class="meta">${escapeHtml(exercise.muscle)} · ${sets} serie(s) registradas${exercise.bodyweight?' · peso corporal':''}</div></div>`;
     }).join('');
-    const completed=summary?.completedExercises||0,total=exercises.length,totalSets=summary?.totalSets||0,volume=summary?.totalVolume||0,compliance=summary?.compliance||0;
+    const completed=summary?.completedExercises||0,total=exercises.length,totalSets=summary?.totalSets||0,volume=summary?.totalVolume||0;
     const displaySummary=summary?{...summary,externalLoadVolume:displayVolume(summary.externalLoadVolume,settingsValue.unit),addedLoadVolume:displayVolume(summary.addedLoadVolume,settingsValue.unit)}:{};
     const progressText=window.WORKOUT_METRICS?.formatProgress?.(displaySummary,settingsValue.unit)||`${displayVolume(volume,settingsValue.unit).toLocaleString()} ${settingsValue.unit}`;
-    progress.innerHTML=[['Ejercicios',`${completed}/${total}`],['Series',totalSets],['Progreso',progressText],['Cumplimiento',`${compliance}%`]].map(statCard).join('');
+    progress.innerHTML=[['Ejercicios',`${completed}/${total}`],['Series',totalSets],['Carga registrada',progressText]].map(statCard).join('');
     if(score) score.textContent=`Score gym ${Math.min(100,Math.round((completed/Math.max(1,total))*70 + Math.min(30,totalSets*2)))}/100`;
     if(lever) lever.textContent=totalSets?'Según lo registrado, priorizá técnica antes que carga y registrá la siguiente serie.':'Palanca física de hoy: registrar pesos para medir progreso.';
+    const active=session?.status==='en progreso';
+    if(startButton)startButton.hidden=active;
+    if(continueButton){continueButton.hidden=!active;continueButton.textContent='Continuar entrenamiento';}
   }
   function statCard([k,v]){
     return window.WORKOUT_UI?.statCard?.(k,String(v))??`<div class="quickStat"><span>${escapeHtml(k)}</span><strong>${escapeHtml(String(v))}</strong></div>`;
@@ -1136,19 +1143,21 @@
       window.APP_DRAFTS?.announceRestored?.({id:persistentDraft.id,label:'Borrador de serie restaurado.',onDiscard:()=>{quickDrafts.delete(quickDraftKey(currentQuickExerciseId));renderQuickLogger();}});
     }
     const hint=document.getElementById('quickLastHint');
-    if(h) hint.textContent=`Última vez: ${h.name} — ${h.lastSet?setPerformanceText(h.lastSet,exercise):`${displayWeight(h.lastWeight)} ${settings().unit} x ${h.lastReps||0} reps`}. Podés repetir el registro anterior; si te sentís bien, progresá de forma gradual.`;
-    else hint.textContent='Última vez: sin datos todavía. Si estás fatigado, mantener carga también cuenta.';
+    if(h) hint.textContent=`Última: ${h.lastSet?setPerformanceText(h.lastSet,exercise):`${displayWeight(h.lastWeight)} ${settings().unit} × ${h.lastReps||0}`}.`;
+    else hint.textContent='Última: todavía sin datos.';
     const stat=document.getElementById('quickSetStats');
     if(stat){
       const exerciseSets=exerciseSetCount(exercise);
       const muscleSets=muscleSetCount(source,exercise.muscle);
       const typeCounts=setModel()?.counts?.(sets)||{working:exerciseSets,warmup:0,supplementary:0};
       const detail=[`${typeCounts.working} efectiva(s)`,typeCounts.warmup?`${typeCounts.warmup} calentamiento(s)`:null,typeCounts.supplementary?`${typeCounts.supplementary} complementaria(s)`:null].filter(Boolean).join(' · ');
-      stat.textContent=`Series de este ejercicio: ${exerciseSets} (${detail}). Total de ${exercise.muscle}: ${muscleSets}.`;
+      stat.textContent=`Ejercicio: ${exerciseSets} · ${exercise.muscle}: ${muscleSets}${detail?` · ${detail}`:''}.`;
     }
     const logged=document.getElementById('quickLoggedSets'); if(logged)logged.innerHTML=quickSetRowsHtml(exercise);
     const save=document.getElementById('saveQuickSetBtn'); if(save)save.textContent=editingSet?'Guardar cambios':'Guardar serie';
-    const undo=document.getElementById('undoQuickSetDeleteBtn'); if(undo)undo.disabled=!lastDeletedQuickSet;
+    const undo=document.getElementById('undoQuickSetDeleteBtn'); if(undo){undo.disabled=!lastDeletedQuickSet;undo.hidden=!lastDeletedQuickSet;}
+    const repeat=document.getElementById('repeatLastSetBtn');if(repeat)repeat.hidden=!(last||h);
+    updateQuickWeightStepUi();
     if(!syncNativeTimerFromBridge())updateRestTimerDisplay();
     const show=settings().showRir;
     ['quickRir','quickRpe'].forEach(id=>{const field=document.getElementById(id)?.closest('.field'); if(field) field.classList.toggle('hidden',!show);});
@@ -1172,11 +1181,20 @@
   }
   function openQuickSetLogger(exerciseId){
     const session=ensureSession(todayStr());
+    activateNativeControlsForSession();
     if(exerciseId) currentQuickExerciseId=exerciseId;
     else if(session) currentQuickExerciseId=currentExercise(session)?.id || currentExercise(session)?.exerciseId || null;
     openGymToday();
     renderQuickLogger();
     document.getElementById('quickSetLoggerPanel')?.scrollIntoView({behavior:window.preferredMotionBehavior?.()||'auto',block:'start'});
+  }
+  function activateNativeControlsForSession(){
+    if(!window.AndroidBridge?.requestWorkoutNotificationPermission)return;
+    enableNativeWorkoutFeatures({notification:true});
+    const permission=String(window.AndroidBridge.workoutNotificationPermissionState?.()||'');
+    if(permission==='prompt')window.AndroidBridge.requestWorkoutNotificationPermission();
+    else syncWorkoutWidget();
+    window.setTimeout(renderWorkoutQuickAccessStatus,350);
   }
   function selectedSessionForQuick(){
     return ensureSession(todayStr());
@@ -1610,9 +1628,19 @@
     const id=target==='reps'?'quickReps':'quickWeight',input=document.getElementById(id);if(!input)return;
     const value=Math.max(0,numeric(input.value,0)+numeric(delta,0));input.value=target==='reps'?Math.round(value):Math.round(value*2)/2;captureQuickDraft();input.focus();
   }
+  function updateQuickWeightStepUi(){
+    const label=quickWeightAdjustmentStep===5?'5':'0,5';
+    const minus=document.getElementById('quickWeightMinusBtn'),plus=document.getElementById('quickWeightPlusBtn'),toggle=document.getElementById('quickWeightStepBtn');
+    if(minus){minus.textContent=`-${label}`;minus.setAttribute('aria-label',`Disminuir ${label} ${settings().unit}`);}
+    if(plus){plus.textContent=`+${label}`;plus.setAttribute('aria-label',`Aumentar ${label} ${settings().unit}`);}
+    if(toggle){toggle.textContent=`Paso ${label} ${settings().unit}`;toggle.setAttribute('aria-label',`Cambiar paso de carga. Paso actual ${label} ${settings().unit}`);}
+  }
   async function handleQuickLoggerAction(event){
     const adjust=event.target.closest('[data-quick-adjust]');
     if(adjust){const [target,delta]=adjust.dataset.quickAdjust.split(':');adjustQuickInput(target,delta);return;}
+    const stepped=event.target.closest('[data-quick-adjust-step]');
+    if(stepped){const [target,direction]=stepped.dataset.quickAdjustStep.split(':');adjustQuickInput(target,Number(direction)*quickWeightAdjustmentStep);return;}
+    if(event.target.closest('[data-quick-weight-step]')){quickWeightAdjustmentStep=quickWeightAdjustmentStep===0.5?5:0.5;updateQuickWeightStepUi();return;}
     const edit=event.target.closest('[data-quick-edit-set]');
     if(edit){window.APP_DRAFTS?.remove?.(quickPersistentDraftId());editingQuickSetId=edit.dataset.quickEditSet;quickFormDirty=false;quickDrafts.delete(quickDraftKey());renderQuickLogger();document.getElementById('quickReps')?.focus();return;}
     const remove=event.target.closest('[data-quick-delete-set]');
@@ -1713,9 +1741,9 @@
       return;
     }
     const currentStatus=nativeBridgeJson('getWorkoutWidgetStatus');
-    if(currentStatus?.notificationCode==='not-posted'&&window.AndroidBridge?.openWorkoutNotificationSettings){
+    if(['not-posted','active'].includes(currentStatus?.notificationCode)&&window.AndroidBridge?.openWorkoutNotificationSettings){
       nativeBridgeJson('openWorkoutNotificationSettings');
-      flash('Revisá que el canal Controles de entrenamiento pueda mostrarse en la pantalla de bloqueo.');
+      flash('Revisá que Controles de entrenamiento pueda mostrarse en la pantalla de bloqueo.');
       return;
     }
     enableNativeWorkoutFeatures({notification:true});
@@ -1757,16 +1785,16 @@
     if(addButton){setStateDisabled(addButton,instances>0);addButton.textContent=instances>0?'Widget agregado':'Agregar widget';}
     const permission=capabilities.notificationPermission||'unknown';
     const notificationCode=status?.notificationCode||'';
-    if(notificationCode==='active')lockStatus.textContent='Controles visibles durante el entrenamiento. Bloqueá el teléfono para comprobarlos.';
+    if(notificationCode==='active')lockStatus.textContent='Notificación activa. Si no aparece al bloquear, revisá su visibilidad en Android.';
     else if(notificationCode==='not-posted')lockStatus.textContent='Android no está mostrando los controles. Revisá el canal de notificaciones.';
     else if(notificationCode==='waiting-for-session')lockStatus.textContent='Controles activados. Iniciá un entrenamiento para que aparezcan.';
     else if(lockEnabled&&permission==='granted')lockStatus.textContent='Controles activados. Iniciá un entrenamiento para que aparezcan.';
     else if(permission==='blocked'||permission==='denied')lockStatus.textContent='Notificaciones desactivadas. Podés habilitarlas desde Ajustes de Android.';
     else lockStatus.textContent='Puede depender de tu versión de Android y del fabricante.';
     if(enableButton){
-      const needsNotificationReview=notificationCode==='not-posted';
+      const needsNotificationReview=['not-posted','active'].includes(notificationCode);
       setStateDisabled(enableButton,lockEnabled&&permission==='granted'&&!needsNotificationReview);
-      enableButton.textContent=needsNotificationReview?'Revisar notificación':lockEnabled&&permission==='granted'?'Controles activos':'Activar controles';
+      enableButton.textContent=notificationCode==='active'?'Configurar bloqueo':notificationCode==='not-posted'?'Revisar notificación':lockEnabled&&permission==='granted'?'Controles activos':'Activar controles';
     }
     const queue=status?.queue||{};
     const pending=Math.max(0,Number(queue.pending||0));
@@ -2084,7 +2112,57 @@
       laterality:normalizedLast.laterality||'bilateral',
       repsMode:normalizedLast.repsMode||'total'
     };
-    const guidance=current&&window.WORKOUT_LOAD_GUIDANCE?.calculate?.({sessions:sessions(),exercise:current,candidateSet})||null;
+    const workoutSessions=sessions();
+    const calculateGuidance=(exercise,override=null)=>{
+      if(!exercise||!window.WORKOUT_LOAD_GUIDANCE?.calculate)return null;
+      const exerciseSets=exercise.sets||[];
+      const exerciseLast=exerciseSets.slice().reverse().find(set=>setModel()?.countsForProgression?.(set)??true)||exerciseSets[exerciseSets.length-1]||null;
+      const exerciseHistory=exercise.exerciseId?history()[exercise.exerciseId]:null;
+      const normalized=normalizeSet(exerciseLast||exerciseHistory?.lastSet||{
+        reps:exerciseHistory?.lastReps??8,
+        weightKg:exerciseHistory?.lastWeight??0,
+        measurementMode:exercise.measurementMode||'reps',
+        loadMode:exercise.defaultLoadMode||(exercise.bodyweight?'bodyweight':'total')
+      },exercise);
+      const comparableCandidate=override||{
+        reps:Math.max(0,Number(normalized.reps??exerciseHistory?.lastReps??8)||0),
+        weightKg:Math.max(0,Number(normalized.weightKg??exerciseHistory?.lastWeight??0)||0),
+        durationSeconds:Math.max(0,Number(normalized.durationSeconds)||0),
+        distanceMeters:Math.max(0,Number(normalized.distanceMeters)||0),
+        bodyweight:!!(normalized.bodyweight||exercise.bodyweight),
+        measurementMode:normalized.measurementMode||exercise.measurementMode||'reps',
+        loadMode:normalized.loadMode||exercise.defaultLoadMode||(exercise.bodyweight?'bodyweight':'total'),
+        equipmentId:normalized.equipmentId||exercise.equipmentId||'',
+        equipmentName:normalized.equipmentName||exercise.equipmentName||'',
+        barWeightKg:Math.max(0,Number(normalized.barWeightKg)||0),
+        laterality:normalized.laterality||'bilateral',
+        repsMode:normalized.repsMode||'total'
+      };
+      return window.WORKOUT_LOAD_GUIDANCE.calculate({sessions:workoutSessions,exercise,candidateSet:comparableCandidate});
+    };
+    const guidance=current?calculateGuidance(current,candidateSet):null;
+    const exerciseLoadGuidance={};
+    exercises.forEach(exercise=>{
+      const id=exercise.id||exercise.exerciseId;
+      const value=id===currentId?guidance:calculateGuidance(exercise);
+      if(!id||!value)return;
+      const snapshot={
+        lastComparableSet:value.lastComparableSet||null,
+        historicalLoadRecord:value.historicalLoadRecord||null,
+        loadGuidanceSnapshot:{
+          exerciseId:value.exerciseId,
+          comparisonKey:value.comparisonKey,
+          last:value.lastComparableSet||null,
+          record:value.historicalLoadRecord||null,
+          recordKind:value.recordKind,
+          comparisonLabel:value.comparisonLabel,
+          confidence:value.confidence,
+          calculatedAt:value.calculatedAt,
+          policyVersion:value.policyVersion
+        }
+      };
+      exerciseLoadGuidance[id]=snapshot;
+    });
     return {
       schemaVersion:3,
       featureFlags:window.APP_FEATURE_FLAGS?.all?.()||{schemaVersion:1,nativeWorkoutControlsV1:false,lockScreenWorkoutControls:false,nativeRestTimer:false,multiPartyWorkoutSharing:false},
@@ -2149,6 +2227,7 @@
         calculatedAt:guidance.calculatedAt,
         policyVersion:guidance.policyVersion
       }:null,
+      exerciseLoadGuidance,
       quickLog:{
         currentExerciseId:currentId,
         exerciseName:current?.name||'',
@@ -2169,6 +2248,7 @@
         unit:s.unit,
         weightStep:0.5,
         weightFastStep:5,
+        weightAdjustmentStep:[0.5,5].includes(Number(previousQuick.weightAdjustmentStep))?Number(previousQuick.weightAdjustmentStep):0.5,
         currentExerciseSets,
         currentMuscleSets,
         currentMuscleName:current?.muscle||'',

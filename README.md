@@ -15,7 +15,7 @@ PWA y APK Android para medir habitos, atencion, actividad fisica y nutricion con
 
 ## Navegacion y diseno
 
-La version actual `v2.7.0` (build web `91`, Android `35`) usa una barra inferior movil con cinco destinos: **Inicio**,
+La version actual `v2.7.0` (build web `92`, Android `36`) usa una barra inferior movil con cinco destinos: **Inicio**,
 **Gym**, **Nutricion**, **Progreso** y **Mas**. En escritorio usa una barra
 lateral compacta. Gym Party se abre desde **Gym > Grupo**, desde un acceso
 discreto en Inicio o mediante un enlace `gymPartyCode`; ya no ocupa un boton
@@ -516,9 +516,13 @@ Los layouts compacto, estandar y expandido se eligen por el tamaño actual del
 widget, sin usar las dimensiones máximas de otra orientación. Por eso tocar un
 control ya no despliega de pronto otro layout. Ningun control funcional se
 oculta en 1 dp y todos los botones principales miden al menos 48 dp. El
-compacto mantiene una sola fila con **-5**, **Guardar** y **+5**; el estandar y
-el expandido ofrecen correccion simetrica de reps, peso en pasos de 5 unidades,
-Guardar, Repetir o Deshacer y Siguiente. Peso corporal, lastre, asistencia,
+compacto mantiene una sola fila con **-0,5**, **Guardar** y **+0,5**; el estandar y
+el expandido ofrecen correccion simetrica de reps y peso. El paso normal de
+carga es **0,5 kg**; tocar el valor central alterna temporalmente a **5 kg** para
+llegar rapido a cargas altas, sin desplegar botones adicionales. Tocar el nombre
+del ejercicio abre un selector nativo con toda la rutina, por lo que no hace
+falta recorrerla con Anterior/Siguiente. Al elegirlo se muestran su ultima carga
+comparable y su maximo historico comparable. Peso corporal, lastre, asistencia,
 tiempo y distancia muestran su semantica correspondiente.
 
 El widget y la notificacion reutilizan `WorkoutQuickActionReducer`. Cada serie
@@ -530,10 +534,12 @@ cerrada. **Guardado en el dispositivo** no se presenta como sincronizado: Gym
 Party se prepara despues de la importacion privada.
 
 Los controles de entrenamiento se activan de forma explicita y solicitan
-`POST_NOTIFICATIONS` solo en ese momento. La notificacion existe unicamente
-durante una sesion activa, usa `VISIBILITY_PRIVATE` y su version publica solo
-muestra **Entrenamiento en curso**. No se promete un widget de keyguard: la
-compatibilidad depende de Android y del fabricante. La app completa se abre
+`POST_NOTIFICATIONS` al iniciar o activar expresamente esos controles. La
+notificacion existe unicamente durante una sesion activa, usa un canal silencioso
+de importancia predeterminada, `VISIBILITY_PRIVATE` y una version publica que
+solo muestra **Entrenamiento en curso**. No se promete un widget de keyguard:
+Android moderno usa esta notificacion como acceso de bloqueo y cada fabricante
+puede ocultarla hasta que se habilite el canal. La app completa se abre
 respetando el desbloqueo del sistema.
 
 Después de activar los controles hay que tocar **Empezar entrenamiento**. La

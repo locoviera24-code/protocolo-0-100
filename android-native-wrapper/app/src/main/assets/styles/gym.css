@@ -1,3 +1,16 @@
+#tab-gym > .moduleHero {
+  padding: var(--space-4);
+}
+#tab-gym > .moduleHero #gymStats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+#tab-gym > .moduleHero #gymStats .quickStat {
+  min-height: 0;
+  padding: var(--space-2) var(--space-3);
+}
 .workoutTodayGrid {
   display: grid;
   grid-template-columns: 1.15fr 0.85fr;
@@ -26,15 +39,36 @@
   background: var(--state-info-soft);
 }
 .quickLogger {
-  border: 1px solid var(--state-info-border);
-  background: linear-gradient(
-    180deg,
-    var(--state-info-soft),
-    var(--color-success-soft)
-  );
-  border-radius: var(--radius-panel);
-  padding: 14px;
-  margin-top: 12px;
+  border: 1px solid var(--line);
+  background: var(--surface-glass-soft);
+  border-radius: var(--radius-card);
+  padding: var(--space-4);
+  margin-top: var(--space-3);
+}
+.workoutTodaySummary {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+.workoutTodaySummary .buttons {
+  margin: 0;
+}
+.todayExerciseDetails {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+}
+.todayExerciseDetails > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: var(--touch-target);
+  cursor: pointer;
+  font-weight: 750;
+}
+.todayExerciseDetailsBody {
+  margin-top: var(--space-2);
 }
 .quickLogger input,
 .quickLogger select {
@@ -50,6 +84,34 @@
   gap: 10px;
   margin-top: 10px;
 }
+.quickLoggerHeading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.quickLoggerHeading h3,
+.quickLoggerHeading p,
+.quickContextSummary p,
+.workoutLever,
+.workoutSafety p {
+  margin: 0;
+}
+.quickExerciseChooser {
+  display: grid;
+  gap: var(--space-2);
+}
+.quickExerciseSearchDetails {
+  border: 0;
+  padding: 0;
+}
+.quickExerciseSearchDetails summary {
+  color: var(--color-muted);
+  font-size: var(--font-label);
+}
+.quickExerciseSearchDetails .field {
+  margin-top: var(--space-2);
+}
 .quickAdjustRow {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -61,12 +123,22 @@
   padding: 7px 5px;
   font-size: var(--font-label);
 }
+.quickWeightControls {
+  display: grid;
+  grid-template-columns: minmax(48px, 1fr) minmax(92px, 1.25fr) minmax(48px, 1fr);
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+.quickWeightControls button {
+  min-height: var(--touch-target);
+  padding-inline: var(--space-2);
+}
 .quickStickyActions {
   position: sticky;
   bottom: max(8px, env(safe-area-inset-bottom));
   z-index: 35;
   display: grid;
-  grid-template-columns: minmax(0, 1.5fr) repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
   margin: 12px -4px 8px;
   padding: 9px;
@@ -78,6 +150,22 @@
 }
 .quickStickyActions button {
   min-height: 50px;
+}
+.quickContextSummary {
+  display: grid;
+  gap: var(--space-1);
+  margin-top: var(--space-3);
+  color: var(--color-muted);
+  font-size: var(--font-label);
+}
+.quickContextActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+.quickContextActions button {
+  min-height: var(--touch-target);
 }
 .quickRestTimer {
   display: flex;
@@ -303,7 +391,7 @@
 .workoutSafety {
   border: 1px solid var(--state-warning-border);
   border-radius: var(--radius-card);
-  padding: 12px;
+  padding: var(--space-2) var(--space-3);
   background: var(--color-warning-soft);
   color: var(--state-warning-text);
   margin-top: 12px;
@@ -316,13 +404,40 @@
   color: var(--color-text);
   margin-top: 10px;
 }
-.workoutQuickAccess {
-  display: grid;
-  gap: var(--space-4);
+.workoutSafety summary {
+  cursor: pointer;
+  font-weight: 700;
 }
-.workoutQuickAccess > div:first-child p {
-  margin: var(--space-1) 0 0;
-  max-width: 66ch;
+.workoutSafety p {
+  margin-top: var(--space-2);
+}
+.workoutLever {
+  color: var(--color-muted);
+  font-size: var(--font-label);
+  line-height: 1.45;
+}
+#todayWorkoutExercises .workoutExerciseCard {
+  padding: var(--space-2) var(--space-3);
+}
+.workoutQuickAccess {
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+}
+.workoutQuickAccess > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  cursor: pointer;
+  font-weight: 800;
+}
+.workoutQuickAccess > summary small {
+  color: var(--color-muted);
+  font-weight: 500;
+}
+.workoutQuickAccess > p {
+  margin: var(--space-3) 0;
 }
 .workoutQuickAccessGrid {
   display: grid;
@@ -379,6 +494,9 @@
   }
 }
 @media (max-width: 520px) {
+  #tab-gym > .moduleHero #gymStats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .workoutQuickAccessGrid {
     grid-template-columns: 1fr;
   }
@@ -398,7 +516,7 @@
     grid-column: span 2;
   }
   .quickStickyActions {
-    grid-template-columns: 1.35fr 0.9fr 0.8fr;
+    grid-template-columns: 1fr;
   }
   .quickStickyActions button {
     padding: 9px 7px;
@@ -406,5 +524,13 @@
   }
   .quickAdjustRow {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .quickWeightControls {
+    grid-template-columns: 48px minmax(88px, 1fr) 48px;
+  }
+  .workoutQuickAccess > summary {
+    align-items: start;
+    flex-direction: column;
+    gap: var(--space-1);
   }
 }
