@@ -12,6 +12,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
@@ -67,6 +68,7 @@ public class MainActivity extends Activity {
     private static final String APP_URL = "https://" + APP_HOST + "/assets/index.html";
     private WebView webView;
     private Intent pendingWidgetIntent;
+    private boolean packagedWebCacheAudited;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -117,14 +119,56 @@ public class MainActivity extends Activity {
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
                 if (!isTrustedAppUrl(Uri.parse(url))) return;
-                dispatchWidgetIntentToWeb(pendingWidgetIntent);
-                pendingWidgetIntent = null;
+                auditPackagedWebCache(view);
             }
         });
         webView.addJavascriptInterface(new AndroidBridge(this), "AndroidBridge");
         webView.addJavascriptInterface(new AndroidUsageBridge(this), "AndroidUsageBridge");
         webView.addJavascriptInterface(new AndroidSpeechBridge(), "AndroidSpeechBridge");
         webView.loadUrl(APP_URL);
+    }
+
+    private void auditPackagedWebCache(WebView view) {
+        if (packagedWebCacheAudited) {
+            dispatchPendingWidgetIntent();
+            return;
+        }
+        packagedWebCacheAudited = true;
+        String cleanup = "(async()=>{try{"
+                + "const registrations=navigator.serviceWorker&&navigator.serviceWorker.getRegistrations?await navigator.serviceWorker.getRegistrations():[];"
+                + "const keys=window.caches&&caches.keys?await caches.keys():[];"
+                + "const stale=keys.filter(key=>key.indexOf('protocolo-0-100-pwa-')===0);"
+                + "if(!registrations.length&&!stale.length)return 'clean';"
+                + "await Promise.all(registrations.map(registration=>registration.unregister()));"
+                + "await Promise.all(stale.map(key=>caches.delete(key)));"
+                + "return 'cleaned';}catch(error){return 'cleanup-failed';}})()";
+        view.evaluateJavascript(cleanup, result -> runOnUiThread(() -> {
+            if (result != null && result.contains("cleaned")) {
+                // The APK is already offline-capable; stale PWA caches can only
+                // mask newly packaged assets. User databases are not touched.
+                view.clearCache(true);
+                view.loadUrl(APP_URL + "?apkBuild=" + installedVersionCode());
+                return;
+            }
+            dispatchPendingWidgetIntent();
+        }));
+    }
+
+    @SuppressWarnings("deprecation")
+    private long installedVersionCode() {
+        try {
+            PackageInfo packageInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
+            return Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
+                    ? packageInfo.getLongVersionCode()
+                    : packageInfo.versionCode;
+        } catch (PackageManager.NameNotFoundException error) {
+            return 0L;
+        }
+    }
+
+    private void dispatchPendingWidgetIntent() {
+        dispatchWidgetIntentToWeb(pendingWidgetIntent);
+        pendingWidgetIntent = null;
     }
 
     private boolean isTrustedAppUrl(Uri uri) {
@@ -335,6 +379,7 @@ public class MainActivity extends Activity {
                 output.put("widgetAdded", ids != null && ids.length > 0);
                 output.put("pinWidgetSupported", Build.VERSION.SDK_INT >= 26 && manager.isRequestPinAppWidgetSupported());
                 output.put("notificationPermission", workoutNotificationPermissionState());
+                output.put("notificationChannelEnabled", WorkoutControlNotificationManager.isChannelEnabled(activity));
                 output.put("lockScreenNotificationSupported", true);
                 output.put("keyguardWidgetSupported", false);
                 output.put("directMutationQueue", true);
@@ -369,6 +414,7 @@ public class MainActivity extends Activity {
                 output.put("notificationCode", notificationCode);
                 output.put("sessionActive", sessionActive);
                 output.put("notificationPosted", notificationPosted);
+                output.put("notificationChannelEnabled", WorkoutControlNotificationManager.isChannelEnabled(activity));
             } catch (Exception error) {
                 try { output.put("code", "status-unavailable"); output.put("instances", 0); } catch (Exception ignored) {}
             }
@@ -474,6 +520,7 @@ public class MainActivity extends Activity {
         public String openWorkoutNotificationSettings() {
             JSONObject output = new JSONObject();
             try {
+                WorkoutControlNotificationManager.ensureChannel(activity);
                 Intent settings;
                 if (Build.VERSION.SDK_INT >= 26) {
                     settings = new Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)

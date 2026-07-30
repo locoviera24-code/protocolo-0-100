@@ -53,15 +53,13 @@ deshecha.
 
 ## Layouts
 
-- Compacto: valores preparados, -0,5, Guardar y +0,5; maximo cuatro acciones.
-- Estandar: controles simetricos de reps y carga, Guardar, Repetir/Deshacer y
-  selector de ejercicio; maximo siete acciones.
-- Expandido: conserva los mismos siete controles directos y agrega solamente
-  contexto de rutina, progreso y guia de carga.
+- Compacto: selector directo, valor preparado, -0,5, +0,5, -5, Guardar y +5.
+- Estandar: agrega correccion simetrica de reps y contexto de la serie.
+- Expandido: agrega solamente rutina, progreso, temporizador y guia de carga.
 
-El paso inicial siempre es 0,5 kg. Tocar el valor de peso alterna entre 0,5 y
-5 kg, sin cambiar de layout ni mostrar controles nuevos. Tocar el nombre del
-ejercicio o **Elegir** abre `WorkoutExercisePickerActivity`, una lista nativa de
+Los pasos de 0,5 y 5 kg permanecen visibles simultaneamente: tocar el peso no
+cambia de layout ni revela una botonera adicional. Tocar **Elegir · ejercicio**
+abre `WorkoutExercisePickerActivity`, una lista nativa de
 la rutina que selecciona cualquier ejercicio directamente. El snapshot publica
 `exerciseLoadGuidance` por ejercicio; al seleccionar se actualizan **Ultima** y
 **Max.** usando solamente series comparables por equipo, modalidad y carga.
@@ -97,6 +95,11 @@ ajustes del canal **Controles de entrenamiento**.
 La sesion web se envia a Android en el mismo momento en que se toca **Empezar
 entrenamiento**. El estado comprueba ademas si la notificacion quedo realmente
 publicada; si Android bloquea el canal, **Revisar notificacion** abre sus ajustes.
+La notificacion usa un canal nuevo para no heredar un canal anterior ocultado
+por el fabricante. Su vista expandida ofrece -0,5, +0,5, -5, +5, Guardar y el
+selector de ejercicio; Android puede exigir desbloquear antes de abrir este
+ultimo. La barra de estado junto al registro indica si está activa, esperando
+una sesión, sin permiso u ocultada por Android.
 
 ## Compatibilidad y rollback
 
@@ -105,6 +108,13 @@ flags `nativeWorkoutControlsV1`, `lockScreenWorkoutControls` y
 `nativeRestTimer` controlan la beta. Con las flags apagadas se conserva el
 comportamiento estable. `workoutSessions` sigue siendo la fuente canonica y los
 backups schema 3 no cambian.
+
+El host empaquetado no necesita un service worker para funcionar offline. En la
+primera carga tras actualizar, `MainActivity.auditPackagedWebCache()` desregistra
+workers antiguos y elimina solo caches cuyo nombre comienza con
+`protocolo-0-100-pwa-`; despues recarga los assets del APK. No borra IndexedDB,
+localStorage ni datos personales. Esto evita una mezcla visible entre una beta
+nueva y recursos retenidos por una beta anterior.
 
 ## Limites comprobables
 

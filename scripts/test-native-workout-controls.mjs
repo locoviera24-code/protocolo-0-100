@@ -18,6 +18,7 @@ const paths={
   compact:'../android-native-wrapper/app/src/main/res/layout/widget_workout_compact.xml',
   standard:'../android-native-wrapper/app/src/main/res/layout/widget_workout_standard.xml',
   expanded:'../android-native-wrapper/app/src/main/res/layout/widget_workout_expanded.xml',
+  notificationLayout:'../android-native-wrapper/app/src/main/res/layout/notification_workout_controls.xml',
   info:'../android-native-wrapper/app/src/main/res/xml/workout_widget_info.xml',
   features:'../workout-features.js',
   importer:'../gym/native-workout-importer.js'
@@ -40,11 +41,12 @@ assert.match(source.widget,/state\.requiresEditor/);
 
 for(const method of ['getPendingWorkoutMutations','acknowledgeWorkoutMutations','getWorkoutQuickAccessCapabilities','getWorkoutWidgetStatus','requestPinWorkoutWidget','startWorkoutNotification','updateWorkoutNotification','stopWorkoutNotification','openWorkoutNotificationSettings'])assert.ok(source.activity.includes(method),`Falta bridge ${method}`);
 assert.match(source.activity,/isRequestPinAppWidgetSupported/);
+for(const contract of ['auditPackagedWebCache','getRegistrations','protocolo-0-100-pwa-','installedVersionCode','getLongVersionCode'])assert.ok(source.activity.includes(contract),`Falta limpieza segura de assets APK obsoletos: ${contract}`);
+assert.doesNotMatch(source.activity,/WebStorage\.getInstance\(\)\.deleteAllData|localStorage\.clear/,'La actualizacion APK no debe borrar datos del usuario.');
 for(const contract of ['BOOT_COMPLETED','MY_PACKAGE_REPLACED','DATE_CHANGED','TIMEZONE_CHANGED','POST_NOTIFICATIONS'])assert.ok(source.manifest.includes(contract),`Falta ciclo Android ${contract}`);
 assert.match(source.info,/home_screen/);
 assert.doesNotMatch(source.info,/keyguard/,'No se debe prometer un widget keyguard sin soporte probado.');
 
-function buttonCount(xml){return(xml.match(/<Button\b/g)||[]).length;}
 function verifyTouchTargets(xml,name){
   assert.doesNotMatch(xml,/android:layout_(?:width|height)="1dp"/,`${name} conserva controles funcionales de 1 dp.`);
   const buttons=xml.match(/<Button\b[\s\S]*?\/>/g)||[];
@@ -57,19 +59,21 @@ function verifyTouchTargets(xml,name){
 verifyTouchTargets(source.compact,'compacto');
 verifyTouchTargets(source.standard,'estandar');
 verifyTouchTargets(source.expanded,'expandido');
-assert.ok(buttonCount(source.compact)<=4,'El compacto supera cuatro acciones.');
-assert.ok(buttonCount(source.standard)<=7,'El estandar supera siete acciones.');
-assert.ok(buttonCount(source.expanded)<=7,'El expandido supera siete acciones.');
-for(const id of ['widgetRepsMinusButton','widgetRepsPlusButton','widgetWeightMinusButton','widgetWeightPlusButton'])assert.ok(source.standard.includes(id),`El estandar no permite corregir ${id}.`);
-assert.ok(source.expanded.includes('widgetNextButton'));
-assert.doesNotMatch(source.expanded,/widgetPreviousButton|widgetOpenButton|widgetQuickButton|widgetWeightFast(?:Minus|Plus)Button/,'El expandido conserva acciones secundarias que saturan el widget.');
-assert.match(source.compact,/widgetWeightFastMinusButton/);
-assert.match(source.compact,/widgetWeightFastPlusButton/);
+verifyTouchTargets(source.notificationLayout,'notificacion expandida');
+for(const layout of ['compact','standard','expanded']){
+  for(const id of ['widgetCurrentExercise','widgetWeightMinusButton','widgetWeightPlusButton','widgetWeightFastMinusButton','widgetWeightFastPlusButton','widgetSaveSetButton']){
+    assert.ok(source[layout].includes(id),`${layout} no ofrece ${id}.`);
+  }
+}
+for(const id of ['widgetRepsMinusButton','widgetRepsPlusButton'])assert.ok(source.standard.includes(id),`El estandar no permite corregir ${id}.`);
+assert.doesNotMatch(source.expanded,/widgetPreviousButton|widgetNextButton|widgetOpenButton|widgetQuickButton/,'El selector directo reemplaza la navegacion secuencial del widget.');
 assert.doesNotMatch(source.compact,/widgetQuickButton/,'El compacto no debe abrir una segunda fila de acciones.');
 assert.match(source.widget,/widgetWeightMinusButton, widgetActionIntent\(context, MainActivity\.ACTION_WIDGET_WEIGHT_DOWN/);
 assert.match(source.widget,/widgetWeightPlusButton, widgetActionIntent\(context, MainActivity\.ACTION_WIDGET_WEIGHT_UP/);
-assert.match(source.widget,/ACTION_WIDGET_TOGGLE_WEIGHT_STEP/,'El valor de carga debe alternar el paso fino/rapido sin desplegar botones.');
-assert.match(source.widget,/weightAdjustmentStep/,'El paso 0,5 o 5 debe persistir en el snapshot rapido.');
+assert.match(source.widget,/widgetWeightFastMinusButton, widgetActionIntent\(context, MainActivity\.ACTION_WIDGET_WEIGHT_FAST_DOWN/);
+assert.match(source.widget,/widgetWeightFastPlusButton, widgetActionIntent\(context, MainActivity\.ACTION_WIDGET_WEIGHT_FAST_UP/);
+assert.match(source.widget,/adjustQuick\(state, "weight", -WEIGHT_STEP\)/,'El ajuste fino debe restar 0,5 de forma directa.');
+assert.match(source.widget,/adjustQuick\(state, "weight", WEIGHT_FAST_STEP\)/,'El ajuste rapido debe sumar 5 de forma directa.');
 assert.match(source.widget,/exercisePickerIntent/,'El widget debe abrir un selector directo de ejercicio.');
 assert.match(source.picker,/setSingleChoiceItems/);
 assert.match(source.picker,/ACTION_WIDGET_SELECT_EXERCISE/);
@@ -77,7 +81,8 @@ assert.match(source.features,/exerciseLoadGuidance/,'Cada ejercicio debe publica
 assert.match(source.widget,/int width = minWidth > 0 \? minWidth : maxWidth/,'El layout debe usar el tamaño actual, no el máximo de otra orientación.');
 assert.doesNotMatch(source.widget,/Math\.max\(minWidth, maxWidth\)/,'El tamaño máximo causaba saltos de layout tras un toque.');
 
-for(const contract of ['setOngoing(true)','VISIBILITY_PRIVATE','setPublicVersion(publicVersion(context))','Entrenamiento en curso','IMPORTANCE_DEFAULT','workout_controls_v4'])assert.ok(source.notification.includes(contract),`Falta privacidad o visibilidad de notificacion: ${contract}`);
+for(const contract of ['setOngoing(true)','VISIBILITY_PRIVATE','setPublicVersion(publicVersion(context))','Entrenamiento en curso','IMPORTANCE_DEFAULT','workout_controls_v5','setCustomBigContentView','notification_workout_controls'])assert.ok(source.notification.includes(contract),`Falta privacidad o visibilidad de notificacion: ${contract}`);
+for(const id of ['notificationExerciseButton','notificationWeightMinusButton','notificationWeightPlusButton','notificationWeightFastMinusButton','notificationWeightFastPlusButton','notificationSaveSetButton'])assert.ok(source.notificationLayout.includes(id),`La notificacion expandida no ofrece ${id}.`);
 assert.match(source.notification,/getActiveNotifications/,'El estado debe distinguir permiso concedido de notificacion realmente publicada.');
 assert.doesNotMatch(source.notification,/setFullScreenIntent/);
 for(const contract of ['endsAtElapsedRealtime','startedAtElapsedRealtime','restoreAfterBoot','setAndAllowWhileIdle'])assert.ok(source.timer.includes(contract),`Falta timer durable: ${contract}`);

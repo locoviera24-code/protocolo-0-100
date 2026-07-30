@@ -91,7 +91,6 @@
   let restTimerEndsAt=0;
   let nativeTimerStatus='idle';
   let nativeTimerPausedSeconds=0;
-  let quickWeightAdjustmentStep=0.5;
   let importingNativeWidgetState=false;
   let nativeMutationImportPromise=null;
 
@@ -700,15 +699,19 @@
       </div>
       <div class="moduleCard" id="quickSetLoggerPanel">
         <div class="quickLoggerHeading"><div><h3>Registrar serie</h3><p class="muted small">Elegí ejercicio, reps y carga. El resto es opcional.</p></div><span class="statusChip">Rápido</span></div>
+        <div class="nativeWorkoutLiveBar" id="nativeWorkoutLiveBar" hidden>
+          <div><strong>Controles en pantalla de bloqueo</strong><span id="nativeWorkoutLiveText">Comprobando disponibilidad…</span></div>
+          <button type="button" class="secondary" id="nativeWorkoutLiveButton">Activar</button>
+        </div>
         <div class="quickLogger">
           <div class="quickExerciseChooser">
             <div class="field"><label for="quickExerciseSelect">Ejercicio</label><select id="quickExerciseSelect"></select></div>
             <details class="quickExerciseSearchDetails"><summary>Buscar otro ejercicio</summary><div class="field"><label for="quickExerciseSearch">Nombre o alias</label><input type="search" id="quickExerciseSearch" autocomplete="off" placeholder="Ej. press, dominadas…"></div></details>
           </div>
           <div class="quickPrimaryInputs">
-            <div class="field quickSetNumberField"><label>Serie</label><input type="text" inputmode="decimal" id="quickSetNumber" value="1"></div>
+            <input type="hidden" id="quickSetNumber" value="1">
             <div class="field" id="quickRepsField"><label>Repeticiones</label><input type="text" inputmode="decimal" id="quickReps" value="8"><div class="quickAdjustRow"><button type="button" class="secondary" data-quick-adjust="reps:-1">-1</button><button type="button" class="secondary" data-quick-adjust="reps:1">+1</button></div></div>
-            <div class="field" id="quickWeightField"><label id="quickWeightLabel">Kilos / lastre</label><input type="text" inputmode="decimal" id="quickWeight" value="0"><div class="quickWeightControls"><button type="button" class="secondary" id="quickWeightMinusBtn" data-quick-adjust-step="weight:-1">-0,5</button><button type="button" class="quiet" id="quickWeightStepBtn" data-quick-weight-step>Paso 0,5 kg</button><button type="button" class="secondary" id="quickWeightPlusBtn" data-quick-adjust-step="weight:1">+0,5</button></div></div>
+            <div class="field" id="quickWeightField"><label id="quickWeightLabel">Kilos / lastre</label><input type="text" inputmode="decimal" id="quickWeight" value="0"><div class="quickWeightControls"><button type="button" class="secondary" data-quick-adjust="weight:-5" aria-label="Disminuir 5 kilos">-5</button><button type="button" class="secondary" data-quick-adjust="weight:-0.5" aria-label="Disminuir 0,5 kilos">-0,5</button><button type="button" class="secondary" data-quick-adjust="weight:0.5" aria-label="Aumentar 0,5 kilos">+0,5</button><button type="button" class="secondary" data-quick-adjust="weight:5" aria-label="Aumentar 5 kilos">+5</button></div></div>
             <div class="field hidden" id="quickDurationField"><label>Duracion (segundos)</label><input type="text" inputmode="decimal" id="quickDurationSeconds" value="60"></div>
             <div class="field hidden" id="quickDistanceField"><label>Distancia (metros)</label><input type="text" inputmode="decimal" id="quickDistanceMeters" value="1000"></div>
           </div>
@@ -844,6 +847,7 @@
     document.getElementById('openQuickLoggerBtn')?.addEventListener('click',()=>openQuickSetLogger());
     document.getElementById('addWorkoutWidgetBtn')?.addEventListener('click',requestWorkoutWidgetInstall);
     document.getElementById('enableWorkoutControlsBtn')?.addEventListener('click',enableNativeWorkoutControls);
+    document.getElementById('nativeWorkoutLiveButton')?.addEventListener('click',enableNativeWorkoutControls);
     document.getElementById('quickExerciseSelect')?.addEventListener('change',event=>{editingQuickSetId='';selectQuickExerciseValue(event.target.value);});
     document.getElementById('quickExerciseSearch')?.addEventListener('input',renderQuickLogger);
     document.getElementById('saveQuickSetBtn')?.addEventListener('click',saveQuickSet);
@@ -1157,7 +1161,6 @@
     const save=document.getElementById('saveQuickSetBtn'); if(save)save.textContent=editingSet?'Guardar cambios':'Guardar serie';
     const undo=document.getElementById('undoQuickSetDeleteBtn'); if(undo){undo.disabled=!lastDeletedQuickSet;undo.hidden=!lastDeletedQuickSet;}
     const repeat=document.getElementById('repeatLastSetBtn');if(repeat)repeat.hidden=!(last||h);
-    updateQuickWeightStepUi();
     if(!syncNativeTimerFromBridge())updateRestTimerDisplay();
     const show=settings().showRir;
     ['quickRir','quickRpe'].forEach(id=>{const field=document.getElementById(id)?.closest('.field'); if(field) field.classList.toggle('hidden',!show);});
@@ -1193,7 +1196,12 @@
     enableNativeWorkoutFeatures({notification:true});
     const permission=String(window.AndroidBridge.workoutNotificationPermissionState?.()||'');
     if(permission==='prompt')window.AndroidBridge.requestWorkoutNotificationPermission();
-    else syncWorkoutWidget();
+    else {
+      const state=syncWorkoutWidget();
+      if(permission==='granted'&&state&&window.AndroidBridge?.startWorkoutNotification){
+        try{window.AndroidBridge.startWorkoutNotification(JSON.stringify(state));}catch(error){}
+      }
+    }
     window.setTimeout(renderWorkoutQuickAccessStatus,350);
   }
   function selectedSessionForQuick(){
@@ -1628,19 +1636,9 @@
     const id=target==='reps'?'quickReps':'quickWeight',input=document.getElementById(id);if(!input)return;
     const value=Math.max(0,numeric(input.value,0)+numeric(delta,0));input.value=target==='reps'?Math.round(value):Math.round(value*2)/2;captureQuickDraft();input.focus();
   }
-  function updateQuickWeightStepUi(){
-    const label=quickWeightAdjustmentStep===5?'5':'0,5';
-    const minus=document.getElementById('quickWeightMinusBtn'),plus=document.getElementById('quickWeightPlusBtn'),toggle=document.getElementById('quickWeightStepBtn');
-    if(minus){minus.textContent=`-${label}`;minus.setAttribute('aria-label',`Disminuir ${label} ${settings().unit}`);}
-    if(plus){plus.textContent=`+${label}`;plus.setAttribute('aria-label',`Aumentar ${label} ${settings().unit}`);}
-    if(toggle){toggle.textContent=`Paso ${label} ${settings().unit}`;toggle.setAttribute('aria-label',`Cambiar paso de carga. Paso actual ${label} ${settings().unit}`);}
-  }
   async function handleQuickLoggerAction(event){
     const adjust=event.target.closest('[data-quick-adjust]');
     if(adjust){const [target,delta]=adjust.dataset.quickAdjust.split(':');adjustQuickInput(target,delta);return;}
-    const stepped=event.target.closest('[data-quick-adjust-step]');
-    if(stepped){const [target,direction]=stepped.dataset.quickAdjustStep.split(':');adjustQuickInput(target,Number(direction)*quickWeightAdjustmentStep);return;}
-    if(event.target.closest('[data-quick-weight-step]')){quickWeightAdjustmentStep=quickWeightAdjustmentStep===0.5?5:0.5;updateQuickWeightStepUi();return;}
     const edit=event.target.closest('[data-quick-edit-set]');
     if(edit){window.APP_DRAFTS?.remove?.(quickPersistentDraftId());editingQuickSetId=edit.dataset.quickEditSet;quickFormDirty=false;quickDrafts.delete(quickDraftKey());renderQuickLogger();document.getElementById('quickReps')?.focus();return;}
     const remove=event.target.closest('[data-quick-delete-set]');
@@ -1741,7 +1739,9 @@
       return;
     }
     const currentStatus=nativeBridgeJson('getWorkoutWidgetStatus');
-    if(['not-posted','active'].includes(currentStatus?.notificationCode)&&window.AndroidBridge?.openWorkoutNotificationSettings){
+    const capabilities=nativeBridgeJson('getWorkoutQuickAccessCapabilities');
+    const permission=capabilities?.notificationPermission||'';
+    if((['not-posted','active'].includes(currentStatus?.notificationCode)||currentStatus?.notificationCode==='permission-required'&&['blocked','denied'].includes(permission))&&window.AndroidBridge?.openWorkoutNotificationSettings){
       nativeBridgeJson('openWorkoutNotificationSettings');
       flash('Revisá que Controles de entrenamiento pueda mostrarse en la pantalla de bloqueo.');
       return;
@@ -1761,6 +1761,10 @@
     const diagnostic=document.getElementById('workoutQuickAccessDiagnostic');
     const addButton=document.getElementById('addWorkoutWidgetBtn');
     const enableButton=document.getElementById('enableWorkoutControlsBtn');
+    const liveBar=document.getElementById('nativeWorkoutLiveBar');
+    const liveText=document.getElementById('nativeWorkoutLiveText');
+    const liveButton=document.getElementById('nativeWorkoutLiveButton');
+    const quickAccessDetails=document.querySelector('details.workoutQuickAccess');
     if(!widgetStatus||!lockStatus||!overall)return;
     const capabilities=nativeBridgeJson('getWorkoutQuickAccessCapabilities');
     const status=nativeBridgeJson('getWorkoutWidgetStatus');
@@ -1772,6 +1776,7 @@
       button.disabled=!!disabled||button.dataset.workoutBusyDisabled==='true';
     };
     if(!capabilities||capabilities.platform!=='android-apk'){
+      if(liveBar)liveBar.hidden=true;
       widgetStatus.textContent='No disponible en la versión web. Requiere el APK Android.';
       lockStatus.textContent='Requiere el APK Android. En la web podés registrar desde Gym.';
       overall.textContent='Tus registros web continúan guardándose normalmente.';
@@ -1780,6 +1785,7 @@
       if(diagnostic)diagnostic.textContent='El navegador no ofrece controles Android.';
       return;
     }
+    if(liveBar)liveBar.hidden=false;
     const instances=Math.max(0,Number(capabilities.widgetInstances||status?.instances||0));
     widgetStatus.textContent=instances>0?`Widget agregado (${instances}).`:(capabilities.pinWidgetSupported?'Widget no agregado. Podés instalarlo ahora.':'El launcher requiere agregarlo manualmente.');
     if(addButton){setStateDisabled(addButton,instances>0);addButton.textContent=instances>0?'Widget agregado':'Agregar widget';}
@@ -1796,6 +1802,26 @@
       setStateDisabled(enableButton,lockEnabled&&permission==='granted'&&!needsNotificationReview);
       enableButton.textContent=notificationCode==='active'?'Configurar bloqueo':notificationCode==='not-posted'?'Revisar notificación':lockEnabled&&permission==='granted'?'Controles activos':'Activar controles';
     }
+    if(liveText&&liveButton){
+      if(notificationCode==='active'){
+        liveText.textContent='Activos. Desplegá la notificación para ver ±0,5, ±5 y elegir ejercicio.';
+        liveButton.textContent='Configurar';
+      }else if(notificationCode==='not-posted'){
+        liveText.textContent='Android está ocultando la notificación.';
+        liveButton.textContent='Revisar';
+      }else if(permission==='blocked'||permission==='denied'){
+        liveText.textContent='Falta permitir las notificaciones.';
+        liveButton.textContent='Activar';
+      }else if(notificationCode==='waiting-for-session'){
+        liveText.textContent='Listos: aparecen al iniciar el entrenamiento.';
+        liveButton.textContent='Configurar';
+      }else{
+        liveText.textContent='Activá el acceso para usarlo con el teléfono bloqueado.';
+        liveButton.textContent='Activar';
+      }
+      setStateDisabled(liveButton,false);
+    }
+    if(quickAccessDetails&&['disabled','permission-required','not-posted'].includes(notificationCode))quickAccessDetails.open=true;
     const queue=status?.queue||{};
     const pending=Math.max(0,Number(queue.pending||0));
     const rejected=Math.max(0,Number(queue.rejected||0));

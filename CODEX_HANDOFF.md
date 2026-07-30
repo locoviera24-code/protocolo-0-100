@@ -1,10 +1,10 @@
 # CODEX_HANDOFF - Protocolo 0->100
 
-Ultima actualizacion: 2026-07-29
+Ultima actualizacion: 2026-07-30
 Rama esperada: `codex/android-quick-access-v1`
 Version actual: `2.7.0` (fuente unica: `app-version.json`)
-Android: `versionCode 36`, `versionName "2.7.0"`
-Service worker cache: `protocolo-0-100-pwa-2.7.0-b92`
+Android: `versionCode 37`, `versionName "2.7.0"`
+Service worker cache: `protocolo-0-100-pwa-2.7.0-b93`
 Backup consolidado: `schemaVersion: 3`
 
 Leer primero este archivo y luego `README.md`, `index.html`,
@@ -3995,7 +3995,7 @@ Cambios funcionales:
   Al seleccionarlo, Android actualiza **Ultima** y **Max.** usando la guia
   comparable por ejercicio, equipo, modalidad y semantica de carga. El compacto
   utiliza su linea breve para esa guia; estandar y expandido la muestran aparte.
-- La notificacion usa el canal nuevo `workout_controls_v4`, silencioso y de
+- La notificacion usa el canal nuevo `workout_controls_v5`, silencioso y de
   `IMPORTANCE_DEFAULT`. Los canales Android son inmutables; cambiar el ID evita
   heredar la prioridad baja de instalaciones anteriores. El permiso se solicita
   al activar controles o iniciar una sesion desde ese flujo, y **Configurar
@@ -4005,7 +4005,7 @@ Cambios funcionales:
   publica generica. El fabricante todavia puede exigir habilitar notificaciones
   en pantalla bloqueada; la app no afirma poder saltar esa politica.
 - Gym reduce carga visual: resumen superior 2x2 en movil, rutina del dia plegada,
-  registro primero, tres controles de carga, una sola accion primaria Guardar,
+  registro primero, cuatro ajustes de carga visibles, una sola accion primaria Guardar,
   acciones contextuales compactas y configuracion Android/salud plegada.
 
 Archivos principales: `workout-features.js`, `styles/gym.css`,
@@ -4081,7 +4081,73 @@ compilado el checkout correcto. Se movio el tag beta 6 a `a72266f` y se corrigio
 `build-release-apk.yml` para usar `gh release create --target "$GITHUB_SHA"` en
 futuros releases. Stable y `baseline-stable-2.7` siguen intactos.
 
-Siguiente accion exacta: instalar **beta 6 firmada** y completar en hardware las
-pruebas de launcher, bloqueo OEM, reinicio y actualizacion. Si Android rechaza
-la actualizacion desde una beta debug anterior por firma incompatible, exportar
-una copia antes de desinstalar; no borrar datos sin backup.
+Beta 6 queda conservada solo como antecedente y fue supersedida por la correccion
+build 93 descrita a continuacion. No recomendarla para probar los controles.
+
+### Correccion visible build 93
+
+La auditoria posterior a beta 6 confirmo que la experiencia publicada no
+coincidia con lo solicitado: el peso alternaba entre pasos de 0,5 y 5 al tocar
+el valor, el selector directo no era evidente en todos los tamaños y el acceso
+de bloqueo quedaba dentro de un bloque plegado. Ademas, una instalacion APK
+actualizada podia seguir controlada por un service worker antiguo del origen
+`appassets`, mostrando assets anteriores aunque el paquete contuviera archivos
+nuevos.
+
+El build 93 corrige esos contratos:
+
+- los tres layouts RemoteViews muestran simultaneamente `-0,5`, `+0,5`, `-5`
+  y `+5`; tocar el peso ya no cambia de layout ni despliega acciones;
+- `Elegir · <ejercicio>` abre `WorkoutExercisePickerActivity` desde cualquier
+  layout; la seleccion recalcula `Ultima` y `Max.` para ese ejercicio;
+- `notification_workout_controls.xml` aporta la vista expandida privada con
+  los mismos cuatro ajustes, reps, Guardar y selector directo;
+- el canal `workout_controls_v5` evita heredar un canal anterior ocultado y
+  `openWorkoutNotificationSettings()` garantiza que el canal exista;
+- Gym muestra una barra visible de estado de pantalla de bloqueo junto al
+  registro y publica explicitamente la sesion al iniciar;
+- el registro web queda en una columna a 600 px o menos, con cuatro ajustes que
+  caben a 320/390 px, serie calculada oculta y una sola accion primaria;
+- `MainActivity.auditPackagedWebCache()` elimina solamente caches PWA del
+  origen empaquetado y desregistra workers antiguos. No toca localStorage,
+  IndexedDB ni backups; luego recarga los assets incluidos en el APK;
+- el widget requiere como minimo 180 x 230 dp. Tras actualizar conviene quitarlo
+  y volverlo a agregar para que el launcher aplique las nuevas dimensiones.
+
+Archivos principales del bloque: `WorkoutWidgetUpdateService.java`,
+`WorkoutControlNotificationManager.java`, `NativeWorkoutControlRepository.java`,
+`MainActivity.java`, `widget_workout_compact.xml`,
+`widget_workout_standard.xml`, `widget_workout_expanded.xml`,
+`notification_workout_controls.xml`, `workout_widget_info.xml`,
+`workout-features.js`, `styles/gym.css`, `styles/responsive.css`, pruebas y
+previews de `docs/previews/`.
+
+Resultados comprobados antes del gate final:
+
+- version alineada `2.7.0`, Android `37`, build/cache `93`;
+- contratos nativos, orientacion de carga, importador idempotente y Workout:
+  aprobados;
+- validacion con paridad Android y artifact web de 84 recursos sin 404:
+  aprobada;
+- regresion Playwright completa: 380 aprobadas y 14 omisiones en 51,1 min;
+  aparecieron dos fallos aislados (viewport de la nueva prueba y conversion lb
+  en WebKit). El contrato de viewport se corrigio y las repeticiones dirigidas
+  terminaron 4/4; el caso WebKit no requirio cambios de producto;
+- Playwright Android quick access posterior: 3/3 en Android Chromium, iPhone
+  WebKit y Chromium escritorio con viewport movil explicito;
+- Firestore Emulator: aprobado con las reglas actuales;
+- Android `assembleDebug` y `assembleRelease`: aprobados con Java 17/Gradle
+  8.10.2 despues de compilar la limpieza de cache empaquetada;
+- APK local debug: 1.946.242 bytes, SHA-256
+  `D892A4469E842167A1B128AD5C70A88B4C0032A4E61E7515F02B5FEE00DC8F72`;
+- APK local release firmado solo con keystore de prueba: 1.547.952 bytes,
+  SHA-256
+  `2CC3770E9BEDED9E670C91BE1CCDFF1F08CADCB1E493B93727B7CF77625DD4B9`;
+- inspeccion visual en 390 x 844: cuatro controles visibles, una columna y cero
+  scroll horizontal;
+- hardware Android conectado: ninguno; launcher, OEM y bloqueo real siguen
+  expresamente pendientes en `docs/physical-test-checklist.md`.
+
+La prerelease firmada beta 7, su checksum y los resultados del quality gate se
+deben registrar aqui solamente despues de que GitHub Actions termine. No
+fusionar a `main` ni publicar stable.

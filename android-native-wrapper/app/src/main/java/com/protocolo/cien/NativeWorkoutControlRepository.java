@@ -44,6 +44,8 @@ public final class NativeWorkoutControlRepository {
         put(control, "setNumber", quick == null ? 1 : Math.max(1, quick.optInt("setNumber", 1)));
         put(control, "draftReps", quick == null ? 8 : Math.max(0, quick.optInt("reps", 8)));
         put(control, "draftWeight", quick == null ? 0 : Math.max(0, quick.optDouble("weight", 0)));
+        put(control, "measurementMode", quick == null ? "reps" : quick.optString("measurementMode", "reps"));
+        put(control, "loadMode", quick == null ? "total" : quick.optString("loadMode", "total"));
         put(control, "unit", widgetState.optString("unit", "kg"));
         put(control, "lastComparableSet", cloneObject(widgetState.optJSONObject("lastComparableSet")));
         put(control, "historicalLoadRecord", cloneObject(widgetState.optJSONObject("historicalLoadRecord")));

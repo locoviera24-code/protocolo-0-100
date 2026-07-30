@@ -144,10 +144,12 @@ $requiredFiles = @(
   'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutTimerController.java',
   'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutControlNotificationManager.java',
   'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutControlReceiver.java',
+  'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutExercisePickerActivity.java',
     'android-native-wrapper/app/src/main/res/xml/workout_widget_info.xml',
     'android-native-wrapper/app/src/main/res/layout/widget_workout_compact.xml',
     'android-native-wrapper/app/src/main/res/layout/widget_workout_standard.xml',
     'android-native-wrapper/app/src/main/res/layout/widget_workout_expanded.xml',
+    'android-native-wrapper/app/src/main/res/layout/notification_workout_controls.xml',
     'android-native-wrapper/app/src/main/res/values/widget_layout_aliases.xml',
     'android-native-wrapper/app/src/main/res/drawable/widget_background.xml',
     'android-native-wrapper/app/src/main/res/drawable/widget_button.xml',
@@ -308,7 +310,7 @@ foreach ($contract in @('helpButton','statCard','renderRoot','syncLabel')) { Ass
 foreach ($contract in @('calculateSetMetrics','calculateSetsMetrics','bodyweightReps','addedLoadVolume','estimatedOneRepMax','Sin series registradas')) {
     Assert-True ($workoutMetrics.Contains($contract)) "Falta contrato de metricas de gym: $contract"
 }
-foreach ($contract in @('quickStickyActions','data-quick-adjust="reps:1"','data-quick-adjust-step="weight:-1"','data-quick-adjust-step="weight:1"','data-quick-weight-step','quickWeightAdjustmentStep===0.5?5:0.5','undoDeleteQuickSetPayload','restTimerEnabled','hapticEnabled','quickDrafts','Finalizar entrenamiento')) {
+foreach ($contract in @('quickStickyActions','data-quick-adjust="reps:1"','data-quick-adjust="weight:-5"','data-quick-adjust="weight:-0.5"','data-quick-adjust="weight:0.5"','data-quick-adjust="weight:5"','nativeWorkoutLiveBar','undoDeleteQuickSetPayload','restTimerEnabled','hapticEnabled','quickDrafts','Finalizar entrenamiento')) {
     Assert-True ($workout.Contains($contract)) "Falta UX de registro rapido Gym: $contract"
 }
 foreach ($contract in @('partyStickySave','data-party-adjust="reps:1"','data-party-adjust="weight:0.5"','data-party-adjust="weight:2.5"','data-party-adjust="weight:5"','partyQuickDrafts','party-undo-delete-set','Finalizar entrenamiento')) {
@@ -726,7 +728,7 @@ foreach ($contract in @(
 )) {
     Assert-True (($widgetProvider + $widgetUpdater + $mainActivity).Contains($contract)) "Falta contrato nativo de widget: $contract"
 }
-foreach ($contract in @('widgetNextButton', 'widgetSetStats', 'widgetWeightFastPlusButton', 'WEIGHT_STEP = 0.5', 'WEIGHT_FAST_STEP = 5.0', 'currentExerciseSets', 'currentMuscleSets')) {
+foreach ($contract in @('widgetCurrentExercise', 'widgetSetStats', 'widgetLoadGuidance', 'widgetWeightMinusButton', 'widgetWeightPlusButton', 'widgetWeightFastMinusButton', 'widgetWeightFastPlusButton', 'WEIGHT_STEP = 0.5', 'WEIGHT_FAST_STEP = 5.0', 'currentExerciseSets', 'currentMuscleSets', 'exercisePickerIntent')) {
     Assert-True ($widgetUpdater.Contains($contract)) "Falta contrato de widget directo: $contract"
 }
 

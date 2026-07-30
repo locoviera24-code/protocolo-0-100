@@ -30,6 +30,7 @@ test('el APK simulado instala y activa controles solo desde acciones explicitas'
   });
   await page.goto('/index.html?module=gym&view=routine');
   await expect(page.locator('#workoutWidgetInstallStatus')).toContainText('Widget no agregado');
+  await expect(page.locator('#nativeWorkoutLiveBar')).toBeVisible();
   await page.locator('#addWorkoutWidgetBtn').click();
   await page.locator('#enableWorkoutControlsBtn').click();
   const result=await page.evaluate(()=>({calls:window.__quickAccessCalls,flags:window.APP_FEATURE_FLAGS.all()}));
@@ -47,6 +48,7 @@ test('el APK simulado instala y activa controles solo desde acciones explicitas'
 });
 
 test('el registro mantiene paso de 0,5, ofrece paso rapido y cambia ejercicio directamente',async({page})=>{
+  await page.setViewportSize({width:390,height:844});
   await page.goto('/index.html?module=gym&view=train');
   expect(await page.locator('#gymStats').evaluate(element=>getComputedStyle(element).display)).toBe('grid');
   const start=page.locator('#startTodayWorkoutBtn');
@@ -58,15 +60,15 @@ test('el registro mantiene paso de 0,5, ofrece paso rapido y cambia ejercicio di
 
   const weight=page.locator('#quickWeight');
   await weight.fill('0');
-  await expect(page.locator('#quickWeightStepBtn')).toHaveText('Paso 0,5 kg');
-  await page.locator('#quickWeightPlusBtn').click();
+  await expect(page.locator('.quickWeightControls button')).toHaveCount(4);
+  await page.locator('[data-quick-adjust="weight:0.5"]').click();
   await expect(weight).toHaveValue('0.5');
-  await page.locator('#quickWeightMinusBtn').click();
+  await page.locator('[data-quick-adjust="weight:-0.5"]').click();
   await expect(weight).toHaveValue('0');
-
-  await page.locator('#quickWeightStepBtn').click();
-  await expect(page.locator('#quickWeightStepBtn')).toHaveText('Paso 5 kg');
-  await page.locator('#quickWeightPlusBtn').click();
+  await page.locator('[data-quick-adjust="weight:5"]').click();
   await expect(weight).toHaveValue('5');
-  await expect(page.locator('.quickWeightControls button')).toHaveCount(3);
+  await page.locator('[data-quick-adjust="weight:-5"]').click();
+  await expect(weight).toHaveValue('0');
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth)).toBe(0);
+  expect(await page.locator('.quickPrimaryInputs').evaluate(element=>getComputedStyle(element).gridTemplateColumns.split(' ').length)).toBe(1);
 });

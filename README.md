@@ -15,7 +15,7 @@ PWA y APK Android para medir habitos, atencion, actividad fisica y nutricion con
 
 ## Navegacion y diseno
 
-La version actual `v2.7.0` (build web `92`, Android `36`) usa una barra inferior movil con cinco destinos: **Inicio**,
+La version actual `v2.7.0` (build web `93`, Android `37`) usa una barra inferior movil con cinco destinos: **Inicio**,
 **Gym**, **Nutricion**, **Progreso** y **Mas**. En escritorio usa una barra
 lateral compacta. Gym Party se abre desde **Gym > Grupo**, desde un acceso
 discreto en Inicio o mediante un enlace `gymPartyCode`; ya no ocupa un boton
@@ -506,10 +506,9 @@ La PWA/GitHub Pages no puede crear widgets ni controles de pantalla de bloqueo.
 Estas funciones viven en el APK y usan `AppWidgetProvider`, `AppWidgetManager`,
 `RemoteViews`, `PendingIntent` y una notificacion privada de entrenamiento.
 
-La prerelease Android firmada y validada de este bloque es **2.7.0 beta build
-92**: [descargar APK Android](https://github.com/locoviera24-code/protocolo-0-100/releases/download/v2.7.0-native-controls-v1-beta.6/protocolo-0-100-v2.7.0-release.apk).
-El SHA-256 publicado es
-`F6D7AA50BC72D37DDBB5D8041FDB7BE6698825891162E398006624585FF26CB3`.
+La prerelease Android de este bloque es **2.7.0 beta build 93**. Su descarga
+firmada se publica en el tag `v2.7.0-native-controls-v1-beta.7` después de que
+termine el quality gate remoto.
 No reemplaza el canal estable ni mueve `baseline-stable-2.7`.
 
 Desde **Gym > Acceso rapido durante el entrenamiento** se puede tocar **Agregar
@@ -522,11 +521,10 @@ Los layouts compacto, estandar y expandido se eligen por el tamaño actual del
 widget, sin usar las dimensiones máximas de otra orientación. Por eso tocar un
 control ya no despliega de pronto otro layout. Ningun control funcional se
 oculta en 1 dp y todos los botones principales miden al menos 48 dp. El
-compacto mantiene una sola fila con **-0,5**, **Guardar** y **+0,5**; el estandar y
-el expandido ofrecen correccion simetrica de reps y peso. El paso normal de
-carga es **0,5 kg**; tocar el valor central alterna temporalmente a **5 kg** para
-llegar rapido a cargas altas, sin desplegar botones adicionales. Tocar el nombre
-del ejercicio abre un selector nativo con toda la rutina, por lo que no hace
+compacto, el estandar y el expandido muestran siempre **-0,5**, **+0,5**,
+**-5** y **+5** alrededor de la misma carga; no hay un modo oculto ni un toque
+que despliegue otra botonera. Tocar **Elegir · ejercicio** abre un selector
+nativo con toda la rutina, por lo que no hace
 falta recorrerla con Anterior/Siguiente. Al elegirlo se muestran su ultima carga
 comparable y su maximo historico comparable. Peso corporal, lastre, asistencia,
 tiempo y distancia muestran su semantica correspondiente.
@@ -552,7 +550,13 @@ Después de activar los controles hay que tocar **Empezar entrenamiento**. La
 sesion se publica inmediatamente a Android y la app distingue **esperando
 entrenamiento**, **controles visibles** y **notificacion no publicada**. En este
 ultimo caso, **Revisar notificacion** abre directamente el canal **Controles de
-entrenamiento** para habilitar su visibilidad en la pantalla de bloqueo.
+entrenamiento** para habilitar su visibilidad en la pantalla de bloqueo. Durante
+el registro aparece además una barra visible de estado; al desplegar la
+notificacion se muestran los pasos de 0,5 y 5 kg y el selector de ejercicio.
+Al actualizar el APK, el wrapper elimina solamente caches PWA antiguas del
+origen empaquetado antes de recargar. IndexedDB, localStorage, sesiones y
+backups no se borran; esto evita que una beta nueva siga mostrando la interfaz
+de una beta anterior.
 
 `RemoteViews` no reemplaza el editor completo para RIR/RPE, notas o una metrica
 que no pueda corregirse con seguridad. En esos casos **Editar** abre Registro

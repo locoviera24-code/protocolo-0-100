@@ -1,24 +1,25 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="560" height="390" viewBox="0 0 560 390" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="455" viewBox="0 0 560 455" role="img" aria-labelledby="title desc">
   <title id="title">Preview del widget expandido</title>
-  <desc id="desc">Rutina, progreso, ultima carga, maximo comparable y selector directo de ejercicio.</desc>
-  <rect width="560" height="390" rx="24" fill="#0b1726"/>
-  <text x="24" y="34" fill="#dbeaff" font-family="Arial,sans-serif" font-size="13">Miercoles | Torso B</text>
-  <text x="536" y="34" text-anchor="end" fill="#98f5c2" font-family="Arial,sans-serif" font-size="13">2/9 | 5 series</text>
-  <text x="24" y="66" fill="#ffffff" font-family="Arial,sans-serif" font-size="20" font-weight="700">Press de banca</text>
-  <text x="24" y="90" fill="#98f5c2" font-family="Arial,sans-serif" font-size="13">Serie 3 | 2 del ejercicio | 5 de pecho</text>
-  <text x="24" y="112" fill="#dbeaff" font-family="Arial,sans-serif" font-size="12">Ultima: 57,5 kg x 9 | Max.: 70 kg x 5</text>
+  <desc id="desc">Rutina, progreso, selector directo, ultima carga, maximo y controles simultaneos de 0,5 y 5 kilos.</desc>
+  <rect width="560" height="455" rx="24" fill="#0b1726"/>
+  <text x="24" y="32" fill="#dbeaff" font-family="Arial,sans-serif" font-size="13">Miercoles · Torso B</text>
+  <text x="536" y="32" text-anchor="end" fill="#98f5c2" font-family="Arial,sans-serif" font-size="13">2/9 · 5 series</text>
+  <rect x="20" y="48" width="520" height="48" rx="12" fill="#172942"/>
+  <text x="38" y="79" fill="#ffffff" font-family="Arial,sans-serif" font-size="18" font-weight="700">Elegir · Press de banca</text>
+  <text x="24" y="119" fill="#98f5c2" font-family="Arial,sans-serif" font-size="13">Serie 3 · 2 del ejercicio · 5 de pecho</text>
+  <text x="24" y="141" fill="#dbeaff" font-family="Arial,sans-serif" font-size="12">Ultima: 57,5 kg x 9 · Max.: 70 kg x 5</text>
   <g font-family="Arial,sans-serif" text-anchor="middle">
-    <rect x="20" y="128" width="48" height="48" rx="12" fill="#172942"/><text x="44" y="159" fill="#eef5ff" font-size="22">-</text>
-    <rect x="78" y="128" width="404" height="48" rx="12" fill="#172942"/><text x="280" y="158" fill="#eef5ff" font-size="16" font-weight="700">8 reps</text>
-    <rect x="492" y="128" width="48" height="48" rx="12" fill="#172942"/><text x="516" y="159" fill="#eef5ff" font-size="22">+</text>
-    <rect x="20" y="188" width="56" height="48" rx="12" fill="#172942"/><text x="48" y="218" fill="#eef5ff" font-size="14">-0,5</text>
-    <rect x="86" y="188" width="388" height="48" rx="12" fill="#172942"/><text x="280" y="218" fill="#eef5ff" font-size="15" font-weight="700">60 kg | tocar para paso 5</text>
-    <rect x="484" y="188" width="56" height="48" rx="12" fill="#172942"/><text x="512" y="218" fill="#eef5ff" font-size="14">+0,5</text>
-    <rect x="20" y="248" width="250" height="48" rx="12" fill="#68e6a4"/><text x="145" y="278" fill="#06111f" font-size="15" font-weight="700">Guardar</text>
-    <rect x="280" y="248" width="125" height="48" rx="12" fill="#172942"/><text x="342" y="278" fill="#eef5ff" font-size="14">Deshacer</text>
-    <rect x="415" y="248" width="125" height="48" rx="12" fill="#172942"/><text x="477" y="278" fill="#eef5ff" font-size="14">Elegir</text>
+    <rect x="20" y="156" width="48" height="48" rx="12" fill="#172942"/><text x="44" y="187" fill="#eef5ff" font-size="22">-</text>
+    <rect x="78" y="156" width="404" height="48" rx="12" fill="#172942"/><text x="280" y="186" fill="#eef5ff" font-size="16" font-weight="700">8 reps</text>
+    <rect x="492" y="156" width="48" height="48" rx="12" fill="#172942"/><text x="516" y="187" fill="#eef5ff" font-size="22">+</text>
+    <rect x="20" y="216" width="62" height="48" rx="12" fill="#172942"/><text x="51" y="246" fill="#eef5ff" font-size="14">-0,5</text>
+    <rect x="92" y="216" width="376" height="48" rx="12" fill="#172942"/><text x="280" y="246" fill="#eef5ff" font-size="16" font-weight="700">60 kg</text>
+    <rect x="478" y="216" width="62" height="48" rx="12" fill="#172942"/><text x="509" y="246" fill="#eef5ff" font-size="14">+0,5</text>
+    <rect x="20" y="276" width="62" height="48" rx="12" fill="#172942"/><text x="51" y="306" fill="#eef5ff" font-size="15">-5</text>
+    <rect x="92" y="276" width="376" height="48" rx="12" fill="#68e6a4"/><text x="280" y="306" fill="#06111f" font-size="15" font-weight="700">Guardar serie</text>
+    <rect x="478" y="276" width="62" height="48" rx="12" fill="#172942"/><text x="509" y="306" fill="#eef5ff" font-size="15">+5</text>
   </g>
-  <text x="24" y="326" fill="#ffd36e" font-family="Arial,sans-serif" font-size="12">Guardado en el dispositivo | Deshacer disponible</text>
-  <rect x="20" y="340" width="520" height="34" rx="10" fill="#172942"/>
-  <text x="280" y="362" text-anchor="middle" fill="#eef5ff" font-family="Arial,sans-serif" font-size="13">Descanso 01:12</text>
+  <text x="24" y="354" fill="#ffd36e" font-family="Arial,sans-serif" font-size="12">Guardado en el dispositivo · Deshacer disponible</text>
+  <rect x="20" y="370" width="520" height="48" rx="12" fill="#172942"/>
+  <text x="280" y="400" text-anchor="middle" fill="#eef5ff" font-family="Arial,sans-serif" font-size="13">Descanso 01:12</text>
 </svg>
