@@ -33,6 +33,7 @@ assert.match(source,/undoDeleteQuickSetPayload/);
 
 function createContext(preloaded = {}, today = '2026-06-22') {
   const store = new Map(Object.entries(preloaded));
+  let uidCounter=0;
   const context = {
     console,
     window: null,
@@ -55,7 +56,7 @@ function createContext(preloaded = {}, today = '2026-06-22') {
       }
     },
     setLocalData(key, value) { store.set(key, JSON.stringify(value)); },
-    uid(prefix) { return `${prefix}_test`; },
+    uid(prefix) { uidCounter+=1; return `${prefix}_test_${uidCounter}`; },
     todayStr() { return today; },
     escapeHtml(value) { return String(value ?? ''); },
     flash() {},
@@ -160,6 +161,22 @@ assert.equal(quickRestored.ok,true);
 assert.equal(quickRestored.state.currentExerciseSets,1);
 assert.equal(quickRestored.state.currentSets[0].weight,22.5);
 assert.equal(quickWorkout.canUndoQuickSetDelete(),false);
+
+const {context: savedUndoContext} = createContext();
+const savedUndoWorkout=savedUndoContext.WORKOUT_FEATURES;
+const savedUndoState=savedUndoWorkout.getQuickWorkoutState({date:'2026-06-22'});
+const firstSavedUndo=savedUndoWorkout.saveQuickSetPayload({date:'2026-06-22',exerciseId:savedUndoState.currentExerciseId,reps:8,weight:60});
+const secondSavedUndo=savedUndoWorkout.saveQuickSetPayload({date:'2026-06-22',exerciseId:savedUndoState.currentExerciseId,reps:7,weight:62.5});
+assert.deepEqual(Object.keys(firstSavedUndo.undoReceipt.snapshot).sort(),['addedLoadKg','assistanceKg','barWeightKg','bodyweight','completed','distanceMeters','durationSeconds','equipmentId','excludeFromProgression','excludeFromRecords','id','laterality','loadMode','measurementMode','note','reps','rir','rpe','savedAt','setType','weight','weightKg'].sort(),'Deshacer debe capturar el snapshot canonico del set');
+const exactUndo=savedUndoWorkout.undoSavedQuickSetPayload(firstSavedUndo.undoReceipt);
+assert.equal(exactUndo.ok,true);
+assert.deepEqual(Array.from(exactUndo.state.currentSets).map(set=>set.id),[secondSavedUndo.set.id],'Deshacer debe retirar solamente el setId anunciado');
+const repeatedUndo=savedUndoWorkout.undoSavedQuickSetPayload(firstSavedUndo.undoReceipt);
+assert.equal(repeatedUndo.alreadyUndone,true,'Deshacer repetido debe ser idempotente');
+assert.equal(repeatedUndo.reason,'already-undone');
+const editedSaved=savedUndoWorkout.updateQuickSetPayload({date:'2026-06-22',exerciseId:savedUndoState.currentExerciseId,setId:secondSavedUndo.set.id,reps:6,weight:65});
+assert.equal(editedSaved.ok,true);
+assert.equal(savedUndoWorkout.undoSavedQuickSetPayload(secondSavedUndo.undoReceipt).reason,'set-edited','Una serie editada no debe eliminarse silenciosamente');
 assert.equal(quickWorkout.updateGymSettings({restTimerEnabled:true,restSeconds:75,hapticEnabled:false}).restSeconds,75);
 assert.equal(JSON.parse(quickStore.get(quickWorkout.keys.workoutSessions))[0].routine.name, 'Torso A');
 const manualExercise = quickWorkout.addManualExercisePayload({

@@ -22,7 +22,7 @@ test('Inicio movil adapta score, pendientes y acción completada',async ({page},
   await expect(page.locator('#homeCompactActionBtn')).toHaveText('Guardar día');
   await page.locator('#homeCompactActionBtn').click();
   await expect(page.locator('#homeCompactState')).toHaveText('Día guardado');
-  await expect(page.locator('#homeCompactActionBtn')).toHaveText('Ver progreso');
+  await expect(page.locator('#homeCompactActionBtn')).toHaveText('Ver resumen');
   await expect(page.locator('#actionFocusCard')).toHaveClass(/completed/);
   await expect(page.locator('#actionNextRecommendation')).toBeVisible();
 });

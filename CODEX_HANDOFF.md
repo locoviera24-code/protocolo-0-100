@@ -12,6 +12,27 @@ Leer primero este archivo y luego `README.md`, `index.html`,
 `manifest.webmanifest`, `sw.js`, `firebase/README.md` y los archivos Android
 en `android-native-wrapper/`.
 
+## Trabajo en curso: Web Core Flow P0
+
+Rama: `codex/web-core-flow-p0` desde `main` (`1a9186e`). La version sigue en
+`2.7.0`, build web `89`, Android `versionCode 33` y backup schema 3 hasta cerrar
+el bloque completo.
+
+Gate A completado el 2026-08-03:
+
+- Inicio decide su CTA con estados explicitos: registro existente, borrador,
+  cambios pendientes, campos esenciales y validez. Los dos botones de guardado
+  usan `saveCurrentDay`; el inferior es secundario.
+- Gym presenta `Entrenar` antes del resumen y deja la sesion completa dentro de
+  `Edicion avanzada de sesion`.
+- Guardar muestra la serie exacta, devuelve el foco y ofrece Deshacer durante
+  10 segundos. La operacion conserva el `setId`, es idempotente, no elimina una
+  serie posterior y rechaza una serie editada.
+- Pruebas directas aprobadas: Home/Ajustes, Workout, diseno, layout y limites
+  modulares. Playwright Android Chromium aprobo Inicio, guardado/Deshacer y el
+  flujo PWA; el proceso local de Playwright quedo abierto despues de reportar
+  exito y fue terminado por el timeout del runner, sin escenario fallido.
+
 ## 1. Estado actual del proyecto
 
 La app sigue siendo PWA + APK Android con WebView. La raiz del repo es la

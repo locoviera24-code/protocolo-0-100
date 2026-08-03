@@ -174,7 +174,7 @@
               <div class="field" style="margin-top:12px"><label>Nota breve del día</label><textarea id="note" placeholder="Qué funcionó o qué querés ajustar"></textarea></div>
             </details>
             <div class="dailySaveBar">
-              <button type="button" class="good" id="saveBtn"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M5 3h12l2 2v16H5zM8 3v6h8V3M8 17h8"/></svg>Guardar día</button>
+              <button type="button" class="secondary" id="saveBtn"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M5 3h12l2 2v16H5zM8 3v6h8V3M8 17h8"/></svg>Guardar día</button>
             </div>
             <div class="scoreBreak" id="scoreBreak"></div>
             <div class="auditBox" id="auditBox"></div>
@@ -208,7 +208,7 @@
             </div>
 
             <details class="moduleCard gymLegacyDetails">
-              <summary>Registro por sesión (avanzado)</summary>
+              <summary>Edición avanzada de sesión</summary>
               <h3>Sesión completa</h3>
               <div class="formGrid">
                 <div class="field"><label>Fecha</label><input type="date" id="gymDate"></div>
@@ -839,6 +839,7 @@
 <script src="app/numbers.js"></script>
 <script src="app/drafts.js"></script>
 <script src="app/dates.js"></script>
+<script src="app/home-state.js"></script>
 <script src="data/schema-registry.js"></script>
 <script src="data/indexeddb.js"></script>
 <script src="data/repositories.js"></script>
@@ -904,6 +905,7 @@ let gymDraft = [];
 let nutritionAssistantDraft = [];
 let activeModule = 'protocolo';
 let lastProtocolTab = 'registro';
+let protocolFormDirty = false;
 
 function pad(n){return String(n).padStart(2,'0')}
 function todayStr(){ const d=new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
@@ -922,15 +924,22 @@ function homeCompletionState(){
   const filled=essentialIds.filter(id=>String(document.getElementById(id)?.value||'').trim()!=='');
   const date=document.getElementById('entryDate')?.value||todayStr();
   const saved=getEntries().find(entry=>entry.date===date)||null;
-  return {essentialIds,filled,saved,date,state:saved?'complete':filled.length?'partial':'empty'};
+  const requiredMissing=essentialIds.filter(id=>!filled.includes(id));
+  const hasDraft=protocolFormDirty||!!window.APP_DRAFTS?.get?.(protocolDraftId(date),{newerThan:saved?.savedAt||''});
+  const isDirty=protocolFormDirty;
+  const isValid=requiredMissing.length===0&&essentialIds.every(id=>{
+    const value=window.APP_NUMBERS?.parse?.(document.getElementById(id)?.value);
+    return Number.isFinite(value)&&value>=0;
+  });
+  return {essentialIds,filled,saved,date,hasTodayRecord:!!saved,hasDraft,isDirty,requiredMissing,isValid};
 }
 function renderHomeStatus(){
   const card=document.getElementById('homeStatusCard');if(!card)return;
   const completion=homeCompletionState(),raw=readForm(),score=scoreEntry(raw),entries=getEntries();
   let streak=0;for(let index=entries.length-1;index>=0;index--){if((entries[index].score||0)>=70)streak+=1;else break;}
   const actionDone=!!(completion.saved?.keyActionDone||raw.keyActionDone);
-  const ready=!completion.saved&&completion.filled.length===completion.essentialIds.length;
-  const state=completion.saved?'complete':ready?'ready':completion.state;
+  const actionName=window.HOME_STATE?.primaryAction(completion)||(completion.filled.length?'continue':'start');
+  const state=actionName==='summary'?'complete':actionName==='save'?'ready':actionName==='continue'?'partial':'empty';
   const stateLabels={empty:'Sin datos',partial:'Registro parcial',ready:'Listo para guardar',complete:'Día guardado'};
   card.dataset.homeState=state;document.body.dataset.homeState=state;document.body.dataset.actionComplete=String(actionDone);
   document.getElementById('homeCompactScore').textContent=completion.saved?.score??score.total;
@@ -939,18 +948,27 @@ function renderHomeStatus(){
   const pending=Math.max(0,completion.essentialIds.length-completion.filled.length);
   document.getElementById('homeCompactPending').textContent=completion.saved?'Registro guardado':pending?(pending+' dato'+(pending===1?'':'s')+' esencial'+(pending===1?'':'es')+' pendiente'+(pending===1?'':'s')):'Revisá y guardá el día';
   const action=document.getElementById('homeCompactActionBtn');
-  action.textContent=completion.saved?'Ver progreso':ready?'Guardar día':completion.filled.length?'Continuar registro':'Empezar registro';
-  action.dataset.homeAction=completion.saved?'progress':ready?'save':'continue';
+  const actionLabels={start:'Empezar registro',continue:'Continuar registro',save:'Guardar día',summary:'Ver resumen'};
+  action.textContent=actionLabels[actionName];
+  action.dataset.homeAction=actionName;
   document.getElementById('actionFocusCard')?.classList.toggle('completed',actionDone);
   document.getElementById('actionNextRecommendation')?.classList.toggle('hidden',!actionDone);
 }
 function runHomeCompactAction(){
   const action=document.getElementById('homeCompactActionBtn')?.dataset.homeAction;
-  if(action==='progress'){window.APP_ROUTER?.navigate({module:'progress',view:'overview'});return;}
-  if(action==='save'){saveEntry();return;}
+  if(action==='summary'){window.APP_ROUTER?.navigate({module:'home',view:'overview'});return;}
+  if(action==='save'){saveCurrentDay();return;}
   const completion=homeCompletionState();
   const target=completion.essentialIds.map(id=>document.getElementById(id)).find(element=>!String(element?.value||'').trim())||document.getElementById('nonEssential');
   target?.scrollIntoView({behavior:preferredMotionBehavior(),block:'center'});target?.focus();
+}
+function organizeHomePrimaryFlow(){
+  const dateControls=document.querySelector('.homeDateControls');
+  const actionCard=document.getElementById('actionFocusCard');
+  if(dateControls&&actionCard)dateControls.insertAdjacentElement('afterend',actionCard);
+  const dashboard=document.getElementById('tab-dashboard');
+  const sharedShortcut=document.querySelector('.homeShortcut');
+  if(dashboard&&sharedShortcut)dashboard.insertAdjacentElement('afterend',sharedShortcut);
 }
 function daysBetween(a,b){ return Math.round((parseDate(b)-parseDate(a))/(1000*60*60*24)); }
 function clamp(n,min,max){ return Math.max(min, Math.min(max, Number.isFinite(n)?n:0)); }
@@ -2112,7 +2130,7 @@ function captureProtocolDraft(){
 }
 function restoreProtocolDraft(date=document.getElementById('entryDate')?.value||todayStr(),saved=getEntries().find(entry=>entry.date===date)){
   const id=protocolDraftId(date),draft=window.APP_DRAFTS?.get?.(id,{newerThan:saved?.savedAt||''});if(!draft?.payload)return false;
-  fillForm(draft.payload);document.getElementById('manualDay').value=draft.payload.manualDay??'';updateUI();
+  fillForm(draft.payload);document.getElementById('manualDay').value=draft.payload.manualDay??'';protocolFormDirty=true;updateUI();
   if(!restoredDraftNotices.has(id)){
     restoredDraftNotices.add(id);
     window.APP_DRAFTS?.announceRestored?.({id,label:'Borrador del registro diario restaurado.',onDiscard:()=>fillForm(saved||null)});
@@ -2128,10 +2146,11 @@ function fillForm(entry){
   ['phoneImported','phoneImportedAt','phoneDetectedTotal','phoneDetectedNonEssential','phoneMetricSource'].forEach(id=>{const el=document.getElementById(id); if(el) el.value = entry ? (entry[id] ?? '') : '';});
   ['measuredScreen','wakeNoSocial','stableSchedule','phoneOutBed','noPhoneBed','writingDone','readBeforeScroll','keyActionDone'].forEach(id=>{document.getElementById(id).checked = !!e[id];});
   document.getElementById('note').value = e.note || '';
+  protocolFormDirty=false;
   updateUI();
 }
 
-function saveEntry(){
+function saveCurrentDay(){
   const raw = readForm();
   const score = scoreEntry(raw);
   const plan = planForDay(raw.day);
@@ -2142,9 +2161,11 @@ function saveEntry(){
   entries.sort((a,b)=>a.date.localeCompare(b.date));
   setEntries(entries);
   window.APP_DRAFTS?.remove?.(protocolDraftId(entry.date));
+  protocolFormDirty=false;
   flash('Registro guardado.');
   renderAll();
 }
+function saveEntry(){return saveCurrentDay();}
 function deleteEntry(){
   const date = document.getElementById('entryDate').value || todayStr();
   let entries = getEntries().filter(e=>e.date!==date);
@@ -3077,6 +3098,7 @@ if('serviceWorker' in navigator && location.protocol !== 'file:' && location.hos
 
 // Events
 
+organizeHomePrimaryFlow();
 const syncBtn=document.getElementById('syncAndroidUsageBtn'); if(syncBtn) syncBtn.addEventListener('click', syncAndroidUsageToday);
 const requestUsageBtn=document.getElementById('requestUsageAccessBtn'); if(requestUsageBtn) requestUsageBtn.addEventListener('click', requestUsageAccess);
 const installBtn=document.getElementById('installPwaBtn'); if(installBtn) installBtn.addEventListener('click', installPwa);
@@ -3184,13 +3206,13 @@ document.getElementById('nutritionDate').addEventListener('change', ()=>{loadBod
 document.getElementById('customFoodDetails')?.addEventListener('toggle',event=>{if(event.currentTarget.dataset.suppressDraft!=='1')captureNutritionFoodDraft();});
 document.getElementById('customFoodOptionalFields')?.addEventListener('toggle',captureNutritionFoodDraft);
 
-document.getElementById('saveBtn').addEventListener('click', saveEntry);
+document.getElementById('saveBtn').addEventListener('click', saveCurrentDay);
 document.getElementById('deleteBtn').addEventListener('click', deleteEntry);
 document.getElementById('clearBtn').addEventListener('click', ()=>{window.APP_DRAFTS?.remove?.(protocolDraftId());fillForm(null);});
 document.getElementById('startDate').addEventListener('change', e=>{localStorage.setItem(START_KEY,e.target.value); renderAll();});
 document.getElementById('entryDate').addEventListener('change', loadEntryForDate);
-document.getElementById('manualDay').addEventListener('input', ()=>{updateUI();captureProtocolDraft();});
-['totalScreen','nonEssential','sleepHours','noSocialMins','readingMins','offlineMins','anxiety','measuredScreen','wakeNoSocial','stableSchedule','phoneOutBed','noPhoneBed','writingDone','readBeforeScroll','keyActionDone','phoneImported','phoneImportedAt','phoneDetectedTotal','phoneDetectedNonEssential','phoneMetricSource','note'].forEach(id=>document.getElementById(id).addEventListener('input',()=>{updateUI();captureProtocolDraft();}));
+document.getElementById('manualDay').addEventListener('input', ()=>{protocolFormDirty=true;updateUI();captureProtocolDraft();});
+['totalScreen','nonEssential','sleepHours','noSocialMins','readingMins','offlineMins','anxiety','measuredScreen','wakeNoSocial','stableSchedule','phoneOutBed','noPhoneBed','writingDone','readBeforeScroll','keyActionDone','phoneImported','phoneImportedAt','phoneDetectedTotal','phoneDetectedNonEssential','phoneMetricSource','note'].forEach(id=>document.getElementById(id).addEventListener('input',()=>{protocolFormDirty=true;updateUI();captureProtocolDraft();}));
 document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{
   activateTab(btn.dataset.tab);
   if(btn.dataset.tab==='guia') renderHelpGuide();
