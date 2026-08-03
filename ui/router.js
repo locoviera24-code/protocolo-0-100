@@ -25,7 +25,7 @@
     gym:new Set(['train','routine','group','progress']),
     nutrition:new Set(['meals','coverage','targets','history']),
     progress:new Set(['overview','habits','gym','nutrition','history','achievements']),
-    more:new Set(['root','phone','plan','help','settings','data','privacy','about'])
+    more:new Set(['root','phone','plan','help','settings','data','privacy','about','experimental'])
   };
   let currentRoute=null;
   let routeHandler=null;

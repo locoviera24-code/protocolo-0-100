@@ -13,6 +13,7 @@
     {id:'calves',x:144,y:99},{id:'tibialis',x:58,y:96}
   ];
   let activeView='overview';
+  const viewState=Object.fromEntries([...views].map(view=>[view,{rendered:false,dirty:true}]));
 
   function read(key,fallback){
     return window.APP_REPOSITORIES?.forKey?.(key)?.get(key,fallback)??window.APP_DATA?.read?.(key,fallback)??fallback;
@@ -38,6 +39,37 @@
     return read(key,[]);
   }
   function nutritionEntries(){return read(NUTRITION_KEY,[]);}
+  function progressRoute(){return window.APP_ROUTER?.current?.()?.module==='progress';}
+  function comparableGymSessions(){
+    const rows=window.GYM_PROGRESS_MODEL?.flatten?.(workoutSessions(),window.WORKOUT_FEATURES?.getExerciseLibrary?.()||[])||[],groups=new Map();
+    rows.forEach(row=>row.sets.filter(set=>set.completed!==false&&set.progressionEligible!==false&&set.mainVolume!==false).forEach(set=>{
+      const key=[row.exerciseId,set.comparisonKey||[set.measurementMode,set.loadMode].join('|')].join('|'),sessions=groups.get(key)||new Set();
+      sessions.add(row.sessionId);groups.set(key,sessions);
+    }));
+    return Math.max(0,...[...groups.values()].map(sessions=>sessions.size));
+  }
+  function emptyState(view){
+    if(view==='habits'){
+      const count=new Set(protocolEntries().map(entry=>entry.date).filter(Boolean)).size;
+      return count<3?{count,needed:3-count,text:'Registrá 3 días para comparar una tendencia.',action:'Registrar hoy',module:'home',routeView:'register'}:null;
+    }
+    if(view==='gym'){
+      const count=comparableGymSessions();
+      return count<2?{count,needed:2-count,text:'Guardá al menos 2 sesiones del mismo ejercicio.',action:'Empezar entrenamiento',module:'gym',routeView:'train'}:null;
+    }
+    if(view==='nutrition'){
+      const count=new Set(nutritionEntries().map(entry=>entry.date).filter(Boolean)).size;
+      return count<3?{count,needed:3-count,text:'Registrá comidas en 3 días para ver promedios.',action:'Agregar alimento',module:'nutrition',routeView:'meals'}:null;
+    }
+    return null;
+  }
+  function renderEmptyState(view){
+    const panel=document.querySelector('[data-progress-panel="'+view+'"]'),box=panel?.querySelector('[data-progress-empty="'+view+'"]'),state=emptyState(view);
+    if(!panel||!box)return false;
+    panel.dataset.insufficient=String(!!state);box.classList.toggle('hidden',!state);
+    box.innerHTML=state?'<h3>'+escape(state.text)+'</h3><p class="muted small">Faltan '+state.needed+' registro(s) comparable(s). Cuando estén disponibles, vas a ver tendencias sin mezclar modos o equipos incompatibles.</p><button type="button" class="primary" data-progress-empty-action data-module="'+state.module+'" data-view="'+state.routeView+'">'+escape(state.action)+'</button>':'';
+    return !!state;
+  }
   function sessionMetrics(session){
     if(Array.isArray(session.exercises))return window.WORKOUT_METRICS?.calculateSessionMetrics?.(session)||{};
     const items=session.items||[];
@@ -206,8 +238,24 @@
     if(chart)chart.innerHTML=barRows(weeks,{value:row=>row.days.size,label:row=>row.label.slice(5),detail:row=>`${Math.round(row.volume).toLocaleString()} kcal registradas`,display:row=>`${row.days.size} días`,max:()=>7,empty:'Registrá comidas para ver constancia por semana.'});
     if(caption)caption.textContent=weeks.length?`Resumen textual: ${weeks.map(week=>`semana ${week.label}, ${week.days.size} días registrados`).join('; ')}. La ausencia de registro no equivale a una evaluación de la alimentación.`:'Resumen textual: no hay comidas en el período.';
   }
-  function render(){renderOverview();renderGym();renderNutrition();}
-  function applyRoute(view,{navigate=false}={}){
+  function renderView(view,{force=false}={}){
+    const state=viewState[view];if(!state||(!force&&state.rendered&&!state.dirty))return false;
+    if(view==='overview'){window.renderIntegralScore?.();renderOverview();}
+    else if(view==='habits'){if(!renderEmptyState(view))window.renderProtocolProgressView?.(view);}
+    else if(view==='gym'){if(!renderEmptyState(view))renderGym();}
+    else if(view==='nutrition'){if(!renderEmptyState(view))renderNutrition();}
+    else window.renderProtocolProgressView?.(view);
+    state.rendered=true;state.dirty=false;return true;
+  }
+  function markDirty(viewNames=views){
+    for(const view of viewNames)viewState[view]&&(viewState[view].dirty=true);
+  }
+  function render(){if(progressRoute())renderView(activeView);}
+  function focusActiveHeading(){
+    const headings={overview:'progressViewHeading',habits:'progressHabitsHeading',gym:'progressGymHeading',nutrition:'progressNutritionHeading',history:'progressHistoryHeading',achievements:'progressAchievementsHeading'};
+    requestAnimationFrame(()=>document.getElementById(headings[activeView])?.focus({preventScroll:true}));
+  }
+  function applyRoute(view,{navigate=false,focus=false}={}){
     activeView=views.has(view)?view:'overview';
     document.querySelectorAll('[data-progress-view]').forEach(button=>{
       const selected=button.dataset.progressView===activeView;
@@ -216,12 +264,20 @@
     });
     document.querySelectorAll('[data-progress-panel]').forEach(panel=>panel.classList.toggle('hidden',panel.dataset.progressPanel!==activeView));
     if(navigate)window.APP_ROUTER?.navigate({module:'progress',view:activeView});
-    render();
+    const rendered=renderView(activeView);
+    if(!rendered&&activeView==='gym'&&viewState.gym.rendered&&!viewState.gym.dirty)renderGymScope();
+    if(focus||navigate)focusActiveHeading();
   }
   function setup(){
-    document.querySelectorAll('[data-progress-view]').forEach(button=>button.addEventListener('click',()=>applyRoute(button.dataset.progressView,{navigate:true})));
-    document.getElementById('progressPeriod')?.addEventListener('change',render);
-    document.getElementById('progressArea')?.addEventListener('change',render);
+    document.querySelectorAll('[data-progress-view]').forEach(button=>button.addEventListener('click',()=>applyRoute(button.dataset.progressView,{navigate:true,focus:true})));
+    document.querySelector('.progressSectionNav')?.addEventListener('keydown',event=>{
+      if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
+      const tabs=[...event.currentTarget.querySelectorAll('[data-progress-view]')],current=Math.max(0,tabs.indexOf(document.activeElement));
+      const index=event.key==='Home'?0:event.key==='End'?tabs.length-1:(current+(event.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length,target=tabs[index];
+      if(!target)return;event.preventDefault();applyRoute(target.dataset.progressView,{navigate:true,focus:true});
+    });
+    document.getElementById('progressPeriod')?.addEventListener('change',()=>{markDirty(['overview','gym','nutrition']);render();});
+    document.getElementById('progressArea')?.addEventListener('change',()=>{markDirty(['overview']);render();});
     document.querySelectorAll('[data-progress-gym-scope]').forEach(button=>button.addEventListener('click',()=>{const scope=button.dataset.progressGymScope,selection=scope==='muscle'?(selectedMuscleFromUrl()||document.getElementById('progressMuscleSelect')?.value||''):scope==='exercise'?(selectedExerciseFromUrl()||document.getElementById('progressExerciseSelect')?.value||''):'';setGymScope(scope,selection);}));
     document.getElementById('progressMuscleSelect')?.addEventListener('change',event=>setGymScope('muscle',event.target.value));
     document.getElementById('progressMuscleMap')?.addEventListener('click',event=>{const button=event.target.closest('[data-progress-muscle]');if(button?.dataset.progressMuscle)setGymScope('muscle',button.dataset.progressMuscle);});
@@ -230,11 +286,18 @@
     document.getElementById('progressExerciseSelect')?.addEventListener('change',event=>setGymScope('exercise',event.target.value));
     document.getElementById('progressExerciseSearch')?.addEventListener('input',renderExerciseProgress);
     document.getElementById('progressExerciseMetric')?.addEventListener('change',renderExerciseProgress);
-    document.addEventListener('click',event=>{if(event.target.closest('[data-open-progress]'))window.APP_ROUTER?.navigate({module:'progress',view:'overview'});});
+    document.addEventListener('click',event=>{
+      if(event.target.closest('[data-open-progress]')){window.APP_ROUTER?.navigate({module:'progress',view:'overview'});return;}
+      const action=event.target.closest('[data-progress-empty-action]');if(action)window.APP_ROUTER?.navigate({module:action.dataset.module,view:action.dataset.view});
+    });
+    window.addEventListener('app-data-change',event=>{
+      const affected={protocol:['overview','habits','history','achievements'],workout:['overview','gym'],nutrition:['overview','nutrition']}[event.detail?.domain];
+      if(!affected)return;markDirty(affected);if(progressRoute()&&affected.includes(activeView))requestAnimationFrame(render);
+    });
     window.addEventListener('app-route-change',event=>{if(event.detail?.module==='progress')applyRoute(event.detail.view);});
-    const route=window.APP_ROUTER?.current();if(route?.module==='progress')applyRoute(route.view);else render();
+    const route=window.APP_ROUTER?.current();if(route?.module==='progress')applyRoute(route.view);
   }
 
-  window.PROGRESS_VIEW={render,applyRoute,current:()=>activeView};
+  window.PROGRESS_VIEW={render,applyRoute,markDirty,current:()=>activeView,state:()=>Object.fromEntries(Object.entries(viewState).map(([view,state])=>[view,{...state}]))};
   setup();
 })();

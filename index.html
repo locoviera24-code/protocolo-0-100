@@ -531,6 +531,8 @@
             </section>
 
             <section class="hidden" data-progress-panel="habits" role="tabpanel" aria-labelledby="progress-tab-habits">
+              <h2 class="srOnly" id="progressHabitsHeading" tabindex="-1">Progreso de hábitos</h2>
+              <div class="moduleCard progressEmptyGate hidden" data-progress-empty="habits" role="status"></div>
               <div class="periodNote"><strong>Hábitos:</strong> compará períodos para decidir un solo ajuste concreto.</div>
               <div class="metricGrid" id="periodMetrics"></div>
               <div class="comparisonBars" id="comparisonBars"></div>
@@ -546,6 +548,8 @@
             </section>
 
             <section class="hidden" data-progress-panel="gym" role="tabpanel" aria-labelledby="progress-tab-gym">
+              <h2 class="srOnly" id="progressGymHeading" tabindex="-1">Progreso de Gym</h2>
+              <div class="moduleCard progressEmptyGate hidden" data-progress-empty="gym" role="status"></div>
               <nav class="progressGymNav" aria-label="Análisis de Gym">
                 <button type="button" class="active" data-progress-gym-scope="summary">Resumen</button>
                 <button type="button" data-progress-gym-scope="muscle">Músculos</button>
@@ -582,20 +586,20 @@
             </section>
 
             <section class="hidden" data-progress-panel="nutrition" role="tabpanel" aria-labelledby="progress-tab-nutrition">
+              <h2 class="srOnly" id="progressNutritionHeading" tabindex="-1">Progreso de Nutrición</h2>
+              <div class="moduleCard progressEmptyGate hidden" data-progress-empty="nutrition" role="status"></div>
               <div class="progressKpiGrid" id="progressNutritionSummary"></div>
               <section class="moduleCard" aria-labelledby="progressNutritionChartTitle"><h2 id="progressNutritionChartTitle">Registro nutricional</h2><div id="progressNutritionChart"></div><p class="chartCaption" id="progressNutritionChartSummary"></p></section>
             </section>
 
             <section class="hidden" data-progress-panel="history" role="tabpanel" aria-labelledby="progress-tab-history">
+              <h2 class="srOnly" id="progressHistoryHeading" tabindex="-1">Historial del protocolo</h2>
               <div class="moduleCard"><div class="sectionHeading"><div><h2>Historial del protocolo</h2><p class="muted small">Los registros más recientes aparecen primero.</p></div><div class="buttons"><button type="button" class="secondary" id="exportJsonBtn">Exportar JSON</button><button type="button" class="secondary" id="exportCsvBtn">Exportar CSV</button><button type="button" class="secondary" id="importBtn">Importar JSON</button><input type="file" id="importFile" accept="application/json" class="hidden"></div></div><div class="history"><table id="historyTable"></table></div></div>
             </section>
 
             <section class="hidden" data-progress-panel="achievements" role="tabpanel" aria-labelledby="progress-tab-achievements">
+              <h2 class="srOnly" id="progressAchievementsHeading" tabindex="-1">Logros de hábitos</h2>
               <div class="moduleCard"><h2>Insignias de hábitos</h2><div class="badgeGrid" id="badges"></div></div>
-              <details class="moduleCard progressRewardsDetails"><summary>Focus Coins y recompensas</summary><div class="moduleGrid"><div class="moduleCard"><h3>Focus Coins</h3><div class="coinBalance"><span id="coinBalance">0</span> <small>coins</small></div><div class="muted small">Gamificación interna, no financiera y no transferible.</div><div class="ledgerList" id="coinLedger"></div></div><div class="moduleCard"><h3>Recompensas e insignias</h3><div class="badgeGrid" id="rewardBadges"></div><div class="entryList" id="rewardsList"></div></div></div></details>
-              <details class="moduleCard progressSecondaryDetails"><summary>Rankings mensuales</summary><div class="formGrid"><div class="field"><label for="rankingAlias">Alias público</label><input type="text" id="rankingAlias" placeholder="Ej. LectorConstante"></div><label class="check"><input type="checkbox" id="rankingOptIn"><span>Participar en rankings locales simulados.</span></label></div><div class="buttons"><button type="button" class="secondary" id="saveRankingSettingsBtn">Guardar preferencia</button></div><div class="rankingTable"><table id="monthlyRankingsTable"></table></div><div class="muted small">No existe un ranking único de perfección. La comparación útil es con tu período anterior.</div></details>
-              <details class="moduleCard progressSecondaryDetails"><summary>Referidos y afiliados</summary><div class="formGrid"><div class="field"><label for="referralCodeInput">Código de referido</label><input type="text" id="referralCodeInput" placeholder="Ej. FOCUS10"></div><div class="field"><label>Estado</label><div class="auditItem" id="referralStatus">Sin código aplicado.</div></div></div><div class="buttons"><button type="button" class="good" id="applyReferralBtn">Aplicar código</button><button type="button" class="secondary" id="exportAffiliateCsvBtn">Descargar panel CSV</button></div><div class="quickStats" id="affiliateStats"></div><div class="legalBox"><strong>Aviso de afiliados:</strong> las conversiones e ingresos mostrados aquí son simulaciones locales; pagos reales requieren backend, identidad y condiciones comerciales.</div></details>
-              <details class="moduleCard progressSecondaryDetails"><summary>Términos de Focus Coins</summary><div class="legalBox">Los puntos internos no son dinero, inversión ni criptomoneda; no se pueden retirar, transferir ni intercambiar por dinero.</div></details>
             </section>
           </div>
 
@@ -610,6 +614,7 @@
               <button type="button" class="moreLink" data-more-view="help"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.8 9a2.4 2.4 0 1 1 3.6 2.1c-.9.5-1.4 1-1.4 2M12 17h.01"/></svg><span><strong>Ayuda</strong><small>Guía y criterios</small></span></button>
               <button type="button" class="moreLink" data-more-view="settings"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="11" cy="18" r="2"/></svg><span><strong>Ajustes</strong><small>Experiencia y módulos</small></span></button>
               <button type="button" class="moreLink" data-more-view="data"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M5 5h14v14H5zM8 9h8M8 13h8M8 17h5"/></svg><span><strong>Datos y copias</strong><small>Exportar, importar y restablecer</small></span></button>
+              <button type="button" class="moreLink" data-more-view="experimental"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3"/><path d="M8 15h8"/></svg><span><strong>Funciones experimentales</strong><small>Coins, rankings y afiliados opcionales</small></span></button>
               <button type="button" class="moreLink" data-more-view="privacy"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.6 2.8 8.2 7 10 4.2-1.8 7-5.4 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></svg><span><strong>Privacidad</strong><small>Qué se guarda y comparte</small></span></button>
               <button type="button" class="moreLink" data-more-view="about"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/></svg><span><strong>Acerca de</strong><small>Versión, licencias y fuentes</small></span></button>
             </div>
@@ -713,6 +718,17 @@
             <div class="moduleCard"><h3>Datos personales</h3><p>Hábitos, nutrición, sueño, pantalla y notas permanecen en este dispositivo. Gym Party comparte solo los datos de gimnasio que aceptás compartir.</p><button type="button" class="secondary" data-route-module="gym" data-route-view="group">Revisar privacidad de Gym Party</button></div>
           </section>
 
+          <section id="tab-experimental" class="hidden routeSubpage" aria-labelledby="experimentalViewTitle">
+            <div class="moduleHero"><h2 id="experimentalViewTitle" tabindex="-1">Funciones experimentales</h2><div class="muted small">Estas funciones están en evaluación y no afectan tus registros principales.</div></div>
+            <div class="moduleCard"><label class="check"><input type="checkbox" id="experimentalFeaturesEnabled"><span>Activar funciones experimentales en este dispositivo.</span></label><p class="muted small" id="experimentalFeaturesStatus" role="status" aria-live="polite">Desactivadas. Tus datos anteriores se conservan sin recalcularse.</p><div class="hidden experimentalLegacyDecision" id="experimentalLegacyDecision"><p><strong>Encontramos datos experimentales anteriores.</strong> Elegí si querés continuar usándolos. Ninguna opción borra saldos, rankings ni referidos.</p><div class="buttons"><button type="button" class="good" id="continueExperimentalFeaturesBtn">Seguir usando funciones experimentales</button><button type="button" class="secondary" id="pauseExperimentalFeaturesBtn">Mantenerlas pausadas</button></div></div></div>
+            <div id="experimentalFeaturesContent" class="hidden">
+              <details class="moduleCard progressRewardsDetails"><summary>Focus Coins y recompensas</summary><div class="moduleGrid"><div class="moduleCard"><h3>Focus Coins</h3><div class="coinBalance"><span id="coinBalance">0</span> <small>coins</small></div><div class="muted small">Gamificación interna, no financiera y no transferible.</div><div class="ledgerList" id="coinLedger"></div></div><div class="moduleCard"><h3>Recompensas e insignias</h3><div class="badgeGrid" id="rewardBadges"></div><div class="entryList" id="rewardsList"></div></div></div></details>
+              <details class="moduleCard progressSecondaryDetails"><summary>Rankings mensuales</summary><div class="formGrid"><div class="field"><label for="rankingAlias">Alias público</label><input type="text" id="rankingAlias" placeholder="Ej. LectorConstante"></div><label class="check"><input type="checkbox" id="rankingOptIn"><span>Participar en rankings locales simulados.</span></label></div><div class="buttons"><button type="button" class="secondary" id="saveRankingSettingsBtn">Guardar preferencia</button></div><div class="rankingTable"><table id="monthlyRankingsTable"></table></div><div class="muted small">No existe un ranking único de perfección. La comparación útil es con tu período anterior.</div></details>
+              <details class="moduleCard progressSecondaryDetails"><summary>Referidos y afiliados</summary><div class="formGrid"><div class="field"><label for="referralCodeInput">Código de referido</label><input type="text" id="referralCodeInput" placeholder="Ej. FOCUS10"></div><div class="field"><label>Estado</label><div class="auditItem" id="referralStatus">Sin código aplicado.</div></div></div><div class="buttons"><button type="button" class="good" id="applyReferralBtn">Aplicar código</button><button type="button" class="secondary" id="exportAffiliateCsvBtn">Descargar panel CSV</button></div><div class="quickStats" id="affiliateStats"></div><div class="legalBox"><strong>Aviso de afiliados:</strong> las conversiones e ingresos mostrados aquí son simulaciones locales; pagos reales requieren backend, identidad y condiciones comerciales.</div></details>
+              <details class="moduleCard progressSecondaryDetails"><summary>Términos de Focus Coins</summary><div class="legalBox">Los puntos internos no son dinero, inversión ni criptomoneda; no se pueden retirar, transferir ni intercambiar por dinero.</div></details>
+            </div>
+          </section>
+
           <section id="tab-about" class="hidden routeSubpage" aria-labelledby="aboutViewTitle">
             <div class="moduleHero"><h2 id="aboutViewTitle" tabindex="-1">Acerca de</h2><div class="muted small">Protocolo 0→100</div></div>
             <div class="moduleCard">
@@ -728,6 +744,7 @@
               </div>
               <div class="auditItem" aria-live="polite"><div><strong id="aboutUpdateStatus">Actualización no comprobada</strong><span class="muted small" id="aboutLastUpdateCheck">Todavía no se realizó una comprobación.</span></div><button type="button" class="secondary" id="checkForUpdateBtn">Comprobar actualización</button></div>
               <p class="muted small">Datos local-first. Herramienta orientativa de autoorganización; no reemplaza asesoramiento profesional de salud o entrenamiento.</p>
+              <section class="aboutCapabilities" aria-labelledby="platformCapabilitiesTitle"><h3 id="platformCapabilitiesTitle">Qué funciona en cada versión</h3><div class="history"><table><thead><tr><th>Función</th><th>Web/PWA</th><th>APK Android</th></tr></thead><tbody id="platformCapabilitiesTable"></tbody></table></div><p class="muted small" id="platformInstallationStatus">Comprobando el modo actual…</p></section>
               <div class="buttons"><button type="button" class="secondary" data-more-view="privacy">Ver privacidad</button><a class="btn-secondary aboutRepoLink" href="https://github.com/locoviera24-code/protocolo-0-100" target="_blank" rel="noopener noreferrer">Código y licencias</a></div>
             </div>
           </section>
@@ -840,6 +857,8 @@
 <script src="app/drafts.js"></script>
 <script src="app/dates.js"></script>
 <script src="app/home-state.js"></script>
+<script src="app/platform-capabilities.js"></script>
+<script src="app/data-events.js"></script>
 <script src="data/schema-registry.js"></script>
 <script src="data/indexeddb.js"></script>
 <script src="data/repositories.js"></script>
@@ -1027,6 +1046,8 @@ window.addEventListener('app-data-error',event=>{
 function uiPreferences(){
   return {appearance:'dark',density:'comfortable',experienceMode:'guided',unit:'kg',showRir:true,nutritionGuidance:true,notifications:false,autoSync:true,...getLocalData(UI_PREFERENCES_KEY,{})};
 }
+function isExperimentalFeaturesEnabled(){return uiPreferences().experimentalFeaturesEnabled===true;}
+window.isExperimentalFeaturesEnabled=isExperimentalFeaturesEnabled;
 let systemThemeQuery=null,systemThemeBound=false;
 let settingsFormDirty=false;
 function resolvedTheme(appearance){return appearance==='system'&&systemThemeQuery?.matches?'light':'dark';}
@@ -1054,11 +1075,49 @@ function applyUiPreferences({syncControls=true}={}){
   return preferences;
 }
 function saveUiSettings(){
-  const preferences={appearance:document.getElementById('settingsAppearance').value,density:document.getElementById('settingsDensity').value,experienceMode:document.getElementById('settingsExperienceMode').value,unit:document.getElementById('settingsUnit').value,showRir:document.getElementById('settingsShowRir').checked,nutritionGuidance:document.getElementById('settingsNutritionGuidance').checked,notifications:document.getElementById('settingsNotifications').checked,autoSync:document.getElementById('settingsAutoSync').checked,updatedAt:new Date().toISOString()};
+  const preferences={...uiPreferences(),appearance:document.getElementById('settingsAppearance').value,density:document.getElementById('settingsDensity').value,experienceMode:document.getElementById('settingsExperienceMode').value,unit:document.getElementById('settingsUnit').value,showRir:document.getElementById('settingsShowRir').checked,nutritionGuidance:document.getElementById('settingsNutritionGuidance').checked,notifications:document.getElementById('settingsNotifications').checked,autoSync:document.getElementById('settingsAutoSync').checked,updatedAt:new Date().toISOString()};
   setLocalData(UI_PREFERENCES_KEY,preferences);
   window.WORKOUT_FEATURES?.updateGymSettings?.({...window.WORKOUT_FEATURES.getGymSettings?.(),unit:preferences.unit,showRir:preferences.showRir});
   settingsFormDirty=false;
   applyUiPreferences();window.dispatchEvent(new CustomEvent('app-settings-change',{detail:preferences}));flash('Ajustes guardados.');
+}
+function renderExperimentalControls(){
+  const stored=getLocalData(UI_PREFERENCES_KEY,{}),hasDecision=Object.prototype.hasOwnProperty.call(stored,'experimentalFeaturesEnabled'),hasHistory=window.hasExperimentalHistory?.()===true,needsDecision=!hasDecision&&hasHistory,enabled=stored.experimentalFeaturesEnabled===true,toggle=document.getElementById('experimentalFeaturesEnabled'),content=document.getElementById('experimentalFeaturesContent'),status=document.getElementById('experimentalFeaturesStatus'),decision=document.getElementById('experimentalLegacyDecision');
+  if(toggle)toggle.checked=enabled;
+  if(toggle)toggle.disabled=needsDecision;
+  decision?.classList.toggle('hidden',!needsDecision);
+  content?.classList.toggle('hidden',!enabled);
+  if(status)status.textContent=needsDecision?'Tus datos anteriores siguen intactos. Elegí si querés continuar o mantener estas funciones pausadas.':enabled?'Activadas en este dispositivo. Podés desactivarlas sin borrar sus datos.':'Desactivadas. Tus datos anteriores se conservan sin recalcularse.';
+  if(enabled&&window.APP_ROUTER?.current?.()?.view==='experimental')window.renderExperimentalFeaturesData?.();
+}
+window.renderExperimentalControls=renderExperimentalControls;
+function setExperimentalFeatures(enabled){
+  const current=uiPreferences(),now=new Date().toISOString(),next={...current,experimentalFeaturesEnabled:!!enabled,experimentalFeaturesEnabledAt:enabled?now:(current.experimentalFeaturesEnabledAt||null)};
+  setLocalData(UI_PREFERENCES_KEY,next);renderExperimentalControls();window.dispatchEvent(new CustomEvent('app-settings-change',{detail:next}));
+  flash(enabled?'Funciones experimentales activadas. Tus registros principales no cambiaron.':'Funciones experimentales desactivadas. Sus datos se conservaron.',{tone:'success'});
+}
+function platformCapabilities(){return window.APP_PLATFORM_CAPABILITIES?.detect?.({installPromptAvailable:!!deferredInstallPrompt})||{runtimeMode:'browser',installationStatus:'unknown'};}
+function renderPlatformCapabilities(){
+  const capabilities=platformCapabilities(),table=document.getElementById('platformCapabilitiesTable'),status=document.getElementById('platformInstallationStatus');
+  const rows=[['Registro diario','Disponible','Disponible'],['Gym','Disponible','Disponible'],['Nutrición','Disponible','Disponible'],['Progreso','Disponible','Disponible'],['Offline','Disponible','Disponible'],['Shortcuts','Disponible','Disponible'],['Uso automático del teléfono','Solo APK','Requiere permiso'],['Reconocimiento de voz','Requiere permiso','Requiere permiso'],['Widget','Solo APK','Disponible'],['Notificación de entrenamiento','En desarrollo','En desarrollo'],['Pantalla bloqueada','En desarrollo','En desarrollo']];
+  if(table)table.innerHTML=rows.map(row=>`<tr><th scope="row">${escapeHtml(row[0])}</th><td>${escapeHtml(row[1])}</td><td>${escapeHtml(row[2])}</td></tr>`).join('');
+  const labels={'running-installed':capabilities.runtimeMode==='android-apk'?'Ejecutándose dentro del APK Android.':'Ejecutándose como aplicación instalada.','install-available':'Podés instalar la PWA desde este navegador.',unknown:'No se puede comprobar la instalación desde este navegador.'};
+  if(status)status.textContent=labels[capabilities.installationStatus]||labels.unknown;
+  window.dispatchEvent(new CustomEvent('platform-capabilities-change',{detail:capabilities}));
+  return capabilities;
+}
+async function showPwaInstallInstructions(){
+  const capabilities=platformCapabilities();
+  if(capabilities.installationStatus==='running-installed'){flash('La aplicación ya se está ejecutando en modo instalado.');return;}
+  if(capabilities.installationStatus==='install-available'){await installPwa();return;}
+  flash('Abrí el menú del navegador y elegí “Instalar aplicación” o “Agregar a pantalla de inicio”.',{duration:7000});
+}
+window.showPwaInstallInstructions=showPwaInstallInstructions;
+window.renderPlatformCapabilities=renderPlatformCapabilities;
+function ensureWidgetDiagnostics(){
+  const mount=document.getElementById('supportDiagnosticsMount');if(!mount||document.getElementById('diagnosticWidgetUpdateBtn'))return;
+  mount.insertAdjacentHTML('beforeend','<section class="diagnosticSection"><h3>Widget Android</h3><p class="muted small">Herramienta de soporte para volver a generar el resumen del widget de entrenamiento.</p><button type="button" class="secondary" id="diagnosticWidgetUpdateBtn">Actualizar widget manualmente</button></section>');
+  document.getElementById('diagnosticWidgetUpdateBtn').onclick=()=>{window.WORKOUT_FEATURES?.syncWorkoutWidget?.();flash('Widget de entrenamiento actualizado.');};
 }
 function maybeShowInternalReminder(){
   const preferences=uiPreferences();if(!preferences.notifications||sessionStorage.getItem('protocolo_internal_reminder_shown')==='1')return;
@@ -1221,7 +1280,7 @@ async function setGymPartyPrimaryMode(enabled){
   finally{if(button)button.disabled=false;renderSettingsData();}
 }
 function renderSettingsData(){
-  applyUiPreferences({syncControls:!settingsFormDirty});const meta=getLocalData(BACKUP_META_KEY,{});
+  applyUiPreferences({syncControls:!settingsFormDirty});renderExperimentalControls();renderPlatformCapabilities();ensureWidgetDiagnostics();const meta=getLocalData(BACKUP_META_KEY,{});
   const last=document.getElementById('lastBackupAt');if(last)last.textContent=meta.lastExportAt?new Intl.DateTimeFormat('es-PY',{dateStyle:'short',timeStyle:'short'}).format(new Date(meta.lastExportAt)):'Nunca';
   const latestImport=window.BACKUP_SERVICE?.history?.()?.find(item=>item.status==='applied'||item.status==='undone'),lastImport=document.getElementById('lastImportAt');if(lastImport)lastImport.textContent=latestImport?.at?compatibilityAuditDate(latestImport.at):'Nunca';
   renderStorageUsage();renderDataHealth();
@@ -2529,10 +2588,11 @@ const APP_VIEW_META={
   'more/help':['Ayuda','Guía y criterios'],
   'more/settings':['Ajustes','Experiencia y módulos'],
   'more/data':['Datos y copias','Exportar, importar y restablecer'],
+  'more/experimental':['Funciones experimentales','Coins, rankings y afiliados opcionales'],
   'more/privacy':['Privacidad','Datos locales y compartidos'],
   'more/about':['Acerca de','Versión, licencias y fuentes']
 };
-const APP_TAB_IDS=['registro','dashboard','gym','gym-party','nutricion','progreso','mas','telefono','plan','guia','settings','data','privacy','about'];
+const APP_TAB_IDS=['registro','dashboard','gym','gym-party','nutricion','progreso','mas','telefono','plan','guia','settings','data','experimental','privacy','about'];
 function routeForLegacyModule(module){
   const routes={
     protocolo:{module:'home',view:lastProtocolTab==='dashboard'?'overview':'register'},
@@ -2553,7 +2613,7 @@ function tabForRoute(route){
   if(route.module==='gym')return route.view==='group'?'gym-party':'gym';
   if(route.module==='nutrition')return 'nutricion';
   if(route.module==='progress')return 'progreso';
-  if(route.module==='more')return ({root:'mas',phone:'telefono',plan:'plan',help:'guia',settings:'settings',data:'data',privacy:'privacy',about:'about'})[route.view]||'mas';
+  if(route.module==='more')return ({root:'mas',phone:'telefono',plan:'plan',help:'guia',settings:'settings',data:'data',experimental:'experimental',privacy:'privacy',about:'about'})[route.view]||'mas';
   return 'registro';
 }
 function internalModuleForRoute(route){
@@ -2565,18 +2625,17 @@ function internalModuleForRoute(route){
 }
 function activateTab(tabName,{internal=false}={}){
   if(!internal&&window.APP_ROUTER?.isStarted()){
-    const routes={registro:{module:'home',view:'register'},dashboard:{module:'home',view:'overview'},gym:{module:'gym',view:'train'},'gym-party':{module:'gym',view:'group'},nutricion:{module:'nutrition',view:'meals'},progreso:{module:'progress',view:'overview'},mas:{module:'more',view:'root'},telefono:{module:'more',view:'phone'},plan:{module:'more',view:'plan'},guia:{module:'more',view:'help'},settings:{module:'more',view:'settings'},data:{module:'more',view:'data'},privacy:{module:'more',view:'privacy'},about:{module:'more',view:'about'}};
+    const routes={registro:{module:'home',view:'register'},dashboard:{module:'home',view:'overview'},gym:{module:'gym',view:'train'},'gym-party':{module:'gym',view:'group'},nutricion:{module:'nutrition',view:'meals'},progreso:{module:'progress',view:'overview'},mas:{module:'more',view:'root'},telefono:{module:'more',view:'phone'},plan:{module:'more',view:'plan'},guia:{module:'more',view:'help'},settings:{module:'more',view:'settings'},data:{module:'more',view:'data'},experimental:{module:'more',view:'experimental'},privacy:{module:'more',view:'privacy'},about:{module:'more',view:'about'}};
     if(routes[tabName])return window.APP_ROUTER.navigate(routes[tabName]);
   }
   if(['registro','dashboard'].includes(tabName))lastProtocolTab=tabName;
   document.querySelectorAll('.tab').forEach(button=>{const selected=button.dataset.tab===tabName;button.classList.toggle('active',selected);button.setAttribute('aria-selected',String(selected));button.tabIndex=selected?0:-1;});
   APP_TAB_IDS.forEach(name=>document.getElementById('tab-'+name)?.classList.toggle('hidden',name!==tabName));
-  if(tabName==='dashboard')drawChart();
   if(tabName==='gym')renderGym();
   if(tabName==='gym-party'&&window.renderGymParty)window.renderGymParty();
   if(tabName==='nutricion')renderNutrition();
   if(tabName==='progreso'&&window.renderAdvancedProgress)window.renderAdvancedProgress();
-  if(['settings','data','about'].includes(tabName))renderSettingsData();
+  if(['settings','data','about','experimental'].includes(tabName))renderSettingsData();
 }
 function applyGymRouteView(view,{focus=false}={}){
   document.querySelectorAll('[data-gym-section]').forEach(button=>button.classList.toggle('active',button.dataset.gymSection===view));
@@ -2856,8 +2915,14 @@ function drawChart(){
   }
 }
 function updateUI(){ updateHomeHeader(); updatePlanUI(); updateScorePreview(); renderHomeStatus(); }
-function renderProtocol(){ updateUI(); renderStats(); renderPeriodMetrics(); renderInsights(); renderBadges(); renderHistory(); renderPlanTable(); drawChart(); updatePhonePanel(); }
-function refreshProtocolViews({reloadForm=true}={}){if(reloadForm)loadEntryForDate();renderProtocol();window.renderAdvancedProgress?.();}
+function renderProtocolProgressView(view){
+  if(view==='habits'){renderPeriodMetrics();renderInsights();drawChart();return;}
+  if(view==='history'){renderHistory();return;}
+  if(view==='achievements')renderBadges();
+}
+window.renderProtocolProgressView=renderProtocolProgressView;
+function renderProtocol(){ updateUI(); renderStats(); renderPlanTable(); updatePhonePanel(); }
+function refreshProtocolViews({reloadForm=true}={}){if(reloadForm)loadEntryForDate();renderProtocol();window.PROGRESS_VIEW?.markDirty?.();window.renderAdvancedProgress?.();}
 function renderAll(){ renderProtocol(); renderGym(); renderNutrition(); renderSettingsData(); }
 
 function exportJson(){
@@ -2970,8 +3035,9 @@ let deferredInstallPrompt = null;
 window.addEventListener('beforeinstallprompt', (event)=>{
   event.preventDefault();
   deferredInstallPrompt = event;
-  updatePhonePanel();
+  updatePhonePanel();renderPlatformCapabilities();window.renderWorkoutQuickAccess?.();
 });
+window.addEventListener('appinstalled',()=>{deferredInstallPrompt=null;renderPlatformCapabilities();window.renderWorkoutQuickAccess?.();});
 
 function formatHoursFromMinutes(minutes){
   if(minutes===null || minutes===undefined || Number.isNaN(Number(minutes))) return '—';
@@ -2996,10 +3062,10 @@ function updatePhonePanel(){
   if(nativeBridgeAvailable()){
     if(nativeHasUsageAccess()){
       status.textContent='Android conectado · permiso activo'; status.classList.add('ok');
-      phoneMessage('ok','La app está conectada al puente Android. Podés sincronizar el uso real de hoy.');
+      phoneMessage('ok','El APK Android está conectado. Podés incorporar el uso real de hoy.');
     }else{
       status.textContent='Android conectado · falta permiso'; status.classList.add('warn');
-      phoneMessage('warn','La app detectó el puente Android, pero falta conceder el permiso “Uso de apps”. Tocá “Conceder permiso de uso”.');
+      phoneMessage('warn','El APK Android está listo, pero falta conceder el permiso “Uso de apps”. Tocá “Conceder permiso de uso”.');
     }
   }else if(standalone){
     status.textContent='PWA instalada · modo manual'; status.classList.add('warn');
@@ -3044,7 +3110,7 @@ function renderNativeAppList(apps){
 }
 function syncAndroidUsageToday(){
   if(!nativeBridgeAvailable()){
-    phoneMessage('warn','No hay puente Android activo. Esta PWA no puede leer automáticamente el uso del teléfono; para eso usá la versión Android nativa o cargá el dato manualmente.');
+    phoneMessage('warn','La PWA no puede leer automáticamente el uso del teléfono. Para incorporarlo, usá el APK Android o cargá el dato manualmente.');
     updatePhonePanel();
     return;
   }
@@ -3074,7 +3140,7 @@ function syncAndroidUsageToday(){
     phoneMessage('ok','Métricas importadas al registro diario. Revisá si el estimado “no esencial” coincide con tu criterio y guardá el día.');
     updateUI(); updatePhonePanel();
   }catch(e){
-    phoneMessage('warn','Error leyendo el puente Android: '+(e.message||e));
+    phoneMessage('warn','No se pudo leer el uso desde el APK Android: '+(e.message||e));
   }
 }
 function copyPhoneMetricsToForm(){
@@ -3112,6 +3178,9 @@ const installBtn=document.getElementById('installPwaBtn'); if(installBtn) instal
 const copyPhoneBtn=document.getElementById('copyPhoneToFormBtn'); if(copyPhoneBtn) copyPhoneBtn.addEventListener('click', copyPhoneMetricsToForm);
 document.getElementById('homeCompactActionBtn')?.addEventListener('click',runHomeCompactAction);
 document.getElementById('saveUiSettingsBtn')?.addEventListener('click',saveUiSettings);
+document.getElementById('experimentalFeaturesEnabled')?.addEventListener('change',event=>setExperimentalFeatures(event.currentTarget.checked));
+document.getElementById('continueExperimentalFeaturesBtn')?.addEventListener('click',()=>setExperimentalFeatures(true));
+document.getElementById('pauseExperimentalFeaturesBtn')?.addEventListener('click',()=>setExperimentalFeatures(false));
 ['settingsAppearance','settingsDensity','settingsExperienceMode','settingsUnit','settingsShowRir','settingsNutritionGuidance','settingsNotifications','settingsAutoSync'].forEach(id=>document.getElementById(id)?.addEventListener('change',()=>{settingsFormDirty=true;}));
 document.getElementById('resetAllDataBtn')?.addEventListener('click',resetAllAppData);
 document.getElementById('reopenOnboardingBtn')?.addEventListener('click',()=>{localStorage.removeItem('protocolo_0_100_onboarding_complete_v1');window.APP_ROUTER?.navigate({module:'more',view:'help'});});
@@ -3135,7 +3204,7 @@ window.addEventListener('app-data-quarantined',()=>{renderDataIntegrity();flash(
 window.addEventListener('app-data-quarantine-change',renderDataIntegrity);
 window.addEventListener('app-data-compatibility-audit',()=>{const route=window.APP_ROUTER?.current?.();if(route?.module==='more'&&route?.view==='data')renderSettingsData();});
 window.addEventListener('app-data-primary-ready',event=>{renderSettingsData();if(event.detail?.domain==='nutritionCache'){populateFoods();renderAdvancedNutrition();}if(event.detail?.domain==='protocol')refreshProtocolViews();});
-window.addEventListener('app-data-change',event=>{if(event.detail?.domain==='protocol'&&event.detail?.source!=='local')refreshProtocolViews({reloadForm:false});});
+window.addEventListener('app-data-change',event=>{if(event.detail?.domain==='protocol'||event.detail?.domain==='import')refreshProtocolViews({reloadForm:false});});
 document.getElementById('toggleProtocolPrimaryBtn')?.addEventListener('click',event=>setProtocolPrimaryMode(event.currentTarget.dataset.enablePrimary==='true'));
 document.getElementById('retryProtocolPrimaryBtn')?.addEventListener('click',async()=>{try{await window.APP_DATA.hydratePrimaryDomain('protocol');refreshProtocolViews();flash('Almacenamiento del registro diario comprobado.');}catch(error){flash('No se pudo comprobar IndexedDB. Los registros compatibles permanecen disponibles.',{tone:'warning'});}renderSettingsData();});
 document.getElementById('toggleNutritionPrimaryBtn')?.addEventListener('click',event=>setNutritionPrimaryMode(event.currentTarget.dataset.enablePrimary==='true'));

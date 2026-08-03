@@ -52,15 +52,14 @@ test('avisa cambios entre dos pestanas sin compartir el contenido',async ({conte
   await Promise.all([page.evaluate(()=>window.APP_DATA.ready()),second.evaluate(()=>window.APP_DATA.ready())]);
   await second.evaluate(()=>{
     window.__dataEvents=[];
-    addEventListener('app-data-change',event=>{
-      if(event.detail?.source!=='local')window.__dataEvents.push(event.detail);
-    });
+    addEventListener('app-data-change',event=>window.__dataEvents.push(event.detail));
   });
-  await page.evaluate(()=>window.APP_REPOSITORIES.settings.setByName('uiPreferences',{density:'compact'}));
-  await expect.poll(()=>second.evaluate(()=>window.__dataEvents.find(event=>event.key==='protocolo_0_100_ui_preferences_v1')||null)).not.toBeNull();
-  const detail=await second.evaluate(()=>window.__dataEvents.find(event=>event.key==='protocolo_0_100_ui_preferences_v1'));
-  expect(detail).toMatchObject({domain:'settings'});
-  expect(detail).not.toHaveProperty('value');
+  await page.evaluate(()=>window.APP_REPOSITORIES.protocol.set('protocolo_0_100_tracker_v1',[{date:'2026-07-11',score:82,note:'actualizado'}]));
+  await expect.poll(()=>second.evaluate(()=>window.__dataEvents.find(event=>event.domain==='protocol')||null)).not.toBeNull();
+  const detail=await second.evaluate(()=>window.__dataEvents.find(event=>event.domain==='protocol'));
+  expect(detail).toMatchObject({domain:'protocol',operation:'update',entityId:null});
+  expect(detail.occurredAt).toMatch(/Z$/);
+  expect(Object.keys(detail).sort()).toEqual(['domain','entityId','occurredAt','operation'].sort());
 });
 
 test('excluye Firebase del espejo y purga copias internas al borrar',async ({page})=>{

@@ -612,9 +612,8 @@
             <div class="buttons">
               <button type="button" class="good" id="startTodayWorkoutBtn">Empezar entrenamiento</button>
               <button type="button" class="secondary" id="openQuickLoggerBtn">Registrar serie</button>
-              <button type="button" class="secondary" id="manualWidgetUpdateBtn">Actualizar widget</button>
             </div>
-            <div class="widgetStatus" id="workoutWidgetStatus">El APK Android sincroniza este resumen con el widget nativo cuando existe el puente Android.</div>
+            <div class="widgetStatus" id="workoutWidgetStatus">El resumen queda guardado en el dispositivo para tus próximos registros.</div>
           </div>
         </div>
       </div>
@@ -661,10 +660,19 @@
         </div>
       </div>
       <div class="moduleCard" id="workoutConfigPanel">
+        <section class="workoutQuickAccess" aria-labelledby="workoutQuickAccessTitle">
+          <div class="sectionHeading"><div><h3 id="workoutQuickAccessTitle">Acceso rápido durante el entrenamiento</h3><p class="muted small">Elegí la opción disponible en la versión que estás usando.</p></div></div>
+          <div class="moduleGrid workoutQuickAccessGrid">
+            <article class="auditItem"><div><strong>Acceso directo de la PWA</strong><span class="muted small">El shortcut “Serie rápida” abre Entrenar directamente.</span><span class="muted small" id="quickAccessPwaStatus">Comprobando instalación…</span></div><button type="button" class="secondary" id="showPwaInstallHelpBtn">Ver instalación</button></article>
+            <article class="auditItem"><div><strong>Widget Android</strong><span class="muted small" id="quickAccessWidgetStatus">Requiere el APK Android.</span></div></article>
+            <article class="auditItem"><div><strong>Controles en pantalla bloqueada</strong><span class="muted small" id="quickAccessLockStatus">Pendiente de implementación. Depende de Android y del dispositivo.</span></div></article>
+            <article class="auditItem"><div><strong>Controles mediante notificación</strong><span class="muted small" id="quickAccessNotificationStatus">Pendiente de implementación. Aparecerán solamente durante una sesión activa.</span></div></article>
+          </div>
+        </section>
         <details class="planAdvancedEditor">
-        <summary>Configurar rutina semanal y widget Android</summary>
+        <summary>Configurar rutina semanal y acceso rápido</summary>
         <div class="formGrid">
-          <label class="check"><input type="checkbox" id="gymWidgetEnabled"><span>Activar resumen para widget interno/nativo.</span></label>
+          <label class="check"><input type="checkbox" id="gymWidgetEnabled"><span>Preparar el resumen para el widget de entrenamiento.</span></label>
           <label class="check"><input type="checkbox" id="gymShowRir"><span>Mostrar RIR/RPE en registro rápido.</span></label>
           <div class="field"><label>Unidad</label><select id="gymUnit"><option value="kg">kg</option><option value="lb">lb</option></select></div>
           <div class="field"><label>Modo</label><select id="gymMode"><option value="simple">Simple</option><option value="advanced">Avanzado</option></select></div>
@@ -719,7 +727,6 @@
           <button type="button" class="good" id="savePlanDayBtn">Guardar nombre y músculos</button>
           <button type="button" class="secondary" id="copyPlanDayBtn">Duplicar rutina en otro día</button>
           <button type="button" class="warn" id="resetDefaultPlanBtn">Restablecer rutina predeterminada</button>
-          <button type="button" class="secondary" id="refreshWorkoutWidgetBtn">Actualizar widget manualmente</button>
         </div>
         </details>
       </div>
@@ -746,7 +753,7 @@
     });
     document.getElementById('startTodayWorkoutBtn')?.addEventListener('click',()=>openQuickSetLogger());
     document.getElementById('openQuickLoggerBtn')?.addEventListener('click',()=>openQuickSetLogger());
-    document.getElementById('manualWidgetUpdateBtn')?.addEventListener('click',()=>{syncWorkoutWidget();flash('Widget actualizado con los datos actuales.');});
+    document.getElementById('showPwaInstallHelpBtn')?.addEventListener('click',()=>window.showPwaInstallInstructions?.());
     document.getElementById('quickExerciseSelect')?.addEventListener('change',event=>{editingQuickSetId='';selectQuickExerciseValue(event.target.value);});
     document.getElementById('quickExerciseSearch')?.addEventListener('input',renderQuickLogger);
     document.getElementById('saveQuickSetBtn')?.addEventListener('click',saveQuickSet);
@@ -785,11 +792,18 @@
     document.getElementById('planEditorCards')?.addEventListener('change',updatePlanExerciseFromCard);
     document.getElementById('planEditorCards')?.addEventListener('click',handlePlanExerciseAction);
     document.getElementById('resetDefaultPlanBtn')?.addEventListener('click',resetDefaultPlan);
-    document.getElementById('refreshWorkoutWidgetBtn')?.addEventListener('click',()=>{syncWorkoutWidget();flash('Widget actualizado manualmente.');});
     ['gymWidgetEnabled','gymShowRir','gymShowRestDays','gymRestTimerEnabled','gymHapticEnabled'].forEach(id=>document.getElementById(id)?.addEventListener('change',saveSettingsFromUi));
     ['gymUnit','gymMode','gymRestSeconds'].forEach(id=>document.getElementById(id)?.addEventListener('change',saveSettingsFromUi));
-    window.applyCurrentRouteView?.();
+    renderWorkoutQuickAccess();window.applyCurrentRouteView?.();
   }
+  function renderWorkoutQuickAccess(){
+    const capabilities=window.renderPlatformCapabilities?.()||window.APP_PLATFORM_CAPABILITIES?.detect?.()||{runtimeMode:'browser',installationStatus:'unknown'};
+    const pwa=document.getElementById('quickAccessPwaStatus'),widget=document.getElementById('quickAccessWidgetStatus');
+    if(pwa)pwa.textContent=capabilities.installationStatus==='running-installed'&&capabilities.runtimeMode==='standalone-pwa'?'Ejecutándose como PWA instalada.':capabilities.runtimeMode==='android-apk'?'El APK ya funciona como aplicación instalada.':'Disponible desde un navegador compatible; la instalación no siempre puede comprobarse.';
+    if(widget)widget.textContent=capabilities.runtimeMode==='android-apk'?'Disponible en el APK Android. Esta versión todavía no detecta si ya fue agregado.':'Requiere el APK Android.';
+    return capabilities;
+  }
+  window.renderWorkoutQuickAccess=renderWorkoutQuickAccess;
   function renderWorkoutDashboard(){
     injectWorkoutUi();
     if(window.APP_DATA?.isPrimaryDomain?.('workout')&&!window.APP_DATA.isPrimaryReady?.('workout')&&!workoutStorageInitialized){
@@ -1958,7 +1972,7 @@
     const state=buildWorkoutWidgetState();
     setLocalData(keys.workoutWidgetState,state);
     const status=document.getElementById('workoutWidgetStatus');
-    if(status) status.textContent=s.widgetEnabled?'Resumen listo para el widget Android nativo.':'Resumen de widget pausado en ajustes.';
+    if(status) status.textContent=s.widgetEnabled?'Resumen listo para el widget de entrenamiento.':'Acceso rápido pausado en ajustes.';
     if(!s.widgetEnabled) return state;
     try{
       if(window.AndroidBridge?.saveWorkoutWidgetData) window.AndroidBridge.saveWorkoutWidgetData(JSON.stringify(state));

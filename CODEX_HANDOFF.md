@@ -33,6 +33,39 @@ Gate A completado el 2026-08-03:
   flujo PWA; el proceso local de Playwright quedo abierto despues de reportar
   exito y fue terminado por el timeout del runner, sin escenario fallido.
 
+Gate B completado el 2026-08-03:
+
+- app/platform-capabilities.js distingue navegador, PWA instalada y APK sin
+  afirmar que una PWA esta instalada cuando el navegador no puede saberlo.
+  Acerca de muestra la matriz Web/PWA frente a APK y Gym explica el acceso
+  rapido, el shortcut Serie rapida, el widget y los controles aun pendientes.
+- Progreso renderiza solamente la subseccion activa. Cada vista conserva estado
+  rendered/dirty, se invalida por dominio y relee los scopes de Gym al usar
+  Atras/Adelante. Inicio y otras rutas ya no construyen graficos, historial o
+  insignias ocultos.
+- Los estados vacios requieren 3 dias de Habitos, 3 dias de Nutricion o dos
+  sesiones distintas con series efectivas comparables del mismo ejercicio.
+  Gym conserva separados modo de medicion, carga, equipo, gimnasio y
+  lateralidad.
+- Focus Coins, rankings, referidos y afiliados viven en
+  Mas > Funciones experimentales. Abrir Progreso o la pantalla Experimental
+  desactivada no escribe esos datos; activarla conserva saldos y toma una linea
+  base para no conceder recompensas retroactivas.
+- Los textos cotidianos ya no muestran puente Android, widget interno,
+  snapshots ni SharedPreferences. La actualizacion manual del widget solo
+  aparece dentro de Diagnostico avanzado.
+- Pruebas directas aprobadas: capacidades, Progreso, router, modulos, diseno,
+  layout y accesibilidad. Playwright aprobo 27/27 escenarios funcionales en
+  Android Chromium, iPhone WebKit y escritorio Chromium. Axe aprobo 33/33
+  escenarios entre esas tres plataformas. La matriz ampliada de Progreso de
+  Android aprobo ademas musculos, ejercicios, scopes y estados vacios.
+- Precache regenerado con 82 recursos para build 89 y paridad web/Android
+  aprobada. No se incremento version, build, versionCode ni schema de backup.
+  Las pruebas fisicas continuan pendientes porque no hay hardware conectado.
+
+Siguiente bloque exacto: Gate C, contrato puro y versionado de acciones rapidas
+en gym/workout-quick-actions.js, documentacion y pruebas sin persistencia.
+
 ## 1. Estado actual del proyecto
 
 La app sigue siendo PWA + APK Android con WebView. La raiz del repo es la

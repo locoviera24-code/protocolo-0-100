@@ -13,7 +13,7 @@
     "test:web-dist": "node scripts/test-web-dist.mjs",
     "test:web-dist:e2e": "playwright test --config=playwright.web-dist.config.mjs",
     "test:rules": "npx --yes firebase-tools@15.23.0 emulators:exec --project demo-protocolo-0100 --only firestore \"node firebase/rules.test.mjs\"",
-    "test:modules": "node scripts/test-module-boundaries.mjs",
+    "test:modules": "node scripts/test-module-boundaries.mjs && node scripts/test-platform-capabilities.mjs && node scripts/test-data-events.mjs",
     "test:design": "node scripts/test-design-system.mjs",
     "test:router": "node scripts/test-router.mjs",
     "test:layout": "node scripts/test-layout-coordinator.mjs",

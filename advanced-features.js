@@ -389,7 +389,7 @@
     if(openMenuId)box.querySelectorAll('details.nutritionFoodMenu').forEach(menu=>{if(menu.dataset.customFoodMenu===openMenuId)menu.open=true;});
   }
 
-  function rebuildCoinLedger(){
+  function coinLedgerCandidates(){
     const ledger=[],push=(id,date,amount,reason)=>ledger.push({id,date,amount,reason});
     getEntries().forEach(entry=>{
       push(`day-${entry.date}`,entry.date,5,'Registrar el día');
@@ -404,8 +404,21 @@
     nutritionDates.forEach(date=>{if(nutritionScoreForDate(date)>=70)push(`nutrition-${date}`,date,5,'Nutrición consistente');});
     const weeks={};getEntries().forEach(entry=>{const week=weekStartStr(entry.date);weeks[week]??=[];weeks[week].push(entry);});
     Object.entries(weeks).forEach(([week,items])=>{if(items.filter(x=>x.readingMins>=20).length>=5)push(`reading-week-${week}`,week,12,'Lectura 5/7');if(items.length>=7)push(`streak-week-${week}`,week,15,'Racha semanal de registro');});
-    ledger.sort((a,b)=>b.date.localeCompare(a.date));setLocalData(COIN_LEDGER_KEY,ledger);return ledger;
+    return ledger.sort((a,b)=>b.date.localeCompare(a.date));
   }
+  function rebuildCoinLedger({allowNew=false}={}){
+    const stored=getLocalData(COIN_LEDGER_KEY,[]);if(!allowNew)return stored;
+    const preferences=getLocalData('protocolo_0_100_ui_preferences_v1',{}),enabledDate=String(preferences.experimentalFeaturesEnabledAt||'').slice(0,10),known=new Set(stored.map(item=>item.id)),candidates=coinLedgerCandidates();
+    const additions=enabledDate?candidates.filter(item=>String(item.date)>enabledDate&&!known.has(item.id)):[],ledger=[...stored,...additions].sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+    if(additions.length)setLocalData(COIN_LEDGER_KEY,ledger);
+    return ledger;
+  }
+  function hasExperimentalHistory(){
+    const ledger=getLocalData(COIN_LEDGER_KEY,[]),rewards=getLocalData(REWARDS_KEY,{}),rankings=getLocalData(MONTHLY_RANKINGS_KEY,{}),rankingSettings=getLocalData(RANKING_SETTINGS_KEY,{}),referral=getLocalData(USER_REFERRAL_KEY,null);
+    return ledger.length>0||Object.keys(rewards||{}).length>0||Object.keys(rankings||{}).length>0||Object.keys(rankingSettings||{}).length>0||!!referral;
+  }
+  window.hasExperimentalHistory=hasExperimentalHistory;
+  window.renderExperimentalControls?.();
   function scoresForDate(date){
     const protocol=getEntries().find(e=>e.date===date);
     const protocolScore=protocol?.score||0;
@@ -427,8 +440,8 @@
     advice.textContent=lowest?`Palanca principal de mejora: ${lowest[0]}. Elegí una acción pequeña y medible.`:'Registrá alguna de las áreas para activar el resumen.';
     tiles.innerHTML=areas.map(([name,score])=>`<div class="scoreTile"><span>${escapeHtml(name)}</span><strong>${score||'—'}</strong></div>`).join('');
   }
-  function renderCoinsAndRewards(){
-    const ledger=rebuildCoinLedger(),balance=ledger.reduce((sum,x)=>sum+x.amount,0);
+  function renderCoinsAndRewards({updateRewards=false}={}){
+    const ledger=rebuildCoinLedger({allowNew:updateRewards}),balance=ledger.reduce((sum,x)=>sum+x.amount,0);
     const balanceEl=document.getElementById('coinBalance'),list=document.getElementById('coinLedger');if(balanceEl)balanceEl.textContent=balance;
     if(list)list.innerHTML=ledger.length?ledger.slice(0,25).map(x=>`<div class="ledgerItem"><span>${escapeHtml(x.date)} · ${escapeHtml(x.reason)}</span><strong>+${x.amount}</strong></div>`).join(''):'<div class="emptyState">Los coins aparecerán al registrar constancia y acciones saludables.</div>';
     const rewards=[
@@ -492,7 +505,16 @@
     const rows=[['codigo','influencer','usuarios_atribuidos','conversiones_simuladas','comision_pct','nota'],[code.code,code.name,code.mockUsers||0,code.mockConversions||0,code.commissionPct||10,'Simulación local; pagos reales requieren backend']];
     downloadBlob(rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n'),'panel_afiliado_simulado.csv','text/csv;charset=utf-8');
   }
-  function renderAdvancedProgress(){ renderIntegralScore();renderCoinsAndRewards();renderRankings();renderReferral();window.PROGRESS_VIEW?.render?.();syncVersionedState(); }
+  function renderExperimentalFeaturesData({updateRewards=false}={}){
+    if(!window.isExperimentalFeaturesEnabled?.())return false;
+    renderCoinsAndRewards({updateRewards});renderRankings();renderReferral();return true;
+  }
+  window.renderIntegralScore=renderIntegralScore;
+  window.renderExperimentalFeaturesData=renderExperimentalFeaturesData;
+  function renderAdvancedProgress(){
+    if(window.APP_ROUTER?.current?.()?.module==='progress'&&window.PROGRESS_VIEW?.current?.()==='overview')renderIntegralScore();
+    window.PROGRESS_VIEW?.render?.();syncVersionedState();
+  }
   window.renderAdvancedProgress=renderAdvancedProgress;
 
   function exportMealsCsv(){
@@ -610,6 +632,10 @@
     document.getElementById('nutritionMeal')?.addEventListener('change',renderNutrition);
     window.addEventListener('online',renderExpandedSearchStatus);
     window.addEventListener('offline',renderExpandedSearchStatus);
+    window.addEventListener('app-data-change',event=>{
+      if(!window.isExperimentalFeaturesEnabled?.()||!['protocol','workout','nutrition','import'].includes(event.detail?.domain))return;
+      renderExperimentalFeaturesData({updateRewards:true});
+    });
     document.addEventListener('click',event=>{
       const customAction=event.target.closest('[data-custom-food-action]');if(customAction){customAction.closest('details.nutritionFoodMenu')?.removeAttribute('open');handleCustomFoodAction(customAction);return;}
       const editFdc=event.target.closest('[data-edit-fdc]');if(editFdc){editCachedFdcFood(editFdc.dataset.editFdc);return;}
