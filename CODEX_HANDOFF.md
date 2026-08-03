@@ -63,8 +63,27 @@ Gate B completado el 2026-08-03:
   aprobada. No se incremento version, build, versionCode ni schema de backup.
   Las pruebas fisicas continuan pendientes porque no hay hardware conectado.
 
-Siguiente bloque exacto: Gate C, contrato puro y versionado de acciones rapidas
-en gym/workout-quick-actions.js, documentacion y pruebas sin persistencia.
+Gate C completado el 2026-08-03:
+
+- gym/workout-quick-actions.js define un contrato puro schema 1 para nueve
+  acciones Web/widget/notificacion. Separa actionId de mutationId, exige UUID
+  v4, timestamp UTC, revision esperada, payload versionado y resultado con
+  codigo estable.
+- El contrato rechaza schema o payload futuros, NaN/Infinity, ciclos, valores no
+  JSON, mas de 16 KiB, profundidad excesiva y claves de contaminacion de
+  prototipos. createAction acepta reloj y UUID inyectables para pruebas.
+- No usa localStorage, IndexedDB, APP_DATA ni repositorios. La futura cola
+  Android sera transporte y las series continuaran aplicandose con el modelo
+  Workout existente.
+- docs/workout-quick-actions.md documenta campos, payloads, ejemplos JSON,
+  idempotencia, resultados e integracion futura sin duplicar el modelo.
+- Pruebas directas aprobadas: nueve acciones, resultados aplicados/rechazados,
+  payload seguro, limites modulares, precache y guard de build. Precache y
+  assets Android sincronizados con 83 recursos para build 89.
+
+Siguiente bloque exacto: Gate D, regresion completa, artifact web, Android
+debug/release, evidencias visuales, documentacion final e incremento unico a
+build 90 si todo queda verde.
 
 ## 1. Estado actual del proyecto
 

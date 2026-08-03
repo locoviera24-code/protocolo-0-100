@@ -130,9 +130,14 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
       "sha256": "1d42acf228a0b9556d43596b1c7b9e729f55d9aa2cba1568902086b8e6a96583"
     },
     {
+      "url": "./gym/workout-quick-actions.js",
+      "bytes": 10420,
+      "sha256": "36b8f2b12e3b572a8087c9ee1c086040b062698369f993665aed56e125e8f7c0"
+    },
+    {
       "url": "./index.html",
-      "bytes": 328752,
-      "sha256": "755550e4408b82afb18eaf4e8953be0e4a03cd69a0cbee3d64cd3805112f55a2"
+      "bytes": 328805,
+      "sha256": "d8f7da5ae3bf31acf47bee2daf72fb73147d0f45896904e047955c75bd8b9a9b"
     },
     {
       "url": "./nutrition-data.js",

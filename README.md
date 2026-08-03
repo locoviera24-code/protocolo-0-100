@@ -560,6 +560,12 @@ al recalcular resumen e historial.
 
 ## Desarrollo y validacion
 
+El contrato puro para futuras acciones rapidas de Workout esta documentado en
+docs/workout-quick-actions.md. La version 1 cubre Web, widget y notificacion,
+usa UUID v4 y revisiones, valida payloads JSON y no accede a almacenamiento.
+Las series siguen aplicandose mediante el modelo Workout y los repositorios
+existentes.
+
 ### Progreso consolidado
 
 `Progreso` concentra la vista general, habitos, Gym, Nutricion, historial y
