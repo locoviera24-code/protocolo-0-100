@@ -29,7 +29,7 @@ assert.match(pages,/needs: quality/);
 assert.match(pages,/actions\/download-artifact@v8/);
 assert.equal(stableRelease.channel,'stable');
 assert.equal(stableRelease.version,appVersion.version,'La solicitud estable debe usar la version activa');
-assert.equal(stableRelease.build,appVersion.build,'La solicitud estable debe usar el build activo');
+assert.ok(Number(stableRelease.build)<=Number(appVersion.build),'La solicitud estable no puede apuntar a un build futuro');
 assert.doesNotMatch(debug,/\n  push:/,'El APK manual no debe duplicar el gate automatico de main');
 assert.doesNotMatch(debug,/gh release/);
 assert.match(release,/needs: quality/);

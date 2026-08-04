@@ -122,3 +122,19 @@ test('Acceso rapido explica shortcut, APK y controles pendientes',async({page})=
   await expect(section).not.toContainText('puente Android');
   await expect(section).not.toContainText('widget interno');
 });
+
+test('Gym movil prioriza Entrenar antes del resumen',async({page})=>{
+  await page.setViewportSize({width:390,height:844});
+  await clean(page,'/index.html?module=gym&view=train');
+  const quick=page.locator('#quickSetLoggerPanel'),summary=page.locator('.gymSummaryDetails');
+  await expect(quick).toBeVisible();
+  const positions=await page.evaluate(()=>({
+    quick:document.getElementById('quickSetLoggerPanel')?.getBoundingClientRect().top,
+    summary:document.querySelector('.gymSummaryDetails')?.getBoundingClientRect().top,
+    save:document.getElementById('saveQuickSetBtn')?.getBoundingClientRect().top
+  }));
+  expect(positions.quick).toBeLessThan(positions.summary);
+  expect(positions.quick).toBeLessThan(220);
+  expect(positions.save).toBeLessThan(844);
+  await expect(summary).not.toHaveAttribute('open','');
+});

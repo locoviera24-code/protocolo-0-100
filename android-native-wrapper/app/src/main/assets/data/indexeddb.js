@@ -3,6 +3,8 @@
 
   const registry=global.APP_SCHEMA_REGISTRY;
   if(!registry)throw new Error('APP_SCHEMA_REGISTRY debe cargar antes de IndexedDB.');
+  const dataEvents=global.APP_DATA_EVENTS;
+  if(!dataEvents)throw new Error('APP_DATA_EVENTS debe cargar antes de IndexedDB.');
   const DB_NAME='protocolo_0_100_data';
   const DB_VERSION=2;
   const RECORDS_STORE='records';
@@ -56,6 +58,13 @@
   }
   function domainForKey(key){return registry.get(key)?.domain||'';}
   function primaryGroupForKey(key){const record=registry.get(key);return record?.primaryGroup||record?.domain||'';}
+  function publicDomainForKey(key){
+    const domain=domainForKey(key),group=primaryGroupForKey(key);
+    if(group==='protocol'||domain==='protocol')return'protocol';
+    if(group==='workout'||domain==='workout')return'workout';
+    if(group==='nutrition'||group==='nutritionCache'||domain==='nutrition'||domain==='nutritionCache')return'nutrition';
+    return'';
+  }
   function isPrimaryDomain(domain,current=config()){return !!(current.enabled&&current.primaryDomains?.[domain]&&PRIMARY_KEYS[domain]);}
   function isPrimaryReady(domain){return primaryReadyDomains.has(domain);}
   function shouldMirror(key){
@@ -173,7 +182,7 @@
     const entry={id,key:result.key,name:result.record.name,domain:result.record.domain,status:result.status,error:result.error||'schema-validation',schemaVersion:result.record.schemaVersion,storedVersion:result.storedVersion||null,createdAt:existing?.createdAt||now,lastSeenAt:now,occurrences:Number(existing?.occurrences||0)+1,raw:safeRaw,redacted:safeRaw===null};
     store.put(entry);if(!indexedRecord||!['valid','legacy'].includes(inspectRaw(result.key,indexedRecord.raw).status))records.delete(result.key);await done;
     if(localStorage.getItem(result.key)===result.raw)localStorage.removeItem(result.key);
-    notifyChange(result.key,'quarantine');
+    notifyChange(result.key,'quarantine','delete');
     emit('app-data-quarantined',{id,key:entry.key,domain:entry.domain,status:entry.status,error:entry.error,redacted:entry.redacted});
     return entry;
   }
@@ -181,16 +190,33 @@
     quarantineQueue=quarantineQueue.then(()=>captureQuarantine(result)).catch(error=>reportError(error,'quarantine',result?.key||''));
     return quarantineQueue;
   }
-  function notifyChange(key,source='local'){
-    const detail={key,domain:domainForKey(key),primaryGroup:primaryGroupForKey(key),source,at:new Date().toISOString()};
-    if(source!=='local'&&primaryReadyDomains.has(detail.primaryGroup)&&PRIMARY_KEYS[detail.primaryGroup]?.includes(key)){
+  function refreshPrimaryCache(key,source){
+    const primaryGroup=primaryGroupForKey(key);
+    if(source!=='local'&&primaryReadyDomains.has(primaryGroup)&&PRIMARY_KEYS[primaryGroup]?.includes(key)){
       const result=inspectRaw(key,localStorage.getItem(key));
       if(['valid','legacy'].includes(result.status))primaryRawCache.set(key,result.raw);else primaryRawCache.delete(key);
     }
-    emit('app-data-change',detail);
+  }
+  function notifyChange(key,source='local',operation='update',forwarded=null){
+    refreshPrimaryCache(key,source);
+    const domain=publicDomainForKey(key),detail=forwarded&&dataEvents.validate(forwarded).ok?forwarded:domain?dataEvents.create({domain,operation,entityId:null}):null;
+    if(detail)dataEvents.emit(detail);
     if(source==='local'){
-      try{channel?.postMessage(detail);}catch(error){/* Storage event remains as fallback. */}
+      try{channel?.postMessage({key,event:detail});}catch(error){/* Storage event remains as fallback. */}
     }
+    return detail;
+  }
+  function notifyBatch(keys,{source='local',operation='update',domain='',forwarded=null}={}){
+    const selected=[...new Set((keys||[]).filter(Boolean))];if(!selected.length)return null;
+    selected.forEach(key=>refreshPrimaryCache(key,source));
+    const domains=[...new Set(selected.map(publicDomainForKey).filter(Boolean))];
+    const eventDomain=domain||(domains.length===1?domains[0]:domains.length>1?'import':'');
+    const detail=forwarded&&dataEvents.validate(forwarded).ok?forwarded:eventDomain?dataEvents.create({domain:eventDomain,operation,entityId:null}):null;
+    if(detail)dataEvents.emit(detail);
+    if(source==='local'){
+      try{channel?.postMessage({keys:selected,event:detail});}catch(error){/* Storage event remains as fallback. */}
+    }
+    return detail;
   }
   function readResult(key,{quarantine=true}={}){
     recordForKey(key);
@@ -238,12 +264,13 @@
     await transactionDone(transaction);
   }
   function writeRaw(key,raw,{notify=true,mirror=true}={}){
+    const existed=localStorage.getItem(key)!==null;
     const result=retainResult(inspectRaw(key,String(raw))),normalizedRaw=result.raw;
     if(!['valid','legacy'].includes(result.status))throw new Error(`Datos invalidos para ${key}: ${result.error||result.status}`);
     try{localStorage.setItem(key,normalizedRaw);}
     catch(error){reportError(error,'local-write',key);throw error;}
-    if(notify)notifyChange(key);
     if(isPrimaryDomain(primaryGroupForKey(key))){primaryRawCache.set(key,normalizedRaw);}
+    if(notify)notifyChange(key,'local',existed?'update':'create');
     if(mirror&&shouldMirror(key))enqueueMirror(()=>putRawRecord(key,normalizedRaw),'mirror-write',key);
     if(result.retention?.changed)emit('app-data-retention',{key,domain:domainForKey(key),primaryGroup:primaryGroupForKey(key),removedCount:result.retention.removedCount,policy:result.retention.policy});
     return normalizedRaw;
@@ -259,8 +286,8 @@
     recordForKey(key);
     try{localStorage.removeItem(key);}
     catch(error){reportError(error,'local-remove',key);throw error;}
-    if(notify)notifyChange(key);
     primaryRawCache.delete(key);
+    if(notify)notifyChange(key,'local','delete');
     if(mirror&&shouldMirror(key))enqueueMirror(()=>deleteRecord(key),'mirror-remove',key);
   }
   async function readIndexedResult(key,{quarantine=true}={}){
@@ -395,7 +422,7 @@
           writes.push({key,domain:domainForKey(key),raw:sanitizeRawForMirror(key,localResult.raw),updatedAt:new Date().toISOString()});
         }
       }else if(indexedValid){
-        selectedRaw=indexedResult.raw;localStorage.setItem(key,indexedResult.raw);recovered.push({key,name:recordForKey(key).name,source:'indexeddb'});notifyChange(key,'primary-recovery');
+        selectedRaw=indexedResult.raw;localStorage.setItem(key,indexedResult.raw);recovered.push({key,name:recordForKey(key).name,source:'indexeddb'});notifyChange(key,'primary-recovery','restore');
         if(indexedResult.retention?.changed)writes.push({key,domain:domainForKey(key),raw:indexedResult.raw,updatedAt:new Date().toISOString()});
       }
       if(selectedRaw===null)primaryRawCache.delete(key);else primaryRawCache.set(key,selectedRaw);
@@ -539,7 +566,7 @@
         });
         await transactionDone(transaction);
       }
-      keys.forEach(key=>notifyChange(key));
+      notifyBatch(keys,{operation:String(reason).startsWith('import:')?'restore':'update',domain:String(reason).startsWith('import:')?'import':''});
       return {ok:true,snapshotId:snapshot.id,keys};
     }catch(error){
       if(snapshot)restoreLocalSnapshot(snapshot);
@@ -568,7 +595,7 @@
         });
         await transactionDone(writeTransaction);
       }
-      (snapshot.keys||[]).forEach(key=>notifyChange(key));
+      notifyBatch(snapshot.keys||[],{operation:'restore',domain:'import'});
       return {ok:true,snapshotId,currentSnapshotId:current.id};
     }catch(error){
       restoreLocalSnapshot(current);
@@ -600,7 +627,7 @@
       quarantined.filter(entry=>selected.includes(entry.key)).forEach(entry=>quarantine.delete(entry.id));
       await done;
     }
-    selected.forEach(key=>notifyChange(key));
+    notifyBatch(selected,{operation:'delete'});
     return selected.length;
   }
   async function clearAllData(){
@@ -622,7 +649,7 @@
       transaction.objectStore(QUARANTINE_STORE).clear();
       await transactionDone(transaction);
     }
-    localKeys.forEach(key=>notifyChange(key));
+    notifyBatch(localKeys,{operation:'delete',domain:'import'});
     return localKeys.length;
   }
   async function diagnostics(){
@@ -676,11 +703,15 @@
     if(typeof global.BroadcastChannel==='function'){
       try{
         channel=new BroadcastChannel(CHANNEL_NAME);
-        channel.addEventListener('message',event=>notifyChange(event.data?.key||'', 'broadcast'));
+        channel.addEventListener('message',event=>{
+          const message=event.data||{};
+          if(Array.isArray(message.keys))notifyBatch(message.keys,{source:'broadcast',forwarded:message.event});
+          else if(message.key)notifyChange(message.key,'broadcast',message.event?.operation||'update',message.event);
+        });
       }catch(error){channel=null;}
     }
     global.addEventListener?.('storage',event=>{
-      if(event.storageArea===localStorage&&event.key?.startsWith('protocolo_0_100_'))notifyChange(event.key,'storage');
+      if(event.storageArea===localStorage&&event.key?.startsWith('protocolo_0_100_'))notifyChange(event.key,'storage','update');
     });
   }
 

@@ -620,7 +620,7 @@
       <div class="moduleCard" id="quickSetLoggerPanel">
         <div class="actionFocusTop"><div><h3>Entrenar</h3><div class="muted small" id="quickWorkoutContext">Rutina de hoy · próxima serie</div></div><span class="statusChip good">Registro rápido</span></div>
         <div class="quickLogger">
-          <div class="formGrid">
+          <div class="formGrid quickExercisePicker">
             <div class="field"><label>Buscar ejercicio</label><input type="search" id="quickExerciseSearch" autocomplete="off" placeholder="Nombre o alias"></div>
             <div class="field"><label>Ejercicio actual</label><select id="quickExerciseSelect"></select></div>
           </div>
@@ -731,8 +731,9 @@
         </details>
       </div>
     `);
-    const quickPanel=document.getElementById('quickSetLoggerPanel'),todayPanel=document.getElementById('todayWorkoutPanel');
+    const quickPanel=document.getElementById('quickSetLoggerPanel'),todayPanel=document.getElementById('todayWorkoutPanel'),summaryPanel=tab.querySelector('.gymSummaryDetails');
     if(quickPanel&&todayPanel)todayPanel.insertAdjacentElement('beforebegin',quickPanel);
+    if(quickPanel&&summaryPanel)quickPanel.insertAdjacentElement('afterend',summaryPanel);
     setupWorkoutEvents();
   }
   function setupWorkoutEvents(){

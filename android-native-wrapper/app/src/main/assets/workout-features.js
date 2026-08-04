@@ -620,7 +620,7 @@
       <div class="moduleCard" id="quickSetLoggerPanel">
         <div class="actionFocusTop"><div><h3>Entrenar</h3><div class="muted small" id="quickWorkoutContext">Rutina de hoy · próxima serie</div></div><span class="statusChip good">Registro rápido</span></div>
         <div class="quickLogger">
-          <div class="formGrid">
+          <div class="formGrid quickExercisePicker">
             <div class="field"><label>Buscar ejercicio</label><input type="search" id="quickExerciseSearch" autocomplete="off" placeholder="Nombre o alias"></div>
             <div class="field"><label>Ejercicio actual</label><select id="quickExerciseSelect"></select></div>
           </div>
@@ -665,8 +665,8 @@
           <div class="moduleGrid workoutQuickAccessGrid">
             <article class="auditItem"><div><strong>Acceso directo de la PWA</strong><span class="muted small">El shortcut “Serie rápida” abre Entrenar directamente.</span><span class="muted small" id="quickAccessPwaStatus">Comprobando instalación…</span></div><button type="button" class="secondary" id="showPwaInstallHelpBtn">Ver instalación</button></article>
             <article class="auditItem"><div><strong>Widget Android</strong><span class="muted small" id="quickAccessWidgetStatus">Requiere el APK Android.</span></div></article>
-            <article class="auditItem"><div><strong>Controles en pantalla bloqueada</strong><span class="muted small" id="quickAccessLockStatus">Pendiente de implementación. Depende de Android y del dispositivo.</span></div></article>
-            <article class="auditItem"><div><strong>Controles mediante notificación</strong><span class="muted small" id="quickAccessNotificationStatus">Pendiente de implementación. Aparecerán solamente durante una sesión activa.</span></div></article>
+            <article class="auditItem"><div><strong>Controles en pantalla bloqueada</strong><span class="muted small" id="quickAccessLockStatus">En desarrollo para el APK Android. No existe soporte universal: depende de Android y del dispositivo.</span></div></article>
+            <article class="auditItem"><div><strong>Controles mediante notificación</strong><span class="muted small" id="quickAccessNotificationStatus">Disponible en la beta Android; pendiente de integración y validación física. No está disponible en la versión estable actual.</span></div></article>
           </div>
         </section>
         <details class="planAdvancedEditor">
@@ -731,8 +731,9 @@
         </details>
       </div>
     `);
-    const quickPanel=document.getElementById('quickSetLoggerPanel'),todayPanel=document.getElementById('todayWorkoutPanel');
+    const quickPanel=document.getElementById('quickSetLoggerPanel'),todayPanel=document.getElementById('todayWorkoutPanel'),summaryPanel=tab.querySelector('.gymSummaryDetails');
     if(quickPanel&&todayPanel)todayPanel.insertAdjacentElement('beforebegin',quickPanel);
+    if(quickPanel&&summaryPanel)quickPanel.insertAdjacentElement('afterend',summaryPanel);
     setupWorkoutEvents();
   }
   function setupWorkoutEvents(){
@@ -1342,6 +1343,17 @@
       ]
     })||null;
   }
+  const quickSetUndoFields=Object.freeze([
+    'id','reps','weight','weightKg','addedLoadKg','assistanceKg','durationSeconds','distanceMeters',
+    'measurementMode','setType','bodyweight','loadMode','laterality','equipmentId','barWeightKg',
+    'completed','excludeFromRecords','excludeFromProgression','rir','rpe','note','savedAt'
+  ]);
+  function quickSetUndoSnapshot(set={}){
+    return Object.fromEntries(quickSetUndoFields.map(field=>[field,set[field]===undefined?null:clone(set[field])]));
+  }
+  function quickSetMatchesUndoSnapshot(set={},snapshot={}){
+    return JSON.stringify(quickSetUndoSnapshot(set))===JSON.stringify(snapshot);
+  }
   function saveQuickSetPayload(payload={}){
     const date=payload.date||todayStr();
     const session=ensureSession(date);
@@ -1362,7 +1374,7 @@
     currentQuickExerciseId=exercise.id;
     session.summary=sessionSummary(session);
     replaceSession(session);
-    const undoReceipt={sessionId:session.id,exerciseId:exercise.id||exercise.exerciseId,setId:set.id,savedAt:set.savedAt,createdAt:Date.now(),expiresAt:Date.now()+10000,undone:false};
+    const undoReceipt={sessionId:session.id,exerciseId:exercise.id||exercise.exerciseId,setId:set.id,snapshot:quickSetUndoSnapshot(set),createdAt:Date.now(),expiresAt:Date.now()+10000,undone:false};
     return {ok:true,session:clone(session),exercise:clone(exercise),set:clone(set),undoReceipt,state:getQuickWorkoutState({date,exerciseId:exercise.id})};
   }
   function updateQuickSetPayload(payload={}){
@@ -1426,13 +1438,13 @@
   }
   function undoSavedQuickSetPayload(receipt=lastSavedQuickSet){
     if(!receipt?.setId)return {ok:false,reason:'nothing-to-undo',message:'No hay una serie reciente para deshacer.'};
-    if(receipt.undone)return {ok:true,alreadyUndone:true};
+    if(receipt.undone)return {ok:true,reason:'already-undone',alreadyUndone:true};
     if(Date.now()>Number(receipt.expiresAt||0))return {ok:false,reason:'expired',message:'El tiempo para deshacer esta serie terminó.'};
     const session=sessions().find(item=>item.id===receipt.sessionId);
     const exercise=session?.exercises?.find(item=>(item.id||item.exerciseId)===receipt.exerciseId);
     const set=exercise?.sets?.find(item=>item.id===receipt.setId);
-    if(!session||!exercise||!set){receipt.undone=true;return {ok:true,alreadyUndone:true};}
-    if(set.savedAt!==receipt.savedAt||set.editedAt)return {ok:false,reason:'set-edited',message:'La serie cambió después de guardarse. Revisala antes de eliminarla.'};
+    if(!session||!exercise||!set){receipt.undone=true;return {ok:true,reason:'already-undone',alreadyUndone:true};}
+    if(!receipt.snapshot||!quickSetMatchesUndoSnapshot(set,receipt.snapshot))return {ok:false,reason:'set-edited',message:'La serie cambió después de guardarse. Revisala antes de eliminarla.'};
     exercise.sets=exercise.sets.filter(item=>item.id!==receipt.setId).map((item,index)=>({...item,setNumber:index+1}));
     session.summary=sessionSummary(session);
     currentQuickExerciseId=exercise.id||exercise.exerciseId;

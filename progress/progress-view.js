@@ -63,8 +63,8 @@
     }
     return null;
   }
-  function renderEmptyState(view){
-    const panel=document.querySelector('[data-progress-panel="'+view+'"]'),box=panel?.querySelector('[data-progress-empty="'+view+'"]'),state=emptyState(view);
+  function renderEmptyState(view,{enabled=true}={}){
+    const panel=document.querySelector('[data-progress-panel="'+view+'"]'),box=panel?.querySelector('[data-progress-empty="'+view+'"]'),state=enabled?emptyState(view):null;
     if(!panel||!box)return false;
     panel.dataset.insufficient=String(!!state);box.classList.toggle('hidden',!state);
     box.innerHTML=state?'<h3>'+escape(state.text)+'</h3><p class="muted small">Faltan '+state.needed+' registro(s) comparable(s). Cuando estén disponibles, vas a ver tendencias sin mezclar modos o equipos incompatibles.</p><button type="button" class="primary" data-progress-empty-action data-module="'+state.module+'" data-view="'+state.routeView+'">'+escape(state.action)+'</button>':'';
@@ -242,7 +242,7 @@
     const state=viewState[view];if(!state||(!force&&state.rendered&&!state.dirty))return false;
     if(view==='overview'){window.renderIntegralScore?.();renderOverview();}
     else if(view==='habits'){if(!renderEmptyState(view))window.renderProtocolProgressView?.(view);}
-    else if(view==='gym'){if(!renderEmptyState(view))renderGym();}
+    else if(view==='gym'){if(!renderEmptyState(view,{enabled:gymScopeFromUrl()==='summary'||comparableGymSessions()===0}))renderGym();}
     else if(view==='nutrition'){if(!renderEmptyState(view))renderNutrition();}
     else window.renderProtocolProgressView?.(view);
     state.rendered=true;state.dirty=false;return true;

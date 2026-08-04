@@ -13,6 +13,7 @@ const localStorage={
 const window={localStorage,indexedDB:null,navigator:{},addEventListener(){},dispatchEvent(){},setTimeout};
 const context=vm.createContext({window,localStorage,console,setTimeout,clearTimeout,Date,Math,JSON,Object,Array,Set,Map,String,Number,RegExp,Promise,Error,CustomEvent:class CustomEvent{constructor(type,options={}){this.type=type;this.detail=options.detail;}}});
 vm.runInContext(fs.readFileSync('data/schema-registry.js','utf8'),context);
+vm.runInContext(fs.readFileSync('app/data-events.js','utf8'),context);
 vm.runInContext(fs.readFileSync('data/indexeddb.js','utf8'),context);
 
 const data=window.APP_DATA,registry=window.APP_SCHEMA_REGISTRY;

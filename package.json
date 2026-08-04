@@ -6,6 +6,7 @@
   "scripts": {
     "build:precache": "node scripts/generate-precache-manifest.mjs",
     "build:pwa-screenshots": "node scripts/capture-pwa-screenshots.mjs",
+    "build:web-core-evidence": "node scripts/capture-web-core-flow-p0.mjs",
     "test:manifest": "node scripts/test-manifest.mjs",
     "test:precache": "node scripts/generate-precache-manifest.mjs --check && node scripts/test-build-guard.mjs",
     "test:quality-gate": "node scripts/test-quality-gate.mjs",

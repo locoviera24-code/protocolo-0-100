@@ -68,6 +68,7 @@ const referenced=new Set(sourceFiles().flatMap(file=>fs.readFileSync(file,'utf8'
 referenced.delete('protocolo_0_100_data_changes_v1');
 for(const key of referenced)assert.ok(registry.get(key),`Clave usada fuera del registro: ${key}`);
 
+vm.runInContext(fs.readFileSync('app/data-events.js','utf8'),context);
 vm.runInContext(fs.readFileSync('data/indexeddb.js','utf8'),context);
 vm.runInContext(fs.readFileSync('data/repositories.js','utf8'),context);
 assert.ok(window.APP_DATA.DOMAIN_KEYS.workout.includes('protocolo_0_100_equipment_profiles_v1'));

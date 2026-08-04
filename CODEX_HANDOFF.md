@@ -1,10 +1,10 @@
 # CODEX_HANDOFF - Protocolo 0->100
 
-Ultima actualizacion: 2026-07-28
-Rama esperada: `main`
+Ultima actualizacion: 2026-08-04
+Rama esperada: `codex/web-core-flow-p0`
 Version actual: `2.7.0` (fuente unica: `app-version.json`)
 Android: `versionCode 33`, `versionName "2.7.0"`
-Service worker cache: `protocolo-0-100-pwa-2.7.0-b89`
+Service worker cache: `protocolo-0-100-pwa-2.7.0-b90`
 Backup consolidado: `schemaVersion: 3`
 
 Leer primero este archivo y luego `README.md`, `index.html`,
@@ -15,75 +15,103 @@ en `android-native-wrapper/`.
 ## Trabajo en curso: Web Core Flow P0
 
 Rama: `codex/web-core-flow-p0` desde `main` (`1a9186e`). La version sigue en
-`2.7.0`, build web `89`, Android `versionCode 33` y backup schema 3 hasta cerrar
-el bloque completo.
+`2.7.0`, build web `90`, Android `versionCode 33` y backup schema 3. El build se
+incremento una sola vez durante el cierre del Gate D.
 
-Gate A completado el 2026-08-03:
+Gate A completado:
 
-- Inicio decide su CTA con estados explicitos: registro existente, borrador,
-  cambios pendientes, campos esenciales y validez. Los dos botones de guardado
-  usan `saveCurrentDay`; el inferior es secundario.
+- Inicio decide su CTA con `hasTodayRecord`, `hasDraft`, `isDirty`,
+  `requiredMissing`, `isValid` y `hasStarted`. Un formulario vacio no se marca
+  invalido antes de empezar; Continuar enfoca el primer error o campo pendiente.
+  Los dos botones de guardado usan `saveCurrentDay`; el inferior es secundario.
 - Gym presenta `Entrenar` antes del resumen y deja la sesion completa dentro de
   `Edicion avanzada de sesion`.
 - Guardar muestra la serie exacta, devuelve el foco y ofrece Deshacer durante
-  10 segundos. La operacion conserva el `setId`, es idempotente, no elimina una
-  serie posterior y rechaza una serie editada.
-- Pruebas directas aprobadas: Home/Ajustes, Workout, diseno, layout y limites
-  modulares. Playwright Android Chromium aprobo Inicio, guardado/Deshacer y el
-  flujo PWA; el proceso local de Playwright quedo abierto despues de reportar
-  exito y fue terminado por el timeout del runner, sin escenario fallido.
+  10 segundos. El recibo conserva `sessionId`, `exerciseId`, `setId` y el
+  snapshot canonico; es idempotente, no elimina una serie posterior y rechaza
+  una serie editada.
+- Pruebas directas de Home/Ajustes, Workout, diseno, layout, router y limites
+  modulares aprobadas. La matriz E2E final cubre los estados, foco, guardado,
+  edicion, modalidades y Deshacer.
 
-Gate B completado el 2026-08-03:
+Gate B completado:
 
 - app/platform-capabilities.js distingue navegador, PWA instalada y APK sin
   afirmar que una PWA esta instalada cuando el navegador no puede saberlo.
   Acerca de muestra la matriz Web/PWA frente a APK y Gym explica el acceso
-  rapido, el shortcut Serie rapida, el widget y los controles aun pendientes.
+  rapido, el shortcut Serie rapida, el widget y los estados Android reales.
+- app/data-events.js publica solo dominio, operacion, ID y fecha UTC. IndexedDB
+  agrupa invalidaciones masivas y no expone contenido del usuario.
 - Progreso renderiza solamente la subseccion activa. Cada vista conserva estado
-  rendered/dirty, se invalida por dominio y relee los scopes de Gym al usar
-  Atras/Adelante. Inicio y otras rutas ya no construyen graficos, historial o
-  insignias ocultos.
+  `rendered/dirty`, se invalida por dominio, relee datos actuales y restaura el
+  foco al usar tabs, deep links, Atras o Adelante.
 - Los estados vacios requieren 3 dias de Habitos, 3 dias de Nutricion o dos
   sesiones distintas con series efectivas comparables del mismo ejercicio.
   Gym conserva separados modo de medicion, carga, equipo, gimnasio y
   lateralidad.
 - Focus Coins, rankings, referidos y afiliados viven en
   Mas > Funciones experimentales. Abrir Progreso o la pantalla Experimental
-  desactivada no escribe esos datos; activarla conserva saldos y toma una linea
-  base para no conceder recompensas retroactivas.
+  desactivada no escribe esos datos. Usuarios con historial previo eligen de
+  forma explicita seguir usando las funciones o mantenerlas pausadas; saldos y
+  registros no se recalculan ni se borran.
 - Los textos cotidianos ya no muestran puente Android, widget interno,
   snapshots ni SharedPreferences. La actualizacion manual del widget solo
   aparece dentro de Diagnostico avanzado.
-- Pruebas directas aprobadas: capacidades, Progreso, router, modulos, diseno,
-  layout y accesibilidad. Playwright aprobo 27/27 escenarios funcionales en
-  Android Chromium, iPhone WebKit y escritorio Chromium. Axe aprobo 33/33
-  escenarios entre esas tres plataformas. La matriz ampliada de Progreso de
-  Android aprobo ademas musculos, ejercicios, scopes y estados vacios.
-- Precache regenerado con 82 recursos para build 89 y paridad web/Android
-  aprobada. No se incremento version, build, versionCode ni schema de backup.
-  Las pruebas fisicas continuan pendientes porque no hay hardware conectado.
+- Pruebas de capacidades, eventos, Progreso, router, deep links, Experimental,
+  modulos, diseno, layout y accesibilidad aprobadas.
 
-Gate C completado el 2026-08-03:
+Gate C completado:
 
 - gym/workout-quick-actions.js define un contrato puro schema 1 para nueve
-  acciones Web/widget/notificacion. Separa actionId de mutationId, exige UUID
-  v4, timestamp UTC, revision esperada, payload versionado y resultado con
-  codigo estable.
-- El contrato rechaza schema o payload futuros, NaN/Infinity, ciclos, valores no
-  JSON, mas de 16 KiB, profundidad excesiva y claves de contaminacion de
-  prototipos. createAction acepta reloj y UUID inyectables para pruebas.
+  acciones Web/widget/notificacion. Usa `actionType` y `mutationId`, exige UUID
+  v4, timestamp UTC, revision esperada, version de cliente y payload versionado.
+- El contrato rechaza schema o payload futuros, NaN/Infinity, ciclos, mas de
+  16 KiB UTF-8, profundidad excesiva y claves de contaminacion de prototipos.
+  `createAction` acepta reloj y UUID inyectables para pruebas.
 - No usa localStorage, IndexedDB, APP_DATA ni repositorios. La futura cola
   Android sera transporte y las series continuaran aplicandose con el modelo
   Workout existente.
 - docs/workout-quick-actions.md documenta campos, payloads, ejemplos JSON,
   idempotencia, resultados e integracion futura sin duplicar el modelo.
-- Pruebas directas aprobadas: nueve acciones, resultados aplicados/rechazados,
-  payload seguro, limites modulares, precache y guard de build. Precache y
-  assets Android sincronizados con 83 recursos para build 89.
+- docs/web-core-android-rebase.md compara el contrato con la rama Android y
+  prohibe conservar dos schemas de mutacion despues del rebase.
+- Pruebas directas aprobadas para nueve acciones, tres fuentes, resultados
+  aplicados/rechazados/ignorados, payload seguro y limites modulares.
 
-Siguiente bloque exacto: Gate D, regresion completa, artifact web, Android
-debug/release, evidencias visuales, documentacion final e incremento unico a
-build 90 si todo queda verde.
+Gate D completado el 2026-08-04:
+
+- La version permanece en `2.7.0`, Android en `versionCode 33` y backup en
+  schema 3. El build web/PWA subio una sola vez a 90; el canal estable conserva
+  build 89 en `.github/stable-release.json` y no se publico stable.
+- Precache reproducible: 84 recursos. Artifact `dist-pages`: 85 recursos con
+  inventario y hash. La prueba servida confirmo rutas profundas, modulos,
+  service worker, navegacion offline, cero 404 y cero errores de pagina o
+  consola.
+- La matriz Playwright final aprobo 418 escenarios y omitio 14: Android
+  Chromium 142/2, iPhone WebKit 137/7 y escritorio Chromium 139/5. Axe aporta
+  33 escenarios dentro de ese total y paso sin exclusiones. Las omisiones son
+  deliberadas por plataforma, no fallos funcionales.
+- La matriz detecto una carrera previa en Diagnostico: respuestas asincronas
+  antiguas podian repintar un modo de almacenamiento ya cambiado. Un token de
+  generacion y el agrupado de renders descartan resultados obsoletos; los casos
+  de Nutricion, Workout y Gym Party pasaron 9/9 repeticiones en WebKit.
+- Firebase Tools 15.23.0 y Firestore Emulator aprobaron contadores atomicos,
+  reactivacion controlada, aislamiento de expulsados, invitaciones limitadas y
+  capacidad concurrente. Los `PERMISSION_DENIED` del log son negativas
+  esperadas por la suite. En Windows se fijo `en_US` solo para la JVM.
+- Gradle 8.10.2 genero APK debug y release de prueba con Java 21 y Android 35.
+  Ambos declaran Android 33 / `2.7.0`, verifican firma v1/v2 y conservan paridad
+  de assets. Debug: 1.846.403 bytes, SHA-256
+  `D1FFAFFD87277A538C3F645D8A886BE18787BC7C3E92A7210C0AD4F97490E954`.
+  Release de prueba: 1.517.067 bytes, SHA-256
+  `4E8090CCD934C969C7B1EEE7388D2C252F25C6C02060485D297288FC74F3A981`.
+  La firma release es efimera de validacion y no es un artifact distribuible.
+- Las cinco capturas auditables estan en
+  `docs/screenshots/web-core-flow-p0/` y quedan fuera del precache y del APK.
+  No hubo hardware fisico disponible; todas las comprobaciones de
+  `docs/physical-test-checklist.md` permanecen pendientes y no se simularon.
+- Resumen de arquitectura, compatibilidad, riesgos y rollback preparado en
+  `docs/pr-web-core-flow-p0.md`.
 
 ## 1. Estado actual del proyecto
 
@@ -97,7 +125,7 @@ Estado actual:
 - Gym Party implementado como modulo web/PWA opcional.
 - Nutricion local/FDC opcional.
 - Backups JSON `schemaVersion: 3`.
-- PWA offline con cache derivada `protocolo-0-100-pwa-2.7.0-b89` y
+- PWA offline con cache derivada `protocolo-0-100-pwa-2.7.0-b90` y
   actualizacion consentida desde el aviso visible.
 - APK con widget Android y permiso `INTERNET` para Firebase/Gym Party.
 
@@ -159,7 +187,7 @@ Web:
   tombstones, backoff y contexto horario.
 - `gym-party.js`: modulo Gym Party, registro rapido, graficas y edicion/eliminacion de series.
 - `advanced-features.js`: version `2.7.0`, backup/importacion Gym Party.
-- `sw.js`: cache derivada del build 89, actualización atómica consentida y sin mezcla de assets; evita
+- `sw.js`: cache derivada del build 90, actualización atómica consentida y sin mezcla de assets; evita
   persistir una configuracion Firebase obsoleta.
 - `README.md`: documenta Gym Party, demo, Firebase, privacidad y pruebas.
 - `CODEX_HANDOFF.md`: este handoff.

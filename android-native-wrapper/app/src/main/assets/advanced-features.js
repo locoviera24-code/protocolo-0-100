@@ -408,13 +408,17 @@
   }
   function rebuildCoinLedger({allowNew=false}={}){
     const stored=getLocalData(COIN_LEDGER_KEY,[]);if(!allowNew)return stored;
-    const preferences=getLocalData('protocolo_0_100_ui_preferences_v1',{}),baseline=new Set(preferences.experimentalRewardBaselineIds||[]),known=new Set(stored.map(item=>item.id)),candidates=coinLedgerCandidates();
-    const additions=candidates.filter(item=>!baseline.has(item.id)&&!known.has(item.id)),ledger=[...stored,...additions].sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+    const preferences=getLocalData('protocolo_0_100_ui_preferences_v1',{}),enabledDate=String(preferences.experimentalFeaturesEnabledAt||'').slice(0,10),known=new Set(stored.map(item=>item.id)),candidates=coinLedgerCandidates();
+    const additions=enabledDate?candidates.filter(item=>String(item.date)>enabledDate&&!known.has(item.id)):[],ledger=[...stored,...additions].sort((a,b)=>String(b.date).localeCompare(String(a.date)));
     if(additions.length)setLocalData(COIN_LEDGER_KEY,ledger);
-    const nextBaseline=candidates.map(item=>item.id);if(nextBaseline.some((id,index)=>id!==preferences.experimentalRewardBaselineIds?.[index])||nextBaseline.length!==(preferences.experimentalRewardBaselineIds?.length||0))setLocalData('protocolo_0_100_ui_preferences_v1',{...preferences,experimentalRewardBaselineIds:nextBaseline});
     return ledger;
   }
-  window.experimentalRewardCandidateIds=()=>coinLedgerCandidates().map(item=>item.id);
+  function hasExperimentalHistory(){
+    const ledger=getLocalData(COIN_LEDGER_KEY,[]),rewards=getLocalData(REWARDS_KEY,{}),rankings=getLocalData(MONTHLY_RANKINGS_KEY,{}),rankingSettings=getLocalData(RANKING_SETTINGS_KEY,{}),referral=getLocalData(USER_REFERRAL_KEY,null);
+    return ledger.length>0||Object.keys(rewards||{}).length>0||Object.keys(rankings||{}).length>0||Object.keys(rankingSettings||{}).length>0||!!referral;
+  }
+  window.hasExperimentalHistory=hasExperimentalHistory;
+  window.renderExperimentalControls?.();
   function scoresForDate(date){
     const protocol=getEntries().find(e=>e.date===date);
     const protocolScore=protocol?.score||0;
@@ -629,7 +633,7 @@
     window.addEventListener('online',renderExpandedSearchStatus);
     window.addEventListener('offline',renderExpandedSearchStatus);
     window.addEventListener('app-data-change',event=>{
-      if(!window.isExperimentalFeaturesEnabled?.()||!['protocol','workout','nutrition'].includes(event.detail?.domain))return;
+      if(!window.isExperimentalFeaturesEnabled?.()||!['protocol','workout','nutrition','import'].includes(event.detail?.domain))return;
       renderExperimentalFeaturesData({updateRewards:true});
     });
     document.addEventListener('click',event=>{
