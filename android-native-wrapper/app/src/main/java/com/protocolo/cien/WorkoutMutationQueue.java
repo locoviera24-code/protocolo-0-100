@@ -18,10 +18,12 @@ public final class WorkoutMutationQueue {
     static final String KEY_MUTATION_QUEUE = "native_mutation_queue_v1";
     static final String KEY_CORRUPT_QUEUE = "native_mutation_queue_corrupt_v1";
     static final int MAX_MUTATIONS = 200;
+    private static final int RECORD_VERSION = 1;
     private static final long IMPORTED_RETENTION_MS = 7L * 24L * 60L * 60L * 1000L;
 
     private WorkoutMutationQueue() {}
 
+    /** Returns persisted transport records without rewriting legacy entries. */
     public static synchronized JSONArray readAll(Context context) {
         SharedPreferences prefs = preferences(context);
         String raw = prefs.getString(KEY_MUTATION_QUEUE, "");
@@ -31,8 +33,8 @@ public final class WorkoutMutationQueue {
             JSONArray valid = new JSONArray();
             boolean partiallyCorrupt = false;
             for (int index = 0; index < parsed.length(); index++) {
-                JSONObject mutation = parsed.optJSONObject(index);
-                if (isValid(mutation)) valid.put(mutation);
+                JSONObject record = parsed.optJSONObject(index);
+                if (isValidRecord(record)) valid.put(record);
                 else partiallyCorrupt = true;
             }
             if (partiallyCorrupt) quarantine(prefs, raw, "invalid-entry");
@@ -43,24 +45,41 @@ public final class WorkoutMutationQueue {
         }
     }
 
+    /** Exposes only canonical schema-1 actions to the WebView. */
     public static synchronized JSONArray pending(Context context) {
         JSONArray source = readAll(context);
         JSONArray output = new JSONArray();
         for (int index = 0; index < source.length(); index++) {
-            JSONObject mutation = source.optJSONObject(index);
-            if (mutation != null && "pending".equals(status(mutation))) output.put(cloneObject(mutation));
+            JSONObject record = source.optJSONObject(index);
+            if (record == null || !"pending".equals(status(record))) continue;
+            JSONObject action = action(record);
+            if (action != null) output.put(action);
         }
         return output;
     }
 
-    public static synchronized boolean append(Context context, JSONObject mutation) {
-        if (!isValid(mutation)) return false;
+    public static synchronized boolean append(Context context, JSONObject action, JSONObject transport) {
+        if (!WorkoutQuickActionContract.validate(action).ok) return false;
         JSONArray queue = readAll(context);
-        String id = id(mutation);
-        if (find(queue, id) != null) return true;
+        String mutationId = action.optString("mutationId", "");
+        if (find(queue, mutationId) != null) return true;
         if (queue.length() >= MAX_MUTATIONS) return false;
-        queue.put(cloneObject(mutation));
+        JSONObject record = new JSONObject();
+        put(record, "queueRecordVersion", RECORD_VERSION);
+        put(record, "action", cloneObject(action));
+        put(record, "status", "pending");
+        put(record, "privateImportState", "pending");
+        put(record, "importedAt", JSONObject.NULL);
+        put(record, "createdAtEpochMs", System.currentTimeMillis());
+        put(record, "transport", cloneObject(transport));
+        put(record, "attempts", 0);
+        put(record, "lastError", JSONObject.NULL);
+        queue.put(record);
         return write(context, queue);
+    }
+
+    public static synchronized boolean append(Context context, JSONObject action) {
+        return append(context, action, new JSONObject());
     }
 
     public static synchronized boolean acknowledgeImported(Context context, JSONArray ids) {
@@ -74,13 +93,12 @@ public final class WorkoutMutationQueue {
         JSONArray queue = readAll(context);
         boolean changed = false;
         for (int index = 0; index < queue.length(); index++) {
-            JSONObject mutation = queue.optJSONObject(index);
-            if (mutation == null || !requested.contains(id(mutation))) continue;
-            if (!"pending".equals(status(mutation))) continue;
-            put(mutation, "status", "imported");
-            put(mutation, "privateImportState", "imported");
-            put(mutation, "importedAt", nowIso());
-            put(mutation, "updatedAt", nowIso());
+            JSONObject record = queue.optJSONObject(index);
+            if (record == null || !requested.contains(id(record)) || !"pending".equals(status(record))) continue;
+            put(record, "status", "imported");
+            put(record, "privateImportState", "imported");
+            put(record, "importedAt", nowIso());
+            put(record, "updatedAt", nowIso());
             changed = true;
         }
         return changed && write(context, prune(queue, System.currentTimeMillis()));
@@ -89,25 +107,26 @@ public final class WorkoutMutationQueue {
     public static synchronized boolean setStatus(Context context, String mutationId, String nextStatus, String error) {
         if (mutationId == null || mutationId.isEmpty() || !isStatus(nextStatus)) return false;
         JSONArray queue = readAll(context);
-        JSONObject mutation = find(queue, mutationId);
-        if (mutation == null) return false;
-        put(mutation, "status", nextStatus);
-        put(mutation, "privateImportState", "imported".equals(nextStatus) ? "imported" : "rejected".equals(nextStatus) ? "error" : nextStatus);
-        if ("imported".equals(nextStatus)) put(mutation, "importedAt", nowIso());
-        put(mutation, "lastError", error == null || error.trim().isEmpty() ? JSONObject.NULL : error.trim());
-        put(mutation, "attempts", Math.max(0, mutation.optInt("attempts", 0)) + 1);
-        put(mutation, "updatedAt", nowIso());
+        JSONObject record = find(queue, mutationId);
+        if (record == null) return false;
+        put(record, "status", nextStatus);
+        put(record, "privateImportState", "imported".equals(nextStatus) ? "imported" : "rejected".equals(nextStatus) ? "error" : nextStatus);
+        if ("imported".equals(nextStatus)) put(record, "importedAt", nowIso());
+        put(record, "lastError", error == null || error.trim().isEmpty() ? JSONObject.NULL : error.trim());
+        put(record, "attempts", Math.max(0, record.optInt("attempts", 0)) + 1);
+        put(record, "updatedAt", nowIso());
         return write(context, prune(queue, System.currentTimeMillis()));
     }
 
     public static synchronized JSONObject latestUndoableSave(Context context, long nowEpochMs) {
         JSONArray queue = readAll(context);
         for (int index = queue.length() - 1; index >= 0; index--) {
-            JSONObject mutation = queue.optJSONObject(index);
-            if (mutation == null || !"save_set".equals(mutation.optString("type", ""))) continue;
-            String state = status(mutation);
+            JSONObject record = queue.optJSONObject(index);
+            JSONObject action = action(record);
+            if (record == null || action == null || !WorkoutQuickActionContract.SAVE_SET.equals(action.optString("actionType", ""))) continue;
+            String state = status(record);
             if (!("pending".equals(state) || "imported".equals(state))) continue;
-            if (nowEpochMs <= mutation.optLong("undoUntilEpochMs", 0L)) return cloneObject(mutation);
+            if (nowEpochMs <= transport(record).optLong("undoUntilEpochMs", 0L)) return cloneObject(record);
         }
         return null;
     }
@@ -136,36 +155,48 @@ public final class WorkoutMutationQueue {
         return output;
     }
 
-    static String id(JSONObject mutation) {
-        if (mutation == null) return "";
-        String value = mutation.optString("mutationId", "");
-        return value.isEmpty() ? mutation.optString("id", "") : value;
+    static JSONObject action(JSONObject record) {
+        return WorkoutQuickActionContract.adaptLegacy(record);
     }
 
-    static String status(JSONObject mutation) {
-        if (mutation == null) return "rejected";
-        String value = mutation.optString("status", "");
+    static JSONObject transport(JSONObject record) {
+        if (record == null) return new JSONObject();
+        JSONObject nested = record.optJSONObject("transport");
+        if (nested != null) return cloneObject(nested);
+        JSONObject legacy = new JSONObject();
+        for (String key : new String[]{"dedupeFingerprint", "undoUntilEpochMs", "compensatesMutationId", "shareTargets"}) {
+            if (record.has(key)) put(legacy, key, record.opt(key));
+        }
+        return legacy;
+    }
+
+    static String id(JSONObject record) {
+        if (record == null) return "";
+        JSONObject nested = record.optJSONObject("action");
+        if (nested != null) return nested.optString("mutationId", "");
+        String value = record.optString("mutationId", "");
+        return value.isEmpty() ? record.optString("id", "") : value;
+    }
+
+    static String status(JSONObject record) {
+        if (record == null) return "rejected";
+        String value = record.optString("status", "");
         if (isStatus(value)) return value;
-        String legacy = mutation.optString("privateImportState", "pending");
+        String legacy = record.optString("privateImportState", "pending");
         return "imported".equals(legacy) ? "imported" : "error".equals(legacy) ? "rejected" : "pending";
     }
 
     private static JSONObject find(JSONArray queue, String mutationId) {
         if (queue == null || mutationId == null || mutationId.isEmpty()) return null;
         for (int index = 0; index < queue.length(); index++) {
-            JSONObject mutation = queue.optJSONObject(index);
-            if (mutationId.equals(id(mutation))) return mutation;
+            JSONObject record = queue.optJSONObject(index);
+            if (mutationId.equals(id(record))) return record;
         }
         return null;
     }
 
-    private static boolean isValid(JSONObject mutation) {
-        if (mutation == null) return false;
-        String mutationId = id(mutation);
-        String type = mutation.optString("type", "");
-        return !mutationId.isEmpty() && mutationId.length() <= 160
-                && !type.isEmpty() && type.length() <= 80
-                && mutation.optJSONObject("payload") != null;
+    private static boolean isValidRecord(JSONObject record) {
+        return record != null && !id(record).isEmpty() && action(record) != null;
     }
 
     private static boolean isStatus(String value) {
@@ -175,11 +206,11 @@ public final class WorkoutMutationQueue {
     private static JSONArray prune(JSONArray source, long nowEpochMs) {
         JSONArray retained = new JSONArray();
         for (int index = 0; index < source.length(); index++) {
-            JSONObject mutation = source.optJSONObject(index);
-            if (mutation == null) continue;
-            long createdAt = mutation.optLong("createdAtEpochMs", nowEpochMs);
-            if ("imported".equals(status(mutation)) && nowEpochMs - createdAt > IMPORTED_RETENTION_MS) continue;
-            retained.put(mutation);
+            JSONObject record = source.optJSONObject(index);
+            if (record == null) continue;
+            long createdAt = record.optLong("createdAtEpochMs", nowEpochMs);
+            if ("imported".equals(status(record)) && nowEpochMs - createdAt > IMPORTED_RETENTION_MS) continue;
+            retained.put(record);
         }
         if (retained.length() <= MAX_MUTATIONS) return retained;
         JSONArray limited = new JSONArray();

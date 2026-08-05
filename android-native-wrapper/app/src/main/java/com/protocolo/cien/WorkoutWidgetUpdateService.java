@@ -210,7 +210,8 @@ public final class WorkoutWidgetUpdateService {
                 || MainActivity.ACTION_WIDGET_PREVIOUS_EXERCISE.equals(action)
                 || MainActivity.ACTION_WIDGET_NEXT_EXERCISE.equals(action)
                 || MainActivity.ACTION_WIDGET_UNDO_LAST_SET.equals(action)
-                || MainActivity.ACTION_WIDGET_COMPLETE_TIME_SET.equals(action);
+                || MainActivity.ACTION_WIDGET_COMPLETE_TIME_SET.equals(action)
+                || MainActivity.ACTION_WIDGET_COMPLETE_DISTANCE_SET.equals(action);
     }
 
     static String applyDirectAction(Context context, JSONObject state, String action) {
@@ -247,7 +248,9 @@ public final class WorkoutWidgetUpdateService {
             code = "next-exercise";
         } else if (MainActivity.ACTION_WIDGET_SELECT_EXERCISE.equals(action)) {
             code = selectExercise(state, state.optString("_nativeSelectedExerciseId", ""));
-        } else if (MainActivity.ACTION_WIDGET_SAVE_SET.equals(action) || MainActivity.ACTION_WIDGET_COMPLETE_TIME_SET.equals(action)) {
+        } else if (MainActivity.ACTION_WIDGET_SAVE_SET.equals(action)
+                || MainActivity.ACTION_WIDGET_COMPLETE_TIME_SET.equals(action)
+                || MainActivity.ACTION_WIDGET_COMPLETE_DISTANCE_SET.equals(action)) {
             code = saveSet(context, state);
         } else if (MainActivity.ACTION_WIDGET_UNDO_LAST_SET.equals(action)) {
             code = undoLastSet(context, state);
@@ -352,7 +355,7 @@ public final class WorkoutWidgetUpdateService {
         put(set, "note", "Guardado desde widget Android");
         put(set, "savedAt", nowIso());
         if (nativeResult.ok) {
-            put(set, "nativeMutationId", nativeResult.mutation.optString("id", ""));
+            put(set, "nativeMutationId", nativeResult.mutation.optString("mutationId", ""));
             put(set, "privateImportState", "pending");
         }
         put(set, "volume", Math.round(reps * weight));
@@ -398,7 +401,7 @@ public final class WorkoutWidgetUpdateService {
             return result.error.length() == 0 ? "nothing-to-undo" : result.error;
         }
         JSONObject payload = result.mutation.optJSONObject("payload");
-        String targetSetId = payload == null ? "" : payload.optString("targetSetId", "");
+        String targetSetId = payload == null ? "" : payload.optString("setId", "");
         JSONObject session = state.optJSONObject("workoutSession");
         JSONObject affectedExercise = null;
         if (session != null) {
@@ -420,7 +423,7 @@ public final class WorkoutWidgetUpdateService {
             put(state, "workoutSession", session);
         }
         JSONObject previousHistory = payload == null ? null : payload.optJSONObject("previousHistory");
-        String exerciseId = payload == null ? "" : payload.optString("exerciseId", "");
+        String exerciseId = result.mutation == null ? "" : result.mutation.optString("exerciseId", "");
         JSONObject history = state.optJSONObject("exerciseHistory");
         if (history == null) history = new JSONObject();
         if (previousHistory != null && previousHistory.length() > 0) put(history, exerciseId, previousHistory);

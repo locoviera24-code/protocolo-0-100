@@ -60,6 +60,7 @@ public class MainActivity extends Activity {
     public static final String ACTION_WIDGET_NEXT_EXERCISE = "com.protocolo.cien.ACTION_WIDGET_NEXT_EXERCISE";
     public static final String ACTION_WIDGET_UNDO_LAST_SET = "com.protocolo.cien.ACTION_WIDGET_UNDO_LAST_SET";
     public static final String ACTION_WIDGET_COMPLETE_TIME_SET = "com.protocolo.cien.ACTION_WIDGET_COMPLETE_TIME_SET";
+    public static final String ACTION_WIDGET_COMPLETE_DISTANCE_SET = "com.protocolo.cien.ACTION_WIDGET_COMPLETE_DISTANCE_SET";
     public static final String ACTION_WIDGET_PINNED = "com.protocolo.cien.ACTION_WIDGET_PINNED";
     private static final int SPEECH_REQUEST_CODE = 4100;
     private static final int NOTIFICATION_PERMISSION_REQUEST_CODE = 4101;
