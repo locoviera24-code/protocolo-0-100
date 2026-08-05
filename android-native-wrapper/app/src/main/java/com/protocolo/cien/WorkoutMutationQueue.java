@@ -27,42 +27,21 @@ public final class WorkoutMutationQueue {
     public static synchronized JSONArray readAll(Context context) {
         SharedPreferences prefs = preferences(context);
         String raw = prefs.getString(KEY_MUTATION_QUEUE, "");
-        if (raw == null || raw.trim().isEmpty()) return new JSONArray();
-        try {
-            JSONArray parsed = new JSONArray(raw);
-            JSONArray valid = new JSONArray();
-            boolean partiallyCorrupt = false;
-            for (int index = 0; index < parsed.length(); index++) {
-                JSONObject record = parsed.optJSONObject(index);
-                if (isValidRecord(record)) valid.put(record);
-                else partiallyCorrupt = true;
-            }
-            if (partiallyCorrupt) quarantine(prefs, raw, "invalid-entry");
-            return prune(valid, System.currentTimeMillis());
-        } catch (Exception error) {
-            quarantine(prefs, raw, "invalid-json");
-            return new JSONArray();
-        }
+        ParseResult parsed = parse(raw, System.currentTimeMillis());
+        if (parsed.corrupt) quarantine(prefs, raw, parsed.reason);
+        return parsed.records;
     }
 
     /** Exposes only canonical schema-1 actions to the WebView. */
     public static synchronized JSONArray pending(Context context) {
-        JSONArray source = readAll(context);
-        JSONArray output = new JSONArray();
-        for (int index = 0; index < source.length(); index++) {
-            JSONObject record = source.optJSONObject(index);
-            if (record == null || !"pending".equals(status(record))) continue;
-            JSONObject action = action(record);
-            if (action != null) output.put(action);
-        }
-        return output;
+        return canonicalPending(readAll(context));
     }
 
     public static synchronized boolean append(Context context, JSONObject action, JSONObject transport) {
         if (!WorkoutQuickActionContract.validate(action).ok) return false;
         JSONArray queue = readAll(context);
         String mutationId = action.optString("mutationId", "");
-        if (find(queue, mutationId) != null) return true;
+        if (containsId(queue, mutationId)) return true;
         if (queue.length() >= MAX_MUTATIONS) return false;
         JSONObject record = new JSONObject();
         put(record, "queueRecordVersion", RECORD_VERSION);
@@ -91,16 +70,7 @@ public final class WorkoutMutationQueue {
         }
         if (requested.isEmpty()) return false;
         JSONArray queue = readAll(context);
-        boolean changed = false;
-        for (int index = 0; index < queue.length(); index++) {
-            JSONObject record = queue.optJSONObject(index);
-            if (record == null || !requested.contains(id(record)) || !"pending".equals(status(record))) continue;
-            put(record, "status", "imported");
-            put(record, "privateImportState", "imported");
-            put(record, "importedAt", nowIso());
-            put(record, "updatedAt", nowIso());
-            changed = true;
-        }
+        boolean changed = markImported(queue, requested, nowIso());
         return changed && write(context, prune(queue, System.currentTimeMillis()));
     }
 
@@ -159,6 +129,48 @@ public final class WorkoutMutationQueue {
         return WorkoutQuickActionContract.adaptLegacy(record);
     }
 
+    static ParseResult parse(String raw, long nowEpochMs) {
+        if (raw == null || raw.trim().isEmpty()) return new ParseResult(new JSONArray(), false, "");
+        try {
+            JSONArray parsed = new JSONArray(raw);
+            JSONArray valid = new JSONArray();
+            boolean partiallyCorrupt = false;
+            for (int index = 0; index < parsed.length(); index++) {
+                JSONObject record = parsed.optJSONObject(index);
+                if (isValidRecord(record)) valid.put(record);
+                else partiallyCorrupt = true;
+            }
+            return new ParseResult(prune(valid, nowEpochMs), partiallyCorrupt, partiallyCorrupt ? "invalid-entry" : "");
+        } catch (Exception error) {
+            return new ParseResult(new JSONArray(), true, "invalid-json");
+        }
+    }
+
+    static JSONArray canonicalPending(JSONArray source) {
+        JSONArray output = new JSONArray();
+        for (int index = 0; source != null && index < source.length(); index++) {
+            JSONObject record = source.optJSONObject(index);
+            if (record == null || !"pending".equals(status(record))) continue;
+            JSONObject action = action(record);
+            if (action != null) output.put(action);
+        }
+        return output;
+    }
+
+    static boolean markImported(JSONArray queue, Set<String> requested, String importedAt) {
+        boolean changed = false;
+        for (int index = 0; queue != null && index < queue.length(); index++) {
+            JSONObject record = queue.optJSONObject(index);
+            if (record == null || requested == null || !requested.contains(id(record)) || !"pending".equals(status(record))) continue;
+            put(record, "status", "imported");
+            put(record, "privateImportState", "imported");
+            put(record, "importedAt", importedAt);
+            put(record, "updatedAt", importedAt);
+            changed = true;
+        }
+        return changed;
+    }
+
     static JSONObject transport(JSONObject record) {
         if (record == null) return new JSONObject();
         JSONObject nested = record.optJSONObject("transport");
@@ -195,6 +207,10 @@ public final class WorkoutMutationQueue {
         return null;
     }
 
+    static boolean containsId(JSONArray queue, String mutationId) {
+        return find(queue, mutationId) != null;
+    }
+
     private static boolean isValidRecord(JSONObject record) {
         return record != null && !id(record).isEmpty() && action(record) != null;
     }
@@ -203,7 +219,7 @@ public final class WorkoutMutationQueue {
         return "pending".equals(value) || "imported".equals(value) || "rejected".equals(value) || "undone".equals(value);
     }
 
-    private static JSONArray prune(JSONArray source, long nowEpochMs) {
+    static JSONArray prune(JSONArray source, long nowEpochMs) {
         JSONArray retained = new JSONArray();
         for (int index = 0; index < source.length(); index++) {
             JSONObject record = source.optJSONObject(index);
@@ -247,5 +263,17 @@ public final class WorkoutMutationQueue {
 
     private static void put(JSONObject target, String key, Object value) {
         try { target.put(key, value == null ? JSONObject.NULL : value); } catch (Exception ignored) {}
+    }
+
+    static final class ParseResult {
+        final JSONArray records;
+        final boolean corrupt;
+        final String reason;
+
+        ParseResult(JSONArray records, boolean corrupt, String reason) {
+            this.records = records;
+            this.corrupt = corrupt;
+            this.reason = reason;
+        }
     }
 }

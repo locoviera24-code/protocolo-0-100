@@ -101,10 +101,7 @@ public final class NativeWorkoutControlRepository {
         SharedPreferences prefs = preferences(context);
         long elapsed = SystemClock.elapsedRealtime();
         long previousElapsed = prefs.getLong(KEY_LAST_SAVE_ELAPSED, Long.MIN_VALUE);
-        if (fingerprint.equals(prefs.getString(KEY_LAST_SAVE_FINGERPRINT, ""))
-                && previousElapsed >= 0
-                && elapsed >= previousElapsed
-                && elapsed - previousElapsed <= DOUBLE_TAP_WINDOW_MS) {
+        if (isAccidentalDuplicate(fingerprint, prefs.getString(KEY_LAST_SAVE_FINGERPRINT, ""), elapsed, previousElapsed)) {
             return EnqueueResult.duplicate(findByFingerprint(readMutations(context), fingerprint));
         }
 
@@ -329,6 +326,13 @@ public final class NativeWorkoutControlRepository {
             }
         }
         return null;
+    }
+
+    static boolean isAccidentalDuplicate(String fingerprint, String previousFingerprint, long elapsed, long previousElapsed) {
+        return fingerprint != null && fingerprint.equals(previousFingerprint)
+                && previousElapsed >= 0
+                && elapsed >= previousElapsed
+                && elapsed - previousElapsed <= DOUBLE_TAP_WINDOW_MS;
     }
 
     private static String clientVersion(JSONObject widgetState) {

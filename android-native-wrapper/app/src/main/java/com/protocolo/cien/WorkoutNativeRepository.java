@@ -70,14 +70,21 @@ public final class WorkoutNativeRepository {
         JSONArray source;
         try { source = new JSONArray(prefs.getString(KEY_PROCESSED_DELIVERIES, "[]")); }
         catch (Exception ignored) { source = new JSONArray(); }
+        JSONArray next = appendDelivery(source, deliveryId);
+        if (next == null) return false;
+        return prefs.edit().putString(KEY_PROCESSED_DELIVERIES, next.toString()).commit();
+    }
+
+    static JSONArray appendDelivery(JSONArray source, String deliveryId) {
+        if (deliveryId == null || deliveryId.trim().isEmpty() || deliveryId.length() > 240) return null;
         for (int index = 0; index < source.length(); index++) {
-            if (deliveryId.equals(source.optString(index, ""))) return false;
+            if (deliveryId.equals(source.optString(index, ""))) return null;
         }
         JSONArray next = new JSONArray();
         int start = Math.max(0, source.length() - MAX_DELIVERIES + 1);
         for (int index = start; index < source.length(); index++) next.put(source.optString(index, ""));
         next.put(deliveryId);
-        return prefs.edit().putString(KEY_PROCESSED_DELIVERIES, next.toString()).commit();
+        return next;
     }
 
     public static String newMutationId() {

@@ -5,6 +5,7 @@ import {readFile} from 'node:fs/promises';
 const paths={
   repository:'../android-native-wrapper/app/src/main/java/com/protocolo/cien/NativeWorkoutControlRepository.java',
   queue:'../android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutMutationQueue.java',
+  nativeContract:'../android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutQuickActionContract.java',
   state:'../android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutNativeRepository.java',
   reducer:'../android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutQuickActionReducer.java',
   widget:'../android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetUpdateService.java',
@@ -21,17 +22,23 @@ const paths={
   notificationLayout:'../android-native-wrapper/app/src/main/res/layout/notification_workout_controls.xml',
   info:'../android-native-wrapper/app/src/main/res/xml/workout_widget_info.xml',
   features:'../workout-features.js',
-  importer:'../gym/native-workout-importer.js'
+  importer:'../gym/native-workout-importer.js',
+  webContract:'../gym/workout-quick-actions.js'
 };
 const entries=await Promise.all(Object.entries(paths).map(async([name,path])=>[name,await readFile(new URL(path,import.meta.url),'utf8')]));
 const source=Object.fromEntries(entries);
 
 for(const contract of ['DOUBLE_TAP_WINDOW_MS = 650L','privateImportState','expectedRevision','revision-conflict'])assert.ok(source.repository.includes(contract),`Falta contrato nativo: ${contract}`);
 assert.ok(source.state.includes('native_control_state_v1'),'Falta el estado de control nativo.');
-for(const contract of ['native_mutation_queue_v1','pending','imported','rejected','undone','acknowledgeImported','MAX_MUTATIONS = 200'])assert.ok(source.queue.includes(contract),`Falta contrato de cola: ${contract}`);
-assert.match(source.queue,/if \(!"pending"\.equals\(status\(mutation\)\)\) continue;/,'Una confirmacion tardia no debe revivir una mutacion deshecha.');
+for(const contract of ['native_mutation_queue_v1','pending','imported','rejected','undone','acknowledgeImported','MAX_MUTATIONS = 200','"action"','"transport"'])assert.ok(source.queue.includes(contract),`Falta contrato de cola: ${contract}`);
+assert.match(source.queue,/!"pending"\.equals\(status\(record\)\)/,'Una confirmacion tardia no debe revivir una mutacion deshecha.');
+for(const contract of ['SCHEMA_VERSION = 1','PAYLOAD_VERSION = 1','MAX_PAYLOAD_BYTES = 16 * 1024','UUID_V4','DANGEROUS_KEYS','adaptLegacy'])assert.ok(source.nativeContract.includes(contract),`Falta schema 1 nativo: ${contract}`);
+assert.doesNotMatch(source.repository,/"save_set"|"undo_set"|"UNDO_LAST_SET"/,'Las mutaciones nuevas no deben usar tipos legacy.');
+assert.match(source.repository,/WorkoutQuickActionContract\.SAVE_SET/);
+assert.match(source.repository,/WorkoutQuickActionContract\.UNDO_SET/);
 assert.match(source.state,/nativeRevision[^\n]+revision/,'La revision compacta debe aceptar el snapshot y el control nativo.');
-for(const action of ['ADJUST_REPS','ADJUST_WEIGHT','SAVE_SET','UNDO_LAST_SET','REPEAT_LAST_SET','PREVIOUS_EXERCISE','NEXT_EXERCISE','SELECT_EXERCISE','TOGGLE_WEIGHT_STEP','COMPLETE_TIME_SET'])assert.ok(source.reducer.includes(action),`Falta reducer ${action}`);
+for(const action of ['ADJUST_REPS','ADJUST_WEIGHT','SAVE_SET','UNDO_SET','REPEAT_LAST_SET','PREVIOUS_EXERCISE','NEXT_EXERCISE','COMPLETE_TIME_SET','COMPLETE_DISTANCE_SET'])assert.ok(source.reducer.includes(action),`Falta reducer ${action}`);
+for(const command of ['COMMAND_SELECT_EXERCISE','COMMAND_TOGGLE_WEIGHT_STEP'])assert.ok(source.reducer.includes(command),`Falta comando local ${command}`);
 assert.match(source.reducer,/claimDelivery/);
 assert.match(source.provider,/handleWidgetAction\(context, intent, WorkoutQuickActionReducer\.SOURCE_WIDGET\)/);
 assert.match(source.receiver,/handleWidgetAction\(context, intent, WorkoutQuickActionReducer\.SOURCE_NOTIFICATION\)/);
@@ -87,20 +94,21 @@ assert.match(source.notification,/getActiveNotifications/,'El estado debe distin
 assert.doesNotMatch(source.notification,/setFullScreenIntent/);
 for(const contract of ['endsAtElapsedRealtime','startedAtElapsedRealtime','restoreAfterBoot','setAndAllowWhileIdle'])assert.ok(source.timer.includes(contract),`Falta timer durable: ${contract}`);
 assert.doesNotMatch(source.timer,/Thread\.sleep|setInterval|startForeground/);
-for(const text of ['Acceso rápido en Android','Agregar widget','Controles mientras entrenás','No disponible en la versión web'])assert.ok(source.features.includes(text),`Falta UX de descubrimiento: ${text}`);
+for(const text of ['workoutQuickAccessTitle','Agregar widget','Controles mediante','No disponible en la versi'])assert.ok(source.features.includes(text),`Falta UX de descubrimiento: ${text}`);
 assert.doesNotMatch(source.features,/puente Android|widget interno\/nativo|Actualizar widget manualmente/i);
 
-const sandbox={window:{}};
+const sandbox={window:{APP_VERSION_INFO:{version:'2.7.0',build:93}},TextEncoder,Uint8Array,Date,Math,Number,String,Object,Array,Set,JSON,encodeURIComponent};
+vm.runInNewContext(source.webContract,sandbox,{filename:'workout-quick-actions.js'});
 vm.runInNewContext(source.importer,sandbox,{filename:'native-workout-importer.js'});
 const importer=sandbox.window.NATIVE_WORKOUT_IMPORTER;
-const mutation={mutationId:'mutation-1',id:'mutation-1',type:'save_set',sessionId:'session-1',exerciseId:'bench',setId:'set-1',payload:{date:'2026-07-29',dayKey:'wednesday',weekday:'Miercoles',startedAt:'2026-07-29T10:00:00.000Z',exercise:{id:'bench',exerciseId:'bench',name:'Press de banca'},set:{id:'set-1',reps:8,weightKg:60,setType:'working'}}};
+const mutation={schemaVersion:1,payloadVersion:1,actionType:'SAVE_SET',mutationId:'11111111-1111-4111-8111-111111111111',source:'android-widget',sessionId:'session-1',exerciseId:'bench',createdAt:'2026-07-29T10:00:00.000Z',clientVersion:'2.7.0+93',expectedRevision:0,payload:{setId:'set-1',date:'2026-07-29',dayKey:'wednesday',weekday:'Miercoles',startedAt:'2026-07-29T10:00:00.000Z',exercise:{id:'bench',exerciseId:'bench',name:'Press de banca'},values:{id:'set-1',reps:8,weightKg:60,setType:'working'}}};
 const first=importer.apply([],mutation);
 assert.equal(first.status,'applied');
 assert.equal(first.sessions[0].exercises[0].sets.length,1);
 const redelivery=importer.apply(first.sessions,mutation);
 assert.equal(redelivery.status,'duplicate');
 assert.equal(redelivery.sessions[0].exercises[0].sets.length,1,'Una reentrega no debe duplicar la serie.');
-const undo={mutationId:'mutation-2',id:'mutation-2',type:'undo_set',sessionId:'session-1',exerciseId:'bench',setId:'set-1',payload:{targetSetId:'set-1',exerciseId:'bench'}};
+const undo={schemaVersion:1,payloadVersion:1,actionType:'UNDO_SET',mutationId:'22222222-2222-4222-8222-222222222222',source:'android-widget',sessionId:'session-1',exerciseId:'bench',createdAt:'2026-07-29T10:01:00.000Z',clientVersion:'2.7.0+93',expectedRevision:1,payload:{setId:'set-1'}};
 const undone=importer.apply(redelivery.sessions,undo);
 assert.equal(undone.status,'applied');
 assert.equal(undone.sessions[0].exercises[0].sets.length,0);
