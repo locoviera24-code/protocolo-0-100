@@ -10,12 +10,13 @@ PWA y APK Android para medir habitos, atencion, actividad fisica y nutricion con
 - **Gym Party:** sala privada opcional para compartir entrenamientos, comparar progreso semanal/mensual y probar graficas en modo demo.
 - **Nutricion:** portada simple Hoy/Agregar/Progreso, comidas agrupadas, agua independiente, buscador unico, recetas, porciones habituales, alimentos propios y metas editables.
 - **Fuentes nutricionales opcionales:** la busqueda prioriza datos guardados y, si no encuentra una coincidencia suficiente, puede consultar automaticamente un proveedor externo configurado de forma segura.
-- **Progreso integral:** scores separados e integral, Focus Coins no financieros, recompensas, rankings mensuales opcionales y referidos simulados.
+- **Progreso integral:** scores separados e integral, tendencias, habitos, Gym y Nutricion con estados vacios accionables.
+- **Funciones experimentales:** Focus Coins no financieros, recompensas, rankings mensuales opcionales y referidos simulados, pausados salvo activacion explicita.
 - **Telefono Android:** importacion opcional de estadisticas de uso con permiso explicito.
 
 ## Navegacion y diseno
 
-La version actual `v2.7.0` (build web `89`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
+La version actual `v2.7.0` (build web `90`, Android `33`) usa una barra inferior movil con cinco destinos: **Inicio**,
 **Gym**, **Nutricion**, **Progreso** y **Mas**. En escritorio usa una barra
 lateral compacta. Gym Party se abre desde **Gym > Grupo**, desde un acceso
 discreto en Inicio o mediante un enlace `gymPartyCode`; ya no ocupa un boton
@@ -33,6 +34,22 @@ La navegación conserva estado en URLs `module/view`, por ejemplo
 `?module=gym&view=train`, `?module=gym&view=group` y
 `?module=more&view=settings`. Atrás, recarga y los botones del navegador
 restauran la misma vista; los enlaces antiguos siguen aceptándose como alias.
+
+El flujo cotidiano se concentra en tres acciones: registrar el día, una serie
+y una comida. Inicio muestra una sola acción principal según el estado real del
+registro; Gym abre en **Entrenar**, deja la sesión completa en **Edición
+avanzada de sesión** y permite editar o deshacer la serie identificada que se
+acaba de guardar. Progreso no construye paneles ocultos ni gráficos sin datos:
+explica cuántos registros comparables faltan y enlaza con la acción que los
+genera. Focus Coins, rankings, referidos y afiliados están en **Más > Funciones
+experimentales**, desactivados por defecto sin borrar sus datos anteriores.
+
+**Gym > Ajustes > Acceso rápido durante el entrenamiento** diferencia el
+shortcut de la PWA, el widget que requiere el APK, la pantalla bloqueada en
+desarrollo y la notificacion disponible solo en la beta Android pendiente de
+integracion y validacion fisica. **Más > Acerca de** compara capacidades
+Web/PWA y APK sin
+afirmar que una PWA está instalada cuando el navegador no puede comprobarlo.
 
 La interfaz conserva todos los controles y datos, pero muestra primero la tarea
 principal. Ajustes, explicaciones, acciones destructivas, micronutrientes,
@@ -143,6 +160,9 @@ ui/recovery-view.js         Reintento, reinicio, modo seguro y diagnostico local
 app/drafts.js               Borradores versionados, expiracion y coordinacion entre pestanas
 app/dates.js                Medianoche, zona horaria, background y fechas manuales
 app/build-guard.js          Impide arrancar con HTML y modulos de builds distintos
+app/home-state.js           Decide el CTA unico de Inicio sin persistencia
+app/platform-capabilities.js Describe navegador, PWA y APK sin inferencias falsas
+app/data-events.js          Invalida vistas por dominio sin exponer datos personales
 data/schema-registry.js     Fuente unica de claves, schemas, backup, reset y retencion
 data/indexeddb.js           Espejo transaccional, migraciones y recuperacion local
 data/repositories.js        Repositorios por dominio sobre claves compatibles
@@ -166,6 +186,7 @@ progress/exercise-progress.js Fuerza, historial y sugerencia por ejercicio
 progress/personal-records.js Records derivados de sesiones canonicas
 gym/anomaly-detector.js     Revision conservadora de registros inusuales
 gym/progression-engine.js   Prescripciones y sugerencias conservadoras comparables
+gym/workout-quick-actions.js Contrato puro y versionado para acciones rapidas futuras
 workout-store.js            Acceso conservador y versionado al repositorio Gym
 workout-plan.js             Normalizacion, deduplicacion e insercion en rutinas
 workout-ui.js               Renderizadores pequenos y anuncios accesibles de Gym
@@ -190,10 +211,12 @@ scripts/precache-manifest.mjs Clasificacion obligatoria/opcional del shell
 scripts/generate-precache-manifest.mjs Generador reproducible para web y Android
 scripts/generate-pwa-icons.ps1 Generador reproducible de iconos PWA
 scripts/capture-pwa-screenshots.mjs Captura vistas limpias sin datos personales
+scripts/capture-web-core-flow-p0.mjs Evidencias de auditoria fuera del artifact productivo
 scripts/test-manifest.mjs   Valida rutas, dimensiones, purposes y shortcuts
 scripts/validate-app.ps1    Validaciones estructurales
 scripts/test-service-worker.mjs Prueba de cache/offline/FDC
 scripts/test-workout-features.mjs Prueba de rutina, widget e importacion directa
+scripts/test-workout-quick-actions.mjs Prueba schema, payloads y resultados del contrato
 scripts/test-gym-party.mjs  Prueba de demo, multi-miembro, estadisticas y backup Gym Party
 scripts/test-module-boundaries.mjs Prueba de contratos entre modulos extraidos
 scripts/sync-web-assets.ps1 Sincronizacion web -> Android
@@ -559,6 +582,12 @@ widget Android registra series efectivas por defecto y conserva esta semantica
 al recalcular resumen e historial.
 
 ## Desarrollo y validacion
+
+El contrato puro para futuras acciones rapidas de Workout esta documentado en
+docs/workout-quick-actions.md. La version 1 cubre Web, widget y notificacion,
+usa UUID v4 y revisiones, valida payloads JSON y no accede a almacenamiento.
+Las series siguen aplicandose mediante el modelo Workout y los repositorios
+existentes.
 
 ### Progreso consolidado
 

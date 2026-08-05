@@ -11,6 +11,11 @@ for(const view of ['overview','habits','gym','nutrition','history','achievements
   assert.match(router,new RegExp(`['"]${view}['"]`));
 }
 for(const contract of ['progressPeriod','progressArea','renderOverview','renderGym','renderNutrition','analyticsBars','percentChange','previousWindow'])assert.match(html+progress,new RegExp(contract));
+for(const contract of ['viewState','markDirty','renderView','renderEmptyState','comparableGymSessions','progressEmptyGate'])assert.match(html+progress,new RegExp(contract));
+assert.match(progress,/workout:\['overview','gym','history'\]/);
+assert.match(progress,/nutrition:\['overview','nutrition','history'\]/);
+assert.match(progress,/import:\[\.\.\.views\]/);
+assert.doesNotMatch(html,/function renderProtocol\(\)\{[^}]*renderPeriodMetrics/);
 assert.match(progress,/WORKOUT_METRICS/);
 assert.match(progress,/APP_SCHEMA_REGISTRY/);
 assert.match(progress,/getByName\('nutrition','entries'\)/);

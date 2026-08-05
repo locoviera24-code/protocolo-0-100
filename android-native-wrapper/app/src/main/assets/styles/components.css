@@ -368,6 +368,29 @@ td {
   background: var(--color-warning-soft);
   color: var(--state-warning-text);
 }
+.aboutUpdateCheck {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.aboutVersionStats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.aboutVersionStats .quickStat:nth-child(4n) {
+  border-right: 0;
+}
+.aboutVersionStats .quickStat:nth-child(n + 5) {
+  border-top: 1px solid var(--color-border-soft);
+}
+.aboutUpdateCheck > div {
+  display: grid;
+  gap: var(--space-1);
+}
+.aboutUpdateCheck .small {
+  display: block;
+}
 
 .modalBackdrop {
   z-index: var(--z-modal);

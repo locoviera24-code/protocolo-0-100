@@ -9,6 +9,7 @@ const ROUTES=[
   ['Progreso','/index.html?module=progress&view=overview'],
   ['Más','/index.html?module=more&view=root'],
   ['Datos y copias','/index.html?module=more&view=data'],
+  ['Funciones experimentales','/index.html?module=more&view=experimental'],
   ['Gym Party','/index.html?module=gym&view=group']
 ];
 
@@ -53,4 +54,17 @@ test('@axe drawer cerrado queda fuera del orden de foco y restaura el control',a
   await expect(drawer).not.toHaveAttribute('inert','');await expect(page.locator('#closeDrawerBtn')).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(drawer).toHaveAttribute('inert','');await expect(trigger).toBeFocused();
+});
+
+test('@axe tabs de Progreso usan flechas y enfocan el encabezado activo',async({page})=>{
+  await clean(page);await page.goto('/index.html?module=progress&view=overview');await waitForAppReady(page);
+  const overview=page.locator('[data-progress-view="overview"]');
+  await overview.focus();await overview.press('ArrowRight');
+  await expect(page).toHaveURL(/module=progress&view=habits/);
+  await expect(page.locator('[data-progress-view="habits"]')).toHaveAttribute('aria-selected','true');
+  await expect(page.locator('#progressHabitsHeading')).toBeFocused();
+  await page.locator('[data-progress-view="habits"]').focus();
+  await page.keyboard.press('End');
+  await expect(page).toHaveURL(/module=progress&view=achievements/);
+  await expect(page.locator('#progressAchievementsHeading')).toBeFocused();
 });

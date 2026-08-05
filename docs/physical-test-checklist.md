@@ -1,6 +1,6 @@
 # Checklist de pruebas físicas
 
-Referencia objetivo: Protocolo 0->100 `2.7.0`, build web/PWA `89`, Android
+Referencia objetivo: Protocolo 0->100 `2.7.0`, build web/PWA `90`, Android
 `versionCode 33`.
 
 Este documento separa resultados automatizados de pruebas sobre hardware real.
@@ -16,6 +16,33 @@ emulador de Firestore.
 Anotar para cada ejecución: fecha, modelo, versión del sistema, navegador,
 build probado y resultado. Adjuntar captura o diagnóstico solo si no contiene
 datos personales.
+
+## Web Core Flow P0
+
+No hubo hardware conectado durante este ciclo. Las capturas automatizadas en
+`docs/screenshots/web-core-flow-p0/` son evidencia visual, no sustituyen estas
+pruebas físicas.
+
+- [ ] Inicio a 390 x 844 muestra un solo CTA en los estados vacío, borrador,
+  listo para guardar y día guardado.
+- [ ] Completar el registro diario con el teclado abierto sin tapar el CTA ni
+  perder el borrador.
+- [ ] Guardar una serie con una mano y comprobar detalle exacto, Editar,
+  Deshacer y Siguiente ejercicio.
+- [ ] Confirmar que Deshacer afecta solo a la serie indicada aunque se haya
+  guardado otra después.
+- [ ] Registrar repeticiones/carga, peso corporal, asistencia, tiempo y
+  distancia desde Entrenar.
+- [ ] Registrar una comida con el teclado abierto y volver al resumen diario.
+- [ ] Ver Progreso sin datos y con suficientes días/sesiones comparables.
+- [ ] Activar y desactivar Funciones experimentales sin alterar registros,
+  saldos ni recompensas existentes.
+- [ ] Revisar la tabla Web/PWA frente a APK y sus estados con lector de
+  pantalla y texto aumentado.
+- [ ] Abrir los shortcuts PWA **Serie rápida** y el deep link de Gym Party.
+- [ ] Forzar cierre, activar modo avión y volver a abrir sin perder cambios.
+- [ ] Actualizar desde build 89 a build 90 sin mezclar HTML, CSS o JavaScript.
+- [ ] Repetir el recorrido en Android Chrome y en iPhone Safari/PWA.
 
 ## iPhone y Safari/PWA
 

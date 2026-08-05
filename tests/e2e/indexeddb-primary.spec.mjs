@@ -365,7 +365,7 @@ test('coordina la cola offline de Gym Party entre dos pestañas',async ({page,co
   await second.close();
 });
 
-test('Datos y copias permite rollback y reactivación visibles',async ({page})=>{
+test('Datos y copias permite rollback y reactivación visibles en Nutrición',async ({page})=>{
   await clean(page);await page.goto('/index.html?module=more&view=data');
   await page.locator('#dataAdvancedDiagnostics > summary').click();
   await expect(page.locator('#nutritionStorageStatus')).toContainText('IndexedDB');
@@ -387,6 +387,11 @@ test('Datos y copias permite rollback y reactivación visibles',async ({page})=>
   await page.locator('#toggleNutritionPrimaryBtn').click();
   await expect(page.locator('#nutritionStorageStatus')).toContainText('IndexedDB verificada');
   expect(await page.evaluate(()=>window.APP_DATA.config().primaryDomains.nutrition)).toBe(true);
+});
+
+test('Datos y copias permite rollback y reactivación visibles en Workout',async ({page})=>{
+  await clean(page);await page.goto('/index.html?module=more&view=data');
+  await page.locator('#dataAdvancedDiagnostics > summary').click();
   await expect(page.locator('#workoutStorageStatus')).toContainText('IndexedDB');
   await expect(page.locator('#toggleWorkoutPrimaryBtn')).toHaveText('Usar modo compatible');
   await page.locator('#toggleWorkoutPrimaryBtn').click();
@@ -398,6 +403,11 @@ test('Datos y copias permite rollback y reactivación visibles',async ({page})=>
   await page.locator('#toggleWorkoutPrimaryBtn').click();
   await expect(page.locator('#workoutStorageStatus')).toContainText('IndexedDB verificada');
   expect(await page.evaluate(()=>window.APP_DATA.config().primaryDomains.workout)).toBe(true);
+});
+
+test('Datos y copias permite rollback y reactivación visibles en Gym Party',async ({page})=>{
+  await clean(page);await page.goto('/index.html?module=more&view=data');
+  await page.locator('#dataAdvancedDiagnostics > summary').click();
   await expect(page.locator('#gymPartyStorageStatus')).toContainText('IndexedDB');
   await expect(page.locator('#toggleGymPartyPrimaryBtn')).toHaveText('Usar modo compatible');
   await page.locator('#toggleGymPartyPrimaryBtn').click();

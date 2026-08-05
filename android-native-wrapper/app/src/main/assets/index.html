@@ -174,7 +174,7 @@
               <div class="field" style="margin-top:12px"><label>Nota breve del día</label><textarea id="note" placeholder="Qué funcionó o qué querés ajustar"></textarea></div>
             </details>
             <div class="dailySaveBar">
-              <button type="button" class="good" id="saveBtn"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M5 3h12l2 2v16H5zM8 3v6h8V3M8 17h8"/></svg>Guardar día</button>
+              <button type="button" class="secondary" id="saveBtn"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M5 3h12l2 2v16H5zM8 3v6h8V3M8 17h8"/></svg>Guardar día</button>
             </div>
             <div class="scoreBreak" id="scoreBreak"></div>
             <div class="auditBox" id="auditBox"></div>
@@ -194,11 +194,11 @@
           </div>
 
           <div id="tab-gym" class="hidden">
-            <div class="moduleHero">
-              <h3>Gym</h3>
+            <details class="moduleCard gymSummaryDetails">
+              <summary>Resumen de Gym</summary>
               <div class="muted small">Registrá la próxima serie y seguí tu rutina.</div>
               <div class="quickStats" id="gymStats"></div>
-            </div>
+            </details>
 
             <div class="gymSectionNav" aria-label="Secciones de Gym">
               <button type="button" class="active" data-gym-section="train">Entrenar</button>
@@ -208,7 +208,7 @@
             </div>
 
             <details class="moduleCard gymLegacyDetails">
-              <summary>Registro por sesión (avanzado)</summary>
+              <summary>Edición avanzada de sesión</summary>
               <h3>Sesión completa</h3>
               <div class="formGrid">
                 <div class="field"><label>Fecha</label><input type="date" id="gymDate"></div>
@@ -425,7 +425,7 @@
               </details>
               <details class="advancedDetails" id="nutritionRecipesDetails">
                 <summary>Mis recetas y platos compuestos</summary>
-                <p class="muted small">Calculá una vez el plato y después registrá una porción o los gramos consumidos. Los días anteriores conservan su snapshot.</p>
+                <p class="muted small">Calculá una vez el plato y después registrá una porción o los gramos consumidos. Los días anteriores conservan los valores con los que fueron registrados.</p>
                 <div class="foodQuickActions" aria-label="Ejemplos de recetas" id="recipeTemplateButtons"></div>
                 <div class="formGrid recipeFormFields">
                   <div class="field"><label for="recipeName">Nombre</label><input type="text" id="recipeName" placeholder="Ej. guiso de lentejas"></div>
@@ -531,6 +531,8 @@
             </section>
 
             <section class="hidden" data-progress-panel="habits" role="tabpanel" aria-labelledby="progress-tab-habits">
+              <h2 class="srOnly" id="progressHabitsHeading" tabindex="-1">Progreso de hábitos</h2>
+              <div class="moduleCard progressEmptyGate hidden" data-progress-empty="habits" role="status"></div>
               <div class="periodNote"><strong>Hábitos:</strong> compará períodos para decidir un solo ajuste concreto.</div>
               <div class="metricGrid" id="periodMetrics"></div>
               <div class="comparisonBars" id="comparisonBars"></div>
@@ -546,6 +548,8 @@
             </section>
 
             <section class="hidden" data-progress-panel="gym" role="tabpanel" aria-labelledby="progress-tab-gym">
+              <h2 class="srOnly" id="progressGymHeading" tabindex="-1">Progreso de Gym</h2>
+              <div class="moduleCard progressEmptyGate hidden" data-progress-empty="gym" role="status"></div>
               <nav class="progressGymNav" aria-label="Análisis de Gym">
                 <button type="button" class="active" data-progress-gym-scope="summary">Resumen</button>
                 <button type="button" data-progress-gym-scope="muscle">Músculos</button>
@@ -582,20 +586,20 @@
             </section>
 
             <section class="hidden" data-progress-panel="nutrition" role="tabpanel" aria-labelledby="progress-tab-nutrition">
+              <h2 class="srOnly" id="progressNutritionHeading" tabindex="-1">Progreso de Nutrición</h2>
+              <div class="moduleCard progressEmptyGate hidden" data-progress-empty="nutrition" role="status"></div>
               <div class="progressKpiGrid" id="progressNutritionSummary"></div>
               <section class="moduleCard" aria-labelledby="progressNutritionChartTitle"><h2 id="progressNutritionChartTitle">Registro nutricional</h2><div id="progressNutritionChart"></div><p class="chartCaption" id="progressNutritionChartSummary"></p></section>
             </section>
 
             <section class="hidden" data-progress-panel="history" role="tabpanel" aria-labelledby="progress-tab-history">
+              <h2 class="srOnly" id="progressHistoryHeading" tabindex="-1">Historial del protocolo</h2>
               <div class="moduleCard"><div class="sectionHeading"><div><h2>Historial del protocolo</h2><p class="muted small">Los registros más recientes aparecen primero.</p></div><div class="buttons"><button type="button" class="secondary" id="exportJsonBtn">Exportar JSON</button><button type="button" class="secondary" id="exportCsvBtn">Exportar CSV</button><button type="button" class="secondary" id="importBtn">Importar JSON</button><input type="file" id="importFile" accept="application/json" class="hidden"></div></div><div class="history"><table id="historyTable"></table></div></div>
             </section>
 
             <section class="hidden" data-progress-panel="achievements" role="tabpanel" aria-labelledby="progress-tab-achievements">
+              <h2 class="srOnly" id="progressAchievementsHeading" tabindex="-1">Logros de hábitos</h2>
               <div class="moduleCard"><h2>Insignias de hábitos</h2><div class="badgeGrid" id="badges"></div></div>
-              <details class="moduleCard progressRewardsDetails"><summary>Focus Coins y recompensas</summary><div class="moduleGrid"><div class="moduleCard"><h3>Focus Coins</h3><div class="coinBalance"><span id="coinBalance">0</span> <small>coins</small></div><div class="muted small">Gamificación interna, no financiera y no transferible.</div><div class="ledgerList" id="coinLedger"></div></div><div class="moduleCard"><h3>Recompensas e insignias</h3><div class="badgeGrid" id="rewardBadges"></div><div class="entryList" id="rewardsList"></div></div></div></details>
-              <details class="moduleCard progressSecondaryDetails"><summary>Rankings mensuales</summary><div class="formGrid"><div class="field"><label for="rankingAlias">Alias público</label><input type="text" id="rankingAlias" placeholder="Ej. LectorConstante"></div><label class="check"><input type="checkbox" id="rankingOptIn"><span>Participar en rankings locales simulados.</span></label></div><div class="buttons"><button type="button" class="secondary" id="saveRankingSettingsBtn">Guardar preferencia</button></div><div class="rankingTable"><table id="monthlyRankingsTable"></table></div><div class="muted small">No existe un ranking único de perfección. La comparación útil es con tu período anterior.</div></details>
-              <details class="moduleCard progressSecondaryDetails"><summary>Referidos y afiliados</summary><div class="formGrid"><div class="field"><label for="referralCodeInput">Código de referido</label><input type="text" id="referralCodeInput" placeholder="Ej. FOCUS10"></div><div class="field"><label>Estado</label><div class="auditItem" id="referralStatus">Sin código aplicado.</div></div></div><div class="buttons"><button type="button" class="good" id="applyReferralBtn">Aplicar código</button><button type="button" class="secondary" id="exportAffiliateCsvBtn">Descargar panel CSV</button></div><div class="quickStats" id="affiliateStats"></div><div class="legalBox"><strong>Aviso de afiliados:</strong> las conversiones e ingresos mostrados aquí son simulaciones locales; pagos reales requieren backend, identidad y condiciones comerciales.</div></details>
-              <details class="moduleCard progressSecondaryDetails"><summary>Términos de Focus Coins</summary><div class="legalBox">Los puntos internos no son dinero, inversión ni criptomoneda; no se pueden retirar, transferir ni intercambiar por dinero.</div></details>
             </section>
           </div>
 
@@ -610,6 +614,7 @@
               <button type="button" class="moreLink" data-more-view="help"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.8 9a2.4 2.4 0 1 1 3.6 2.1c-.9.5-1.4 1-1.4 2M12 17h.01"/></svg><span><strong>Ayuda</strong><small>Guía y criterios</small></span></button>
               <button type="button" class="moreLink" data-more-view="settings"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="11" cy="18" r="2"/></svg><span><strong>Ajustes</strong><small>Experiencia y módulos</small></span></button>
               <button type="button" class="moreLink" data-more-view="data"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M5 5h14v14H5zM8 9h8M8 13h8M8 17h5"/></svg><span><strong>Datos y copias</strong><small>Exportar, importar y restablecer</small></span></button>
+              <button type="button" class="moreLink" data-more-view="experimental"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3"/><path d="M8 15h8"/></svg><span><strong>Funciones experimentales</strong><small>Coins, rankings y afiliados opcionales</small></span></button>
               <button type="button" class="moreLink" data-more-view="privacy"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.6 2.8 8.2 7 10 4.2-1.8 7-5.4 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></svg><span><strong>Privacidad</strong><small>Qué se guarda y comparte</small></span></button>
               <button type="button" class="moreLink" data-more-view="about"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/></svg><span><strong>Acerca de</strong><small>Versión, licencias y fuentes</small></span></button>
             </div>
@@ -713,10 +718,21 @@
             <div class="moduleCard"><h3>Datos personales</h3><p>Hábitos, nutrición, sueño, pantalla y notas permanecen en este dispositivo. Gym Party comparte solo los datos de gimnasio que aceptás compartir.</p><button type="button" class="secondary" data-route-module="gym" data-route-view="group">Revisar privacidad de Gym Party</button></div>
           </section>
 
+          <section id="tab-experimental" class="hidden routeSubpage" aria-labelledby="experimentalViewTitle">
+            <div class="moduleHero"><h2 id="experimentalViewTitle" tabindex="-1">Funciones experimentales</h2><div class="muted small">Estas funciones están en evaluación y no afectan tus registros principales.</div></div>
+            <div class="moduleCard"><label class="check"><input type="checkbox" id="experimentalFeaturesEnabled"><span>Activar funciones experimentales en este dispositivo.</span></label><p class="muted small" id="experimentalFeaturesStatus" role="status" aria-live="polite">Desactivadas. Tus datos anteriores se conservan sin recalcularse.</p><div class="hidden experimentalLegacyDecision" id="experimentalLegacyDecision"><p><strong>Encontramos datos experimentales anteriores.</strong> Elegí si querés continuar usándolos. Ninguna opción borra saldos, rankings ni referidos.</p><div class="buttons"><button type="button" class="good" id="continueExperimentalFeaturesBtn">Seguir usando funciones experimentales</button><button type="button" class="secondary" id="pauseExperimentalFeaturesBtn">Mantenerlas pausadas</button></div></div></div>
+            <div id="experimentalFeaturesContent" class="hidden">
+              <details class="moduleCard progressRewardsDetails"><summary>Focus Coins y recompensas</summary><div class="moduleGrid"><div class="moduleCard"><h3>Focus Coins</h3><div class="coinBalance"><span id="coinBalance">0</span> <small>coins</small></div><div class="muted small">Gamificación interna, no financiera y no transferible.</div><div class="ledgerList" id="coinLedger"></div></div><div class="moduleCard"><h3>Recompensas e insignias</h3><div class="badgeGrid" id="rewardBadges"></div><div class="entryList" id="rewardsList"></div></div></div></details>
+              <details class="moduleCard progressSecondaryDetails"><summary>Rankings mensuales</summary><div class="formGrid"><div class="field"><label for="rankingAlias">Alias público</label><input type="text" id="rankingAlias" placeholder="Ej. LectorConstante"></div><label class="check"><input type="checkbox" id="rankingOptIn"><span>Participar en rankings locales simulados.</span></label></div><div class="buttons"><button type="button" class="secondary" id="saveRankingSettingsBtn">Guardar preferencia</button></div><div class="rankingTable"><table id="monthlyRankingsTable"></table></div><div class="muted small">No existe un ranking único de perfección. La comparación útil es con tu período anterior.</div></details>
+              <details class="moduleCard progressSecondaryDetails"><summary>Referidos y afiliados</summary><div class="formGrid"><div class="field"><label for="referralCodeInput">Código de referido</label><input type="text" id="referralCodeInput" placeholder="Ej. FOCUS10"></div><div class="field"><label>Estado</label><div class="auditItem" id="referralStatus">Sin código aplicado.</div></div></div><div class="buttons"><button type="button" class="good" id="applyReferralBtn">Aplicar código</button><button type="button" class="secondary" id="exportAffiliateCsvBtn">Descargar panel CSV</button></div><div class="quickStats" id="affiliateStats"></div><div class="legalBox"><strong>Aviso de afiliados:</strong> las conversiones e ingresos mostrados aquí son simulaciones locales; pagos reales requieren backend, identidad y condiciones comerciales.</div></details>
+              <details class="moduleCard progressSecondaryDetails"><summary>Términos de Focus Coins</summary><div class="legalBox">Los puntos internos no son dinero, inversión ni criptomoneda; no se pueden retirar, transferir ni intercambiar por dinero.</div></details>
+            </div>
+          </section>
+
           <section id="tab-about" class="hidden routeSubpage" aria-labelledby="aboutViewTitle">
             <div class="moduleHero"><h2 id="aboutViewTitle" tabindex="-1">Acerca de</h2><div class="muted small">Protocolo 0→100</div></div>
             <div class="moduleCard">
-              <div class="quickStats">
+              <div class="quickStats aboutVersionStats">
                 <div class="quickStat"><span>Versión</span><strong id="aboutWebVersion">—</strong></div>
                 <div class="quickStat"><span>Build</span><strong id="aboutBuildNumber">—</strong></div>
                 <div class="quickStat"><span>Canal</span><strong id="aboutChannel">—</strong></div>
@@ -726,8 +742,9 @@
                 <div class="quickStat"><span>Service worker</span><strong id="aboutServiceWorker">—</strong></div>
                 <div class="quickStat"><span>Android</span><strong id="aboutAndroidVersion">Web/PWA</strong></div>
               </div>
-              <div class="auditItem" aria-live="polite"><div><strong id="aboutUpdateStatus">Actualización no comprobada</strong><span class="muted small" id="aboutLastUpdateCheck">Todavía no se realizó una comprobación.</span></div><button type="button" class="secondary" id="checkForUpdateBtn">Comprobar actualización</button></div>
+              <div class="auditItem aboutUpdateCheck" aria-live="polite"><div><strong id="aboutUpdateStatus">Actualización no comprobada</strong><span class="muted small" id="aboutLastUpdateCheck">Todavía no se realizó una comprobación.</span></div><button type="button" class="secondary" id="checkForUpdateBtn">Comprobar actualización</button></div>
               <p class="muted small">Datos local-first. Herramienta orientativa de autoorganización; no reemplaza asesoramiento profesional de salud o entrenamiento.</p>
+              <section class="aboutCapabilities" aria-labelledby="platformCapabilitiesTitle"><h3 id="platformCapabilitiesTitle">Qué funciona en cada versión</h3><div class="history"><table><thead><tr><th>Función</th><th>Web/PWA</th><th>APK Android</th></tr></thead><tbody id="platformCapabilitiesTable"></tbody></table></div><p class="muted small" id="platformInstallationStatus">Comprobando el modo actual…</p></section>
               <div class="buttons"><button type="button" class="secondary" data-more-view="privacy">Ver privacidad</button><a class="btn-secondary aboutRepoLink" href="https://github.com/locoviera24-code/protocolo-0-100" target="_blank" rel="noopener noreferrer">Código y licencias</a></div>
             </div>
           </section>
@@ -839,6 +856,9 @@
 <script src="app/numbers.js"></script>
 <script src="app/drafts.js"></script>
 <script src="app/dates.js"></script>
+<script src="app/home-state.js"></script>
+<script src="app/platform-capabilities.js"></script>
+<script src="app/data-events.js"></script>
 <script src="data/schema-registry.js"></script>
 <script src="data/indexeddb.js"></script>
 <script src="data/repositories.js"></script>
@@ -904,6 +924,8 @@ let gymDraft = [];
 let nutritionAssistantDraft = [];
 let activeModule = 'protocolo';
 let lastProtocolTab = 'registro';
+let protocolFormDirty = false;
+let protocolFormStarted = false;
 
 function pad(n){return String(n).padStart(2,'0')}
 function todayStr(){ const d=new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
@@ -922,15 +944,23 @@ function homeCompletionState(){
   const filled=essentialIds.filter(id=>String(document.getElementById(id)?.value||'').trim()!=='');
   const date=document.getElementById('entryDate')?.value||todayStr();
   const saved=getEntries().find(entry=>entry.date===date)||null;
-  return {essentialIds,filled,saved,date,state:saved?'complete':filled.length?'partial':'empty'};
+  const requiredMissing=essentialIds.filter(id=>!filled.includes(id));
+  const hasDraft=protocolFormDirty||!!window.APP_DRAFTS?.get?.(protocolDraftId(date),{newerThan:saved?.savedAt||''});
+  const isDirty=protocolFormDirty;
+  const errors=essentialIds.filter(id=>document.getElementById(id)?.getAttribute('aria-invalid')==='true');
+  const isValid=requiredMissing.length===0&&essentialIds.every(id=>{
+    const value=window.APP_NUMBERS?.parse?.(document.getElementById(id)?.value);
+    return Number.isFinite(value)&&value>=0;
+  });
+  return {essentialIds,filled,saved,date,hasTodayRecord:!!saved,hasDraft,isDirty,requiredMissing,isValid,hasStarted:protocolFormStarted,errors};
 }
 function renderHomeStatus(){
   const card=document.getElementById('homeStatusCard');if(!card)return;
   const completion=homeCompletionState(),raw=readForm(),score=scoreEntry(raw),entries=getEntries();
   let streak=0;for(let index=entries.length-1;index>=0;index--){if((entries[index].score||0)>=70)streak+=1;else break;}
   const actionDone=!!(completion.saved?.keyActionDone||raw.keyActionDone);
-  const ready=!completion.saved&&completion.filled.length===completion.essentialIds.length;
-  const state=completion.saved?'complete':ready?'ready':completion.state;
+  const actionName=window.HOME_STATE?.primaryAction(completion)||(completion.filled.length?'continue':'start');
+  const state=actionName==='summary'?'complete':actionName==='save'?'ready':actionName==='continue'?'partial':'empty';
   const stateLabels={empty:'Sin datos',partial:'Registro parcial',ready:'Listo para guardar',complete:'Día guardado'};
   card.dataset.homeState=state;document.body.dataset.homeState=state;document.body.dataset.actionComplete=String(actionDone);
   document.getElementById('homeCompactScore').textContent=completion.saved?.score??score.total;
@@ -939,18 +969,30 @@ function renderHomeStatus(){
   const pending=Math.max(0,completion.essentialIds.length-completion.filled.length);
   document.getElementById('homeCompactPending').textContent=completion.saved?'Registro guardado':pending?(pending+' dato'+(pending===1?'':'s')+' esencial'+(pending===1?'':'es')+' pendiente'+(pending===1?'':'s')):'Revisá y guardá el día';
   const action=document.getElementById('homeCompactActionBtn');
-  action.textContent=completion.saved?'Ver progreso':ready?'Guardar día':completion.filled.length?'Continuar registro':'Empezar registro';
-  action.dataset.homeAction=completion.saved?'progress':ready?'save':'continue';
+  const actionLabels={start:'Empezar registro',continue:'Continuar registro',save:'Guardar día',summary:'Ver resumen'};
+  action.textContent=actionLabels[actionName];
+  action.dataset.homeAction=actionName;
   document.getElementById('actionFocusCard')?.classList.toggle('completed',actionDone);
   document.getElementById('actionNextRecommendation')?.classList.toggle('hidden',!actionDone);
 }
 function runHomeCompactAction(){
   const action=document.getElementById('homeCompactActionBtn')?.dataset.homeAction;
-  if(action==='progress'){window.APP_ROUTER?.navigate({module:'progress',view:'overview'});return;}
-  if(action==='save'){saveEntry();return;}
+  if(action==='summary'){window.APP_ROUTER?.navigate({module:'progress',view:'overview'});return;}
+  if(action==='save'){saveCurrentDay();return;}
   const completion=homeCompletionState();
-  const target=completion.essentialIds.map(id=>document.getElementById(id)).find(element=>!String(element?.value||'').trim())||document.getElementById('nonEssential');
+  protocolFormStarted=true;
+  const errorTarget=completion.errors.map(id=>document.getElementById(id)).find(Boolean);
+  const missingTarget=completion.requiredMissing.map(id=>document.getElementById(id)).find(Boolean);
+  const target=action==='continue'?(errorTarget||missingTarget||document.getElementById('nonEssential')):document.getElementById(completion.essentialIds[0]);
   target?.scrollIntoView({behavior:preferredMotionBehavior(),block:'center'});target?.focus();
+}
+function organizeHomePrimaryFlow(){
+  const dateControls=document.querySelector('.homeDateControls');
+  const actionCard=document.getElementById('actionFocusCard');
+  if(dateControls&&actionCard)dateControls.insertAdjacentElement('afterend',actionCard);
+  const dashboard=document.getElementById('tab-dashboard');
+  const sharedShortcut=document.querySelector('.homeShortcut');
+  if(dashboard&&sharedShortcut)dashboard.insertAdjacentElement('afterend',sharedShortcut);
 }
 function daysBetween(a,b){ return Math.round((parseDate(b)-parseDate(a))/(1000*60*60*24)); }
 function clamp(n,min,max){ return Math.max(min, Math.min(max, Number.isFinite(n)?n:0)); }
@@ -1004,6 +1046,8 @@ window.addEventListener('app-data-error',event=>{
 function uiPreferences(){
   return {appearance:'dark',density:'comfortable',experienceMode:'guided',unit:'kg',showRir:true,nutritionGuidance:true,notifications:false,autoSync:true,...getLocalData(UI_PREFERENCES_KEY,{})};
 }
+function isExperimentalFeaturesEnabled(){return uiPreferences().experimentalFeaturesEnabled===true;}
+window.isExperimentalFeaturesEnabled=isExperimentalFeaturesEnabled;
 let systemThemeQuery=null,systemThemeBound=false;
 let settingsFormDirty=false;
 function resolvedTheme(appearance){return appearance==='system'&&systemThemeQuery?.matches?'light':'dark';}
@@ -1031,11 +1075,49 @@ function applyUiPreferences({syncControls=true}={}){
   return preferences;
 }
 function saveUiSettings(){
-  const preferences={appearance:document.getElementById('settingsAppearance').value,density:document.getElementById('settingsDensity').value,experienceMode:document.getElementById('settingsExperienceMode').value,unit:document.getElementById('settingsUnit').value,showRir:document.getElementById('settingsShowRir').checked,nutritionGuidance:document.getElementById('settingsNutritionGuidance').checked,notifications:document.getElementById('settingsNotifications').checked,autoSync:document.getElementById('settingsAutoSync').checked,updatedAt:new Date().toISOString()};
+  const preferences={...uiPreferences(),appearance:document.getElementById('settingsAppearance').value,density:document.getElementById('settingsDensity').value,experienceMode:document.getElementById('settingsExperienceMode').value,unit:document.getElementById('settingsUnit').value,showRir:document.getElementById('settingsShowRir').checked,nutritionGuidance:document.getElementById('settingsNutritionGuidance').checked,notifications:document.getElementById('settingsNotifications').checked,autoSync:document.getElementById('settingsAutoSync').checked,updatedAt:new Date().toISOString()};
   setLocalData(UI_PREFERENCES_KEY,preferences);
   window.WORKOUT_FEATURES?.updateGymSettings?.({...window.WORKOUT_FEATURES.getGymSettings?.(),unit:preferences.unit,showRir:preferences.showRir});
   settingsFormDirty=false;
   applyUiPreferences();window.dispatchEvent(new CustomEvent('app-settings-change',{detail:preferences}));flash('Ajustes guardados.');
+}
+function renderExperimentalControls(){
+  const stored=getLocalData(UI_PREFERENCES_KEY,{}),hasDecision=Object.prototype.hasOwnProperty.call(stored,'experimentalFeaturesEnabled'),hasHistory=window.hasExperimentalHistory?.()===true,needsDecision=!hasDecision&&hasHistory,enabled=stored.experimentalFeaturesEnabled===true,toggle=document.getElementById('experimentalFeaturesEnabled'),content=document.getElementById('experimentalFeaturesContent'),status=document.getElementById('experimentalFeaturesStatus'),decision=document.getElementById('experimentalLegacyDecision');
+  if(toggle)toggle.checked=enabled;
+  if(toggle)toggle.disabled=needsDecision;
+  decision?.classList.toggle('hidden',!needsDecision);
+  content?.classList.toggle('hidden',!enabled);
+  if(status)status.textContent=needsDecision?'Tus datos anteriores siguen intactos. Elegí si querés continuar o mantener estas funciones pausadas.':enabled?'Activadas en este dispositivo. Podés desactivarlas sin borrar sus datos.':'Desactivadas. Tus datos anteriores se conservan sin recalcularse.';
+  if(enabled&&window.APP_ROUTER?.current?.()?.view==='experimental')window.renderExperimentalFeaturesData?.();
+}
+window.renderExperimentalControls=renderExperimentalControls;
+function setExperimentalFeatures(enabled){
+  const current=uiPreferences(),now=new Date().toISOString(),next={...current,experimentalFeaturesEnabled:!!enabled,experimentalFeaturesEnabledAt:enabled?now:(current.experimentalFeaturesEnabledAt||null)};
+  setLocalData(UI_PREFERENCES_KEY,next);renderExperimentalControls();window.dispatchEvent(new CustomEvent('app-settings-change',{detail:next}));
+  flash(enabled?'Funciones experimentales activadas. Tus registros principales no cambiaron.':'Funciones experimentales desactivadas. Sus datos se conservaron.',{tone:'success'});
+}
+function platformCapabilities(){return window.APP_PLATFORM_CAPABILITIES?.detect?.({installPromptAvailable:!!deferredInstallPrompt})||{runtimeMode:'browser',installationStatus:'unknown'};}
+function renderPlatformCapabilities(){
+  const capabilities=platformCapabilities(),table=document.getElementById('platformCapabilitiesTable'),status=document.getElementById('platformInstallationStatus');
+  const rows=[['Registro diario','Disponible','Disponible'],['Gym','Disponible','Disponible'],['Nutrición','Disponible','Disponible'],['Progreso','Disponible','Disponible'],['Offline','Disponible','Disponible'],['Shortcuts','Disponible','Disponible'],['Uso automático del teléfono','Solo APK','Requiere permiso'],['Reconocimiento de voz','Requiere permiso','Requiere permiso'],['Widget','Solo APK','Disponible'],['Notificación de entrenamiento','En desarrollo','En desarrollo'],['Pantalla bloqueada','En desarrollo','En desarrollo']];
+  if(table)table.innerHTML=rows.map(row=>`<tr><th scope="row">${escapeHtml(row[0])}</th><td>${escapeHtml(row[1])}</td><td>${escapeHtml(row[2])}</td></tr>`).join('');
+  const labels={'running-installed':capabilities.runtimeMode==='android-apk'?'Ejecutándose dentro del APK Android.':'Ejecutándose como aplicación instalada.','install-available':'Podés instalar la PWA desde este navegador.',unknown:'No se puede comprobar la instalación desde este navegador.'};
+  if(status)status.textContent=labels[capabilities.installationStatus]||labels.unknown;
+  window.dispatchEvent(new CustomEvent('platform-capabilities-change',{detail:capabilities}));
+  return capabilities;
+}
+async function showPwaInstallInstructions(){
+  const capabilities=platformCapabilities();
+  if(capabilities.installationStatus==='running-installed'){flash('La aplicación ya se está ejecutando en modo instalado.');return;}
+  if(capabilities.installationStatus==='install-available'){await installPwa();return;}
+  flash('Abrí el menú del navegador y elegí “Instalar aplicación” o “Agregar a pantalla de inicio”.',{duration:7000});
+}
+window.showPwaInstallInstructions=showPwaInstallInstructions;
+window.renderPlatformCapabilities=renderPlatformCapabilities;
+function ensureWidgetDiagnostics(){
+  const mount=document.getElementById('supportDiagnosticsMount');if(!mount||document.getElementById('diagnosticWidgetUpdateBtn'))return;
+  mount.insertAdjacentHTML('beforeend','<section class="diagnosticSection"><h3>Widget Android</h3><p class="muted small">Herramienta de soporte para volver a generar el resumen del widget de entrenamiento.</p><button type="button" class="secondary" id="diagnosticWidgetUpdateBtn">Actualizar widget manualmente</button></section>');
+  document.getElementById('diagnosticWidgetUpdateBtn').onclick=()=>{window.WORKOUT_FEATURES?.syncWorkoutWidget?.();flash('Widget de entrenamiento actualizado.');};
 }
 function maybeShowInternalReminder(){
   const preferences=uiPreferences();if(!preferences.notifications||sessionStorage.getItem('protocolo_internal_reminder_shown')==='1')return;
@@ -1197,8 +1279,15 @@ async function setGymPartyPrimaryMode(enabled){
   }catch(error){flash('No se pudo cambiar el almacenamiento de Gym Party. Se conservó el modo anterior.',{tone:'error'});return null;}
   finally{if(button)button.disabled=false;renderSettingsData();}
 }
+let settingsDataRenderRevision=0,settingsDataRenderTimer=0;
+function scheduleSettingsDataRender(){
+  if(settingsDataRenderTimer)clearTimeout(settingsDataRenderTimer);
+  settingsDataRenderTimer=setTimeout(()=>{settingsDataRenderTimer=0;renderSettingsData();},0);
+}
 function renderSettingsData(){
-  applyUiPreferences({syncControls:!settingsFormDirty});const meta=getLocalData(BACKUP_META_KEY,{});
+  if(settingsDataRenderTimer){clearTimeout(settingsDataRenderTimer);settingsDataRenderTimer=0;}
+  const renderRevision=++settingsDataRenderRevision;
+  applyUiPreferences({syncControls:!settingsFormDirty});renderExperimentalControls();renderPlatformCapabilities();ensureWidgetDiagnostics();const meta=getLocalData(BACKUP_META_KEY,{});
   const last=document.getElementById('lastBackupAt');if(last)last.textContent=meta.lastExportAt?new Intl.DateTimeFormat('es-PY',{dateStyle:'short',timeStyle:'short'}).format(new Date(meta.lastExportAt)):'Nunca';
   const latestImport=window.BACKUP_SERVICE?.history?.()?.find(item=>item.status==='applied'||item.status==='undone'),lastImport=document.getElementById('lastImportAt');if(lastImport)lastImport.textContent=latestImport?.at?compatibilityAuditDate(latestImport.at):'Nunca';
   renderStorageUsage();renderDataHealth();
@@ -1207,6 +1296,7 @@ function renderSettingsData(){
   if(indexedStatus&&window.APP_DATA){
     indexedStatus.textContent='Preparando';
     window.APP_DATA.ready().then(()=>window.APP_DATA.diagnostics()).then(diagnostics=>{
+      if(renderRevision!==settingsDataRenderRevision)return;
       dataHealthDiagnostics=diagnostics;renderDataHealth();
       const domains=Object.values(diagnostics.domains||{}),complete=domains.filter(item=>item.status==='complete').length,review=domains.filter(item=>item.status==='review-needed').length;
       indexedStatus.textContent=!diagnostics.indexedDB?'No disponible':review?`${review} por revisar`:complete===domains.length?'Lista':`${complete}/${domains.length} áreas`;
@@ -1254,7 +1344,7 @@ function renderSettingsData(){
       if(gymPartyToggle){const primary=gymParty?.storageMode==='primary';gymPartyToggle.textContent=primary?'Usar modo compatible':'Reactivar IndexedDB';gymPartyToggle.dataset.enablePrimary=primary?'false':'true';}
       if(gymPartyRetry)gymPartyRetry.classList.toggle('hidden',gymParty?.storageMode!=='primary');
       renderCompatibilityAudit(diagnostics.compatibility,diagnostics);
-    }).catch(()=>{indexedStatus.textContent='No disponible';dataHealthDiagnostics={indexedDB:false,lastError:{type:'unavailable'},domains:{}};renderDataHealth();});
+    }).catch(()=>{if(renderRevision!==settingsDataRenderRevision)return;indexedStatus.textContent='No disponible';dataHealthDiagnostics={indexedDB:false,lastError:{type:'unavailable'},domains:{}};renderDataHealth();});
   }
   const undoPanel=document.getElementById('importUndoPanel');
   if(undoPanel){
@@ -1602,7 +1692,7 @@ function saveRecipe(){const payload=recipeEditorPayload(),existing=nutritionReci
 function editRecipe(id){const recipe=nutritionRecipes({includeArchived:true}).find(item=>item.id===id);if(!recipe)return;window.setNutritionView?.('library');document.getElementById('nutritionRecipesDetails').open=true;applyRecipeEditorPayload({id:recipe.id,ingredients:recipe.ingredients,name:recipe.name,servings:recipe.servings,totalWeight:recipe.totalWeightGrams,confidence:recipe.confidence,source:recipe.source});captureRecipeDraft();document.getElementById('recipeName')?.focus();}
 function saveRecipeAsFrequent(recipe){const food=window.NUTRITION_RECIPES.toFood(recipe),entry=window.NUTRITION_MODEL.buildEntry(food,recipe.servingWeightGrams,'Almuerzo',todayStr()),{id,date,meal,savedAt,...item}=entry,saved=window.NUTRITION_STORE.savedMeals();saved.push({id:uid('savedmeal'),name:recipe.name,items:[item],savedAt:new Date().toISOString(),recipeId:recipe.id});window.NUTRITION_STORE.saveSavedMeals(saved);window.renderSavedMeals?.();renderFoodSearchSuggestions();flash('Receta guardada como comida frecuente.');}
 function registerRecipe(recipe,mode){populateFoods();const foodId=`recipe:${recipe.id}`,index=allFoods().findIndex(food=>food.id===foodId);if(index<1)return;const food=allFoods()[index],meal=window.NUTRITION_PORTIONS.suggestedMeal(),amount=mode==='portion'?1:recipe.servingWeightGrams,unit=mode==='portion'?'porcion':'g';document.getElementById('nutritionFood').value=String(index);document.getElementById('foodQuantity').value=String(amount);document.getElementById('foodUnit').value=unit;document.getElementById('nutritionMeal').value=meal;nutritionEntryFlow.set({food,amount,unit,meal,date:document.getElementById('nutritionDate').value||todayStr()}).go(mode==='portion'?'review':'amount');captureNutritionFoodDraft();window.setNutritionView?.('registrar',{focus:true});renderNutritionFoodFlow({focus:true});}
-async function handleRecipeAction(button){const action=button.dataset.recipeAction,id=button.dataset.recipeId,recipes=nutritionRecipes({includeArchived:true}),index=recipes.findIndex(item=>item.id===id);if(index<0)return;const recipe=recipes[index];if(action==='edit'){editRecipe(id);return;}if(action==='duplicate'){recipes.push(window.NUTRITION_RECIPES.duplicate(recipe));window.NUTRITION_STORE.saveRecipes(recipes);populateFoods();renderRecipeManager();flash('Receta duplicada.');return;}if(action==='portion'||action==='grams'){registerRecipe(recipe,action);return;}if(action==='frequent'){saveRecipeAsFrequent(recipe);return;}if(action==='archive'||action==='restore'){recipes[index]={...recipe,archived:action==='archive',updatedAt:new Date().toISOString()};window.NUTRITION_STORE.saveRecipes(recipes);populateFoods();renderRecipeManager();renderFoodSearchSuggestions();flash(action==='archive'?'Receta archivada.':'Receta restaurada.');return;}if(action==='delete'){const confirmed=await window.APP_CONFIRMATION.ask({title:'Eliminar receta',message:'Los registros anteriores conservarán su snapshot. La receta dejará de estar disponible para nuevos registros.',confirmLabel:'Eliminar',danger:true});if(!confirmed)return;recipes.splice(index,1);window.NUTRITION_STORE.saveRecipes(recipes);populateFoods();renderRecipeManager();renderFoodSearchSuggestions();flash('Receta eliminada.',{actionLabel:'Deshacer',duration:7000,onAction:()=>{const current=nutritionRecipes({includeArchived:true});if(!current.some(item=>item.id===recipe.id))current.splice(Math.min(index,current.length),0,recipe);window.NUTRITION_STORE.saveRecipes(current);populateFoods();renderRecipeManager();renderFoodSearchSuggestions();}});}}
+async function handleRecipeAction(button){const action=button.dataset.recipeAction,id=button.dataset.recipeId,recipes=nutritionRecipes({includeArchived:true}),index=recipes.findIndex(item=>item.id===id);if(index<0)return;const recipe=recipes[index];if(action==='edit'){editRecipe(id);return;}if(action==='duplicate'){recipes.push(window.NUTRITION_RECIPES.duplicate(recipe));window.NUTRITION_STORE.saveRecipes(recipes);populateFoods();renderRecipeManager();flash('Receta duplicada.');return;}if(action==='portion'||action==='grams'){registerRecipe(recipe,action);return;}if(action==='frequent'){saveRecipeAsFrequent(recipe);return;}if(action==='archive'||action==='restore'){recipes[index]={...recipe,archived:action==='archive',updatedAt:new Date().toISOString()};window.NUTRITION_STORE.saveRecipes(recipes);populateFoods();renderRecipeManager();renderFoodSearchSuggestions();flash(action==='archive'?'Receta archivada.':'Receta restaurada.');return;}if(action==='delete'){const confirmed=await window.APP_CONFIRMATION.ask({title:'Eliminar receta',message:'Los registros anteriores conservarán los valores con los que fueron guardados. La receta dejará de estar disponible para nuevos registros.',confirmLabel:'Eliminar',danger:true});if(!confirmed)return;recipes.splice(index,1);window.NUTRITION_STORE.saveRecipes(recipes);populateFoods();renderRecipeManager();renderFoodSearchSuggestions();flash('Receta eliminada.',{actionLabel:'Deshacer',duration:7000,onAction:()=>{const current=nutritionRecipes({includeArchived:true});if(!current.some(item=>item.id===recipe.id))current.splice(Math.min(index,current.length),0,recipe);window.NUTRITION_STORE.saveRecipes(current);populateFoods();renderRecipeManager();renderFoodSearchSuggestions();}});}}
 function normalizeFoodText(value){return window.NUTRITION_MODEL.normalizeText(value);}
 function cleanFoodQuery(value){return window.NUTRITION_MODEL.cleanQuery(value);}
 function editDistance(a,b){return window.NUTRITION_FOOD_SEARCH.editDistance(a,b);}
@@ -1857,6 +1947,7 @@ function saveNutritionEntryAsFrequent(id){
 }
 function removeFood(id){rememberNutritionEntries();window.NUTRITION_STORE.removeEntry(id);renderNutrition();flash('Alimento eliminado. Podes deshacer el cambio.');}
 let previousNutritionWater=null;
+let nutritionWeightDirty=false;
 function saveNutritionWater(value=num('nutritionWater'),announce=true){
   const date=document.getElementById('nutritionDate').value||todayStr();
   const metrics=window.NUTRITION_STORE.bodyMetrics();
@@ -1889,15 +1980,16 @@ function saveNutritionWeight(){
   const displayValue=Math.max(0,num('nutritionWeight'));
   const weightKg=uiPreferences().unit==='lb'?displayValue/2.2046226218:displayValue;
   metrics[date]={...current,weight:Math.round(weightKg*1000)/1000,savedAt:new Date().toISOString()};
+  nutritionWeightDirty=false;
   window.NUTRITION_STORE.saveBodyMetrics(metrics);
   renderNutrition();flash('Peso guardado.');
 }
 function nutritionTotals(entries){return window.NUTRITION_MODEL.totals(entries);}
-function loadBodyMetricsForDate(){
+function loadBodyMetricsForDate({force=false}={}){
   const m=window.NUTRITION_STORE.bodyMetrics()[document.getElementById('nutritionDate').value||todayStr()]||{};
   const water=document.getElementById('nutritionWater'),weight=document.getElementById('nutritionWeight');
   if(water)water.value=m.water||'';
-  if(weight){const value=(Number(m.weight)||0)*(uiPreferences().unit==='lb'?2.2046226218:1);weight.value=value?window.APP_NUMBERS.format(value,{maximumFractionDigits:1}):'';}
+  if(weight&&(!nutritionWeightDirty||force)){const value=(Number(m.weight)||0)*(uiPreferences().unit==='lb'?2.2046226218:1);weight.value=value?window.APP_NUMBERS.format(value,{maximumFractionDigits:1}):'';nutritionWeightDirty=false;}
 }
 function renderNutrition(){
   const date=document.getElementById('nutritionDate')?.value||todayStr();
@@ -2112,7 +2204,7 @@ function captureProtocolDraft(){
 }
 function restoreProtocolDraft(date=document.getElementById('entryDate')?.value||todayStr(),saved=getEntries().find(entry=>entry.date===date)){
   const id=protocolDraftId(date),draft=window.APP_DRAFTS?.get?.(id,{newerThan:saved?.savedAt||''});if(!draft?.payload)return false;
-  fillForm(draft.payload);document.getElementById('manualDay').value=draft.payload.manualDay??'';updateUI();
+  fillForm(draft.payload);document.getElementById('manualDay').value=draft.payload.manualDay??'';protocolFormDirty=true;protocolFormStarted=true;updateUI();
   if(!restoredDraftNotices.has(id)){
     restoredDraftNotices.add(id);
     window.APP_DRAFTS?.announceRestored?.({id,label:'Borrador del registro diario restaurado.',onDiscard:()=>fillForm(saved||null)});
@@ -2128,10 +2220,12 @@ function fillForm(entry){
   ['phoneImported','phoneImportedAt','phoneDetectedTotal','phoneDetectedNonEssential','phoneMetricSource'].forEach(id=>{const el=document.getElementById(id); if(el) el.value = entry ? (entry[id] ?? '') : '';});
   ['measuredScreen','wakeNoSocial','stableSchedule','phoneOutBed','noPhoneBed','writingDone','readBeforeScroll','keyActionDone'].forEach(id=>{document.getElementById(id).checked = !!e[id];});
   document.getElementById('note').value = e.note || '';
+  protocolFormDirty=false;
+  protocolFormStarted=false;
   updateUI();
 }
 
-function saveEntry(){
+function saveCurrentDay(){
   const raw = readForm();
   const score = scoreEntry(raw);
   const plan = planForDay(raw.day);
@@ -2142,9 +2236,12 @@ function saveEntry(){
   entries.sort((a,b)=>a.date.localeCompare(b.date));
   setEntries(entries);
   window.APP_DRAFTS?.remove?.(protocolDraftId(entry.date));
+  protocolFormDirty=false;
+  protocolFormStarted=false;
   flash('Registro guardado.');
   renderAll();
 }
+function saveEntry(){return saveCurrentDay();}
 function deleteEntry(){
   const date = document.getElementById('entryDate').value || todayStr();
   let entries = getEntries().filter(e=>e.date!==date);
@@ -2501,10 +2598,11 @@ const APP_VIEW_META={
   'more/help':['Ayuda','Guía y criterios'],
   'more/settings':['Ajustes','Experiencia y módulos'],
   'more/data':['Datos y copias','Exportar, importar y restablecer'],
+  'more/experimental':['Funciones experimentales','Coins, rankings y afiliados opcionales'],
   'more/privacy':['Privacidad','Datos locales y compartidos'],
   'more/about':['Acerca de','Versión, licencias y fuentes']
 };
-const APP_TAB_IDS=['registro','dashboard','gym','gym-party','nutricion','progreso','mas','telefono','plan','guia','settings','data','privacy','about'];
+const APP_TAB_IDS=['registro','dashboard','gym','gym-party','nutricion','progreso','mas','telefono','plan','guia','settings','data','experimental','privacy','about'];
 function routeForLegacyModule(module){
   const routes={
     protocolo:{module:'home',view:lastProtocolTab==='dashboard'?'overview':'register'},
@@ -2525,7 +2623,7 @@ function tabForRoute(route){
   if(route.module==='gym')return route.view==='group'?'gym-party':'gym';
   if(route.module==='nutrition')return 'nutricion';
   if(route.module==='progress')return 'progreso';
-  if(route.module==='more')return ({root:'mas',phone:'telefono',plan:'plan',help:'guia',settings:'settings',data:'data',privacy:'privacy',about:'about'})[route.view]||'mas';
+  if(route.module==='more')return ({root:'mas',phone:'telefono',plan:'plan',help:'guia',settings:'settings',data:'data',experimental:'experimental',privacy:'privacy',about:'about'})[route.view]||'mas';
   return 'registro';
 }
 function internalModuleForRoute(route){
@@ -2537,18 +2635,17 @@ function internalModuleForRoute(route){
 }
 function activateTab(tabName,{internal=false}={}){
   if(!internal&&window.APP_ROUTER?.isStarted()){
-    const routes={registro:{module:'home',view:'register'},dashboard:{module:'home',view:'overview'},gym:{module:'gym',view:'train'},'gym-party':{module:'gym',view:'group'},nutricion:{module:'nutrition',view:'meals'},progreso:{module:'progress',view:'overview'},mas:{module:'more',view:'root'},telefono:{module:'more',view:'phone'},plan:{module:'more',view:'plan'},guia:{module:'more',view:'help'},settings:{module:'more',view:'settings'},data:{module:'more',view:'data'},privacy:{module:'more',view:'privacy'},about:{module:'more',view:'about'}};
+    const routes={registro:{module:'home',view:'register'},dashboard:{module:'home',view:'overview'},gym:{module:'gym',view:'train'},'gym-party':{module:'gym',view:'group'},nutricion:{module:'nutrition',view:'meals'},progreso:{module:'progress',view:'overview'},mas:{module:'more',view:'root'},telefono:{module:'more',view:'phone'},plan:{module:'more',view:'plan'},guia:{module:'more',view:'help'},settings:{module:'more',view:'settings'},data:{module:'more',view:'data'},experimental:{module:'more',view:'experimental'},privacy:{module:'more',view:'privacy'},about:{module:'more',view:'about'}};
     if(routes[tabName])return window.APP_ROUTER.navigate(routes[tabName]);
   }
   if(['registro','dashboard'].includes(tabName))lastProtocolTab=tabName;
   document.querySelectorAll('.tab').forEach(button=>{const selected=button.dataset.tab===tabName;button.classList.toggle('active',selected);button.setAttribute('aria-selected',String(selected));button.tabIndex=selected?0:-1;});
   APP_TAB_IDS.forEach(name=>document.getElementById('tab-'+name)?.classList.toggle('hidden',name!==tabName));
-  if(tabName==='dashboard')drawChart();
   if(tabName==='gym')renderGym();
   if(tabName==='gym-party'&&window.renderGymParty)window.renderGymParty();
   if(tabName==='nutricion')renderNutrition();
   if(tabName==='progreso'&&window.renderAdvancedProgress)window.renderAdvancedProgress();
-  if(['settings','data','about'].includes(tabName))renderSettingsData();
+  if(['settings','data','about','experimental'].includes(tabName))renderSettingsData();
 }
 function applyGymRouteView(view,{focus=false}={}){
   document.querySelectorAll('[data-gym-section]').forEach(button=>button.classList.toggle('active',button.dataset.gymSection===view));
@@ -2828,8 +2925,14 @@ function drawChart(){
   }
 }
 function updateUI(){ updateHomeHeader(); updatePlanUI(); updateScorePreview(); renderHomeStatus(); }
-function renderProtocol(){ updateUI(); renderStats(); renderPeriodMetrics(); renderInsights(); renderBadges(); renderHistory(); renderPlanTable(); drawChart(); updatePhonePanel(); }
-function refreshProtocolViews({reloadForm=true}={}){if(reloadForm)loadEntryForDate();renderProtocol();window.renderAdvancedProgress?.();}
+function renderProtocolProgressView(view){
+  if(view==='habits'){renderPeriodMetrics();renderInsights();drawChart();return;}
+  if(view==='history'){renderHistory();return;}
+  if(view==='achievements')renderBadges();
+}
+window.renderProtocolProgressView=renderProtocolProgressView;
+function renderProtocol(){ updateUI(); renderStats(); renderPlanTable(); updatePhonePanel(); }
+function refreshProtocolViews({reloadForm=true}={}){if(reloadForm)loadEntryForDate();renderProtocol();window.PROGRESS_VIEW?.markDirty?.();window.renderAdvancedProgress?.();}
 function renderAll(){ renderProtocol(); renderGym(); renderNutrition(); renderSettingsData(); }
 
 function exportJson(){
@@ -2942,8 +3045,9 @@ let deferredInstallPrompt = null;
 window.addEventListener('beforeinstallprompt', (event)=>{
   event.preventDefault();
   deferredInstallPrompt = event;
-  updatePhonePanel();
+  updatePhonePanel();renderPlatformCapabilities();window.renderWorkoutQuickAccess?.();
 });
+window.addEventListener('appinstalled',()=>{deferredInstallPrompt=null;renderPlatformCapabilities();window.renderWorkoutQuickAccess?.();});
 
 function formatHoursFromMinutes(minutes){
   if(minutes===null || minutes===undefined || Number.isNaN(Number(minutes))) return '—';
@@ -2968,10 +3072,10 @@ function updatePhonePanel(){
   if(nativeBridgeAvailable()){
     if(nativeHasUsageAccess()){
       status.textContent='Android conectado · permiso activo'; status.classList.add('ok');
-      phoneMessage('ok','La app está conectada al puente Android. Podés sincronizar el uso real de hoy.');
+      phoneMessage('ok','El APK Android está conectado. Podés incorporar el uso real de hoy.');
     }else{
       status.textContent='Android conectado · falta permiso'; status.classList.add('warn');
-      phoneMessage('warn','La app detectó el puente Android, pero falta conceder el permiso “Uso de apps”. Tocá “Conceder permiso de uso”.');
+      phoneMessage('warn','El APK Android está listo, pero falta conceder el permiso “Uso de apps”. Tocá “Conceder permiso de uso”.');
     }
   }else if(standalone){
     status.textContent='PWA instalada · modo manual'; status.classList.add('warn');
@@ -3016,7 +3120,7 @@ function renderNativeAppList(apps){
 }
 function syncAndroidUsageToday(){
   if(!nativeBridgeAvailable()){
-    phoneMessage('warn','No hay puente Android activo. Esta PWA no puede leer automáticamente el uso del teléfono; para eso usá la versión Android nativa o cargá el dato manualmente.');
+    phoneMessage('warn','La PWA no puede leer automáticamente el uso del teléfono. Para incorporarlo, usá el APK Android o cargá el dato manualmente.');
     updatePhonePanel();
     return;
   }
@@ -3046,7 +3150,7 @@ function syncAndroidUsageToday(){
     phoneMessage('ok','Métricas importadas al registro diario. Revisá si el estimado “no esencial” coincide con tu criterio y guardá el día.');
     updateUI(); updatePhonePanel();
   }catch(e){
-    phoneMessage('warn','Error leyendo el puente Android: '+(e.message||e));
+    phoneMessage('warn','No se pudo leer el uso desde el APK Android: '+(e.message||e));
   }
 }
 function copyPhoneMetricsToForm(){
@@ -3077,12 +3181,16 @@ if('serviceWorker' in navigator && location.protocol !== 'file:' && location.hos
 
 // Events
 
+organizeHomePrimaryFlow();
 const syncBtn=document.getElementById('syncAndroidUsageBtn'); if(syncBtn) syncBtn.addEventListener('click', syncAndroidUsageToday);
 const requestUsageBtn=document.getElementById('requestUsageAccessBtn'); if(requestUsageBtn) requestUsageBtn.addEventListener('click', requestUsageAccess);
 const installBtn=document.getElementById('installPwaBtn'); if(installBtn) installBtn.addEventListener('click', installPwa);
 const copyPhoneBtn=document.getElementById('copyPhoneToFormBtn'); if(copyPhoneBtn) copyPhoneBtn.addEventListener('click', copyPhoneMetricsToForm);
 document.getElementById('homeCompactActionBtn')?.addEventListener('click',runHomeCompactAction);
 document.getElementById('saveUiSettingsBtn')?.addEventListener('click',saveUiSettings);
+document.getElementById('experimentalFeaturesEnabled')?.addEventListener('change',event=>setExperimentalFeatures(event.currentTarget.checked));
+document.getElementById('continueExperimentalFeaturesBtn')?.addEventListener('click',()=>setExperimentalFeatures(true));
+document.getElementById('pauseExperimentalFeaturesBtn')?.addEventListener('click',()=>setExperimentalFeatures(false));
 ['settingsAppearance','settingsDensity','settingsExperienceMode','settingsUnit','settingsShowRir','settingsNutritionGuidance','settingsNotifications','settingsAutoSync'].forEach(id=>document.getElementById(id)?.addEventListener('change',()=>{settingsFormDirty=true;}));
 document.getElementById('resetAllDataBtn')?.addEventListener('click',resetAllAppData);
 document.getElementById('reopenOnboardingBtn')?.addEventListener('click',()=>{localStorage.removeItem('protocolo_0_100_onboarding_complete_v1');window.APP_ROUTER?.navigate({module:'more',view:'help'});});
@@ -3104,9 +3212,9 @@ document.getElementById('exportCompatibilityAuditBtn')?.addEventListener('click'
 document.getElementById('clearCompatibilityAuditBtn')?.addEventListener('click',()=>clearCompatibilityAuditHistory().catch(()=>flash('No se pudo borrar el historial técnico.',{tone:'error'})));
 window.addEventListener('app-data-quarantined',()=>{renderDataIntegrity();flash('Se apartó una copia local que necesita revisión.',{tone:'warning'});});
 window.addEventListener('app-data-quarantine-change',renderDataIntegrity);
-window.addEventListener('app-data-compatibility-audit',()=>{const route=window.APP_ROUTER?.current?.();if(route?.module==='more'&&route?.view==='data')renderSettingsData();});
-window.addEventListener('app-data-primary-ready',event=>{renderSettingsData();if(event.detail?.domain==='nutritionCache'){populateFoods();renderAdvancedNutrition();}if(event.detail?.domain==='protocol')refreshProtocolViews();});
-window.addEventListener('app-data-change',event=>{if(event.detail?.domain==='protocol'&&event.detail?.source!=='local')refreshProtocolViews({reloadForm:false});});
+window.addEventListener('app-data-compatibility-audit',()=>{const route=window.APP_ROUTER?.current?.();if(route?.module==='more'&&route?.view==='data')scheduleSettingsDataRender();});
+window.addEventListener('app-data-primary-ready',event=>{scheduleSettingsDataRender();if(event.detail?.domain==='nutritionCache'){populateFoods();renderAdvancedNutrition();}if(event.detail?.domain==='protocol')refreshProtocolViews();});
+window.addEventListener('app-data-change',event=>{if(event.detail?.domain==='protocol'||event.detail?.domain==='import')refreshProtocolViews({reloadForm:false});});
 document.getElementById('toggleProtocolPrimaryBtn')?.addEventListener('click',event=>setProtocolPrimaryMode(event.currentTarget.dataset.enablePrimary==='true'));
 document.getElementById('retryProtocolPrimaryBtn')?.addEventListener('click',async()=>{try{await window.APP_DATA.hydratePrimaryDomain('protocol');refreshProtocolViews();flash('Almacenamiento del registro diario comprobado.');}catch(error){flash('No se pudo comprobar IndexedDB. Los registros compatibles permanecen disponibles.',{tone:'warning'});}renderSettingsData();});
 document.getElementById('toggleNutritionPrimaryBtn')?.addEventListener('click',event=>setNutritionPrimaryMode(event.currentTarget.dataset.enablePrimary==='true'));
@@ -3179,18 +3287,19 @@ document.getElementById('nutritionAssistantPreview').addEventListener('click',e=
   const create=e.target.closest('[data-assistant-create]');
   if(create) createAssistantCustomFood(create.dataset.assistantCreate,create.closest('[data-assistant-row]'));
 });
-document.getElementById('nutritionDate').addEventListener('change', ()=>{loadBodyMetricsForDate();renderNutrition();resetNutritionFoodFlow();restoreNutritionFoodDraft();});
+document.getElementById('nutritionDate').addEventListener('change', ()=>{loadBodyMetricsForDate({force:true});renderNutrition();resetNutritionFoodFlow();restoreNutritionFoodDraft();});
+document.getElementById('nutritionWeight').addEventListener('input',()=>{nutritionWeightDirty=true;});
 ['foodQuantity','foodUnit','nutritionMeal',...nutritionCustomDraftFields].forEach(id=>document.getElementById(id)?.addEventListener('input',captureNutritionFoodDraft));
 document.getElementById('customFoodDetails')?.addEventListener('toggle',event=>{if(event.currentTarget.dataset.suppressDraft!=='1')captureNutritionFoodDraft();});
 document.getElementById('customFoodOptionalFields')?.addEventListener('toggle',captureNutritionFoodDraft);
 
-document.getElementById('saveBtn').addEventListener('click', saveEntry);
+document.getElementById('saveBtn').addEventListener('click', saveCurrentDay);
 document.getElementById('deleteBtn').addEventListener('click', deleteEntry);
 document.getElementById('clearBtn').addEventListener('click', ()=>{window.APP_DRAFTS?.remove?.(protocolDraftId());fillForm(null);});
 document.getElementById('startDate').addEventListener('change', e=>{localStorage.setItem(START_KEY,e.target.value); renderAll();});
 document.getElementById('entryDate').addEventListener('change', loadEntryForDate);
-document.getElementById('manualDay').addEventListener('input', ()=>{updateUI();captureProtocolDraft();});
-['totalScreen','nonEssential','sleepHours','noSocialMins','readingMins','offlineMins','anxiety','measuredScreen','wakeNoSocial','stableSchedule','phoneOutBed','noPhoneBed','writingDone','readBeforeScroll','keyActionDone','phoneImported','phoneImportedAt','phoneDetectedTotal','phoneDetectedNonEssential','phoneMetricSource','note'].forEach(id=>document.getElementById(id).addEventListener('input',()=>{updateUI();captureProtocolDraft();}));
+document.getElementById('manualDay').addEventListener('input', ()=>{protocolFormDirty=true;protocolFormStarted=true;updateUI();captureProtocolDraft();});
+['totalScreen','nonEssential','sleepHours','noSocialMins','readingMins','offlineMins','anxiety','measuredScreen','wakeNoSocial','stableSchedule','phoneOutBed','noPhoneBed','writingDone','readBeforeScroll','keyActionDone','phoneImported','phoneImportedAt','phoneDetectedTotal','phoneDetectedNonEssential','phoneMetricSource','note'].forEach(id=>document.getElementById(id).addEventListener('input',()=>{protocolFormDirty=true;protocolFormStarted=true;updateUI();captureProtocolDraft();}));
 document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{
   activateTab(btn.dataset.tab);
   if(btn.dataset.tab==='guia') renderHelpGuide();
@@ -3327,6 +3436,7 @@ window.addEventListener('app-time-context-changed',()=>{
 <script src="workout-plan.js"></script>
 <script src="gym/equipment.js"></script>
 <script src="gym/set-model.js"></script>
+<script src="gym/workout-quick-actions.js"></script>
 <script src="workout-metrics.js"></script>
 <script src="gym/anomaly-detector.js"></script>
 <script src="gym/progression-engine.js"></script>

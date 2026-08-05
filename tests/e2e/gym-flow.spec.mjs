@@ -22,6 +22,20 @@ test.beforeEach(async ({page})=>{
   await page.evaluate(()=>localStorage.clear());
 });
 
+test('registro rapido confirma la serie exacta y permite deshacer por setId',async ({page})=>{
+  await page.goto('/index.html?module=gym&view=train&quickLog=1');
+  await expect(page.getByRole('heading',{name:'Entrenar',exact:true})).toBeVisible();
+  await page.locator('#quickReps').fill('8');
+  await page.locator('#quickWeight').fill('60');
+  await page.locator('#saveQuickSetBtn').click();
+  await expect(page.locator('#appSnackbarMessage')).toHaveText(/Serie 1 guardada · 60 kg × 8/);
+  await expect(page.locator('#globalLiveRegion')).toContainText('Serie 1 guardada');
+  await expect(page.locator('#saveQuickSetBtn')).toBeFocused();
+  await page.locator('#appSnackbarAction').click();
+  await expect(page.locator('#quickLoggedSets .quickLoggedSet')).toHaveCount(0);
+  await expect(page.locator('#appSnackbarMessage')).toHaveText('Serie deshecha.');
+});
+
 test('ejercicio personalizado ambiguo exige clasificacion canonica',async ({page})=>{
   await page.goto('/index.html?module=gym&view=routine');
   const config=page.locator('#workoutConfigPanel > details');
@@ -148,13 +162,13 @@ test('PWA controla offline, shortcuts y configuracion Firebase',async ({page,bro
   await page.goto('/index.html?module=gym');
   await page.waitForFunction(()=>navigator.serviceWorker?.ready);
   await page.reload();
-  await expect(page.getByRole('heading',{name:'Registro rápido de serie',exact:true})).toBeVisible();
+  await expect(page.getByRole('heading',{name:'Entrenar',exact:true})).toBeVisible();
   const manifest=await page.evaluate(async()=>fetch('manifest.webmanifest').then(response=>response.json()));
   expect(manifest.shortcuts.map(shortcut=>shortcut.url)).toEqual(expect.arrayContaining(['./index.html?module=home&view=register','./index.html?module=gym&view=train','./index.html?module=gym&view=group','./index.html?module=gym&view=train&quickLog=1','./index.html?module=nutrition&view=meals']));
   const config=await page.evaluate(async()=>fetch('firebase-config.js',{cache:'no-store'}).then(response=>response.text()));
   expect(config).toContain('GYM_PARTY_FIREBASE_CONFIG');
   await context.setOffline(true);
   await page.reload();
-  await expect(page.getByRole('heading',{name:'Registro rápido de serie',exact:true})).toBeVisible();
+  await expect(page.getByRole('heading',{name:'Entrenar',exact:true})).toBeVisible();
   await context.setOffline(false);
 });

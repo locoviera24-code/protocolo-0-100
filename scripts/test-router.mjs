@@ -47,5 +47,6 @@ applyUrl('/index.html?module=nutrition&view=meals');
 listeners.popstate({state});
 assert.deepEqual({...router.current()},{module:'nutrition',view:'meals'});
 assert.deepEqual({...router.normalize({module:'nutricion',view:'invalid'})},{module:'nutrition',view:'meals'});
+assert.deepEqual({...router.normalize({module:'more',view:'experimental'})},{module:'more',view:'experimental'});
 console.log('Router correcto: aliases legacy, URL canonica, historial, Atrás y popstate.');
 

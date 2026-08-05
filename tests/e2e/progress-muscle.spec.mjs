@@ -54,7 +54,7 @@ test('Secundarios se muestran separados sin alterar series primarias',async({pag
 test('Progreso muscular explica el estado sin datos',async({page})=>{
   await page.goto('/index.html');await page.evaluate(async()=>{localStorage.clear();await window.APP_DATA.clearAllData();});
   await page.goto('/index.html?module=progress&view=gym&progressScope=muscle');
-  await expect(page.locator('#progressMuscleMap')).toContainText('Registrá series');
-  await expect(page.locator('#progressMuscleSelect')).toHaveValue('chest');
-  await expect(page.locator('#progressMuscleExercises')).toContainText('Todavía no hay ejercicios primarios');
+  await expect(page.locator('[data-progress-empty="gym"]')).toContainText('Guardá al menos 2 sesiones del mismo ejercicio');
+  await expect(page.locator('[data-progress-empty-action]')).toHaveText('Empezar entrenamiento');
+  await expect(page.locator('#progressMuscleMap')).toBeHidden();
 });

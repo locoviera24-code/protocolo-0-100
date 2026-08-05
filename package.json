@@ -6,6 +6,7 @@
   "scripts": {
     "build:precache": "node scripts/generate-precache-manifest.mjs",
     "build:pwa-screenshots": "node scripts/capture-pwa-screenshots.mjs",
+    "build:web-core-evidence": "node scripts/capture-web-core-flow-p0.mjs",
     "test:manifest": "node scripts/test-manifest.mjs",
     "test:precache": "node scripts/generate-precache-manifest.mjs --check && node scripts/test-build-guard.mjs",
     "test:quality-gate": "node scripts/test-quality-gate.mjs",
@@ -13,7 +14,7 @@
     "test:web-dist": "node scripts/test-web-dist.mjs",
     "test:web-dist:e2e": "playwright test --config=playwright.web-dist.config.mjs",
     "test:rules": "npx --yes firebase-tools@15.23.0 emulators:exec --project demo-protocolo-0100 --only firestore \"node firebase/rules.test.mjs\"",
-    "test:modules": "node scripts/test-module-boundaries.mjs",
+    "test:modules": "node scripts/test-module-boundaries.mjs && node scripts/test-platform-capabilities.mjs && node scripts/test-data-events.mjs && node scripts/test-workout-quick-actions.mjs",
     "test:design": "node scripts/test-design-system.mjs",
     "test:router": "node scripts/test-router.mjs",
     "test:layout": "node scripts/test-layout-coordinator.mjs",
