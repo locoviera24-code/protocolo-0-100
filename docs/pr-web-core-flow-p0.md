@@ -79,7 +79,7 @@ Las capturas usan almacenamiento limpio y no entran al precache ni al APK.
   prototype pollution y resultados aplicados/rechazados/ignorados aprobados.
 - Gate D: contratos estaticos, datos, backup, Nutricion, FDC, Gym, Gym Party,
   service worker, manifest, seguridad WebView y release Android aprobados.
-- Playwright: 418 aprobados y 14 omitidos por matriz; Axe aporta 33 aprobados
+- Playwright: 421 aprobados y 14 omitidos por matriz; Axe aporta 33 aprobados
   dentro de ese total, sin exclusiones.
 - Artifact web: 85 recursos con hash; smoke servido sin 404, errores de pagina
   o consola, con rutas profundas, service worker y offline.
@@ -90,6 +90,29 @@ Las capturas usan almacenamiento limpio y no entran al precache ni al APK.
 - Diagnostico: se corrigio una carrera de renders asincronos y la transicion de
   Nutricion, Workout y Gym Party paso 9/9 repeticiones en iPhone WebKit.
 - Hardware fisico: no disponible; todas las casillas permanecen pendientes.
+
+Artifacts locales de cierre:
+
+- Web ZIP: 541.207 bytes, SHA-256
+  `3D6F30C629D522E68A1FB94D2B425B197D48875DFFAF50131F6504C93A3A8ED0`.
+- Android debug: 1.947.497 bytes, SHA-256
+  `F07C6731E6DB4484AFE64B33709D8E10AFF2FABBB57A3B1E7E5F613AAF24DE3D`.
+- Android release de prueba: 1.516.563 bytes, SHA-256
+  `BFBF728A6EF88D976BFEAA0B41F37186E2902CD5B36DBFE56CCA77ED896D063A`.
+
+## Hallazgos de la auditoria final
+
+- La deteccion del APK ahora exige el metodo confiable `getAppInfo`; un objeto
+  global incompleto ya no hace que una pestaña se presente como APK.
+- Deshacer rechaza cualquier serie editada, aunque sus valores finales vuelvan
+  a coincidir con los guardados originalmente.
+- Experimental incorpora eventos posteriores del mismo dia de activacion sin
+  recalcular eventos previos ni persistir metadatos transitorios.
+- Se retiro lenguaje de snapshots de las vistas cotidianas de recetas y de la
+  clasificacion historica de Gym.
+
+Los cuatro hallazgos incluyen pruebas de regresion y forman un unico commit de
+cierre. No cambian schemas, claves ni el modelo `workoutSessions`.
 
 ## Riesgos
 

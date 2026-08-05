@@ -390,26 +390,26 @@
   }
 
   function coinLedgerCandidates(){
-    const ledger=[],push=(id,date,amount,reason)=>ledger.push({id,date,amount,reason});
+    const ledger=[],push=(id,date,amount,reason,occurredAt='')=>ledger.push({id,date,amount,reason,occurredAt});
     getEntries().forEach(entry=>{
-      push(`day-${entry.date}`,entry.date,5,'Registrar el día');
-      if(entry.keyActionDone)push(`action-${entry.date}`,entry.date,5,'Cumplir acción clave');
-      if(entry.score>=70)push(`score70-${entry.date}`,entry.date,3,'Score ≥70');
-      if(entry.score>=80)push(`score80-${entry.date}`,entry.date,3,'Estabilidad ≥80');
-      if(entry.score>=90)push(`score90-${entry.date}`,entry.date,4,'Día ≥90 sin buscar perfección');
-      if(entry.stableSchedule&&entry.sleepHours>=7)push(`sleep-${entry.date}`,entry.date,2,'Sueño estable y suficiente');
+      push(`day-${entry.date}`,entry.date,5,'Registrar el día',entry.savedAt);
+      if(entry.keyActionDone)push(`action-${entry.date}`,entry.date,5,'Cumplir acción clave',entry.savedAt);
+      if(entry.score>=70)push(`score70-${entry.date}`,entry.date,3,'Score ≥70',entry.savedAt);
+      if(entry.score>=80)push(`score80-${entry.date}`,entry.date,3,'Estabilidad ≥80',entry.savedAt);
+      if(entry.score>=90)push(`score90-${entry.date}`,entry.date,4,'Día ≥90 sin buscar perfección',entry.savedAt);
+      if(entry.stableSchedule&&entry.sleepHours>=7)push(`sleep-${entry.date}`,entry.date,2,'Sueño estable y suficiente',entry.savedAt);
     });
-    getLocalData(GYM_SESSIONS_KEY,[]).forEach(session=>push(`gym-${session.id}`,session.date,4,'Registrar entrenamiento'));
-    const nutritionDates=new Set(getLocalData(NUTRITION_ENTRIES_KEY,[]).map(e=>e.date));
-    nutritionDates.forEach(date=>{if(nutritionScoreForDate(date)>=70)push(`nutrition-${date}`,date,5,'Nutrición consistente');});
+    getLocalData(GYM_SESSIONS_KEY,[]).forEach(session=>push(`gym-${session.id}`,session.date,4,'Registrar entrenamiento',session.startedAt));
+    const nutritionByDate=new Map();getLocalData(NUTRITION_ENTRIES_KEY,[]).forEach(entry=>{const current=nutritionByDate.get(entry.date)||'';if(String(entry.savedAt||'')>current)nutritionByDate.set(entry.date,String(entry.savedAt||''));});
+    nutritionByDate.forEach((occurredAt,date)=>{if(nutritionScoreForDate(date)>=70)push(`nutrition-${date}`,date,5,'Nutrición consistente',occurredAt);});
     const weeks={};getEntries().forEach(entry=>{const week=weekStartStr(entry.date);weeks[week]??=[];weeks[week].push(entry);});
-    Object.entries(weeks).forEach(([week,items])=>{if(items.filter(x=>x.readingMins>=20).length>=5)push(`reading-week-${week}`,week,12,'Lectura 5/7');if(items.length>=7)push(`streak-week-${week}`,week,15,'Racha semanal de registro');});
+    Object.entries(weeks).forEach(([week,items])=>{const occurredAt=items.map(item=>String(item.savedAt||'')).sort().at(-1)||'';if(items.filter(x=>x.readingMins>=20).length>=5)push(`reading-week-${week}`,week,12,'Lectura 5/7',occurredAt);if(items.length>=7)push(`streak-week-${week}`,week,15,'Racha semanal de registro',occurredAt);});
     return ledger.sort((a,b)=>b.date.localeCompare(a.date));
   }
   function rebuildCoinLedger({allowNew=false}={}){
     const stored=getLocalData(COIN_LEDGER_KEY,[]);if(!allowNew)return stored;
-    const preferences=getLocalData('protocolo_0_100_ui_preferences_v1',{}),enabledDate=String(preferences.experimentalFeaturesEnabledAt||'').slice(0,10),known=new Set(stored.map(item=>item.id)),candidates=coinLedgerCandidates();
-    const additions=enabledDate?candidates.filter(item=>String(item.date)>enabledDate&&!known.has(item.id)):[],ledger=[...stored,...additions].sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+    const preferences=getLocalData('protocolo_0_100_ui_preferences_v1',{}),enabledAt=String(preferences.experimentalFeaturesEnabledAt||''),enabledDate=enabledAt.slice(0,10),known=new Set(stored.map(item=>item.id)),candidates=coinLedgerCandidates();
+    const additions=enabledDate?candidates.filter(item=>!known.has(item.id)&&(String(item.date)>enabledDate||(String(item.date)===enabledDate&&String(item.occurredAt||'')>enabledAt))).map(({occurredAt,...item})=>item):[],ledger=[...stored,...additions].sort((a,b)=>String(b.date).localeCompare(String(a.date)));
     if(additions.length)setLocalData(COIN_LEDGER_KEY,ledger);
     return ledger;
   }

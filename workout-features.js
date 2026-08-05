@@ -710,7 +710,7 @@
           <div id="exerciseLibraryList" class="exerciseLibraryList"></div>
           <details class="advancedDetails" id="historicalClassificationMigration">
             <summary>Clasificación de sesiones antiguas</summary>
-            <p class="muted small">Las sesiones nuevas conservan un snapshot. Las antiguas solo se actualizan desde esta acción explícita, con vista previa y Deshacer.</p>
+            <p class="muted small">Las sesiones nuevas conservan una clasificación histórica fija. Las antiguas solo se actualizan desde esta acción explícita, con vista previa y Deshacer.</p>
             <div id="historicalClassificationStatus" class="exerciseClassificationStatus" role="status" aria-live="polite">Todavía no se analizó el historial.</div>
             <div class="buttons">
               <button type="button" class="secondary" id="previewHistoricalClassificationBtn">Revisar sesiones antiguas</button>
@@ -1444,6 +1444,7 @@
     const exercise=session?.exercises?.find(item=>(item.id||item.exerciseId)===receipt.exerciseId);
     const set=exercise?.sets?.find(item=>item.id===receipt.setId);
     if(!session||!exercise||!set){receipt.undone=true;return {ok:true,reason:'already-undone',alreadyUndone:true};}
+    if(set.editedAt)return {ok:false,reason:'set-edited',message:'La serie cambió después de guardarse. Revisala antes de eliminarla.'};
     if(!receipt.snapshot||!quickSetMatchesUndoSnapshot(set,receipt.snapshot))return {ok:false,reason:'set-edited',message:'La serie cambió después de guardarse. Revisala antes de eliminarla.'};
     exercise.sets=exercise.sets.filter(item=>item.id!==receipt.setId).map((item,index)=>({...item,setNumber:index+1}));
     session.summary=sessionSummary(session);
@@ -1724,11 +1725,11 @@
   }
   function previewHistoricalClassificationFromUi(){
     const preview=previewHistoricalClassificationMigration();
-    setHistoricalClassificationUi(preview.affectedExercises?`${preview.affectedExercises} ejercicio(s) en ${preview.affectedSessions} sesión(es) pueden recibir un snapshot. Todavía no se modificó nada.`:'Todas las sesiones ya tienen una clasificación histórica fija.',{canApply:preview.affectedExercises>0});
+    setHistoricalClassificationUi(preview.affectedExercises?`${preview.affectedExercises} ejercicio(s) en ${preview.affectedSessions} sesión(es) pueden fijar su clasificación histórica. Todavía no se modificó nada.`:'Todas las sesiones ya tienen una clasificación histórica fija.',{canApply:preview.affectedExercises>0});
   }
   async function applyHistoricalClassificationFromUi(){
     const preview=pendingHistoricalClassificationMigration;if(!preview){previewHistoricalClassificationFromUi();return;}
-    const confirmed=await window.APP_CONFIRMATION?.ask?.({title:'Fijar clasificación histórica',message:`Se agregarán snapshots a ${preview.affectedExercises} ejercicio(s) de ${preview.affectedSessions} sesión(es). No se cambiarán series, cargas ni repeticiones.`,confirmLabel:'Aplicar',cancelLabel:'Cancelar'});
+    const confirmed=await window.APP_CONFIRMATION?.ask?.({title:'Fijar clasificación histórica',message:`Se fijará la clasificación de ${preview.affectedExercises} ejercicio(s) en ${preview.affectedSessions} sesión(es). No se cambiarán series, cargas ni repeticiones.`,confirmLabel:'Aplicar',cancelLabel:'Cancelar'});
     if(!confirmed)return;
     const result=await applyHistoricalClassificationMigration(preview.id);
     if(!result.ok){setHistoricalClassificationUi(result.message||'No se pudo aplicar la migración.',{canApply:result.reason!=='changed-since-preview'});return;}

@@ -177,6 +177,9 @@ assert.equal(repeatedUndo.reason,'already-undone');
 const editedSaved=savedUndoWorkout.updateQuickSetPayload({date:'2026-06-22',exerciseId:savedUndoState.currentExerciseId,setId:secondSavedUndo.set.id,reps:6,weight:65});
 assert.equal(editedSaved.ok,true);
 assert.equal(savedUndoWorkout.undoSavedQuickSetPayload(secondSavedUndo.undoReceipt).reason,'set-edited','Una serie editada no debe eliminarse silenciosamente');
+const sameValueSaved=savedUndoWorkout.saveQuickSetPayload({date:'2026-06-22',exerciseId:savedUndoState.currentExerciseId,reps:5,weight:70});
+assert.equal(savedUndoWorkout.updateQuickSetPayload({date:'2026-06-22',exerciseId:savedUndoState.currentExerciseId,setId:sameValueSaved.set.id,reps:5,weight:70}).ok,true);
+assert.equal(savedUndoWorkout.undoSavedQuickSetPayload(sameValueSaved.undoReceipt).reason,'set-edited','Deshacer debe detectar una edicion aunque los valores finales coincidan');
 assert.equal(quickWorkout.updateGymSettings({restTimerEnabled:true,restSeconds:75,hapticEnabled:false}).restSeconds,75);
 assert.equal(JSON.parse(quickStore.get(quickWorkout.keys.workoutSessions))[0].routine.name, 'Torso A');
 const manualExercise = quickWorkout.addManualExercisePayload({

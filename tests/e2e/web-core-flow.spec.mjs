@@ -78,6 +78,21 @@ test('Experimental activado incorpora eventos futuros una sola vez',async({page}
   expect(new Set(ids).size).toBe(ids.length);
 });
 
+test('Experimental incorpora un evento posterior del mismo dia sin recalcular datos anteriores',async({page})=>{
+  await clean(page,'/index.html?module=more&view=experimental');
+  await page.locator('#experimentalFeaturesEnabled').check();
+  const state=await page.evaluate(()=>{
+    const preferences=JSON.parse(localStorage.getItem('protocolo_0_100_ui_preferences_v1'));
+    const enabledAt=new Date(preferences.experimentalFeaturesEnabledAt),savedAt=new Date(enabledAt.getTime()+1000).toISOString(),date=enabledAt.toISOString().slice(0,10);
+    window.APP_REPOSITORIES.protocol.set('protocolo_0_100_tracker_v1',[{date,day:1,score:80,readingMins:25,savedAt}]);
+    return{date};
+  });
+  await expect.poll(()=>page.evaluate(()=>JSON.parse(localStorage.getItem('protocolo_0_100_coin_ledger_v1')||'[]').filter(item=>item.id.startsWith('day-')).length)).toBe(1);
+  const ledger=await page.evaluate(()=>JSON.parse(localStorage.getItem('protocolo_0_100_coin_ledger_v1')));
+  expect(ledger.some(item=>item.id===`day-${state.date}`)).toBe(true);
+  expect(ledger.every(item=>item.occurredAt===undefined)).toBe(true);
+});
+
 test('Progreso renderiza bajo demanda e invalida por dominio',async({page})=>{
   await clean(page,'/index.html?module=progress&view=overview');
   let state=await page.evaluate(()=>window.PROGRESS_VIEW.state());

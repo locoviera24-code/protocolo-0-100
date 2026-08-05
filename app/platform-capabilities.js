@@ -1,8 +1,11 @@
 (function(global){
   'use strict';
 
+  function hasTrustedAndroidBridge(){
+    return typeof global.AndroidBridge?.getAppInfo==='function';
+  }
   function runtimeMode(){
-    if(global.AndroidBridge||global.AndroidUsage)return'android-apk';
+    if(hasTrustedAndroidBridge())return'android-apk';
     if(global.matchMedia?.('(display-mode: standalone)').matches||global.navigator?.standalone===true)return'standalone-pwa';
     return'browser';
   }
@@ -23,5 +26,5 @@
     };
   }
 
-  global.APP_PLATFORM_CAPABILITIES=Object.freeze({runtimeMode,detect});
+  global.APP_PLATFORM_CAPABILITIES=Object.freeze({hasTrustedAndroidBridge,runtimeMode,detect});
 })(window);

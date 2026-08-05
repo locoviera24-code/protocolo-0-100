@@ -6,8 +6,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
   "required": [
     {
       "url": "./advanced-features.js",
-      "bytes": 64663,
-      "sha256": "743b9d26e1d2f299a2caac0ce33fcda98b9a59e90a0c107f3f1b4589a6518f60"
+      "bytes": 65195,
+      "sha256": "caf928968b96c00339a7b133efcdc17118f82e819acea8763aae7660d5b27394"
     },
     {
       "url": "./app-version.js",
@@ -51,8 +51,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     },
     {
       "url": "./app/platform-capabilities.js",
-      "bytes": 1154,
-      "sha256": "df12295f4c7c2d196f4807bfc60133f5c6b643079ab9737cdd7aaa6823bc9e11"
+      "bytes": 1269,
+      "sha256": "70a5752ac92959aa084461a7c7ee856ccba15250fec0755451460e34cb62e7f1"
     },
     {
       "url": "./build-info.json",
@@ -141,8 +141,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     },
     {
       "url": "./index.html",
-      "bytes": 331488,
-      "sha256": "277478d7663cb9f4ce482cbcf5afc3a79e30d5346ad936e8db2bfea05820f6f2"
+      "bytes": 331548,
+      "sha256": "43b5ae428dc849c92c4310d246e38f69d0f71f4b74c502272f5446bfec830c45"
     },
     {
       "url": "./nutrition-data.js",
@@ -326,8 +326,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     },
     {
       "url": "./workout-features.js",
-      "bytes": 162919,
-      "sha256": "b08cf5a0a85d8d3d765b35a94d8a66d96a7c1b714a573f95d551f14a316a3b1a"
+      "bytes": 163102,
+      "sha256": "df2ceb3ad6480cd43fe9327942976039ad465f57c67e0da05ce316bae8a3be98"
     },
     {
       "url": "./workout-metrics.js",

@@ -27,7 +27,8 @@ assert.equal(standalone.installationStatus,'running-installed');
 const ios=capabilities({navigator:{standalone:true}});
 assert.equal(ios.runtimeMode,'standalone-pwa');
 
-const apk=capabilities({AndroidBridge:{}});
+assert.equal(capabilities({AndroidBridge:{}}).runtimeMode,'browser','Un objeto global sin el contrato nativo no identifica el APK');
+const apk=capabilities({AndroidBridge:{getAppInfo:()=>'{"versionName":"2.7.0"}'}});
 assert.equal(apk.runtimeMode,'android-apk');
 assert.equal(apk.installationStatus,'running-installed');
 assert.equal(apk.workoutWidget,'available');

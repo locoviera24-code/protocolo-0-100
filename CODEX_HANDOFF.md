@@ -87,8 +87,8 @@ Gate D completado el 2026-08-04:
   inventario y hash. La prueba servida confirmo rutas profundas, modulos,
   service worker, navegacion offline, cero 404 y cero errores de pagina o
   consola.
-- La matriz Playwright final aprobo 418 escenarios y omitio 14: Android
-  Chromium 142/2, iPhone WebKit 137/7 y escritorio Chromium 139/5. Axe aporta
+- La matriz Playwright final aprobo 421 escenarios y omitio 14: Android
+  Chromium 143/2, iPhone WebKit 138/7 y escritorio Chromium 140/5. Axe aporta
   33 escenarios dentro de ese total y paso sin exclusiones. Las omisiones son
   deliberadas por plataforma, no fallos funcionales.
 - La matriz detecto una carrera previa en Diagnostico: respuestas asincronas
@@ -99,13 +99,20 @@ Gate D completado el 2026-08-04:
   reactivacion controlada, aislamiento de expulsados, invitaciones limitadas y
   capacidad concurrente. Los `PERMISSION_DENIED` del log son negativas
   esperadas por la suite. En Windows se fijo `en_US` solo para la JVM.
+- La auditoria final corrigio cuatro defectos comprobados: deteccion APK basada
+  en un bridge incompleto, Deshacer sobre una serie editada sin cambios de
+  valor, eventos experimentales posteriores en el mismo dia de activacion y
+  lenguaje tecnico residual en vistas normales. Cada correccion tiene una
+  prueba de regresion.
 - Gradle 8.10.2 genero APK debug y release de prueba con Java 21 y Android 35.
   Ambos declaran Android 33 / `2.7.0`, verifican firma v1/v2 y conservan paridad
-  de assets. Debug: 1.846.403 bytes, SHA-256
-  `D1FFAFFD87277A538C3F645D8A886BE18787BC7C3E92A7210C0AD4F97490E954`.
-  Release de prueba: 1.517.067 bytes, SHA-256
-  `4E8090CCD934C969C7B1EEE7388D2C252F25C6C02060485D297288FC74F3A981`.
+  de assets. Debug: 1.947.497 bytes, SHA-256
+  `F07C6731E6DB4484AFE64B33709D8E10AFF2FABBB57A3B1E7E5F613AAF24DE3D`.
+  Release de prueba: 1.516.563 bytes, SHA-256
+  `BFBF728A6EF88D976BFEAA0B41F37186E2902CD5B36DBFE56CCA77ED896D063A`.
   La firma release es efimera de validacion y no es un artifact distribuible.
+- El ZIP web local mide 541.207 bytes y su SHA-256 es
+  `3D6F30C629D522E68A1FB94D2B425B197D48875DFFAF50131F6504C93A3A8ED0`.
 - Las cinco capturas auditables estan en
   `docs/screenshots/web-core-flow-p0/` y quedan fuera del precache y del APK.
   No hubo hardware fisico disponible; todas las comprobaciones de
