@@ -88,8 +88,15 @@ Resultado local del 2026-08-05:
 - unitarias Android, debug, release firmado de prueba y paridad: aprobados;
 - build `2.7.0+94`, Android `versionCode 38`, backup schema 3 y stable 89.
 
-El gate remoto posterior al push reescrito debe sustituir hashes y run
-historicos del PR por los artifacts producidos desde el HEAD final.
+El gate remoto posterior al push reescrito aprobo en el run `31030685854`,
+intento 1, en 21m08s. Repitio los 397 escenarios funcionales, 33 Axe, 14
+omisiones deliberadas, Firestore Emulator, artifact/offline, Android
+debug/release y paridad. SHA-256 de los artifacts descargados: web ZIP
+`8D027951784745212803EED5A9F6E4AC9177D7C0F32A75B86CD5E7AEC31D91DE`,
+Android ZIP
+`B2AF63353EA20F88284C2E0EE4EC7C9D9CC08EA03F5631A13D9D0147C746D16F` y
+APK debug contenido
+`9DF971213C28D7CB92B21BA1F72210B9ED438D99D298FE16522DD8A5827999BB`.
 
 Las pruebas de launcher, reinicio real, instalacion sobre APK anterior,
 notificacion en bloqueo y comportamiento OEM siguen pendientes en

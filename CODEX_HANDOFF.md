@@ -60,9 +60,19 @@ Gate local posterior al rebase, completado el 2026-08-05:
 - Paridad web/assets Android: exacta. `.github/stable-release.json` permanece
   en build 89 y no se publico ningun artifact estable.
 
-Pendiente: gate remoto final y todas las pruebas fisicas de instalacion,
-launcher, reinicio, cierre forzado, bloqueo, permiso/OEM y Gym Party entre
-dispositivos. No marcar el PR #1 como listo ni fusionarlo antes de completarlas.
+Gate remoto posterior al rebase: run `31030685854`, intento 1, aprobado en
+21m08s. Repitio contratos, 397 escenarios funcionales, 33 Axe, 14 omisiones
+deliberadas, Firestore Emulator, artifact/offline, Android debug/release y
+paridad. Artifact web ZIP: 556.373 bytes, SHA-256
+`8D027951784745212803EED5A9F6E4AC9177D7C0F32A75B86CD5E7AEC31D91DE`;
+artifact Android ZIP: 1.856.915 bytes, SHA-256
+`B2AF63353EA20F88284C2E0EE4EC7C9D9CC08EA03F5631A13D9D0147C746D16F`;
+APK debug contenido: 1.905.901 bytes, SHA-256
+`9DF971213C28D7CB92B21BA1F72210B9ED438D99D298FE16522DD8A5827999BB`.
+
+Siguen pendientes todas las pruebas fisicas de instalacion, launcher, reinicio,
+cierre forzado, bloqueo, permiso/OEM y Gym Party entre dispositivos. No marcar
+el PR #1 como listo ni fusionarlo antes de completarlas.
 
 ## Linea base fusionada: Web Core Flow P0
 
