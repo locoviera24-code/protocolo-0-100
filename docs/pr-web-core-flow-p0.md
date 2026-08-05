@@ -134,7 +134,7 @@ de importacion, idempotencia, widget, notificacion, Gradle y paridad.
 
 ## Rollback
 
-Revertir los cuatro commits de esta rama restaura la UX del build 89. No se
+Revertir los commits de esta rama restaura la UX del build 89. No se
 requiere migracion inversa porque no cambiaron schemas ni claves. El canal
 estable permanece en build 89 y no se publico desde esta rama.
 
