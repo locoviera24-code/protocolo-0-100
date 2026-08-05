@@ -698,7 +698,7 @@ foreach ($contract in @(
     'migrateExerciseLibrary',
     'exerciseLibraryEditor',
     'handleExerciseLibraryAction',
-    'Registrar serie'
+    'Guardar serie'
 )) {
     Assert-True ($workout.Contains($contract)) "Falta contrato web gym/widget: $contract"
 }

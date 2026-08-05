@@ -9,6 +9,7 @@ const equipmentSource = await readFile(new URL('../gym/equipment.js', import.met
 const loadGuidanceSource = await readFile(new URL('../gym/workout-load-guidance.js', import.meta.url), 'utf8');
 const metricsSource = await readFile(new URL('../workout-metrics.js', import.meta.url), 'utf8');
 const anomalySource = await readFile(new URL('../gym/anomaly-detector.js', import.meta.url), 'utf8');
+const quickActionsSource = await readFile(new URL('../gym/workout-quick-actions.js', import.meta.url), 'utf8');
 const nativeImporterSource = await readFile(new URL('../gym/native-workout-importer.js', import.meta.url), 'utf8');
 const rankingSource = await readFile(new URL('../workout-ranking.js', import.meta.url), 'utf8');
 const storeSource = await readFile(new URL('../workout-store.js', import.meta.url), 'utf8');
@@ -77,6 +78,7 @@ function createContext(preloaded = {}, today = '2026-06-22') {
   vm.runInContext(planSource, vmContext, {filename: 'workout-plan.js'});
   vm.runInContext(metricsSource, vmContext, {filename: 'workout-metrics.js'});
   vm.runInContext(anomalySource, vmContext, {filename: 'gym/anomaly-detector.js'});
+  vm.runInContext(quickActionsSource, vmContext, {filename: 'gym/workout-quick-actions.js'});
   vm.runInContext(nativeImporterSource, vmContext, {filename: 'gym/native-workout-importer.js'});
   vm.runInContext(uiSource, vmContext, {filename: 'workout-ui.js'});
   vm.runInContext(rankingSource, vmContext, {filename: 'workout-ranking.js'});
@@ -330,7 +332,7 @@ assert.equal(workout.importWidgetStateFromAndroid({
 assert.equal(JSON.parse(store.get(workout.keys.workoutSessions))[0].id, 'workout_android_test');
 assert.equal(JSON.parse(store.get(workout.keys.exerciseHistory))['press-banca'].lastWeight, 60);
 
-const nativeMutation={id:'native_mutation_test',type:'save_set',sessionId:'native-queue-session',exerciseId:'press-banca',setId:'native-queue-set',privateImportState:'pending',payload:{date:'2026-06-22',dayKey:'monday',weekday:'Lunes',routine:{name:'Torso A'},startedAt:'2026-06-22T13:00:00.000Z',currentExerciseIndex:0,exercise:{id:'press-native',exerciseId:'press-banca',name:'Press de banca',muscle:'Pecho'},set:{id:'native-queue-set',setNumber:1,reps:8,weight:70,weightKg:70,measurementMode:'reps',loadMode:'total',equipmentId:'machine',setType:'working',completed:true}}};
+const nativeMutation={id:'11111111-1111-4111-8111-111111111111',type:'save_set',sessionId:'native-queue-session',exerciseId:'press-banca',setId:'native-queue-set',privateImportState:'pending',payload:{date:'2026-06-22',dayKey:'monday',weekday:'Lunes',routine:{name:'Torso A'},startedAt:'2026-06-22T13:00:00.000Z',currentExerciseIndex:0,exercise:{id:'press-native',exerciseId:'press-banca',name:'Press de banca',muscle:'Pecho'},set:{id:'native-queue-set',setNumber:1,reps:8,weight:70,weightKg:70,measurementMode:'reps',loadMode:'total',equipmentId:'machine',setType:'working',completed:true}}};
 const nativeAcks=[];context.AndroidBridge={acknowledgeNativeWorkoutMutation:(...args)=>{nativeAcks.push(args);return true;}};
 const firstNativeImport=await workout.importNativeWorkoutMutationsFromAndroid({schemaVersion:1,mutations:[nativeMutation]});
 assert.equal(firstNativeImport.ok,true);assert.equal(firstNativeImport.imported,1);

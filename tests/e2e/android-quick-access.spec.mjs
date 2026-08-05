@@ -7,9 +7,9 @@ test.beforeEach(async({page})=>{
 
 test('la web explica el requisito APK sin mostrar diagnostico tecnico',async({page})=>{
   await page.goto('/index.html?module=gym&view=routine');
-  await expect(page.locator('#workoutQuickAccessTitle')).toContainText('Acceso rápido en Android');
+  await expect(page.locator('#workoutQuickAccessTitle')).toContainText('Acceso rápido durante el entrenamiento');
   await expect(page.locator('#workoutWidgetInstallStatus')).toContainText('Requiere el APK Android');
-  await expect(page.locator('#workoutLockScreenStatus')).toContainText('Requiere el APK Android');
+  await expect(page.locator('#workoutLockScreenStatus')).toContainText('En desarrollo para el APK Android');
   await expect(page.locator('#addWorkoutWidgetBtn')).toBeDisabled();
   await expect(page.locator('#enableWorkoutControlsBtn')).toBeDisabled();
   await expect(page.locator('#workoutConfigPanel')).not.toContainText('Puente Android');
@@ -20,6 +20,7 @@ test('el APK simulado instala y activa controles solo desde acciones explicitas'
   await page.addInitScript(()=>{
     window.__quickAccessCalls={pin:0,permission:0,saves:0,states:[]};
     window.AndroidBridge={
+      getAppInfo:()=>JSON.stringify({versionName:'2.7.0',versionCode:38}),
       getWorkoutQuickAccessCapabilities:()=>JSON.stringify({platform:'android-apk',widgetInstances:0,pinWidgetSupported:true,notificationPermission:'prompt'}),
       getWorkoutWidgetStatus:()=>JSON.stringify({code:'widget-not-added',instances:0,notificationCode:'waiting-for-session',queue:{pending:0,rejected:0}}),
       requestPinWorkoutWidget:()=>{window.__quickAccessCalls.pin++;return JSON.stringify({ok:true,code:'pin-requested'});},
@@ -50,11 +51,12 @@ test('el APK simulado instala y activa controles solo desde acciones explicitas'
 test('el registro mantiene paso de 0,5, ofrece paso rapido y cambia ejercicio directamente',async({page})=>{
   await page.setViewportSize({width:390,height:844});
   await page.goto('/index.html?module=gym&view=train');
-  expect(await page.locator('#gymStats').evaluate(element=>getComputedStyle(element).display)).toBe('grid');
+  await expect(page.locator('.gymSummaryDetails')).not.toHaveAttribute('open','');
   const start=page.locator('#startTodayWorkoutBtn');
-  if(await start.isVisible())await start.click();
+  if(await start.isVisible()&&await start.isEnabled())await start.click();
   const exercise=page.locator('#quickExerciseSelect');
   await expect(exercise).toBeVisible();
+  await expect(exercise).toBeEnabled();
   await exercise.selectOption({label:'Press de banca'});
   await expect(exercise.locator('option:checked')).toHaveText('Press de banca');
 
