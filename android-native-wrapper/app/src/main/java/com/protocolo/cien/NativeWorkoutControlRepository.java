@@ -337,7 +337,7 @@ public final class NativeWorkoutControlRepository {
 
     private static String clientVersion(JSONObject widgetState) {
         String explicit = widgetState == null ? "" : widgetState.optString("clientVersion", "");
-        return explicit.matches("^\\d+\\.\\d+\\.\\d+\\+\\d+$") ? explicit : "2.7.0+93";
+        return explicit.matches("^\\d+\\.\\d+\\.\\d+\\+\\d+$") ? explicit : BuildConfig.VERSION_NAME + "+" + BuildConfig.WEB_BUILD;
     }
 
     private static String comparisonKey(JSONObject widgetState, String exerciseId, JSONObject quick) {

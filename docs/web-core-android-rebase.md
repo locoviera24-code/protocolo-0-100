@@ -1,64 +1,104 @@
-# Rebase de Android Quick Access sobre Web Core Flow P0
+# Integracion de Android Quick Access con Web Core Flow P0
 
-Web Core Flow P0 define el contrato canónico en
-`gym/workout-quick-actions.js`. La rama `codex/android-quick-access-v1` sigue
-separada y no fue fusionada ni modificada durante este bloque.
+Estado: rebase completado sobre `main` `569cb591`. La rama Android conserva sus
+commits funcionales y adopta el contrato publico definido por
+`gym/workout-quick-actions.js`.
 
-## Diferencias comprobadas
+## Contrato resultante
 
-| Web Core schema 1 | Rama Android actual | Adaptación requerida |
-| --- | --- | --- |
-| `actionType` | reducer Java recibe acciones Android crudas y la cola usa `type` | Producir/leer `actionType` en el borde nativo. |
-| `UNDO_SET` | `UNDO_LAST_SET` y cola `undo_set` | Resolver el `setId` exacto y emitir `UNDO_SET`. |
-| `SAVE_SET` | cola `save_set` con un payload nativo amplio | Envolver el payload válido sin mantener otro schema público. |
-| `ADJUST_WEIGHT.deltaKg` | reducer deriva incrementos del intent y del estado del widget | Convertir a kg antes de crear el envelope. |
-| `COMPLETE_DISTANCE_SET` | no está implementado por el reducer revisado | Añadirlo o responder `UNSUPPORTED_ACTION`. |
-| Nueve acciones públicas | Android añade `SELECT_EXERCISE` y `TOGGLE_WEIGHT_STEP` | Mantenerlas como comandos locales de UI; no presentarlas como mutaciones Workout schema 1. |
-| códigos estables del contrato | resultados nativos como `saved`, `duplicate-delivery` y errores de texto | Mapear a `OK`, `DUPLICATE_MUTATION` u otro código estable. |
+Existe un solo contrato publico: Workout Quick Actions schema 1.
 
-La cola `WorkoutMutationQueue` ya aporta durabilidad, límite, retención y
-confirmación parcial. `gym/native-workout-importer.js` ya protege `setId`, pero
-actualmente valida `save_set`/`undo_set`. Ambos deben adaptarse en el mismo
-commit para que no convivan dos schemas de mutación.
+- campo discriminador: `actionType`, nunca `type` para escrituras nuevas;
+- guardado: `SAVE_SET`;
+- compensacion: `UNDO_SET` con el `setId` exacto;
+- peso: kg canonico;
+- tiempo: segundos;
+- distancia: metros;
+- identidad: UUID v4 y timestamp ISO 8601 UTC;
+- concurrencia: `expectedRevision` entero no negativo o `null`;
+- seguridad: payload maximo de 16 KiB UTF-8 y rechazo recursivo de
+  `__proto__`, `prototype` y `constructor`.
 
-## Conflictos previsibles
+`SELECT_EXERCISE` y `TOGGLE_WEIGHT_STEP` siguen siendo comandos locales de la
+interfaz Android. No se escriben en la cola como acciones publicas.
 
-- `workout-features.js`;
-- `index.html`;
-- `styles/gym.css`;
-- `gym/native-workout-importer.js`;
-- lista de assets de `scripts/sync-web-assets.ps1`;
-- pruebas Workout, widget y E2E;
-- documentación y `CODEX_HANDOFF.md`.
+## Transporte nativo
 
-Los Java del reducer, repositorio, cola y notificación no existen en `main`, por
-lo que su conflicto será semántico más que textual.
+`WorkoutMutationQueue` conserva internamente dos niveles:
 
-## Orden recomendado
+1. `action`: envelope schema 1 que puede leer la WebView;
+2. `transport`: estado de importacion, deduplicacion, ventana de Deshacer,
+   destinos y errores de reintento.
 
-1. Fusionar Web Core Flow P0 en `main` después de aprobar su PR.
-2. Rebasar `codex/android-quick-access-v1` sobre ese `main`.
-3. Conservar la UX web y resolver manualmente los archivos compartidos.
-4. Adaptar productores Java, cola e importer al schema 1 en un único bloque.
-5. Eliminar el schema público paralelo en minúsculas; permitir adaptadores solo
-   al leer mutaciones legacy ya persistidas.
-6. Regenerar assets Android y repetir todos los gates.
+El bridge expone solamente `action`. Los metadatos internos no forman otro
+schema de Workout. `workoutSessions` sigue siendo la fuente canonica; la cola
+solo transporta cambios pendientes y Gym Party sincroniza despues de la
+importacion privada existente.
 
-## Pruebas que Android debe repetir
+## Compatibilidad legacy
 
-- cada acción y las tres fuentes;
-- UUID/redelivery/doble toque;
-- revisión esperada;
-- confirmación parcial de la cola;
-- `SAVE_SET` y `UNDO_SET` idempotentes;
-- kg/lb, peso corporal, lastre, asistencia, tiempo, distancia y lateralidad;
-- cierre de proceso, reinicio y cola parcialmente corrupta;
-- widget compacto/estándar/expandido;
-- notificación privada y pública;
-- importación a `workoutSessions` sin duplicados;
-- backup schema 3, IndexedDB/localStorage y Gym Party posterior;
-- Android debug/release y paridad de assets;
-- validación física pendiente en dispositivo real.
+`WorkoutQuickActionContract.adaptLegacy()` y
+`NATIVE_WORKOUT_IMPORTER.adaptLegacy()` aceptan temporalmente:
 
-No se debe conservar un schema web y otro Android como contratos igualmente
-canónicos. El adaptador legacy es temporal; el schema 1 es la frontera pública.
+- `save_set`;
+- `undo_set`;
+- `UNDO_LAST_SET`;
+- registros antiguos con `type`.
+
+La adaptacion ocurre en memoria. Leer la cola no la reescribe, una entrada
+corrupta no descarta las sanas y la confirmacion sigue siendo parcial por
+`mutationId`. Ningun productor nuevo crea esos formatos.
+
+El adaptador podra eliminarse solo despues de publicar una version estable que
+importe colas legacy, mantenerla durante al menos un ciclo estable adicional y
+comprobar en diagnostico manual que no quedan entradas antiguas. Eliminarlo
+nunca debe borrar mutaciones pendientes.
+
+## Conflictos resueltos durante el rebase
+
+- `workout-features.js`: conserva Inicio/Gym de Web Core e integra bridge,
+  notificacion, timer e importador Android.
+- `index.html`, `styles/gym.css` y `styles/responsive.css`: conserva el flujo
+  Entrenar primero y los layouts moviles de Web Core junto a los controles
+  nativos.
+- `scripts/sync-web-assets.ps1`: conserva modulos Web Core y agrega los modulos
+  Android que se empaquetan.
+- precache y assets Android: se regeneran desde la raiz web; no se editan como
+  copias independientes.
+- README, handoff y checklist: distinguen build 94 beta, stable 89 y pruebas
+  fisicas pendientes.
+
+## Pruebas repetidas
+
+- nueve acciones y tres fuentes;
+- schema/payload futuro, UUID, UTC, revision y resultados estables;
+- limite UTF-8, valores no finitos, ciclos y prototype pollution;
+- cola vacia, parcialmente corrupta, orden, retencion y confirmacion parcial;
+- redelivery, doble toque y dos guardados deliberados;
+- adaptacion legacy sin doble aplicacion ni escritura durante la lectura;
+- `SAVE_SET` y `UNDO_SET` idempotentes sobre `workoutSessions`;
+- contratos Web Core, artifact web, Android debug/release y paridad de assets.
+
+Resultado local del 2026-08-05:
+
+- Playwright: 397 funcionales + 33 Axe = 430 aprobadas; 14 omisiones
+  deliberadas por plataforma;
+- Firestore Emulator: aprobado;
+- artifact web de 88 recursos, offline y smoke servido: aprobados;
+- unitarias Android, debug, release firmado de prueba y paridad: aprobados;
+- build `2.7.0+94`, Android `versionCode 38`, backup schema 3 y stable 89.
+
+El gate remoto posterior al push reescrito debe sustituir hashes y run
+historicos del PR por los artifacts producidos desde el HEAD final.
+
+Las pruebas de launcher, reinicio real, instalacion sobre APK anterior,
+notificacion en bloqueo y comportamiento OEM siguen pendientes en
+`docs/physical-test-checklist.md`.
+
+## Rollback
+
+La referencia inmutable previa al rebase es
+`backup/android-quick-access-v1-pre-web-core-9464faa`, que apunta a
+`9464faaad3d7bd81db2d71fc6aabf40aeb4dc7d5`. Tambien se pueden revertir solo
+los commits de integracion posteriores al rebase. Ninguna opcion modifica
+`main`, Web Core build 90, datos Workout ni la cola legacy.

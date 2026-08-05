@@ -421,13 +421,13 @@
         else if(typeof window.AndroidBridge?.getNativeWorkoutControlData==='function')payload=JSON.parse(String(window.AndroidBridge.getNativeWorkoutControlData()||'{}'));
         else return{ok:false,reason:'bridge-unavailable'};
       }
-      const mutations=(Array.isArray(payload?.mutations)?payload.mutations:[]).filter(item=>item&&(item.status?item.status==='pending':item.privateImportState!=='imported'));
+      const mutations=(Array.isArray(payload?.mutations)?payload.mutations:[]).filter(Boolean);
       if(!mutations.length)return{ok:true,imported:0,duplicates:0,invalid:0};
       let nextSessions=sessions(),nextHistory=history();
       const imported=[],duplicates=[],invalid=[],affected=new Set(),undoFallbacks=new Map();
       for(const mutation of mutations){
         const result=window.NATIVE_WORKOUT_IMPORTER?.apply?.(nextSessions,mutation,{protectSet:protectNativeSet});
-        if(!result||result.status==='invalid'){invalid.push({mutation,error:result?.error||'importer-unavailable'});continue;}
+        if(!result||result.status==='invalid'){invalid.push({mutation,error:`${result?.errorCode||'INVALID_PAYLOAD'}:${result?.error||'importer-unavailable'}`});continue;}
         if(result.status==='duplicate'){duplicates.push(mutation);continue;}
         nextSessions=result.sessions;imported.push(mutation);affected.add(result.sessionId);
         if(result.operation==='undo')undoFallbacks.set(`${result.sessionId}|${result.exerciseId}`,result.previousHistory||null);
@@ -471,7 +471,7 @@
     })().catch(error=>{
       try{
         const payload=payloadOverride||JSON.parse(String(window.AndroidBridge?.getPendingWorkoutMutations?.()||window.AndroidBridge?.getNativeWorkoutControlData?.()||'{}'));
-        (payload.mutations||[]).filter(item=>item&&(item.status?item.status==='pending':item.privateImportState!=='imported')).forEach(item=>window.AndroidBridge?.acknowledgeNativeWorkoutMutation?.(String(item.mutationId||item.id||''),'error',String(error?.message||'error').slice(0,300)));
+        (payload.mutations||[]).filter(Boolean).forEach(item=>window.AndroidBridge?.acknowledgeNativeWorkoutMutation?.(String(item.mutationId||item.id||''),'error',String(error?.message||'error').slice(0,300)));
       }catch{}
       window.APP_ERROR_BOUNDARY?.capture?.(error,{source:'native-workout-import'});
       return{ok:false,reason:'write-failed'};
@@ -2262,6 +2262,7 @@
     });
     return {
       schemaVersion:3,
+      clientVersion:`${window.APP_VERSION_INFO?.version||'2.7.0'}+${Number(window.APP_VERSION_INFO?.build)||0}`,
       featureFlags:window.APP_FEATURE_FLAGS?.all?.()||{schemaVersion:1,nativeWorkoutControlsV1:false,lockScreenWorkoutControls:false,nativeRestTimer:false,multiPartyWorkoutSharing:false},
       nativeWorkoutSettings:{
         restSeconds:Math.max(15,Number(s.restSeconds)||90),

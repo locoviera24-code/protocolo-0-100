@@ -16,7 +16,7 @@ PWA y APK Android para medir habitos, atencion, actividad fisica y nutricion con
 
 ## Navegacion y diseno
 
-La version actual `v2.7.0` (build web `93`, Android `37`) usa una barra inferior movil con cinco destinos: **Inicio**,
+La version actual `v2.7.0` (build web `94`, Android `38`) usa una barra inferior movil con cinco destinos: **Inicio**,
 **Gym**, **Nutricion**, **Progreso** y **Mas**. En escritorio usa una barra
 lateral compacta. Gym Party se abre desde **Gym > Grupo**, desde un acceso
 discreto en Inicio o mediante un enlace `gymPartyCode`; ya no ocupa un boton
@@ -529,11 +529,10 @@ La PWA/GitHub Pages no puede crear widgets ni controles de pantalla de bloqueo.
 Estas funciones viven en el APK y usan `AppWidgetProvider`, `AppWidgetManager`,
 `RemoteViews`, `PendingIntent` y una notificacion privada de entrenamiento.
 
-La prerelease Android de este bloque es **2.7.0 beta build 93**. El APK release
-firmado se descarga desde [beta 7](https://github.com/locoviera24-code/protocolo-0-100/releases/download/v2.7.0-native-controls-v1-beta.7/protocolo-0-100-v2.7.0-release.apk).
-Su SHA-256 es
-`94ED3476543B71C2642A1949E105C83D8BF50EF92EBB4E3A42780C4653DBA27C`.
-No reemplaza el canal estable ni mueve `baseline-stable-2.7`.
+La integracion actual de la rama es **2.7.0 beta build 94**, Android
+`versionCode 38`. Todavia no tiene un APK publico nuevo: beta 7 corresponde al
+build 93 anterior y queda solo como antecedente. Ninguna beta reemplaza el
+canal estable ni mueve `baseline-stable-2.7`.
 
 Desde **Gym > Acceso rapido durante el entrenamiento** se puede tocar **Agregar
 widget**. Cuando el launcher admite `requestPinAppWidget`, Android muestra su
@@ -554,10 +553,10 @@ comparable y su maximo historico comparable. Peso corporal, lastre, asistencia,
 tiempo y distancia muestran su semantica correspondiente.
 
 El widget y la notificacion reutilizan `WorkoutQuickActionReducer`. Cada serie
-produce una mutacion durable con UUID antes de actualizar la interfaz. El
+produce una accion durable `SAVE_SET` del contrato publico schema 1 antes de actualizar la interfaz. El
 WebView la incorpora una sola vez a `workoutSessions` y confirma el ID. Un doble
 toque o una reentrega de `PendingIntent` no duplica la serie; durante diez
-segundos se puede crear un Deshacer compensatorio incluso con la WebView
+segundos se puede crear un `UNDO_SET` compensatorio dirigido al `setId` exacto incluso con la WebView
 cerrada. **Guardado en el dispositivo** no se presenta como sincronizado: Gym
 Party se prepara despues de la importacion privada.
 

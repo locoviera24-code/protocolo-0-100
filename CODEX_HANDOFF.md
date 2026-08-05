@@ -1,10 +1,10 @@
 # CODEX_HANDOFF - Protocolo 0->100
 
-Ultima actualizacion: 2026-07-30
+Ultima actualizacion: 2026-08-05
 Rama esperada: `codex/android-quick-access-v1`
 Version actual: `2.7.0` (fuente unica: `app-version.json`)
-Android: `versionCode 37`, `versionName "2.7.0"`
-Service worker cache: `protocolo-0-100-pwa-2.7.0-b93`
+Android: `versionCode 38`, `versionName "2.7.0"`
+Service worker cache: `protocolo-0-100-pwa-2.7.0-b94`
 Backup consolidado: `schemaVersion: 3`
 
 Leer primero este archivo y luego `README.md`, `index.html`,
@@ -12,11 +12,62 @@ Leer primero este archivo y luego `README.md`, `index.html`,
 `manifest.webmanifest`, `sw.js`, `firebase/README.md` y los archivos Android
 en `android-native-wrapper/`.
 
-## Trabajo en curso: Web Core Flow P0
+## Integracion actual: Android Quick Access sobre Web Core
 
-Rama: `codex/web-core-flow-p0` desde `main` (`1a9186e`). La version sigue en
-`2.7.0`, build web `90`, Android `versionCode 33` y backup schema 3. El build se
-incremento una sola vez durante el cierre del Gate D.
+`main` `569cb591` ya contiene Web Core Flow P0 build 90. La rama Android fue
+rebasada desde la base antigua `1a9186e`; su estado previo permanece en la rama
+remota inmutable `backup/android-quick-access-v1-pre-web-core-9464faa`, SHA
+`9464faaad3d7bd81db2d71fc6aabf40aeb4dc7d5`.
+
+La integracion usa build web/PWA beta 94, Android `versionCode 38` y backup
+schema 3. Stable permanece en build 89 y no se publico una release nueva.
+
+- `gym/workout-quick-actions.js` schema 1 es el unico contrato publico.
+- Android produce `actionType: SAVE_SET` y `UNDO_SET`, UUID v4, UTC,
+  `expectedRevision`, kg, segundos y metros canonicos.
+- `SELECT_EXERCISE` y `TOGGLE_WEIGHT_STEP` son comandos locales, no mutaciones
+  publicas.
+- `WorkoutMutationQueue` separa `action` de metadatos privados `transport` y
+  el bridge expone solamente el envelope schema 1.
+- El adaptador legacy acepta en memoria `type`, `save_set`, `undo_set` y
+  `UNDO_LAST_SET`; no reescribe la cola durante la lectura ni crea nuevas
+  entradas antiguas.
+- `workoutSessions` sigue siendo la fuente canonica. Gym Party sincroniza solo
+  despues de la importacion privada desde la WebView; no hay Firebase nativo.
+- Tests JVM cubren contrato, cola parcialmente corrupta, orden, retencion,
+  confirmacion parcial, redelivery, doble toque y dos guardados deliberados.
+- Los tres widgets y la notificacion privada conservan -0,5, +0,5, -5, +5,
+  selector directo, ultima carga y maximo comparable.
+
+Gate local posterior al rebase, completado el 2026-08-05:
+
+- Contratos, versionado, manifest, precache, service worker, modulos, datos,
+  backups, Workout, Gym Party, Nutricion, Progreso y accesibilidad estructural:
+  aprobados.
+- Playwright: 397 escenarios funcionales y 33 Axe aprobados, 430 en total;
+  14 omisiones deliberadas por plataforma. Web Core conserva sus 421 casos y
+  Android Quick Access agrega 9, sin reduccion de cobertura.
+- Firestore Emulator con Firebase Tools 15.23.0 y Java 21: aprobado. Los
+  `PERMISSION_DENIED` del log corresponden a casos negativos esperados.
+- Artifact web: 88 recursos, rutas profundas, offline y smoke servido
+  aprobados. ZIP local: 554.203 bytes, SHA-256
+  `829929971F44AA918C094B75A1E8FDE3E48B689802F49FC861C09DEB77D20871`.
+- Gradle 8.10.2 con Java 17 y Android 35: unitarias, APK debug y release de
+  prueba aprobados. Debug: 1.907.726 bytes, SHA-256
+  `C5256050D7FB2557F1802886179323C77EE68FD5F92784C0C6B6CC14DD37205E`.
+  Release efimero: 1.564.773 bytes, firma v1/v2 valida, SHA-256
+  `CAC8512931793FFD8462DC3516417E86537792EADB83DDC4A97C6F68E88795D8`.
+- Paridad web/assets Android: exacta. `.github/stable-release.json` permanece
+  en build 89 y no se publico ningun artifact estable.
+
+Pendiente: gate remoto final y todas las pruebas fisicas de instalacion,
+launcher, reinicio, cierre forzado, bloqueo, permiso/OEM y Gym Party entre
+dispositivos. No marcar el PR #1 como listo ni fusionarlo antes de completarlas.
+
+## Linea base fusionada: Web Core Flow P0
+
+El PR Web Core #2 fue fusionado en `main` y conserva como referencia historica
+la version `2.7.0`, build web `90`, Android `versionCode 33` y backup schema 3.
 
 Gate A completado:
 
@@ -132,7 +183,7 @@ Estado actual:
 - Gym Party implementado como modulo web/PWA opcional.
 - Nutricion local/FDC opcional.
 - Backups JSON `schemaVersion: 3`.
-- PWA offline con cache derivada `protocolo-0-100-pwa-2.7.0-b90` y
+- PWA offline con cache derivada `protocolo-0-100-pwa-2.7.0-b94` y
   actualizacion consentida desde el aviso visible.
 - APK con widget Android y permiso `INTERNET` para Firebase/Gym Party.
 
@@ -194,7 +245,7 @@ Web:
   tombstones, backoff y contexto horario.
 - `gym-party.js`: modulo Gym Party, registro rapido, graficas y edicion/eliminacion de series.
 - `advanced-features.js`: version `2.7.0`, backup/importacion Gym Party.
-- `sw.js`: cache derivada del build 90, actualización atómica consentida y sin mezcla de assets; evita
+- `sw.js`: cache derivada del build 94, actualización atómica consentida y sin mezcla de assets; evita
   persistir una configuracion Firebase obsoleta.
 - `README.md`: documenta Gym Party, demo, Firebase, privacidad y pruebas.
 - `CODEX_HANDOFF.md`: este handoff.
@@ -213,7 +264,7 @@ Android:
 - `android-native-wrapper/app/src/main/java/com/protocolo/cien/MainActivity.java`:
   usa `WebViewAssetLoader` sobre HTTPS interno, bloquea file/content/universal
   access y mixed content, activa Safe Browsing y limita origenes remotos.
-- `android-native-wrapper/app/build.gradle`: `versionCode 33`,
+- `android-native-wrapper/app/build.gradle`: `versionCode 38`,
   `versionName 2.7.0`, firma release solo desde variables seguras.
 - `android-native-wrapper/app/src/main/assets/*`: sincronizado desde raiz.
 
@@ -3834,8 +3885,9 @@ hasta completarla.
 
 ## 82. Controles Android de acceso rapido V1 en rama beta
 
-La rama `codex/android-quick-access-v1` parte de `main` build 89 y no modifica
-la referencia estable `baseline-stable-2.7`. El bloque P0 reemplaza la logica
+La rama `codex/android-quick-access-v1` se origino en `main` build 89 y fue
+rebasada despues sobre Web Core build 90; no modifica la referencia estable
+`baseline-stable-2.7`. El bloque P0 reemplaza la logica
 monolitica del widget por tres responsabilidades nativas:
 
 - `WorkoutQuickActionReducer` procesa las mismas acciones para widget y
@@ -3844,9 +3896,9 @@ monolitica del widget por tres responsabilidades nativas:
 - `WorkoutMutationQueue` mantiene hasta 200 mutaciones durables `pending`,
   `imported`, `rejected` o `undone` con UUID y cuarentena de entradas corruptas.
 
-`NativeWorkoutControlRepository` escribe `save_set` antes de actualizar la UI,
-valida la revision esperada, bloquea doble toque accidental durante 650 ms y
-crea `undo_set` compensatorio durante diez segundos. Una confirmacion tardia
+`NativeWorkoutControlRepository` escribe `SAVE_SET` schema 1 antes de actualizar
+la UI, valida la revision esperada, bloquea doble toque accidental durante 650 ms y
+crea `UNDO_SET` compensatorio durante diez segundos. Una confirmacion tardia
 solo puede importar mutaciones que continuen `pending`, por lo que no reactiva
 una serie ya deshecha. `gym/native-workout-importer.js` aplica y deshace por
 `setId` de forma idempotente; despues de importar prepara la sincronizacion

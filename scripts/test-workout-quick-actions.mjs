@@ -3,7 +3,8 @@ import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
 
 const source=await readFile(new URL('../gym/workout-quick-actions.js',import.meta.url),'utf8');
-const window={APP_VERSION_INFO:{version:'2.7.0',build:90}};
+const appVersion=JSON.parse(await readFile(new URL('../app-version.json',import.meta.url),'utf8'));
+const window={APP_VERSION_INFO:{version:appVersion.version,build:appVersion.build}};
 vm.runInContext(source,vm.createContext({window,TextEncoder,Uint8Array,Date,Math,Number,String,Object,Array,Set,JSON,encodeURIComponent,console}),{filename:'gym/workout-quick-actions.js'});
 const contract=window.WORKOUT_QUICK_ACTIONS;
 const ids=['11111111-1111-4111-8111-111111111111','22222222-2222-4222-8222-222222222222','33333333-3333-4333-8333-333333333333'];
@@ -17,7 +18,7 @@ for(const actionType of contract.ACTION_TYPES){
   for(const sourceName of contract.ACTION_SOURCES){
     const action=contract.createAction({actionType,source:sourceName,sessionId:'session-1',exerciseId:'press',expectedRevision:3,payload:payloads[actionType]},dependencies);
     assert.equal(contract.validateAction(action).ok,true,`${actionType}:${sourceName}`);
-    assert.equal(action.schemaVersion,1);assert.equal(action.payloadVersion,1);assert.equal(action.clientVersion,'2.7.0+90');assert.equal(action.actionId,undefined);
+    assert.equal(action.schemaVersion,1);assert.equal(action.payloadVersion,1);assert.equal(action.clientVersion,`${appVersion.version}+${appVersion.build}`);assert.equal(action.actionId,undefined);
   }
 }
 

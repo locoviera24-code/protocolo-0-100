@@ -1,7 +1,8 @@
 # Controles Android de acceso rapido V1
 
-Estado: beta en `codex/android-quick-access-v1`. No forma parte de la linea
-estable 2.7 hasta que se fusione y publique de forma explicita.
+Estado: beta `2.7.0+94`, Android `versionCode 38`, en
+`codex/android-quick-access-v1`. No forma parte de la linea estable 2.7 hasta
+que se fusione y publique de forma explicita.
 
 ## Experiencia
 
@@ -29,8 +30,8 @@ de `WorkoutControlReceiver`. Antes de ejecutar una accion reclama su
 
 Una serie se guarda en este orden:
 
-1. `WorkoutMutationQueue` persiste una mutacion `save_set` con UUID, fuente,
-   revision esperada y payload.
+1. `WorkoutMutationQueue` persiste una accion `SAVE_SET` schema 1 con UUID,
+   fuente, revision esperada y payload seguro.
 2. Se actualiza el snapshot compatible `state_json`.
 3. Se actualizan widget y notificacion.
 4. El WebView lee solamente mutaciones `pending`.
@@ -46,10 +47,16 @@ separa en una cuarentena nativa y no invalida las entradas sanas.
 ## Deshacer
 
 Durante diez segundos, `WorkoutMutationQueue.latestUndoableSave()` permite
-crear una mutacion compensatoria `undo_set`. Si la serie aun no se importo, la
+crear una mutacion compensatoria `UNDO_SET` dirigida al `setId` exacto. Si la serie aun no se importo, la
 mutacion original queda `undone`; si ya se importo, el compensador elimina el
 `setId` canonico. Una confirmacion tardia no puede reactivar una mutacion
 deshecha.
+
+La cola guarda el envelope publico dentro de `action` y los metadatos de
+transporte dentro de `transport`. El bridge entrega solo el schema 1. Un
+adaptador de lectura acepta temporalmente `save_set`, `undo_set`,
+`UNDO_LAST_SET` y envelopes con `type` ya persistidos; no los vuelve a escribir
+ni permite que productores nuevos los creen.
 
 ## Layouts
 

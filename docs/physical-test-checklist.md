@@ -1,7 +1,7 @@
 # Checklist de pruebas físicas
 
-Referencia objetivo beta: Protocolo 0->100 `2.7.0`, build web/PWA `92`, Android
-`versionCode 36`, rama `codex/android-quick-access-v1`.
+Referencia objetivo beta: Protocolo 0->100 `2.7.0`, build web/PWA `94`, Android
+`versionCode 38`, rama `codex/android-quick-access-v1`.
 
 Este documento separa resultados automatizados de pruebas sobre hardware real.
 No marcar una prueba física por inferencia a partir de Playwright, Gradle o un
@@ -124,11 +124,11 @@ usuarios finales.
 
 ## Registro de hardware de Controles Android V1
 
-Estado al 30 de julio de 2026: **pendiente completo**. En esta ejecucion no hay
+Estado al 5 de agosto de 2026: **pendiente completo**. En esta ejecucion no hay
 un dispositivo Android conectado. Los tres SVG de `docs/previews/` son previews
 de jerarquia y no evidencia de launcher, pantalla de bloqueo o fabricante.
 
-Validacion especifica requerida para build 93:
+Validacion especifica requerida para build 94:
 
 - [ ] Confirmar que -0,5, +0,5, -5 y +5 permanecen visibles sin cambiar de layout.
 - [ ] Tocar el nombre, elegir un ejercicio no adyacente y comprobar el cambio inmediato.

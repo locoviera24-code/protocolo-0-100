@@ -1,6 +1,6 @@
 (function(root){
   'use strict';
-  const info={version:'2.7.0',versionCode:37,build:93,updatedAt:'2026-07-30'};
+  const info={version:'2.7.0',versionCode:38,build:94,updatedAt:'2026-08-05'};
   info.cacheLabel=`${info.version}+${info.build}`;
   info.cacheName=`protocolo-0-100-pwa-${info.version}-b${info.build}`;
   info.apkName=`protocolo-0-100-v${info.version}-release.apk`;

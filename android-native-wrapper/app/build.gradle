@@ -23,7 +23,10 @@ android {
         targetSdk 35
         versionCode appVersion.versionCode as int
         versionName appVersion.version as String
+        buildConfigField 'int', 'WEB_BUILD', String.valueOf(appVersion.build as int)
     }
+
+    buildFeatures { buildConfig true }
 
     signingConfigs {
         release {
