@@ -152,3 +152,10 @@ actualizacion local al candidato final 95/39 conservo la sesion y los datos. La
 fisica queda bloqueada porque el dispositivo de prueba no tenia bloqueo seguro.
 Tiempo, distancia, asistencia, lb, Gym Party entre dispositivos y PWA iPhone
 siguen pendientes o bloqueados por falta de datos/modalidad o hardware.
+
+El gate local final de esta beta aprobo 400 escenarios funcionales, 33 Axe, 43
+contratos estructurales y de dominio, Firestore Emulator, artifact web servido,
+unitarias Android, debug, release firmado de prueba y paridad. Se mantienen 14
+omisiones deliberadas por plataforma. Las dos pruebas que antes dependian del
+dia de ejecucion ahora fijan un lunes y pasaron 18 repeticiones enfocadas antes
+de la matriz completa.

@@ -561,6 +561,10 @@ notificaciones concedido y denegado, controles privados en bloqueo, doble
 toque, Deshacer, temporizador, cierre del proceso, offline y reinicio. Los
 casos bloqueados por hardware se detallan en `docs/physical-test-checklist.md`.
 
+El gate local final del candidato 95/39 aprobo 400 pruebas funcionales, 33 Axe,
+Firestore Emulator, artifact web servido, Android JVM/debug/release firmado de
+prueba y paridad de assets; mantiene 14 omisiones deliberadas por plataforma.
+
 El widget y la notificacion reutilizan `WorkoutQuickActionReducer`. Cada serie
 produce una accion durable `SAVE_SET` del contrato publico schema 1 antes de actualizar la interfaz. El
 WebView la incorpora una sola vez a `workoutSessions` y confirma el ID. Un doble

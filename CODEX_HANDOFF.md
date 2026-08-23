@@ -84,6 +84,29 @@ Validacion fisica del 2026-08-23 en Samsung SM-A165M, Android 16 y One UI 8:
   `publicVersion` fisica sin bloqueo seguro, modalidades no presentes en la
   rutina de prueba, Gym Party sin segundo dispositivo y PWA iPhone.
 
+Gate local final del candidato 95/39, completado el 2026-08-23:
+
+- 43 contratos estructurales y de dominio aprobados en 14,5 s; incluyen
+  versionado, schema 1, adaptador legacy, datos, backups, Workout, Gym Party,
+  Nutricion, Progreso, service worker y paridad de assets.
+- Playwright: 400 escenarios funcionales aprobados en 38m30s y 33 Axe en
+  4m21s; 433 aprobados en total y 14 omisiones deliberadas por plataforma.
+- Dos pruebas que dependian del dia real se fijaron a un lunes. Cada caso paso
+  tres veces en Android Chromium, iPhone WebKit y escritorio (18 repeticiones
+  enfocadas) antes de repetir la matriz completa.
+- Firestore Emulator con Firebase Tools 15.23.0 y Java 21: aprobado en 69,6 s.
+  Los `PERMISSION_DENIED` observados son los rechazos negativos esperados.
+- Artifact web: 88 recursos y smoke servido aprobados. ZIP local: 562.744
+  bytes, SHA-256
+  `4F9522D91845AF0EAC4914BA4D89F5894BA98AD5703268E651DA90B45D5922BB`.
+- Gradle 8.10.2/Java 17: unitarias, lint vital, debug y release de prueba
+  aprobados. Debug: 1.908.888 bytes, SHA-256
+  `DDEB778CCB7844A0042B44212B5FA17CC811E24F7394A36790043F78A23D34B9`.
+  Release local: 1.565.415 bytes, firma v1/v2 valida, SHA-256
+  `E9B7D493CF3D2A053BEF46D71BE2EE52BBCAE6EAA39F85D9357BD32971C9E49D`.
+- `.github/stable-release.json` permanece en build 89. No hubo publicacion ni
+  cambios en `main`.
+
 Los defectos fisicos corregidos fueron el solapamiento con la barra de estado,
 la falta de relayout del widget, la intercepcion de controles por la raiz, el
 recorte del compacto, el solapamiento de Ajustes de Gym y la seleccion nativa

@@ -23,6 +23,7 @@ test.beforeEach(async ({page})=>{
 });
 
 test('registro rapido confirma la serie exacta y permite deshacer por setId',async ({page})=>{
+  await page.clock.setFixedTime(new Date('2026-08-17T15:00:00.000Z'));
   await page.goto('/index.html?module=gym&view=train&quickLog=1');
   await expect(page.getByRole('heading',{name:'Entrenar',exact:true})).toBeVisible();
   await page.locator('#quickReps').fill('8');

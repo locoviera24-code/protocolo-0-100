@@ -53,10 +53,11 @@ test('ajustes de rutina y acceso rapido no superponen controles en movil',async(
 });
 
 test('el APK simulado instala y activa controles solo desde acciones explicitas',async({page})=>{
+  await page.clock.setFixedTime(new Date('2026-08-17T15:00:00.000Z'));
   await page.addInitScript(()=>{
     window.__quickAccessCalls={pin:0,permission:0,saves:0,states:[]};
     window.AndroidBridge={
-      getAppInfo:()=>JSON.stringify({versionName:'2.7.0',versionCode:38}),
+      getAppInfo:()=>JSON.stringify({versionName:'2.7.0',versionCode:39}),
       getWorkoutQuickAccessCapabilities:()=>JSON.stringify({platform:'android-apk',widgetInstances:0,pinWidgetSupported:true,notificationPermission:'prompt'}),
       getWorkoutWidgetStatus:()=>JSON.stringify({code:'widget-not-added',instances:0,notificationCode:'waiting-for-session',queue:{pending:0,rejected:0}}),
       requestPinWorkoutWidget:()=>{window.__quickAccessCalls.pin++;return JSON.stringify({ok:true,code:'pin-requested'});},

@@ -168,3 +168,9 @@ Defectos reproducidos y corregidos en este ciclo:
 No queda ningun `FAIL` reproducible abierto. Los `BLOCKED` anteriores requieren
 otra configuracion, modalidad o dispositivo y permanecen pendientes para la
 revision humana.
+
+El gate automatizado final del mismo candidato aprobo 400 casos funcionales,
+33 Axe, Firestore Emulator, artifact web, Android JVM/debug/release firmado de
+prueba y paridad. Sus 14 omisiones son deliberadas por plataforma. Estos
+resultados no sustituyen ni cambian los estados fisicos `PASS`/`BLOCKED` de la
+tabla.
