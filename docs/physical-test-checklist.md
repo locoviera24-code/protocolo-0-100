@@ -1,7 +1,7 @@
 # Checklist de pruebas físicas
 
-Referencia objetivo beta: Protocolo 0->100 `2.7.0`, build web/PWA `94`, Android
-`versionCode 38`, rama `codex/android-quick-access-v1`.
+Referencia objetivo beta: Protocolo 0->100 `2.7.0`, build web/PWA `95`, Android
+`versionCode 39`, rama `codex/android-quick-access-v1`.
 
 Este documento separa resultados automatizados de pruebas sobre hardware real.
 No marcar una prueba física por inferencia a partir de Playwright, Gradle o un
@@ -10,8 +10,9 @@ emulador de Firestore.
 ## Estado de esta línea base
 
 - Automatizado: se registra en `CODEX_HANDOFF.md` con comando y resultado.
-- Físico ejecutado durante este ciclo: ninguno.
-- Pendiente manual: todas las casillas de dispositivo que siguen.
+- Físico ejecutado durante este ciclo: Samsung SM-A165M, Android 16, One UI 8,
+  launcher Samsung, 23 de agosto de 2026.
+- Pendiente manual: los casos marcados `BLOCKED` o sin ejecutar que siguen.
 
 Anotar para cada ejecución: fecha, modelo, versión del sistema, navegador,
 build probado y resultado. Adjuntar captura o diagnóstico solo si no contiene
@@ -124,27 +125,46 @@ usuarios finales.
 
 ## Registro de hardware de Controles Android V1
 
-Estado al 5 de agosto de 2026: **pendiente completo**. En esta ejecucion no hay
-un dispositivo Android conectado. Los tres SVG de `docs/previews/` son previews
-de jerarquia y no evidencia de launcher, pantalla de bloqueo o fabricante.
+Ejecucion: 23 de agosto de 2026. Dispositivo: Samsung SM-A165M. SO: Android
+16/API 36, One UI 8. Launcher: Samsung. Las correcciones se probaron primero en
+`2.7.0+94`, `versionCode 38`; el candidato final `2.7.0+95`, `versionCode 39`
+se instalo despues en el mismo dispositivo sin borrar datos. Evidencia local numerada bajo
+`.tools/physical-sm-a165m-build94/`; no se incorpora al precache ni al APK.
 
-Validacion especifica requerida para build 94:
+| Caso | Resultado | Pasos y evidencia | Observaciones |
+| --- | --- | --- | --- |
+| Instalacion y actualizacion local | PASS | `adb install -r`; capturas 07, 32, 34, 118 y 121 | El candidato final 95/39 conserva IndexedDB, localStorage, sesion y preferencias con la misma clave local. Actualizar sobre el APK CI anterior queda BLOCKED por firma distinta; no se desinstalo ni borro datos. |
+| Smoke y barras del sistema | PASS | Apertura repetida y captura 07 | La WebView empieza debajo de la barra de estado en Android 16. |
+| Widget compacto | PASS | Captura 101 | Selector, reps, -0,5, +0,5, -5, +5, Guardar, temporizador, Ultima y Max. visibles, sin controles superpuestos. |
+| Widget estandar | PASS | Captura 103 | One UI cambio de variante al redimensionar; contenido legible y controles activos. |
+| Widget expandido | PASS | Capturas 104-105; host reporto 401 x 701 dp | Rutina, progreso y controles legibles. El espacio libre inferior pertenece al alto asignado por el launcher. |
+| Selector directo | PASS | Capturas 68, 100, 106-107 | Seleccion no adyacente, cancelar/volver sin cambio y adopcion inmediata al reabrir WebView. No crea `SELECT_EXERCISE` publico. |
+| Reps y peso | PASS | Capturas 62-67 | Reps +/- y -0,5/+0,5/-5/+5 funcionaron desde bloqueo; kg canonico, sin NaN, infinito ni peso negativo. |
+| Doble toque y `SAVE_SET` | PASS | Captura 72 | Dos toques rapidos produjeron una sola serie canonica. |
+| `UNDO_SET` | PASS | Captura 74 | Guardar y deshacer inmediato volvio de Serie 3 a Serie 2; el intento repetido no elimino otra serie. |
+| Cola, cierre y redelivery | PASS | Capturas 78, 100 y 112 | Proceso destruido, importacion unica y ejercicio nativo sincronizado; `workoutSessions` con una sola aplicacion. |
+| Temporizador | PASS | Capturas 80-81, 87-90 y 92-94 | Inicio, pausa, reanudacion, pantalla apagada, proceso destruido y final de descanso. Widget y notificacion coinciden. |
+| Notificacion privada | PASS | Capturas 61-74 | Ejercicio, reps, cuatro ajustes de peso, Guardar y selector; acciones actualizan contenido. |
+| Permiso de notificaciones | PASS | Capturas 108-110 | Concedido y revocado; sin crash. `Activar` abre los ajustes del canal y al restaurar vuelve la notificacion. |
+| Pantalla bloqueada OEM | PASS | Capturas 61-74 y 90 | One UI 8 muestra contenido privado porque el equipo usa deslizamiento sin bloqueo seguro; el selector abre sin perder estado. |
+| `publicVersion` fisica | BLOCKED | `dumpsys notification` confirma `VISIBILITY_PRIVATE` y public version generica | No se configuro PIN/patron; sin bloqueo seguro One UI muestra la version privada. No se marca PASS por analisis estructural. |
+| Offline real | PASS | Capturas 112 y 114 | Wi-Fi y datos desactivados, guardado desde widget con proceso cerrado, apertura offline y reconexion. Quedo exactamente una serie de Dominadas. |
+| Reinicio fisico | PASS | Capturas 115-116 | Antes de abrir la app el widget y la notificacion se restauraron; Gym mantuvo Serie 2 sin duplicados. |
+| Repetir/anterior/siguiente | BLOCKED | Sin control expuesto en las superficies probadas | Contrato/reducer automatizados; no se atribuye PASS fisico. El selector directo cubre la navegacion cotidiana. |
+| Tiempo y distancia como series | BLOCKED | La rutina de prueba no contiene esas modalidades | Temporizador de descanso si fue probado; `COMPLETE_TIME_SET` y `COMPLETE_DISTANCE_SET` quedan pendientes en hardware. |
+| lb, asistencia, lastre y unilateral | BLOCKED | Modalidades ausentes en la rutina de prueba | Cubiertas por pruebas automatizadas, no por este recorrido fisico. |
+| Gym Party entre dispositivos | BLOCKED | No hay segundo dispositivo | No se inventa sincronizacion fisica. |
+| PWA Android e iPhone | BLOCKED | No se instalo una PWA separada ni hay iPhone | La APK beta no se confunde con stable 89. |
 
-- [ ] Confirmar que -0,5, +0,5, -5 y +5 permanecen visibles sin cambiar de layout.
-- [ ] Tocar el nombre, elegir un ejercicio no adyacente y comprobar el cambio inmediato.
-- [ ] Confirmar que Ultima y Max. cambian con el ejercicio elegido.
-- [ ] Iniciar entrenamiento, aceptar permiso y bloquear el telefono.
-- [ ] Confirmar la notificacion publica `Entrenamiento en curso`.
-- [ ] Desbloquear contenido privado, desplegar la notificacion y probar ambos pasos de peso.
-- [ ] Rechazar el permiso y comprobar que `Activar` abre los ajustes correctos.
-- [ ] Ocultar el canal y comprobar que `Revisar` abre `Controles de entrenamiento`.
-- [ ] Quitar y volver a agregar el widget para aplicar sus nuevas dimensiones minimas.
+Defectos reproducidos y corregidos en este ciclo:
 
-Al ejecutar, registrar aqui:
+1. contenido bajo la barra de estado en Android 16;
+2. widget sin relayout despues de redimensionar;
+3. raiz del widget interceptando controles hijos en One UI;
+4. compacto y vista previa recortados en dos columnas;
+5. controles/textos superpuestos en Ajustes de Gym;
+6. selector nativo no adoptado por la WebView al reabrir.
 
-- modelo y fabricante: pendiente;
-- version Android y parche: pendiente;
-- launcher y version: pendiente;
-- build instalado: pendiente;
-- permiso de notificaciones aceptado/denegado: pendiente;
-- resultado y enlace al issue en caso de fallo: pendiente.
+No queda ningun `FAIL` reproducible abierto. Los `BLOCKED` anteriores requieren
+otra configuracion, modalidad o dispositivo y permanecen pendientes para la
+revision humana.

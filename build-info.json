@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "version": "2.7.0",
-  "versionCode": 38,
-  "build": 94,
+  "versionCode": 39,
+  "build": 95,
   "commit": "development",
-  "artifactCreatedAt": "2026-08-05T00:00:00.000Z",
+  "artifactCreatedAt": "2026-08-23T00:00:00.000Z",
   "channel": "development"
 }

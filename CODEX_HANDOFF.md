@@ -1,10 +1,10 @@
 # CODEX_HANDOFF - Protocolo 0->100
 
-Ultima actualizacion: 2026-08-05
+Ultima actualizacion: 2026-08-23
 Rama esperada: `codex/android-quick-access-v1`
 Version actual: `2.7.0` (fuente unica: `app-version.json`)
-Android: `versionCode 38`, `versionName "2.7.0"`
-Service worker cache: `protocolo-0-100-pwa-2.7.0-b94`
+Android: `versionCode 39`, `versionName "2.7.0"`
+Service worker cache: `protocolo-0-100-pwa-2.7.0-b95`
 Backup consolidado: `schemaVersion: 3`
 
 Leer primero este archivo y luego `README.md`, `index.html`,
@@ -19,7 +19,7 @@ rebasada desde la base antigua `1a9186e`; su estado previo permanece en la rama
 remota inmutable `backup/android-quick-access-v1-pre-web-core-9464faa`, SHA
 `9464faaad3d7bd81db2d71fc6aabf40aeb4dc7d5`.
 
-La integracion usa build web/PWA beta 94, Android `versionCode 38` y backup
+La integracion usa build web/PWA beta 95, Android `versionCode 39` y backup
 schema 3. Stable permanece en build 89 y no se publico una release nueva.
 
 - `gym/workout-quick-actions.js` schema 1 es el unico contrato publico.
@@ -70,9 +70,24 @@ artifact Android ZIP: 1.856.915 bytes, SHA-256
 APK debug contenido: 1.905.901 bytes, SHA-256
 `9DF971213C28D7CB92B21BA1F72210B9ED438D99D298FE16522DD8A5827999BB`.
 
-Siguen pendientes todas las pruebas fisicas de instalacion, launcher, reinicio,
-cierre forzado, bloqueo, permiso/OEM y Gym Party entre dispositivos. No marcar
-el PR #1 como listo ni fusionarlo antes de completarlas.
+Validacion fisica del 2026-08-23 en Samsung SM-A165M, Android 16 y One UI 8:
+
+- PASS: instalacion/actualizacion local con la misma clave, datos conservados,
+  candidato final 95/39 instalado, smoke de la WebView, widgets
+  compacto/estandar/expandido y redimensionado;
+- PASS: selector directo, sincronizacion de seleccion nativa hacia la WebView,
+  reps, -0,5/+0,5/-5/+5, doble toque y Deshacer por `setId`;
+- PASS: cola/importacion unica tras proceso destruido, offline y reinicio;
+- PASS: temporizador con pantalla apagada/proceso destruido, notificacion
+  privada y permiso concedido/denegado con acceso a ajustes;
+- BLOCKED: actualizacion desde el APK CI anterior por clave de firma distinta,
+  `publicVersion` fisica sin bloqueo seguro, modalidades no presentes en la
+  rutina de prueba, Gym Party sin segundo dispositivo y PWA iPhone.
+
+Los defectos fisicos corregidos fueron el solapamiento con la barra de estado,
+la falta de relayout del widget, la intercepcion de controles por la raiz, el
+recorte del compacto, el solapamiento de Ajustes de Gym y la seleccion nativa
+no adoptada al reabrir la WebView. Ver `docs/physical-test-checklist.md`.
 
 ## Linea base fusionada: Web Core Flow P0
 
@@ -255,7 +270,7 @@ Web:
   tombstones, backoff y contexto horario.
 - `gym-party.js`: modulo Gym Party, registro rapido, graficas y edicion/eliminacion de series.
 - `advanced-features.js`: version `2.7.0`, backup/importacion Gym Party.
-- `sw.js`: cache derivada del build 94, actualización atómica consentida y sin mezcla de assets; evita
+- `sw.js`: cache derivada del build 95, actualización atómica consentida y sin mezcla de assets; evita
   persistir una configuracion Firebase obsoleta.
 - `README.md`: documenta Gym Party, demo, Firebase, privacidad y pruebas.
 - `CODEX_HANDOFF.md`: este handoff.
@@ -274,7 +289,7 @@ Android:
 - `android-native-wrapper/app/src/main/java/com/protocolo/cien/MainActivity.java`:
   usa `WebViewAssetLoader` sobre HTTPS interno, bloquea file/content/universal
   access y mixed content, activa Safe Browsing y limita origenes remotos.
-- `android-native-wrapper/app/build.gradle`: `versionCode 38`,
+- `android-native-wrapper/app/build.gradle`: `versionCode 39`,
   `versionName 2.7.0`, firma release solo desde variables seguras.
 - `android-native-wrapper/app/src/main/assets/*`: sincronizado desde raiz.
 

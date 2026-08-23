@@ -1,6 +1,6 @@
 # Controles Android de acceso rapido V1
 
-Estado: beta `2.7.0+94`, Android `versionCode 38`, en
+Estado: beta `2.7.0+95`, Android `versionCode 39`, en
 `codex/android-quick-access-v1`. No forma parte de la linea estable 2.7 hasta
 que se fusione y publique de forma explicita.
 
@@ -131,3 +131,24 @@ nueva y recursos retenidos por una beta anterior.
 - Los previews no sustituyen pruebas en launcher o pantalla de bloqueo real.
 - Las pruebas fisicas pendientes se enumeran en
   [physical-test-checklist.md](physical-test-checklist.md).
+
+## Validacion fisica beta 95
+
+El 23 de agosto de 2026 se valido la beta en un Samsung SM-A165M con Android
+16, One UI 8 y el launcher de Samsung. Las correcciones confirmadas fueron:
+
+- la WebView comienza debajo de la barra de estado;
+- One UI vuelve a solicitar el `RemoteViews` correcto al redimensionar;
+- los controles del widget no son interceptados por el contenedor raiz;
+- el compacto cabe en dos columnas y conserva -0,5, +0,5, -5 y +5;
+- el ejercicio elegido desde widget o bloqueo se adopta al reabrir la WebView;
+- los formularios de Ajustes de Gym no superponen texto ni controles.
+
+Pasaron el guardado con doble toque, Deshacer inmediato, importacion unica,
+temporizador tras pantalla apagada y proceso destruido, permiso de
+notificaciones concedido/denegado, offline real y reinicio fisico. La
+actualizacion local al candidato final 95/39 conservo la sesion y los datos. La
+`publicVersion` generica fue verificada estructuralmente, pero su presentacion
+fisica queda bloqueada porque el dispositivo de prueba no tenia bloqueo seguro.
+Tiempo, distancia, asistencia, lb, Gym Party entre dispositivos y PWA iPhone
+siguen pendientes o bloqueados por falta de datos/modalidad o hardware.

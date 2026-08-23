@@ -1,8 +1,8 @@
 globalThis.PRECACHE_MANIFEST=Object.freeze({
   "schemaVersion": 1,
   "version": "2.7.0",
-  "build": 94,
-  "cacheName": "protocolo-0-100-pwa-2.7.0-b94",
+  "build": 95,
+  "cacheName": "protocolo-0-100-pwa-2.7.0-b95",
   "required": [
     {
       "url": "./advanced-features.js",
@@ -12,12 +12,12 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     {
       "url": "./app-version.js",
       "bytes": 358,
-      "sha256": "2cf0bb3dadb84870e7e34cf79e3fdb1c5dd998d8dc617b0b3a1764cfcbc08ebd"
+      "sha256": "9cce7b7298323420c9bd4895a55f0119760d9453c117393e9c62249426c8f5c5"
     },
     {
       "url": "./app/build-guard.js",
       "bytes": 1811,
-      "sha256": "1c399d47421a6e263ab9b389b51cb60733206dd656e54cc6c0ce376c74db3d9a"
+      "sha256": "e102ea00eef541820e4b26cbdb8cb3f50d96e645b2e87daf9554143817c0f711"
     },
     {
       "url": "./app/build-info.js",
@@ -62,7 +62,7 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     {
       "url": "./build-info.json",
       "bytes": 189,
-      "sha256": "92b1ff2e9b092cca8699f6f48ef41037400274300ff4692c3bc0a6f18f77a361"
+      "sha256": "42258f6fa868560c6e43739604d4a01ea514041c1be652a7daa1ac844674f663"
     },
     {
       "url": "./data/backup-service.js",
@@ -266,8 +266,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     },
     {
       "url": "./styles/components.css",
-      "bytes": 10689,
-      "sha256": "2d6b53c4958fe6830cb65026f68b785ab90d7dcf04ef54fe7a2bb0da63588a70"
+      "bytes": 10982,
+      "sha256": "fa560d92791270e332e302519164be514f771ce6ff6367c266b2a638b6062df6"
     },
     {
       "url": "./styles/features.css",
@@ -281,8 +281,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     },
     {
       "url": "./styles/gym.css",
-      "bytes": 13070,
-      "sha256": "9fd4e11442a66c3b8df5e5d8317b858e7be03d7569e9ffbd0721d7210a09649e"
+      "bytes": 13160,
+      "sha256": "c5c1d33b4020cdcfa6567b7d6b02fd195faf19451d4a0b2fb36328902bb1191b"
     },
     {
       "url": "./styles/modules.css",
@@ -341,8 +341,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     },
     {
       "url": "./workout-features.js",
-      "bytes": 191144,
-      "sha256": "800c0a85782426dfeb8046c71b10356a4ac47023f65cd503cab00650a762edaa"
+      "bytes": 191904,
+      "sha256": "ad8af9967a0bbc3ece3a0368795ff5bc99812f39b37f6a70075130285cf6180d"
     },
     {
       "url": "./workout-metrics.js",
@@ -374,7 +374,7 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     {
       "url": "./app-version.json",
       "bytes": 90,
-      "sha256": "cb5b0a6bd3a0972196519683b88189e266f982f8eac95afc63d014ff98883d45"
+      "sha256": "af1f460a8d6c92e306fac1e3d80a7d3841aa28aca29de4ba0873549cbcab630f"
     },
     {
       "url": "./icons/icon-192.png",

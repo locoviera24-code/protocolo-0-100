@@ -16,7 +16,7 @@ PWA y APK Android para medir habitos, atencion, actividad fisica y nutricion con
 
 ## Navegacion y diseno
 
-La version actual `v2.7.0` (build web `94`, Android `38`) usa una barra inferior movil con cinco destinos: **Inicio**,
+La version actual `v2.7.0` (build web `95`, Android `39`) usa una barra inferior movil con cinco destinos: **Inicio**,
 **Gym**, **Nutricion**, **Progreso** y **Mas**. En escritorio usa una barra
 lateral compacta. Gym Party se abre desde **Gym > Grupo**, desde un acceso
 discreto en Inicio o mediante un enlace `gymPartyCode`; ya no ocupa un boton
@@ -529,8 +529,8 @@ La PWA/GitHub Pages no puede crear widgets ni controles de pantalla de bloqueo.
 Estas funciones viven en el APK y usan `AppWidgetProvider`, `AppWidgetManager`,
 `RemoteViews`, `PendingIntent` y una notificacion privada de entrenamiento.
 
-La integracion actual de la rama es **2.7.0 beta build 94**, Android
-`versionCode 38`. Todavia no tiene un APK publico nuevo: beta 7 corresponde al
+La integracion actual de la rama es **2.7.0 beta build 95**, Android
+`versionCode 39`. Todavia no tiene un APK publico nuevo: beta 7 corresponde al
 build 93 anterior y queda solo como antecedente. Ninguna beta reemplaza el
 canal estable ni mueve `baseline-stable-2.7`.
 
@@ -551,6 +551,15 @@ nativo con toda la rutina, por lo que no hace
 falta recorrerla con Anterior/Siguiente. Al elegirlo se muestran su ultima carga
 comparable y su maximo historico comparable. Peso corporal, lastre, asistencia,
 tiempo y distancia muestran su semantica correspondiente.
+
+La beta 95 incorpora correcciones verificadas en un Samsung SM-A165M con
+Android 16 y One UI 8: respeta la barra de estado, recalcula el layout al
+redimensionar, evita que el contenedor del widget intercepte sus botones y
+adopta en la WebView el ejercicio elegido desde una superficie nativa. La
+validacion fisica cubrio widgets compacto/estandar/expandido, permiso de
+notificaciones concedido y denegado, controles privados en bloqueo, doble
+toque, Deshacer, temporizador, cierre del proceso, offline y reinicio. Los
+casos bloqueados por hardware se detallan en `docs/physical-test-checklist.md`.
 
 El widget y la notificacion reutilizan `WorkoutQuickActionReducer`. Cada serie
 produce una accion durable `SAVE_SET` del contrato publico schema 1 antes de actualizar la interfaz. El
