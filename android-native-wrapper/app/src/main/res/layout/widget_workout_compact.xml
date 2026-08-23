@@ -80,7 +80,7 @@
 
             <Button
                 android:id="@+id/widgetWeightMinusButton"
-                android:layout_width="56dp"
+                android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:background="@drawable/widget_button_secondary"
                 android:contentDescription="Disminuir carga 0,5 kilos"
@@ -108,7 +108,7 @@
 
             <Button
                 android:id="@+id/widgetWeightPlusButton"
-                android:layout_width="56dp"
+                android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:background="@drawable/widget_button_secondary"
                 android:contentDescription="Aumentar carga 0,5 kilos"
@@ -129,7 +129,7 @@
 
             <Button
                 android:id="@+id/widgetWeightFastMinusButton"
-                android:layout_width="56dp"
+                android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:background="@drawable/widget_button_secondary"
                 android:contentDescription="Disminuir carga 5 kilos"
@@ -158,7 +158,7 @@
 
             <Button
                 android:id="@+id/widgetWeightFastPlusButton"
-                android:layout_width="56dp"
+                android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:background="@drawable/widget_button_secondary"
                 android:contentDescription="Aumentar carga 5 kilos"

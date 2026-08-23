@@ -16,6 +16,42 @@ test('la web explica el requisito APK sin mostrar diagnostico tecnico',async({pa
   await expect(page.locator('#workoutConfigPanel')).not.toContainText('widget interno/nativo');
 });
 
+test('ajustes de rutina y acceso rapido no superponen controles en movil',async({page})=>{
+  await page.setViewportSize({width:390,height:844});
+  await page.goto('/index.html?module=gym&view=routine');
+
+  const access=page.locator('.workoutQuickAccess');
+  if(!(await access.evaluate(element=>element.open)))await access.locator(':scope > summary').click();
+  const accessItems=access.locator('.workoutQuickAccessItem');
+  await expect(accessItems).toHaveCount(4);
+  for(const item of await accessItems.all()){
+    const box=await item.boundingBox();
+    expect(box?.x).toBeGreaterThanOrEqual(0);
+    expect((box?.x||0)+(box?.width||0)).toBeLessThanOrEqual(390);
+    const textRows=await item.locator(':scope > div > strong, :scope > div > span').evaluateAll(elements=>elements.map(element=>{
+      const rect=element.getBoundingClientRect();
+      return{top:rect.top,bottom:rect.bottom};
+    }));
+    for(let index=1;index<textRows.length;index+=1)expect(textRows[index].top).toBeGreaterThanOrEqual(textRows[index-1].bottom);
+  }
+
+  const config=page.locator('#workoutConfigPanel details.planAdvancedEditor').first();
+  if(!(await config.evaluate(element=>element.open)))await config.locator(':scope > summary').click();
+  const checks=config.locator(':scope > .formGrid > label.check');
+  expect(await checks.count()).toBeGreaterThanOrEqual(4);
+  const boxes=await checks.evaluateAll(elements=>elements.map(element=>{
+    const rect=element.getBoundingClientRect();
+    const text=element.querySelector('span')?.getBoundingClientRect();
+    return{top:rect.top,bottom:rect.bottom,left:rect.left,right:rect.right,textRight:text?.right||0};
+  }));
+  for(let index=0;index<boxes.length;index+=1){
+    expect(boxes[index].left).toBeGreaterThanOrEqual(0);
+    expect(boxes[index].right).toBeLessThanOrEqual(390);
+    expect(boxes[index].textRight).toBeLessThanOrEqual(boxes[index].right);
+    if(index>0)expect(boxes[index].top).toBeGreaterThanOrEqual(boxes[index-1].bottom);
+  }
+});
+
 test('el APK simulado instala y activa controles solo desde acciones explicitas',async({page})=>{
   await page.addInitScript(()=>{
     window.__quickAccessCalls={pin:0,permission:0,saves:0,states:[]};

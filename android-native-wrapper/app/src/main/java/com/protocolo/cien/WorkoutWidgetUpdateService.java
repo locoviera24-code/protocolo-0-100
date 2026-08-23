@@ -93,7 +93,6 @@ public final class WorkoutWidgetUpdateService {
         bindTimer(context, views, state, kind == LAYOUT_COMPACT);
 
         views.setViewVisibility(R.id.widgetDirectPanel, View.VISIBLE);
-        views.setOnClickPendingIntent(R.id.widgetRoot, openIntent(context, MainActivity.ACTION_OPEN_TODAY_WORKOUT, state.currentExerciseId));
         views.setContentDescription(R.id.widgetCurrentExercise, "Elegir ejercicio. Actual: " + state.currentExerciseName);
         views.setOnClickPendingIntent(R.id.widgetCurrentExercise, exercisePickerIntent(context, state.currentExerciseId, widgetId));
         views.setOnClickPendingIntent(R.id.widgetSaveSetButton, state.requiresEditor

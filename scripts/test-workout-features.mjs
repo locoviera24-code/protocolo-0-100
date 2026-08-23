@@ -308,6 +308,7 @@ const nativeExercise = {...workout.planForDate('2026-06-22').exercises[1], sets:
   savedAt: '2026-06-22T12:00:00.000Z',
   volume: 480
 }]};
+const nativeFirstExercise = {...workout.planForDate('2026-06-22').exercises[0], sets: []};
 const nativeSession = {
   id: 'workout_android_test',
   date: '2026-06-22',
@@ -317,13 +318,13 @@ const nativeSession = {
   startedAt: '2026-06-22T11:55:00.000Z',
   status: 'en progreso',
   currentExerciseIndex: 0,
-  exercises: [nativeExercise],
+  exercises: [nativeFirstExercise, nativeExercise],
   summary: {totalSets: 1, totalVolume: 480}
 };
 assert.equal(workout.importWidgetStateFromAndroid({
   schemaVersion: 2,
   date: '2026-06-22',
-  currentExerciseId: nativeExercise.id,
+  currentExerciseId: nativeFirstExercise.id,
   lastNativeMutationAt: '2026-06-22T12:00:00.000Z',
   lastNativeMutationSource: 'android-widget-direct',
   workoutSession: nativeSession,
@@ -331,6 +332,9 @@ assert.equal(workout.importWidgetStateFromAndroid({
 }), true);
 assert.equal(JSON.parse(store.get(workout.keys.workoutSessions))[0].id, 'workout_android_test');
 assert.equal(JSON.parse(store.get(workout.keys.exerciseHistory))['press-banca'].lastWeight, 60);
+assert.equal(workout.adoptNativeWorkoutSelection({state:{sessionId:nativeSession.id,exerciseId:nativeExercise.id}}),true);
+assert.equal(workout.getQuickWorkoutState({date:'2026-06-22'}).currentExerciseId,nativeExercise.id);
+assert.equal(workout.adoptNativeWorkoutSelection({state:{sessionId:'other-session',exerciseId:nativeFirstExercise.id}}),false);
 
 const nativeMutation={id:'11111111-1111-4111-8111-111111111111',type:'save_set',sessionId:'native-queue-session',exerciseId:'press-banca',setId:'native-queue-set',privateImportState:'pending',payload:{date:'2026-06-22',dayKey:'monday',weekday:'Lunes',routine:{name:'Torso A'},startedAt:'2026-06-22T13:00:00.000Z',currentExerciseIndex:0,exercise:{id:'press-native',exerciseId:'press-banca',name:'Press de banca',muscle:'Pecho'},set:{id:'native-queue-set',setNumber:1,reps:8,weight:70,weightKg:70,measurementMode:'reps',loadMode:'total',equipmentId:'machine',setType:'working',completed:true}}};
 const nativeAcks=[];context.AndroidBridge={acknowledgeNativeWorkoutMutation:(...args)=>{nativeAcks.push(args);return true;}};

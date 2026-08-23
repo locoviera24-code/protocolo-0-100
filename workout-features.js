@@ -378,7 +378,10 @@
   function maybeImportWidgetStateFromAndroid(){
     if(importingNativeWidgetState) return false;
     if(window.APP_FEATURE_FLAGS?.isEnabled?.('nativeWorkoutControlsV1')&&typeof window.AndroidBridge?.getNativeWorkoutControlData==='function'){
-      importNativeWorkoutMutationsFromAndroid();
+      let payload=null;
+      try{payload=JSON.parse(String(window.AndroidBridge.getNativeWorkoutControlData()||'{}'));}catch{}
+      if(payload)adoptNativeWorkoutSelection(payload);
+      importNativeWorkoutMutationsFromAndroid(payload);
       return true;
     }
     if(!window.AndroidBridge || typeof window.AndroidBridge.getWorkoutWidgetData!=='function') return false;
@@ -507,6 +510,17 @@
   }
   function activeSession(date=todayStr()){
     return sessions().find(s=>s.date===date && s.status==='en progreso') || null;
+  }
+  function adoptNativeWorkoutSelection(payload){
+    const state=payload?.state;
+    const exerciseId=String(state?.exerciseId||'').trim();
+    if(!exerciseId)return false;
+    const session=activeSession();
+    if(!session||state?.sessionId&&String(state.sessionId)!==String(session.id))return false;
+    const exercise=session.exercises?.find(item=>item?.id===exerciseId||item?.exerciseId===exerciseId);
+    if(!exercise)return false;
+    currentQuickExerciseId=exercise.id||exercise.exerciseId;
+    return true;
   }
   function latestSessionForDate(date=todayStr()){
     return sessions().filter(s=>s.date===date).sort((a,b)=>String(b.startedAt||'').localeCompare(String(a.startedAt||'')))[0] || null;
@@ -751,7 +765,7 @@
           <summary><span id="workoutQuickAccessTitle">Acceso rápido durante el entrenamiento</span><small>PWA y APK Android</small></summary>
           <p class="muted">Elegí la opción disponible en la versión que estás usando.</p>
           <div class="workoutQuickAccessGrid">
-            <article class="auditItem"><div><strong>Acceso directo de la PWA</strong><span class="muted small">El shortcut “Serie rápida” abre Entrenar directamente.</span><span class="muted small" id="quickAccessPwaStatus">Comprobando instalación…</span></div><button type="button" class="secondary" id="showPwaInstallHelpBtn">Ver instalación</button></article>
+            <article class="auditItem workoutQuickAccessItem"><div><strong>Acceso directo de la PWA</strong><span class="muted small">El shortcut “Serie rápida” abre Entrenar directamente.</span><span class="muted small" id="quickAccessPwaStatus">Comprobando instalación…</span></div><button type="button" class="secondary" id="showPwaInstallHelpBtn">Ver instalación</button></article>
             <article class="auditItem workoutQuickAccessItem"><div><strong>Widget de entrenamiento</strong><span class="muted small" id="workoutWidgetInstallStatus" role="status">Requiere el APK Android.</span></div><button type="button" class="good" id="addWorkoutWidgetBtn">Agregar widget</button><p class="muted small" id="workoutWidgetInstallHelp">Mantené presionada la pantalla de inicio → Widgets → Protocolo 0→100 · Gym.</p></article>
             <article class="auditItem workoutQuickAccessItem"><div><strong>Controles en pantalla bloqueada</strong><span class="muted small" id="workoutLockScreenStatus" role="status">Dependen de Android, el fabricante y la configuración del dispositivo.</span></div></article>
             <article class="auditItem workoutQuickAccessItem"><div><strong>Controles mediante notificación</strong><span class="muted small" id="workoutNotificationStatus" role="status">Disponibles en esta beta Android; pendientes de validación física. No están disponibles en stable.</span></div><button type="button" class="secondary" id="enableWorkoutControlsBtn">Activar controles</button><p class="muted small">La versión pública muestra solo “Entrenamiento en curso”; no expone ejercicio, peso, repeticiones ni Gym Party.</p></article>
@@ -2389,7 +2403,7 @@
     else if(action===actionWidgetSaveSet){syncWorkoutWidget();openGymToday();}
   }
 
-  window.WORKOUT_FEATURES={keys,dayOrder,defaultWeeklyPlan:clone(defaultWeeklyPlan),exerciseLibrary:clone(exerciseLibrary),EXERCISE_LIBRARY_VERSION,ready:()=>initializeWorkoutFeatures(),getExerciseLibrary:()=>clone(libraryData()),getPendingMuscleClassifications:()=>clone(pendingMuscleClassifications()),confirmExerciseClassificationPayload,previewHistoricalClassificationMigration,applyHistoricalClassificationMigration,undoHistoricalClassificationMigration,getWeeklyWorkoutPlan:()=>clone(weeklyPlan()),getEquipmentProfiles:()=>clone(equipmentProfiles()),getGymSettings:()=>clone(settings()),updateGymSettings:next=>{saveSettings(next||{});return clone(settings());},displayWeight,canonicalWeight,displayVolume,migrateExerciseLibrary,migrateLegacyGymSessions,dayKeyForDate,planForDate,rankExercisesForContext,getQuickWorkoutState,addManualExercisePayload,saveQuickSetPayload,updateQuickSetPayload,reviewAnomalousSetResult,deleteQuickSetPayload,undoDeleteQuickSetPayload,undoSavedQuickSetPayload,canUndoQuickSetDelete:()=>!!lastDeletedQuickSet,replaceSessionPayload,completeQuickExercisePayload,finishWorkoutPayload,buildWorkoutWidgetState,syncWorkoutWidget,importWidgetStateFromAndroid,importNativeWorkoutMutationsFromAndroid};
+  window.WORKOUT_FEATURES={keys,dayOrder,defaultWeeklyPlan:clone(defaultWeeklyPlan),exerciseLibrary:clone(exerciseLibrary),EXERCISE_LIBRARY_VERSION,ready:()=>initializeWorkoutFeatures(),getExerciseLibrary:()=>clone(libraryData()),getPendingMuscleClassifications:()=>clone(pendingMuscleClassifications()),confirmExerciseClassificationPayload,previewHistoricalClassificationMigration,applyHistoricalClassificationMigration,undoHistoricalClassificationMigration,getWeeklyWorkoutPlan:()=>clone(weeklyPlan()),getEquipmentProfiles:()=>clone(equipmentProfiles()),getGymSettings:()=>clone(settings()),updateGymSettings:next=>{saveSettings(next||{});return clone(settings());},displayWeight,canonicalWeight,displayVolume,migrateExerciseLibrary,migrateLegacyGymSessions,dayKeyForDate,planForDate,rankExercisesForContext,getQuickWorkoutState,addManualExercisePayload,saveQuickSetPayload,updateQuickSetPayload,reviewAnomalousSetResult,deleteQuickSetPayload,undoDeleteQuickSetPayload,undoSavedQuickSetPayload,canUndoQuickSetDelete:()=>!!lastDeletedQuickSet,replaceSessionPayload,completeQuickExercisePayload,finishWorkoutPayload,buildWorkoutWidgetState,syncWorkoutWidget,importWidgetStateFromAndroid,importNativeWorkoutMutationsFromAndroid,adoptNativeWorkoutSelection};
   window.openGymToday=openGymToday;
   window.openQuickSetLogger=openQuickSetLogger;
   window.handleAndroidWidgetIntent=(action,payload)=>handleAndroidWidgetIntent(action,payload||{});

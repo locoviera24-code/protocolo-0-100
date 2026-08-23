@@ -41,6 +41,7 @@ for(const action of ['ADJUST_REPS','ADJUST_WEIGHT','SAVE_SET','UNDO_SET','REPEAT
 for(const command of ['COMMAND_SELECT_EXERCISE','COMMAND_TOGGLE_WEIGHT_STEP'])assert.ok(source.reducer.includes(command),`Falta comando local ${command}`);
 assert.match(source.reducer,/claimDelivery/);
 assert.match(source.provider,/handleWidgetAction\(context, intent, WorkoutQuickActionReducer\.SOURCE_WIDGET\)/);
+assert.match(source.provider,/onAppWidgetOptionsChanged[\s\S]*updateWidgets\(context, appWidgetManager, new int\[\]\{appWidgetId\}\)/,'Redimensionar debe recalcular el RemoteViews para el tamaÃ±o actual.');
 assert.match(source.receiver,/handleWidgetAction\(context, intent, WorkoutQuickActionReducer\.SOURCE_NOTIFICATION\)/);
 assert.match(source.widget,/OPTION_APPWIDGET_MIN_HEIGHT/);
 assert.match(source.widget,/OPTION_APPWIDGET_MAX_HEIGHT/);
@@ -82,11 +83,14 @@ assert.match(source.widget,/widgetWeightFastPlusButton, widgetActionIntent\(cont
 assert.match(source.widget,/adjustQuick\(state, "weight", -WEIGHT_STEP\)/,'El ajuste fino debe restar 0,5 de forma directa.');
 assert.match(source.widget,/adjustQuick\(state, "weight", WEIGHT_FAST_STEP\)/,'El ajuste rapido debe sumar 5 de forma directa.');
 assert.match(source.widget,/exercisePickerIntent/,'El widget debe abrir un selector directo de ejercicio.');
+assert.doesNotMatch(source.widget,/setOnClickPendingIntent\(R\.id\.widgetRoot/,'El click global no debe interceptar controles hijos en One UI.');
 assert.match(source.picker,/setSingleChoiceItems/);
 assert.match(source.picker,/ACTION_WIDGET_SELECT_EXERCISE/);
 assert.match(source.features,/exerciseLoadGuidance/,'Cada ejercicio debe publicar su ultima carga y record comparables.');
 assert.match(source.widget,/int width = minWidth > 0 \? minWidth : maxWidth/,'El layout debe usar el tamaño actual, no el máximo de otra orientación.');
 assert.doesNotMatch(source.widget,/Math\.max\(minWidth, maxWidth\)/,'El tamaño máximo causaba saltos de layout tras un toque.');
+assert.match(source.info,/android:minWidth="140dp"/,'El compacto debe caber en dos columnas de One UI.');
+assert.match(source.info,/android:initialLayout="@layout\/widget_workout_compact"/,'La vista previa de instalacion no debe recortar el estandar en dos columnas.');
 
 for(const contract of ['setOngoing(true)','VISIBILITY_PRIVATE','setPublicVersion(publicVersion(context))','Entrenamiento en curso','IMPORTANCE_DEFAULT','workout_controls_v5','setCustomBigContentView','notification_workout_controls'])assert.ok(source.notification.includes(contract),`Falta privacidad o visibilidad de notificacion: ${contract}`);
 for(const id of ['notificationExerciseButton','notificationWeightMinusButton','notificationWeightPlusButton','notificationWeightFastMinusButton','notificationWeightFastPlusButton','notificationSaveSetButton'])assert.ok(source.notificationLayout.includes(id),`La notificacion expandida no ofrece ${id}.`);

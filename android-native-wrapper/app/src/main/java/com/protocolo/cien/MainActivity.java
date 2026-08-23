@@ -19,11 +19,14 @@ import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.speech.RecognizerIntent;
+import android.view.WindowInsets;
+import android.view.ViewGroup;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
+import android.widget.FrameLayout;
 
 import androidx.webkit.WebViewAssetLoader;
 import androidx.webkit.WebViewClientCompat;
@@ -74,8 +77,13 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        FrameLayout root = new FrameLayout(this);
         webView = new WebView(this);
-        setContentView(webView);
+        root.addView(webView, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT));
+        setContentView(root);
+        applyStatusBarInset(root, webView);
 
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
@@ -127,6 +135,23 @@ public class MainActivity extends Activity {
         webView.addJavascriptInterface(new AndroidUsageBridge(this), "AndroidUsageBridge");
         webView.addJavascriptInterface(new AndroidSpeechBridge(), "AndroidSpeechBridge");
         webView.loadUrl(APP_URL);
+    }
+
+    @SuppressWarnings("deprecation")
+    private void applyStatusBarInset(FrameLayout root, WebView view) {
+        root.setOnApplyWindowInsetsListener((target, insets) -> {
+            int insetTop = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+                    ? insets.getInsets(WindowInsets.Type.statusBars()).top
+                    : insets.getSystemWindowInsetTop();
+            int topMargin = SystemBarInsetPolicy.statusBarPadding(insetTop);
+            FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) view.getLayoutParams();
+            if (params.topMargin != topMargin) {
+                params.topMargin = topMargin;
+                view.setLayoutParams(params);
+            }
+            return insets;
+        });
+        root.requestApplyInsets();
     }
 
     private void auditPackagedWebCache(WebView view) {
