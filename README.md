@@ -16,7 +16,7 @@ PWA y APK Android para medir habitos, atencion, actividad fisica y nutricion con
 
 ## Navegacion y diseno
 
-La version actual `v2.7.0` (build web `95`, Android `39`) usa una barra inferior movil con cinco destinos: **Inicio**,
+La version actual `v2.7.0` (build web `96`, Android `40`) usa una barra inferior movil con cinco destinos: **Inicio**,
 **Gym**, **Nutricion**, **Progreso** y **Mas**. En escritorio usa una barra
 lateral compacta. Gym Party se abre desde **Gym > Grupo**, desde un acceso
 discreto en Inicio o mediante un enlace `gymPartyCode`; ya no ocupa un boton
@@ -47,7 +47,7 @@ experimentales**, desactivados por defecto sin borrar sus datos anteriores.
 **Gym > Ajustes > Acceso rápido durante el entrenamiento** diferencia el
 shortcut de la PWA, el widget que requiere el APK, la pantalla bloqueada en
 desarrollo y la notificacion disponible solo en la beta Android pendiente de
-integracion y validacion fisica. **Más > Acerca de** compara capacidades
+revision. **Más > Acerca de** compara capacidades
 Web/PWA y APK sin
 afirmar que una PWA está instalada cuando el navegador no puede comprobarlo.
 
@@ -529,8 +529,8 @@ La PWA/GitHub Pages no puede crear widgets ni controles de pantalla de bloqueo.
 Estas funciones viven en el APK y usan `AppWidgetProvider`, `AppWidgetManager`,
 `RemoteViews`, `PendingIntent` y una notificacion privada de entrenamiento.
 
-La integracion actual de la rama es **2.7.0 beta build 95**, Android
-`versionCode 39`. Todavia no tiene un APK publico nuevo: beta 7 corresponde al
+La integracion actual de la rama es **2.7.0 beta build 96**, Android
+`versionCode 40`. Todavia no tiene un APK publico nuevo: beta 7 corresponde al
 build 93 anterior y queda solo como antecedente. Ninguna beta reemplaza el
 canal estable ni mueve `baseline-stable-2.7`.
 
@@ -552,18 +552,23 @@ falta recorrerla con Anterior/Siguiente. Al elegirlo se muestran su ultima carga
 comparable y su maximo historico comparable. Peso corporal, lastre, asistencia,
 tiempo y distancia muestran su semantica correspondiente.
 
-La beta 95 incorpora correcciones verificadas en un Samsung SM-A165M con
+La beta 96 incorpora correcciones verificadas en un Samsung SM-A165M con
 Android 16 y One UI 8: respeta la barra de estado, recalcula el layout al
 redimensionar, evita que el contenedor del widget intercepte sus botones y
 adopta en la WebView el ejercicio elegido desde una superficie nativa. La
 validacion fisica cubrio widgets compacto/estandar/expandido, permiso de
-notificaciones concedido y denegado, controles privados en bloqueo, doble
-toque, Deshacer, temporizador, cierre del proceso, offline y reinicio. Los
-casos bloqueados por hardware se detallan en `docs/physical-test-checklist.md`.
+notificaciones concedido y denegado, `publicVersion` con bloqueo seguro, doble
+toque, Deshacer, temporizador, cierre del proceso, offline, reinicio, kg/lb,
+peso corporal, asistencia, lastre, unilateral, tiempo y distancia. La PWA del
+branch se instalo en el mismo Samsung, funciono standalone/offline y abrio el
+shortcut **Serie rapida**. Los casos externos bloqueados y los `N/A` se detallan
+en `docs/physical-test-checklist.md`.
 
-El gate local final del candidato 95/39 aprobo 400 pruebas funcionales, 33 Axe,
-Firestore Emulator, artifact web servido, Android JVM/debug/release firmado de
-prueba y paridad de assets; mantiene 14 omisiones deliberadas por plataforma.
+El cierre 96/40 corrige una carrera PWA observada al entrar en **Mas > Telefono**
+durante la hidratacion temprana de IndexedDB. La llamada al renderer avanzado
+es opcional y una regresion automatizada impide reintroducir el fallo. El gate
+final y sus hashes se registran en `CODEX_HANDOFF.md`; stable continua en build
+89 y el backup permanece en schema 3.
 
 El widget y la notificacion reutilizan `WorkoutQuickActionReducer`. Cada serie
 produce una accion durable `SAVE_SET` del contrato publico schema 1 antes de actualizar la interfaz. El

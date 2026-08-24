@@ -1,10 +1,10 @@
 # CODEX_HANDOFF - Protocolo 0->100
 
-Ultima actualizacion: 2026-08-23
+Ultima actualizacion: 2026-08-24
 Rama esperada: `codex/android-quick-access-v1`
 Version actual: `2.7.0` (fuente unica: `app-version.json`)
-Android: `versionCode 39`, `versionName "2.7.0"`
-Service worker cache: `protocolo-0-100-pwa-2.7.0-b95`
+Android: `versionCode 40`, `versionName "2.7.0"`
+Service worker cache: `protocolo-0-100-pwa-2.7.0-b96`
 Backup consolidado: `schemaVersion: 3`
 
 Leer primero este archivo y luego `README.md`, `index.html`,
@@ -19,7 +19,7 @@ rebasada desde la base antigua `1a9186e`; su estado previo permanece en la rama
 remota inmutable `backup/android-quick-access-v1-pre-web-core-9464faa`, SHA
 `9464faaad3d7bd81db2d71fc6aabf40aeb4dc7d5`.
 
-La integracion usa build web/PWA beta 95, Android `versionCode 39` y backup
+La integracion usa build web/PWA beta 96, Android `versionCode 40` y backup
 schema 3. Stable permanece en build 89 y no se publico una release nueva.
 
 - `gym/workout-quick-actions.js` schema 1 es el unico contrato publico.
@@ -73,44 +73,56 @@ APK debug contenido: 1.905.901 bytes, SHA-256
 Validacion fisica del 2026-08-23 en Samsung SM-A165M, Android 16 y One UI 8:
 
 - PASS: instalacion/actualizacion local con la misma clave, datos conservados,
-  candidato final 95/39 instalado, smoke de la WebView, widgets
-  compacto/estandar/expandido y redimensionado;
-- PASS: selector directo, sincronizacion de seleccion nativa hacia la WebView,
-  reps, -0,5/+0,5/-5/+5, doble toque y Deshacer por `setId`;
-- PASS: cola/importacion unica tras proceso destruido, offline y reinicio;
-- PASS: temporizador con pantalla apagada/proceso destruido, notificacion
-  privada y permiso concedido/denegado con acceso a ajustes;
-- BLOCKED: actualizacion desde el APK CI anterior por clave de firma distinta,
-  `publicVersion` fisica sin bloqueo seguro, modalidades no presentes en la
-  rutina de prueba, Gym Party sin segundo dispositivo y PWA iPhone.
+  smoke WebView, widgets compacto/estandar/expandido y redimensionado;
+- PASS: selector directo, reps, -0,5/+0,5/-5/+5, doble toque, Deshacer por
+  `setId`, cola/importacion unica, offline, reinicio y temporizador;
+- PASS: notificacion privada, permiso concedido/denegado y `publicVersion`
+  observada con bloqueo seguro: solo **Entrenamiento en curso**;
+- PASS: kg/lb, peso corporal, asistencia, lastre, unilateral, tiempo,
+  distancia, `REPEAT_LAST_SET` y `NEXT_EXERCISE`;
+- PASS: PWA Android instalada desde artifact local, standalone, service worker,
+  recarga offline y shortcut **Serie rapida**;
+- N/A: `PREVIOUS_EXERCISE` no esta expuesto ni prometido en Android V1; el
+  selector directo es la navegacion comprometida;
+- N/A: upgrade desde release CI efimero, porque su clave temporal no representa
+  la clave estable de produccion;
+- BLOCKED no bloqueantes: Gym Party con dos clientes sin backend comun y PWA
+  iPhone sin hardware/preview HTTPS. No queda ningun FAIL fisico abierto.
 
-Gate local final del candidato 95/39, completado el 2026-08-23:
+El recorrido PWA reprodujo dos veces `renderAdvancedNutrition is not defined`
+al abrir **Mas > Telefono** durante una hidratacion temprana de IndexedDB. El
+listener ahora usa `window.renderAdvancedNutrition?.()` y una prueba elimina
+temporalmente el renderer antes de emitir `app-data-primary-ready`. El fix se
+revalido fisicamente en un origen limpio y offline; por ello el candidato final
+subio una sola vez a build 96/versionCode 40.
 
-- 43 contratos estructurales y de dominio aprobados en 14,5 s; incluyen
-  versionado, schema 1, adaptador legacy, datos, backups, Workout, Gym Party,
-  Nutricion, Progreso, service worker y paridad de assets.
-- Playwright: 400 escenarios funcionales aprobados en 38m30s y 33 Axe en
-  4m21s; 433 aprobados en total y 14 omisiones deliberadas por plataforma.
-- Dos pruebas que dependian del dia real se fijaron a un lunes. Cada caso paso
-  tres veces en Android Chromium, iPhone WebKit y escritorio (18 repeticiones
-  enfocadas) antes de repetir la matriz completa.
-- Firestore Emulator con Firebase Tools 15.23.0 y Java 21: aprobado en 69,6 s.
-  Los `PERMISSION_DENIED` observados son los rechazos negativos esperados.
-- Artifact web: 88 recursos y smoke servido aprobados. ZIP local: 562.744
-  bytes, SHA-256
-  `4F9522D91845AF0EAC4914BA4D89F5894BA98AD5703268E651DA90B45D5922BB`.
-- Gradle 8.10.2/Java 17: unitarias, lint vital, debug y release de prueba
-  aprobados. Debug: 1.908.888 bytes, SHA-256
-  `DDEB778CCB7844A0042B44212B5FA17CC811E24F7394A36790043F78A23D34B9`.
-  Release local: 1.565.415 bytes, firma v1/v2 valida, SHA-256
-  `E9B7D493CF3D2A053BEF46D71BE2EE52BBCAE6EAA39F85D9357BD32971C9E49D`.
-- `.github/stable-release.json` permanece en build 89. No hubo publicacion ni
-  cambios en `main`.
+Gate local final del candidato 96/40, completado el 2026-08-24:
 
-Los defectos fisicos corregidos fueron el solapamiento con la barra de estado,
-la falta de relayout del widget, la intercepcion de controles por la raiz, el
-recorte del compacto, el solapamiento de Ajustes de Gym y la seleccion nativa
-no adoptada al reabrir la WebView. Ver `docs/physical-test-checklist.md`.
+- contratos, versionado, manifest, precache, service worker, datos, backups,
+  Workout, importador nativo, Gym Party, Nutricion, Progreso y accesibilidad
+  estructural: aprobados;
+- Playwright: 403 escenarios funcionales aprobados y 14 omisiones deliberadas
+  por plataforma; Axe 33/33. Una perdida aislada de contexto de Chromium paso
+  5/5 al repetirla. Tres timeouts WebKit causados por la suspension del equipo
+  pasaron 9/9 al reanudar; la matriz limpia posterior termino 403/403;
+- Firestore Emulator con Firebase Tools 15.23.0 y Java 21: aprobado. Los
+  `PERMISSION_DENIED` del log son rechazos negativos esperados;
+- artifact web: 88 recursos, rutas profundas, service worker y smoke servido
+  aprobados. ZIP local: 554.393 bytes, SHA-256
+  `39A167560B6B665FB08A35200F6B91114635507EFBD4E843FF0FBCE7EF0476D5`;
+- Gradle 8.10.2/Java 17: JVM, lint vital, debug y release de prueba aprobados.
+  Debug: 1.921.041 bytes, SHA-256
+  `F3222E3A88370F715A9FF9CB72F2BB62F2CD8820EE0847216E3D4D144DEB95C5`.
+  Release efimero: 1.565.415 bytes, firma v1/v2 valida, SHA-256
+  `44F5813148927DA9A3A281DD09FD40409D4E1FC2B74FFFB0EAC178AD7E087A23`;
+- paridad web/assets Android: exacta. Stable permanece en build 89, backup en
+  schema 3 y `main` sin cambios.
+
+Los defectos fisicos corregidos en todo el ciclo fueron el solapamiento con la
+barra de estado, la falta de relayout del widget, la intercepcion de controles
+por la raiz, el recorte del compacto, el solapamiento de Ajustes de Gym, la
+seleccion nativa no adoptada y la carrera PWA descrita. Ver
+`docs/physical-test-checklist.md`.
 
 ## Linea base fusionada: Web Core Flow P0
 
@@ -293,7 +305,7 @@ Web:
   tombstones, backoff y contexto horario.
 - `gym-party.js`: modulo Gym Party, registro rapido, graficas y edicion/eliminacion de series.
 - `advanced-features.js`: version `2.7.0`, backup/importacion Gym Party.
-- `sw.js`: cache derivada del build 95, actualización atómica consentida y sin mezcla de assets; evita
+- `sw.js`: cache derivada del build 96, actualización atómica consentida y sin mezcla de assets; evita
   persistir una configuracion Firebase obsoleta.
 - `README.md`: documenta Gym Party, demo, Firebase, privacidad y pruebas.
 - `CODEX_HANDOFF.md`: este handoff.
@@ -312,7 +324,7 @@ Android:
 - `android-native-wrapper/app/src/main/java/com/protocolo/cien/MainActivity.java`:
   usa `WebViewAssetLoader` sobre HTTPS interno, bloquea file/content/universal
   access y mixed content, activa Safe Browsing y limita origenes remotos.
-- `android-native-wrapper/app/build.gradle`: `versionCode 39`,
+- `android-native-wrapper/app/build.gradle`: `versionCode 40`,
   `versionName 2.7.0`, firma release solo desde variables seguras.
 - `android-native-wrapper/app/src/main/assets/*`: sincronizado desde raiz.
 

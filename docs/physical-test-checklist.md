@@ -1,7 +1,7 @@
 # Checklist de pruebas físicas
 
-Referencia objetivo beta: Protocolo 0->100 `2.7.0`, build web/PWA `95`, Android
-`versionCode 39`, rama `codex/android-quick-access-v1`.
+Referencia objetivo beta: Protocolo 0->100 `2.7.0`, build web/PWA `96`, Android
+`versionCode 40`, rama `codex/android-quick-access-v1`.
 
 Este documento separa resultados automatizados de pruebas sobre hardware real.
 No marcar una prueba física por inferencia a partir de Playwright, Gradle o un
@@ -13,6 +13,18 @@ emulador de Firestore.
 - Físico ejecutado durante este ciclo: Samsung SM-A165M, Android 16, One UI 8,
   launcher Samsung, 23 de agosto de 2026.
 - Pendiente manual: los casos marcados `BLOCKED` o sin ejecutar que siguen.
+
+Semantica vigente:
+
+- `PASS`: comportamiento observado fisicamente y correcto.
+- `FAIL`: comportamiento incorrecto reproducible.
+- `BLOCKED`: prueba aplicable que no pudo ejecutarse por una dependencia externa.
+- `N/A`: prueba que no corresponde a la superficie o alcance Android V1.
+
+Las listas de casillas anteriores al registro de hardware son recorridos de
+referencia y no representan por si solas el estado del candidato. La tabla
+**Registro de hardware de Controles Android V1** es la fuente vigente para esta
+beta; no se convierten casillas historicas en PASS por inferencia.
 
 Anotar para cada ejecución: fecha, modelo, versión del sistema, navegador,
 build probado y resultado. Adjuntar captura o diagnóstico solo si no contiene
@@ -127,13 +139,15 @@ usuarios finales.
 
 Ejecucion: 23 de agosto de 2026. Dispositivo: Samsung SM-A165M. SO: Android
 16/API 36, One UI 8. Launcher: Samsung. Las correcciones se probaron primero en
-`2.7.0+94`, `versionCode 38`; el candidato final `2.7.0+95`, `versionCode 39`
-se instalo despues en el mismo dispositivo sin borrar datos. Evidencia local numerada bajo
-`.tools/physical-sm-a165m-build94/`; no se incorpora al precache ni al APK.
+`2.7.0+94`, `versionCode 38`, y `2.7.0+95`, `versionCode 39`. El cierre corrigio
+una carrera PWA reproducida fisicamente y genera el candidato final
+`2.7.0+96`, `versionCode 40`, sin cambiar backup schema 3. Evidencia local bajo
+`.tools/physical-sm-a165m-build94/` y `.tools/physical-closeout/`; no se incorpora
+al precache ni al APK.
 
 | Caso | Resultado | Pasos y evidencia | Observaciones |
 | --- | --- | --- | --- |
-| Instalacion y actualizacion local | PASS | `adb install -r`; capturas 07, 32, 34, 118 y 121 | El candidato final 95/39 conserva IndexedDB, localStorage, sesion y preferencias con la misma clave local. Actualizar sobre el APK CI anterior queda BLOCKED por firma distinta; no se desinstalo ni borro datos. |
+| Instalacion y actualizacion local | PASS | `adb install -r`; capturas 07, 32, 34, 118 y 121 | 95/39 con firma local compatible conservo IndexedDB, localStorage, sesion y preferencias. La instalacion final 96/40 queda cubierta por gate automatizado; no se desinstalo ni borro datos. |
 | Smoke y barras del sistema | PASS | Apertura repetida y captura 07 | La WebView empieza debajo de la barra de estado en Android 16. |
 | Widget compacto | PASS | Captura 101 | Selector, reps, -0,5, +0,5, -5, +5, Guardar, temporizador, Ultima y Max. visibles, sin controles superpuestos. |
 | Widget estandar | PASS | Captura 103 | One UI cambio de variante al redimensionar; contenido legible y controles activos. |
@@ -146,15 +160,23 @@ se instalo despues en el mismo dispositivo sin borrar datos. Evidencia local num
 | Temporizador | PASS | Capturas 80-81, 87-90 y 92-94 | Inicio, pausa, reanudacion, pantalla apagada, proceso destruido y final de descanso. Widget y notificacion coinciden. |
 | Notificacion privada | PASS | Capturas 61-74 | Ejercicio, reps, cuatro ajustes de peso, Guardar y selector; acciones actualizan contenido. |
 | Permiso de notificaciones | PASS | Capturas 108-110 | Concedido y revocado; sin crash. `Activar` abre los ajustes del canal y al restaurar vuelve la notificacion. |
-| Pantalla bloqueada OEM | PASS | Capturas 61-74 y 90 | One UI 8 muestra contenido privado porque el equipo usa deslizamiento sin bloqueo seguro; el selector abre sin perder estado. |
-| `publicVersion` fisica | BLOCKED | `dumpsys notification` confirma `VISIBILITY_PRIVATE` y public version generica | No se configuro PIN/patron; sin bloqueo seguro One UI muestra la version privada. No se marca PASS por analisis estructural. |
+| Pantalla bloqueada OEM | PASS | Capturas 61-74 y cierre con bloqueo seguro | One UI 8 conserva los controles privados desbloqueado y aplica la version publica cuando se oculta contenido sensible. |
+| `publicVersion` fisica | PASS | Bloqueo seguro temporal configurado por el operador; observacion directa en pantalla bloqueada | Mostro solamente **Entrenamiento en curso**. No expuso ejercicio, peso, repeticiones, rutina ni otros datos personales. El PIN/patron no fue revelado ni gestionado por ADB. |
 | Offline real | PASS | Capturas 112 y 114 | Wi-Fi y datos desactivados, guardado desde widget con proceso cerrado, apertura offline y reconexion. Quedo exactamente una serie de Dominadas. |
 | Reinicio fisico | PASS | Capturas 115-116 | Antes de abrir la app el widget y la notificacion se restauraron; Gym mantuvo Serie 2 sin duplicados. |
-| Repetir/anterior/siguiente | BLOCKED | Sin control expuesto en las superficies probadas | Contrato/reducer automatizados; no se atribuye PASS fisico. El selector directo cubre la navegacion cotidiana. |
-| Tiempo y distancia como series | BLOCKED | La rutina de prueba no contiene esas modalidades | Temporizador de descanso si fue probado; `COMPLETE_TIME_SET` y `COMPLETE_DISTANCE_SET` quedan pendientes en hardware. |
-| lb, asistencia, lastre y unilateral | BLOCKED | Modalidades ausentes en la rutina de prueba | Cubiertas por pruebas automatizadas, no por este recorrido fisico. |
-| Gym Party entre dispositivos | BLOCKED | No hay segundo dispositivo | No se inventa sincronizacion fisica. |
-| PWA Android e iPhone | BLOCKED | No se instalo una PWA separada ni hay iPhone | La APK beta no se confunde con stable 89. |
+| `REPEAT_LAST_SET` | PASS | Registro rapido WebView, valor preparado modificado y accion **Repetir ultima** | Restauro exactamente la ultima serie como preparacion y no creo una serie nueva. |
+| `NEXT_EXERCISE` | PASS | Registro rapido WebView | Avanzo al ejercicio siguiente definido por la rutina sin crear una serie. |
+| `PREVIOUS_EXERCISE` | N/A | Auditoria de contrato, reducer, widget, notificacion y selector | Android V1 no promete ni expone este boton. La navegacion nativa comprometida es el selector directo. |
+| Tiempo como serie | PASS | Rutina sintetica; 60 s, cierre forzado y reapertura | `COMPLETE_TIME_SET` produjo una sola serie, mostro `1:00 min` y persistio segundos canonicos. |
+| Distancia como serie | PASS | Rutina sintetica; 1000 m + 60 s, cierre forzado y reapertura | `COMPLETE_DISTANCE_SET` produjo una sola serie, mostro `1 km` y persistio metros/segundos canonicos. |
+| lb | PASS | Cambio por UI, ajustes `+5`, `+0,5`, `-0,5`, guardado y vuelta a kg | Mostro 5 lb y al volver a kg mostro el equivalente canonico; la preferencia final se restauro a kg. |
+| Asistencia | PASS | Guardados 5 kg y 4,5 kg de asistencia | Incremento/decremento y persistencia correctos; 4,5 kg quedo como mejor comparable, sin invertir la semantica. |
+| Lastre | PASS | Peso corporal + 5 kg de lastre, cierre forzado y reapertura | Recibo y serie persistida conservaron la semantica de lastre. |
+| Unilateral | PASS | Modalidad por lado, lado derecho, 5 kg x 8, cierre forzado y edicion | La lateralidad persistio y no se duplico volumen automaticamente. |
+| Gym Party entre dos clientes | BLOCKED | APK en modo local/demo; `firebase-config.js` del candidato es un stub seguro | El navegador de escritorio es un segundo cliente valido, pero no existe backend comun configurado. Bloqueo externo, no defecto Android; no se modifico Firebase de produccion. |
+| PWA Android del branch | PASS | Artifact local por ADB reverse, WebAPK instalado, navegacion, offline, recarga y shortcut | Chrome la detecto como browser/PWA, no APK; service worker controlo la pagina, `Serie rapida` abrio Gym y widget/notificacion quedaron exclusivos de APK. |
+| PWA iPhone | BLOCKED | Hardware y preview HTTPS no disponibles | Validacion cross-platform pendiente y no bloqueante para este PR Android. |
+| Upgrade desde artifact CI anterior | N/A | Auditoria del workflow de firma | El release de prueba CI usa una clave efimera de dos dias. No representa la ruta de upgrade de produccion, que debe usar la clave estable; no se intento saltar la proteccion ni se desinstalo la app. |
 
 Defectos reproducidos y corregidos en este ciclo:
 
@@ -163,13 +185,17 @@ Defectos reproducidos y corregidos en este ciclo:
 3. raiz del widget interceptando controles hijos en One UI;
 4. compacto y vista previa recortados en dos columnas;
 5. controles/textos superpuestos en Ajustes de Gym;
-6. selector nativo no adoptado por la WebView al reabrir.
+6. selector nativo no adoptado por la WebView al reabrir;
+7. carrera PWA al recibir `app-data-primary-ready` antes de publicar el renderer
+   nutricional avanzado. Se reprodujo dos veces y se corrigio con callback
+   opcional y regresion automatizada.
 
-No queda ningun `FAIL` reproducible abierto. Los `BLOCKED` anteriores requieren
-otra configuracion, modalidad o dispositivo y permanecen pendientes para la
-revision humana.
+No queda ningun `FAIL` reproducible abierto. Los `BLOCKED` residuales dependen
+de Firebase/configuracion externa o de hardware/preview iPhone y no afectan
+privacidad, datos ni la funcion principal Android. `PREVIOUS_EXERCISE` y la
+firma efimera CI son `N/A`, no PASS.
 
-El gate automatizado final del mismo candidato aprobo 400 casos funcionales,
+El gate automatizado local final del mismo candidato aprobo 403 casos funcionales,
 33 Axe, Firestore Emulator, artifact web, Android JVM/debug/release firmado de
 prueba y paridad. Sus 14 omisiones son deliberadas por plataforma. Estos
 resultados no sustituyen ni cambian los estados fisicos `PASS`/`BLOCKED` de la

@@ -1,6 +1,6 @@
 # Controles Android de acceso rapido V1
 
-Estado: beta `2.7.0+95`, Android `versionCode 39`, en
+Estado: beta `2.7.0+96`, Android `versionCode 40`, en
 `codex/android-quick-access-v1`. No forma parte de la linea estable 2.7 hasta
 que se fusione y publique de forma explicita.
 
@@ -132,7 +132,7 @@ nueva y recursos retenidos por una beta anterior.
 - Las pruebas fisicas pendientes se enumeran en
   [physical-test-checklist.md](physical-test-checklist.md).
 
-## Validacion fisica beta 95
+## Validacion fisica y cierre beta 96
 
 El 23 de agosto de 2026 se valido la beta en un Samsung SM-A165M con Android
 16, One UI 8 y el launcher de Samsung. Las correcciones confirmadas fueron:
@@ -146,16 +146,27 @@ El 23 de agosto de 2026 se valido la beta en un Samsung SM-A165M con Android
 
 Pasaron el guardado con doble toque, Deshacer inmediato, importacion unica,
 temporizador tras pantalla apagada y proceso destruido, permiso de
-notificaciones concedido/denegado, offline real y reinicio fisico. La
-actualizacion local al candidato final 95/39 conservo la sesion y los datos. La
-`publicVersion` generica fue verificada estructuralmente, pero su presentacion
-fisica queda bloqueada porque el dispositivo de prueba no tenia bloqueo seguro.
-Tiempo, distancia, asistencia, lb, Gym Party entre dispositivos y PWA iPhone
-siguen pendientes o bloqueados por falta de datos/modalidad o hardware.
+notificaciones concedido/denegado, offline real y reinicio fisico. Un bloqueo
+seguro temporal permitio comprobar que `publicVersion` muestra solamente
+**Entrenamiento en curso** cuando One UI oculta contenido sensible.
 
-El gate local final de esta beta aprobo 400 escenarios funcionales, 33 Axe, 43
-contratos estructurales y de dominio, Firestore Emulator, artifact web servido,
-unitarias Android, debug, release firmado de prueba y paridad. Se mantienen 14
-omisiones deliberadas por plataforma. Las dos pruebas que antes dependian del
-dia de ejecucion ahora fijan un lunes y pasaron 18 repeticiones enfocadas antes
-de la matriz completa.
+Tambien pasaron kg/lb, peso corporal, asistencia, lastre, unilateral, tiempo,
+distancia, `REPEAT_LAST_SET`, `NEXT_EXERCISE`, PWA Android instalada, service
+worker/offline y el shortcut **Serie rapida**. `PREVIOUS_EXERCISE` es `N/A`:
+forma parte del contrato/reducer, pero Android V1 usa el selector directo y no
+promete ese boton en widget o notificacion.
+
+La prueba PWA encontro una carrera reproducible al hidratar la cache nutricional
+antes de publicar el renderer avanzado. El callback ahora es opcional y tiene
+regresion automatizada; por este cambio productivo el candidato final es 96/40.
+Gym Party entre dos clientes sigue `BLOCKED` porque el candidato usa el stub
+local/demo sin backend comun. PWA iPhone sigue `BLOCKED` por falta de hardware y
+preview HTTPS. Ambos son externos y no bloquean la revision Android.
+
+Actualizar sobre un release CI efimero es `N/A` para produccion: el workflow
+crea una clave temporal de prueba y la elimina. La ruta distribuible debe usar
+la clave estable; no se desinstalo la app ni se borraron datos.
+
+El resultado automatizado final, los hashes y los `BLOCKED`/`N/A` vigentes se
+registran en `CODEX_HANDOFF.md` y `docs/physical-test-checklist.md`. Ninguna
+prueba automatizada se usa para convertir un caso fisico en PASS.
