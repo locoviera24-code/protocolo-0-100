@@ -133,7 +133,7 @@ test('Acceso rapido explica shortcut, APK y controles pendientes',async({page})=
   await expect(section).toContainText('Serie rápida');
   await expect(section).toContainText('Requiere el APK Android');
   await expect(section).toContainText('En desarrollo para el APK Android');
-  await expect(section).toContainText('pendiente de integración y validación física');
+  await expect(section).toContainText('pendiente de revisión');
   await expect(section).not.toContainText('puente Android');
   await expect(section).not.toContainText('widget interno');
 });

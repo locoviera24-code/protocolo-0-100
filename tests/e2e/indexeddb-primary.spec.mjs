@@ -1,6 +1,20 @@
 import {test,expect} from '@playwright/test';
 import {waitForAppReady} from './helpers/app-ready.mjs';
 
+test('la hidratacion temprana de cache no depende del renderer nutricional avanzado',async ({page})=>{
+  await clean(page);
+  const result=await page.evaluate(()=>{
+    delete window.renderAdvancedNutrition;
+    window.dispatchEvent(new CustomEvent('app-data-primary-ready',{detail:{domain:'nutritionCache'}}));
+    return{
+      recoveryHidden:document.getElementById('appRecoveryBackdrop')?.classList.contains('hidden'),
+      renderErrors:window.APP_ERROR_BOUNDARY.logs().filter(item=>String(item.message||'').includes('renderAdvancedNutrition')).length
+    };
+  });
+  expect(result.recoveryHidden).toBe(true);
+  expect(result.renderErrors).toBe(0);
+});
+
 const NUTRITION_KEY='protocolo_0_100_nutrition_entries_v1';
 const WORKOUT_KEY='protocolo_0_100_workout_sessions_v1';
 const FDC_FOODS_KEY='protocolo_0_100_cached_fdc_foods_v1';

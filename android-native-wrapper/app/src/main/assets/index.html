@@ -3214,7 +3214,7 @@ document.getElementById('clearCompatibilityAuditBtn')?.addEventListener('click',
 window.addEventListener('app-data-quarantined',()=>{renderDataIntegrity();flash('Se apartó una copia local que necesita revisión.',{tone:'warning'});});
 window.addEventListener('app-data-quarantine-change',renderDataIntegrity);
 window.addEventListener('app-data-compatibility-audit',()=>{const route=window.APP_ROUTER?.current?.();if(route?.module==='more'&&route?.view==='data')scheduleSettingsDataRender();});
-window.addEventListener('app-data-primary-ready',event=>{scheduleSettingsDataRender();if(event.detail?.domain==='nutritionCache'){populateFoods();renderAdvancedNutrition();}if(event.detail?.domain==='protocol')refreshProtocolViews();});
+window.addEventListener('app-data-primary-ready',event=>{scheduleSettingsDataRender();if(event.detail?.domain==='nutritionCache'){populateFoods();window.renderAdvancedNutrition?.();}if(event.detail?.domain==='protocol')refreshProtocolViews();});
 window.addEventListener('app-data-change',event=>{if(event.detail?.domain==='protocol'||event.detail?.domain==='import')refreshProtocolViews({reloadForm:false});});
 document.getElementById('toggleProtocolPrimaryBtn')?.addEventListener('click',event=>setProtocolPrimaryMode(event.currentTarget.dataset.enablePrimary==='true'));
 document.getElementById('retryProtocolPrimaryBtn')?.addEventListener('click',async()=>{try{await window.APP_DATA.hydratePrimaryDomain('protocol');refreshProtocolViews();flash('Almacenamiento del registro diario comprobado.');}catch(error){flash('No se pudo comprobar IndexedDB. Los registros compatibles permanecen disponibles.',{tone:'warning'});}renderSettingsData();});
