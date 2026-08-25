@@ -1,5 +1,9 @@
 # Web Core Flow P0
 
+> Documento historico del PR Web Core #2. El PR fue fusionado en `main` y el
+> rebase Android descrito como accion futura tambien fue completado; Android
+> Quick Access V1 quedo integrado por el merge commit `39c40a2`.
+
 ## Problema y resultado
 
 Inicio, Gym y Progreso mostraban acciones o paneles con el mismo peso visual.
@@ -138,9 +142,9 @@ Revertir los commits de esta rama restaura la UX del build 89. No se
 requiere migracion inversa porque no cambiaron schemas ni claves. El canal
 estable permanece en build 89 y no se publico desde esta rama.
 
-## Accion siguiente
+## Accion siguiente historica (completada)
 
-Revisar este PR sin fusion automatica. Tras aprobar y fusionar Web Core Flow P0,
-rebasar `codex/android-quick-access-v1` sobre `main` siguiendo
-`docs/web-core-android-rebase.md`, resolver un solo schema de mutacion y ejecutar
-de nuevo su gate Android y las pruebas fisicas pendientes.
+En ese momento correspondia revisar Web Core y despues rebasar
+`codex/android-quick-access-v1` sobre `main`. Ambos pasos ya se completaron; el
+resultado usa un solo schema de mutacion y fue validado automatica y fisicamente
+antes del merge Android.
