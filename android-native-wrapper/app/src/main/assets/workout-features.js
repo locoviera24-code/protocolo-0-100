@@ -90,7 +90,10 @@
   let planDraftSelectionHydrated=false;
   let restTimerInterval=null;
   let restTimerEndsAt=0;
+  let nativeTimerStatus='idle';
+  let nativeTimerPausedSeconds=0;
   let importingNativeWidgetState=false;
+  let nativeMutationImportPromise=null;
 
   function ex(id,name,aliases,muscle,type,unit,primary,secondary,notes,options={}){
     return {id,name,aliases,group:muscle,type,unit,primaryMuscles:primary,secondaryMuscles:secondary,notes,...options};
@@ -161,7 +164,7 @@
     return ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][jsDay];
   }
   function settings(){
-    return {...{widgetEnabled:true,showRir:true,unit:'kg',mode:'simple',showRestDays:true,restTimerEnabled:false,restSeconds:90,hapticEnabled:true},...readStore(keys.gymSettings,{})};
+    return {...{widgetEnabled:true,showRir:true,unit:'kg',mode:'simple',showRestDays:true,restTimerEnabled:false,restSeconds:90,hapticEnabled:true,timerSound:false,showWorkoutOnLockScreen:true,showWeightOnLockScreen:true,showRecordOnLockScreen:true,lockScreenVisibility:'private'},...readStore(keys.gymSettings,{})};
   }
   const LB_PER_KG=2.2046226218;
   function displayWeight(weightKg,unit=settings().unit){
@@ -374,6 +377,13 @@
   }
   function maybeImportWidgetStateFromAndroid(){
     if(importingNativeWidgetState) return false;
+    if(window.APP_FEATURE_FLAGS?.isEnabled?.('nativeWorkoutControlsV1')&&typeof window.AndroidBridge?.getNativeWorkoutControlData==='function'){
+      let payload=null;
+      try{payload=JSON.parse(String(window.AndroidBridge.getNativeWorkoutControlData()||'{}'));}catch{}
+      if(payload)adoptNativeWorkoutSelection(payload);
+      importNativeWorkoutMutationsFromAndroid(payload);
+      return true;
+    }
     if(!window.AndroidBridge || typeof window.AndroidBridge.getWorkoutWidgetData!=='function') return false;
     try{
       const raw=window.AndroidBridge.getWorkoutWidgetData();
@@ -398,6 +408,78 @@
     });
     next.summary=sessionSummary(next);
     return next;
+  }
+  function protectNativeSet(rawSet,exercise){
+    const detector=window.WORKOUT_ANOMALY_DETECTOR,set=clone(rawSet);
+    if(!detector?.analyze||!detector?.markPending||set.anomalyReview?.status)return set;
+    const analysis=detector.analyze({candidate:set,history:historicalSetsForExercise(exercise,set.id),exercise});
+    return analysis.suspicious?detector.markPending(set,analysis):set;
+  }
+  async function importNativeWorkoutMutationsFromAndroid(payloadOverride=null){
+    if(nativeMutationImportPromise)return nativeMutationImportPromise;
+    nativeMutationImportPromise=(async()=>{
+      let payload=payloadOverride;
+      if(!payload){
+        if(typeof window.AndroidBridge?.getPendingWorkoutMutations==='function')payload=JSON.parse(String(window.AndroidBridge.getPendingWorkoutMutations()||'{}'));
+        else if(typeof window.AndroidBridge?.getNativeWorkoutControlData==='function')payload=JSON.parse(String(window.AndroidBridge.getNativeWorkoutControlData()||'{}'));
+        else return{ok:false,reason:'bridge-unavailable'};
+      }
+      const mutations=(Array.isArray(payload?.mutations)?payload.mutations:[]).filter(Boolean);
+      if(!mutations.length)return{ok:true,imported:0,duplicates:0,invalid:0};
+      let nextSessions=sessions(),nextHistory=history();
+      const imported=[],duplicates=[],invalid=[],affected=new Set(),undoFallbacks=new Map();
+      for(const mutation of mutations){
+        const result=window.NATIVE_WORKOUT_IMPORTER?.apply?.(nextSessions,mutation,{protectSet:protectNativeSet});
+        if(!result||result.status==='invalid'){invalid.push({mutation,error:`${result?.errorCode||'INVALID_PAYLOAD'}:${result?.error||'importer-unavailable'}`});continue;}
+        if(result.status==='duplicate'){duplicates.push(mutation);continue;}
+        nextSessions=result.sessions;imported.push(mutation);affected.add(result.sessionId);
+        if(result.operation==='undo')undoFallbacks.set(`${result.sessionId}|${result.exerciseId}`,result.previousHistory||null);
+      }
+      for(const sessionId of affected){
+        const session=nextSessions.find(item=>item.id===sessionId);if(!session)continue;
+        session.summary=sessionSummary(session);
+        nextHistory=exerciseHistoryAfterSession(session,nextHistory);
+        (session.exercises||[]).forEach(exercise=>{
+          if((exercise.sets||[]).length)return;
+          const key=`${sessionId}|${exercise.exerciseId||exercise.id}`,fallback=undoFallbacks.get(key);
+          if(fallback)nextHistory[exercise.exerciseId||exercise.id]=fallback;
+          else if(undoFallbacks.has(key))delete nextHistory[exercise.exerciseId||exercise.id];
+        });
+      }
+      if(imported.length){
+        const changes={[keys.workoutSessions]:nextSessions,[keys.exerciseHistory]:nextHistory};
+        const result=window.APP_REPOSITORIES?.workout?.replace
+          ?await window.APP_REPOSITORIES.workout.replace(changes,'native-workout-import')
+          :(saveSessions(nextSessions),saveHistory(nextHistory),{ok:true});
+        if(!result?.ok)throw new Error(result?.error?.message||result?.error||'native-import-write-failed');
+      }
+      const acknowledge=(mutation,state,error='')=>{
+        try{return typeof window.AndroidBridge?.acknowledgeNativeWorkoutMutation==='function'&&window.AndroidBridge.acknowledgeNativeWorkoutMutation(String(mutation.mutationId||mutation.id||''),state,String(error||'').slice(0,300));}
+        catch{return false;}
+      };
+      const accepted=[...imported,...duplicates],acceptedIds=accepted.map(mutation=>String(mutation.mutationId||mutation.id||'')).filter(Boolean);
+      if(acceptedIds.length&&typeof window.AndroidBridge?.acknowledgeWorkoutMutations==='function')window.AndroidBridge.acknowledgeWorkoutMutations(JSON.stringify(acceptedIds));
+      else accepted.forEach(mutation=>acknowledge(mutation,'imported'));
+      invalid.forEach(item=>acknowledge(item.mutation,'error',item.error));
+      if(imported.length){
+        const latest=nextSessions.find(item=>affected.has(item.id));
+        if(latest)currentQuickExerciseId=latest.exercises?.[latest.currentExerciseIndex||0]?.id||currentQuickExerciseId;
+        syncWorkoutWidget();
+        try{
+          window.GYM_PARTY_FEATURES?.syncFromLocalWorkouts?.({silent:true});
+          if(window.navigator?.onLine!==false)window.GYM_PARTY_FEATURES?.syncNow?.({force:false})?.catch?.(()=>{});
+        }catch(error){window.APP_ERROR_BOUNDARY?.record?.(error,{area:'native-workout-party-sync'});}
+      }
+      return{ok:true,imported:imported.length,duplicates:duplicates.length,invalid:invalid.length};
+    })().catch(error=>{
+      try{
+        const payload=payloadOverride||JSON.parse(String(window.AndroidBridge?.getPendingWorkoutMutations?.()||window.AndroidBridge?.getNativeWorkoutControlData?.()||'{}'));
+        (payload.mutations||[]).filter(Boolean).forEach(item=>window.AndroidBridge?.acknowledgeNativeWorkoutMutation?.(String(item.mutationId||item.id||''),'error',String(error?.message||'error').slice(0,300)));
+      }catch{}
+      window.APP_ERROR_BOUNDARY?.capture?.(error,{source:'native-workout-import'});
+      return{ok:false,reason:'write-failed'};
+    }).finally(()=>{nativeMutationImportPromise=null;});
+    return nativeMutationImportPromise;
   }
   function importWidgetStateFromAndroid(state){
     if(!state || typeof state!=='object') return false;
@@ -428,6 +510,17 @@
   }
   function activeSession(date=todayStr()){
     return sessions().find(s=>s.date===date && s.status==='en progreso') || null;
+  }
+  function adoptNativeWorkoutSelection(payload){
+    const state=payload?.state;
+    const exerciseId=String(state?.exerciseId||'').trim();
+    if(!exerciseId)return false;
+    const session=activeSession();
+    if(!session||state?.sessionId&&String(state.sessionId)!==String(session.id))return false;
+    const exercise=session.exercises?.find(item=>item?.id===exerciseId||item?.exerciseId===exerciseId);
+    if(!exercise)return false;
+    currentQuickExerciseId=exercise.id||exercise.exerciseId;
+    return true;
   }
   function latestSessionForDate(date=todayStr()){
     return sessions().filter(s=>s.date===date).sort((a,b)=>String(b.startedAt||'').localeCompare(String(a.startedAt||'')))[0] || null;
@@ -462,6 +555,9 @@
     const list=sessions();
     list.push(created);
     saveSessions(list);
+    // Android only exposes workout controls for an active session. Publish
+    // the new session now instead of waiting for the first saved set.
+    syncWorkoutWidget();
     return created;
   }
   function replaceSession(session){
@@ -551,8 +647,8 @@
       subjectiveNote:session.subjectiveNote||''
     };
   }
-  function updateExerciseHistory(session){
-    const map=history();
+  function exerciseHistoryAfterSession(session,baseMap={}){
+    const map=clone(baseMap||{});
     (session.exercises||[]).forEach(exercise=>{
       const sets=(exercise.sets||[]).map(set=>normalizeSet(set,exercise));
       if(!sets.length) return;
@@ -587,7 +683,10 @@
         bodyweight:!!exercise.bodyweight
       };
     });
-    saveHistory(map);
+    return map;
+  }
+  function updateExerciseHistory(session){
+    saveHistory(exerciseHistoryAfterSession(session,history()));
   }
   function rebuildExerciseHistory(){
     saveHistory({});
@@ -601,45 +700,47 @@
     insertionAnchor.insertAdjacentHTML('afterend',`
       <div class="moduleCard" id="todayWorkoutPanel">
         <div class="actionFocusTop"><div><h3 id="todayWorkoutTitle">Entrenamiento de hoy</h3><div class="muted small" id="todayWorkoutSummary"></div></div><span class="statusChip good" id="todayWorkoutScore">Gym</span></div>
-        <div class="workoutTodayGrid">
-          <div>
-            <div class="entryList" id="todayWorkoutExercises"></div>
-            <div class="workoutSafety">Esta app no reemplaza asesoramiento de un entrenador, médico o profesional de salud. Ajustá cargas según técnica, dolor, fatiga y seguridad.</div>
-          </div>
-          <div>
-            <div class="quickStats" id="todayWorkoutProgress"></div>
-            <div class="auditItem good" id="physicalLever">Registrar pesos para medir progreso. Priorizar técnica antes que carga.</div>
-            <div class="buttons">
-              <button type="button" class="good" id="startTodayWorkoutBtn">Empezar entrenamiento</button>
-              <button type="button" class="secondary" id="openQuickLoggerBtn">Registrar serie</button>
-            </div>
-            <div class="widgetStatus" id="workoutWidgetStatus">El resumen queda guardado en el dispositivo para tus próximos registros.</div>
+        <div class="workoutTodaySummary">
+          <div class="quickStats" id="todayWorkoutProgress"></div>
+          <p class="workoutLever" id="physicalLever">Registrar pesos permite medir progreso. Priorizá técnica antes que carga.</p>
+          <div class="buttons">
+            <button type="button" class="good" id="startTodayWorkoutBtn">Empezar entrenamiento</button>
+            <button type="button" class="secondary" id="openQuickLoggerBtn">Continuar entrenamiento</button>
           </div>
         </div>
+        <details class="todayExerciseDetails">
+          <summary>Ver rutina del día <span class="statusChip" id="todayWorkoutExerciseCount">0 ejercicios</span></summary>
+          <div class="todayExerciseDetailsBody">
+            <div class="entryList" id="todayWorkoutExercises"></div>
+            <details class="workoutSafety"><summary>Entrenar con seguridad</summary><p>Esta app no reemplaza asesoramiento profesional. Ajustá cargas según técnica, dolor, fatiga y seguridad.</p></details>
+          </div>
+        </details>
       </div>
       <div class="moduleCard" id="quickSetLoggerPanel">
-        <div class="actionFocusTop"><div><h3>Entrenar</h3><div class="muted small" id="quickWorkoutContext">Rutina de hoy · próxima serie</div></div><span class="statusChip good">Registro rápido</span></div>
+        <div class="quickLoggerHeading"><div><h3>Entrenar</h3><p class="muted small" id="quickWorkoutContext">Elegí ejercicio, reps y carga. El resto es opcional.</p></div><span class="statusChip">Rápido</span></div>
+        <div class="nativeWorkoutLiveBar" id="nativeWorkoutLiveBar" hidden>
+          <div><strong>Controles en pantalla de bloqueo</strong><span id="nativeWorkoutLiveText">Comprobando disponibilidad…</span></div>
+          <button type="button" class="secondary" id="nativeWorkoutLiveButton">Activar</button>
+        </div>
         <div class="quickLogger">
-          <div class="formGrid quickExercisePicker">
-            <div class="field"><label>Buscar ejercicio</label><input type="search" id="quickExerciseSearch" autocomplete="off" placeholder="Nombre o alias"></div>
-            <div class="field"><label>Ejercicio actual</label><select id="quickExerciseSelect"></select></div>
+          <div class="quickExerciseChooser">
+            <div class="field"><label for="quickExerciseSelect">Ejercicio</label><select id="quickExerciseSelect"></select></div>
+            <details class="quickExerciseSearchDetails"><summary>Buscar otro ejercicio</summary><div class="field"><label for="quickExerciseSearch">Nombre o alias</label><input type="search" id="quickExerciseSearch" autocomplete="off" placeholder="Ej. press, dominadas…"></div></details>
           </div>
           <div class="quickPrimaryInputs">
-            <div class="field quickSetNumberField"><label>Serie</label><input type="text" inputmode="decimal" id="quickSetNumber" value="1"></div>
+            <input type="hidden" id="quickSetNumber" value="1">
             <div class="field" id="quickRepsField"><label>Repeticiones</label><input type="text" inputmode="decimal" id="quickReps" value="8"><div class="quickAdjustRow"><button type="button" class="secondary" data-quick-adjust="reps:-1">-1</button><button type="button" class="secondary" data-quick-adjust="reps:1">+1</button></div></div>
-            <div class="field" id="quickWeightField"><label id="quickWeightLabel">Kilos / lastre</label><input type="text" inputmode="decimal" id="quickWeight" value="0"><div class="quickAdjustRow"><button type="button" class="secondary" data-quick-adjust="weight:-0.5">-0.5</button><button type="button" class="secondary" data-quick-adjust="weight:0.5">+0.5</button><button type="button" class="secondary" data-quick-adjust="weight:-2.5">-2.5</button><button type="button" class="secondary" data-quick-adjust="weight:2.5">+2.5</button><button type="button" class="secondary" data-quick-adjust="weight:-5">-5</button><button type="button" class="secondary" data-quick-adjust="weight:5">+5</button></div></div>
+            <div class="field" id="quickWeightField"><label id="quickWeightLabel">Kilos / lastre</label><input type="text" inputmode="decimal" id="quickWeight" value="0"><div class="quickWeightControls"><button type="button" class="secondary" data-quick-adjust="weight:-5" aria-label="Disminuir 5 kilos">-5</button><button type="button" class="secondary" data-quick-adjust="weight:-0.5" aria-label="Disminuir 0,5 kilos">-0,5</button><button type="button" class="secondary" data-quick-adjust="weight:0.5" aria-label="Aumentar 0,5 kilos">+0,5</button><button type="button" class="secondary" data-quick-adjust="weight:5" aria-label="Aumentar 5 kilos">+5</button></div></div>
             <div class="field hidden" id="quickDurationField"><label>Duracion (segundos)</label><input type="text" inputmode="decimal" id="quickDurationSeconds" value="60"></div>
             <div class="field hidden" id="quickDistanceField"><label>Distancia (metros)</label><input type="text" inputmode="decimal" id="quickDistanceMeters" value="1000"></div>
           </div>
           <div class="quickStickyActions">
             <button type="button" class="good" id="saveQuickSetBtn">Guardar serie</button>
-            <button type="button" class="secondary" id="repeatLastSetBtn">Repetir última</button>
             <button type="button" class="secondary" id="nextQuickExerciseBtn">Siguiente ejercicio</button>
-            <button type="button" class="secondary" id="undoQuickSetDeleteBtn" disabled>Deshacer</button>
           </div>
-          <div class="quickRestTimer hidden" id="quickRestTimer" role="timer" aria-live="polite"><span>Descanso</span><strong id="quickRestTimerValue">0:00</strong></div>
-          <div class="auditItem" id="quickLastHint">Última vez: sin datos todavía.</div>
-          <div class="auditItem" id="quickSetStats">Ejercicio: 0 series · músculo: 0 series.</div>
+          <div class="quickRestTimer hidden" id="quickRestTimer" role="timer" aria-live="polite"><span>Descanso</span><strong id="quickRestTimerValue">0:00</strong><div class="quickTimerActions"><button type="button" class="secondary" id="quickTimerStartBtn">Iniciar</button><button type="button" class="secondary" id="quickTimerPauseBtn">Pausar</button><button type="button" class="secondary" id="quickTimerAddBtn">+15 s</button></div></div>
+          <div class="quickContextSummary"><p id="quickLastHint">Última vez: sin datos todavía.</p><p id="quickSetStats">Ejercicio: 0 series · músculo: 0 series.</p></div>
+          <div class="quickContextActions"><button type="button" class="quiet" id="repeatLastSetBtn">Repetir última</button><button type="button" class="quiet" id="undoQuickSetDeleteBtn" disabled>Deshacer</button></div>
           <div class="quickLoggedSets" id="quickLoggedSets"></div>
           <details class="quickSecondaryDetails">
             <summary>Opcional y finalizar</summary>
@@ -660,15 +761,22 @@
         </div>
       </div>
       <div class="moduleCard" id="workoutConfigPanel">
-        <section class="workoutQuickAccess" aria-labelledby="workoutQuickAccessTitle">
-          <div class="sectionHeading"><div><h3 id="workoutQuickAccessTitle">Acceso rápido durante el entrenamiento</h3><p class="muted small">Elegí la opción disponible en la versión que estás usando.</p></div></div>
-          <div class="moduleGrid workoutQuickAccessGrid">
-            <article class="auditItem"><div><strong>Acceso directo de la PWA</strong><span class="muted small">El shortcut “Serie rápida” abre Entrenar directamente.</span><span class="muted small" id="quickAccessPwaStatus">Comprobando instalación…</span></div><button type="button" class="secondary" id="showPwaInstallHelpBtn">Ver instalación</button></article>
-            <article class="auditItem"><div><strong>Widget Android</strong><span class="muted small" id="quickAccessWidgetStatus">Requiere el APK Android.</span></div></article>
-            <article class="auditItem"><div><strong>Controles en pantalla bloqueada</strong><span class="muted small" id="quickAccessLockStatus">En desarrollo para el APK Android. No existe soporte universal: depende de Android y del dispositivo.</span></div></article>
-            <article class="auditItem"><div><strong>Controles mediante notificación</strong><span class="muted small" id="quickAccessNotificationStatus">Disponible en la beta Android; pendiente de integración y validación física. No está disponible en la versión estable actual.</span></div></article>
+        <div class="workoutQuickAccessShell"><details class="workoutQuickAccess" aria-labelledby="workoutQuickAccessTitle">
+          <summary><span id="workoutQuickAccessTitle">Acceso rápido durante el entrenamiento</span><small>PWA y APK Android</small></summary>
+          <p class="muted">Elegí la opción disponible en la versión que estás usando.</p>
+          <div class="workoutQuickAccessGrid">
+            <article class="auditItem workoutQuickAccessItem"><div><strong>Acceso directo de la PWA</strong><span class="muted small">El shortcut “Serie rápida” abre Entrenar directamente.</span><span class="muted small" id="quickAccessPwaStatus">Comprobando instalación…</span></div><button type="button" class="secondary" id="showPwaInstallHelpBtn">Ver instalación</button></article>
+            <article class="auditItem workoutQuickAccessItem"><div><strong>Widget de entrenamiento</strong><span class="muted small" id="workoutWidgetInstallStatus" role="status">Requiere el APK Android.</span></div><button type="button" class="good" id="addWorkoutWidgetBtn">Agregar widget</button><p class="muted small" id="workoutWidgetInstallHelp">Mantené presionada la pantalla de inicio → Widgets → Protocolo 0→100 · Gym.</p></article>
+            <article class="auditItem workoutQuickAccessItem"><div><strong>Controles en pantalla bloqueada</strong><span class="muted small" id="workoutLockScreenStatus" role="status">Dependen de Android, el fabricante y la configuración del dispositivo.</span></div></article>
+            <article class="auditItem workoutQuickAccessItem"><div><strong>Controles mediante notificación</strong><span class="muted small" id="workoutNotificationStatus" role="status">Disponibles en esta beta Android; pendientes de revisión. No están disponibles en stable.</span></div><button type="button" class="secondary" id="enableWorkoutControlsBtn">Activar controles</button><p class="muted small">La versión pública muestra solo “Entrenamiento en curso”; no expone ejercicio, peso, repeticiones ni Gym Party.</p></article>
           </div>
-        </section>
+          <div class="workoutQuickAccessState" id="workoutQuickAccessState" role="status" aria-live="polite">Guardado en el dispositivo.</div>
+          <details class="advancedDetails workoutQuickAccessDiagnostics">
+            <summary>Diagnóstico avanzado</summary>
+            <p class="muted small" id="workoutQuickAccessDiagnostic">Sin datos técnicos disponibles en la versión web.</p>
+            <button type="button" class="secondary" id="refreshWorkoutWidgetBtn">Actualizar acceso rápido</button>
+          </details>
+        </details></div>
         <details class="planAdvancedEditor">
         <summary>Configurar rutina semanal y acceso rápido</summary>
         <div class="formGrid">
@@ -755,11 +863,17 @@
     document.getElementById('startTodayWorkoutBtn')?.addEventListener('click',()=>openQuickSetLogger());
     document.getElementById('openQuickLoggerBtn')?.addEventListener('click',()=>openQuickSetLogger());
     document.getElementById('showPwaInstallHelpBtn')?.addEventListener('click',()=>window.showPwaInstallInstructions?.());
+    document.getElementById('addWorkoutWidgetBtn')?.addEventListener('click',requestWorkoutWidgetInstall);
+    document.getElementById('enableWorkoutControlsBtn')?.addEventListener('click',enableNativeWorkoutControls);
+    document.getElementById('nativeWorkoutLiveButton')?.addEventListener('click',enableNativeWorkoutControls);
     document.getElementById('quickExerciseSelect')?.addEventListener('change',event=>{editingQuickSetId='';selectQuickExerciseValue(event.target.value);});
     document.getElementById('quickExerciseSearch')?.addEventListener('input',renderQuickLogger);
     document.getElementById('saveQuickSetBtn')?.addEventListener('click',saveQuickSet);
     document.getElementById('repeatLastSetBtn')?.addEventListener('click',repeatLastSet);
     document.getElementById('nextQuickExerciseBtn')?.addEventListener('click',nextExercise);
+    document.getElementById('quickTimerStartBtn')?.addEventListener('click',()=>nativeTimerAction(nativeTimerStatus==='paused'?'com.protocolo.cien.ACTION_TIMER_RESUME':'com.protocolo.cien.ACTION_TIMER_START'));
+    document.getElementById('quickTimerPauseBtn')?.addEventListener('click',()=>nativeTimerAction('com.protocolo.cien.ACTION_TIMER_PAUSE'));
+    document.getElementById('quickTimerAddBtn')?.addEventListener('click',()=>nativeTimerAction('com.protocolo.cien.ACTION_TIMER_ADD_15'));
     document.getElementById('undoQuickSetDeleteBtn')?.addEventListener('click',undoDeletedQuickSet);
     document.getElementById('finishWorkoutBtn')?.addEventListener('click',finishWorkout);
     document.getElementById('quickSetLoggerPanel')?.addEventListener('click',handleQuickLoggerAction);
@@ -793,15 +907,16 @@
     document.getElementById('planEditorCards')?.addEventListener('change',updatePlanExerciseFromCard);
     document.getElementById('planEditorCards')?.addEventListener('click',handlePlanExerciseAction);
     document.getElementById('resetDefaultPlanBtn')?.addEventListener('click',resetDefaultPlan);
+    document.getElementById('refreshWorkoutWidgetBtn')?.addEventListener('click',()=>{syncWorkoutWidget();renderWorkoutQuickAccessStatus();flash('Acceso rápido actualizado.');});
     ['gymWidgetEnabled','gymShowRir','gymShowRestDays','gymRestTimerEnabled','gymHapticEnabled'].forEach(id=>document.getElementById(id)?.addEventListener('change',saveSettingsFromUi));
     ['gymUnit','gymMode','gymRestSeconds'].forEach(id=>document.getElementById(id)?.addEventListener('change',saveSettingsFromUi));
     renderWorkoutQuickAccess();window.applyCurrentRouteView?.();
   }
   function renderWorkoutQuickAccess(){
     const capabilities=window.renderPlatformCapabilities?.()||window.APP_PLATFORM_CAPABILITIES?.detect?.()||{runtimeMode:'browser',installationStatus:'unknown'};
-    const pwa=document.getElementById('quickAccessPwaStatus'),widget=document.getElementById('quickAccessWidgetStatus');
+    const pwa=document.getElementById('quickAccessPwaStatus');
     if(pwa)pwa.textContent=capabilities.installationStatus==='running-installed'&&capabilities.runtimeMode==='standalone-pwa'?'Ejecutándose como PWA instalada.':capabilities.runtimeMode==='android-apk'?'El APK ya funciona como aplicación instalada.':'Disponible desde un navegador compatible; la instalación no siempre puede comprobarse.';
-    if(widget)widget.textContent=capabilities.runtimeMode==='android-apk'?'Disponible en el APK Android. Esta versión todavía no detecta si ya fue agregado.':'Requiere el APK Android.';
+    renderWorkoutQuickAccessStatus(capabilities);
     return capabilities;
   }
   window.renderWorkoutQuickAccess=renderWorkoutQuickAccess;
@@ -825,12 +940,17 @@
     if(busy)tab.setAttribute('aria-busy','true');else tab.removeAttribute('aria-busy');
     tab.querySelectorAll('button,input,select,textarea').forEach(control=>{
       if(busy&&!control.disabled){control.dataset.workoutBusyDisabled='true';control.disabled=true;}
-      else if(!busy&&control.dataset.workoutBusyDisabled==='true'){delete control.dataset.workoutBusyDisabled;control.disabled=false;}
+      else if(!busy&&control.dataset.workoutBusyDisabled==='true'){
+        delete control.dataset.workoutBusyDisabled;
+        control.disabled=control.dataset.workoutStateDisabled==='true';
+      }
     });
   }
   function renderTodayWorkout(date=todayStr()){
     const plan=planForDate(date),session=latestSessionForDate(date),summary=session?sessionSummary(session):null;
     const title=document.getElementById('todayWorkoutTitle'),subtitle=document.getElementById('todayWorkoutSummary'),list=document.getElementById('todayWorkoutExercises'),progress=document.getElementById('todayWorkoutProgress'),score=document.getElementById('todayWorkoutScore'),lever=document.getElementById('physicalLever');
+    const startButton=document.getElementById('startTodayWorkoutBtn'),continueButton=document.getElementById('openQuickLoggerBtn');
+    const exerciseCount=document.getElementById('todayWorkoutExerciseCount');
     if(!title||!subtitle||!list||!progress) return;
     title.textContent=`${plan.weekday} — ${plan.name}`;
     subtitle.textContent=plan.type==='rest'?plan.message:(plan.muscles||[]).join(' · ');
@@ -841,20 +961,27 @@
       progress.innerHTML=[['Estado','Descanso'],['Sugerencia','Movilidad'],['Registro',session?'Hecho':'Opcional'],['Widget',settingsValue.widgetEnabled?'Activo':'Pausado']].map(statCard).join('');
       if(score) score.textContent='Recuperación';
       if(lever) lever.textContent='Hoy toca descanso: recuperación también cuenta.';
+      if(startButton)startButton.hidden=true;
+      if(continueButton)continueButton.hidden=true;
+      if(exerciseCount)exerciseCount.textContent='Recuperación';
       return;
     }
     const exercises=session?.exercises||plan.exercises;
+    if(exerciseCount)exerciseCount.textContent=`${exercises.length} ejercicios`;
     const current=currentExercise(session)||exercises.find(x=>!x.completed)||exercises[0];
     list.innerHTML=exercises.map(exercise=>{
       const sets=exercise.sets?.length||0,done=!!exercise.completed,cur=current && (current.id===exercise.id || current.exerciseId===exercise.exerciseId);
       return `<div class="workoutExerciseCard ${done?'done':''} ${cur?'current':''}"><strong>${escapeHtml(exercise.name)}</strong><div class="meta">${escapeHtml(exercise.muscle)} · ${sets} serie(s) registradas${exercise.bodyweight?' · peso corporal':''}</div></div>`;
     }).join('');
-    const completed=summary?.completedExercises||0,total=exercises.length,totalSets=summary?.totalSets||0,volume=summary?.totalVolume||0,compliance=summary?.compliance||0;
+    const completed=summary?.completedExercises||0,total=exercises.length,totalSets=summary?.totalSets||0,volume=summary?.totalVolume||0;
     const displaySummary=summary?{...summary,externalLoadVolume:displayVolume(summary.externalLoadVolume,settingsValue.unit),addedLoadVolume:displayVolume(summary.addedLoadVolume,settingsValue.unit)}:{};
     const progressText=window.WORKOUT_METRICS?.formatProgress?.(displaySummary,settingsValue.unit)||`${displayVolume(volume,settingsValue.unit).toLocaleString()} ${settingsValue.unit}`;
-    progress.innerHTML=[['Ejercicios',`${completed}/${total}`],['Series',totalSets],['Progreso',progressText],['Cumplimiento',`${compliance}%`]].map(statCard).join('');
+    progress.innerHTML=[['Ejercicios',`${completed}/${total}`],['Series',totalSets],['Carga registrada',progressText]].map(statCard).join('');
     if(score) score.textContent=`Score gym ${Math.min(100,Math.round((completed/Math.max(1,total))*70 + Math.min(30,totalSets*2)))}/100`;
     if(lever) lever.textContent=totalSets?'Según lo registrado, priorizá técnica antes que carga y registrá la siguiente serie.':'Palanca física de hoy: registrar pesos para medir progreso.';
+    const active=session?.status==='en progreso';
+    if(startButton)startButton.hidden=active;
+    if(continueButton){continueButton.hidden=!active;continueButton.textContent='Continuar entrenamiento';}
   }
   function statCard([k,v]){
     return window.WORKOUT_UI?.statCard?.(k,String(v))??`<div class="quickStat"><span>${escapeHtml(k)}</span><strong>${escapeHtml(String(v))}</strong></div>`;
@@ -950,14 +1077,51 @@
   }
   function updateRestTimerDisplay(){
     const box=document.getElementById('quickRestTimer'),value=document.getElementById('quickRestTimerValue'); if(!box||!value)return;
+    const nativeEnabled=nativeTimerEnabled();
+    if(nativeTimerStatus==='paused'){
+      box.classList.remove('hidden');
+      value.textContent=`${Math.floor(nativeTimerPausedSeconds/60)}:${String(nativeTimerPausedSeconds%60).padStart(2,'0')}`;
+      const start=document.getElementById('quickTimerStartBtn'),pause=document.getElementById('quickTimerPauseBtn');if(start)start.textContent='Continuar';if(pause)pause.disabled=true;
+      return;
+    }
     const remaining=Math.max(0,Math.ceil((restTimerEndsAt-Date.now())/1000));
-    box.classList.toggle('hidden',!restTimerEndsAt||remaining<=0);
+    box.classList.toggle('hidden',!nativeEnabled&&nativeTimerStatus!=='running'&&(!restTimerEndsAt||remaining<=0));
     value.textContent=`${Math.floor(remaining/60)}:${String(remaining%60).padStart(2,'0')}`;
-    if(restTimerEndsAt&&remaining<=0){restTimerEndsAt=0;if(restTimerInterval){clearInterval(restTimerInterval);restTimerInterval=null;}if(settings().hapticEnabled&&navigator.vibrate)navigator.vibrate([40,40,40]);}
+    const start=document.getElementById('quickTimerStartBtn'),pause=document.getElementById('quickTimerPauseBtn');if(start)start.textContent='Iniciar';if(pause)pause.disabled=nativeEnabled&&nativeTimerStatus!=='running';
+    if(restTimerEndsAt&&remaining<=0){restTimerEndsAt=0;nativeTimerStatus='finished';if(restTimerInterval){clearInterval(restTimerInterval);restTimerInterval=null;}if(settings().hapticEnabled&&navigator.vibrate)navigator.vibrate([40,40,40]);}
+  }
+  function nativeTimerEnabled(){return !!(window.APP_FEATURE_FLAGS?.isEnabled?.('nativeRestTimer')&&window.AndroidBridge?.handleNativeWorkoutTimerAction);}
+  function syncNativeTimerFromBridge(){
+    if(!nativeTimerEnabled()||!window.AndroidBridge?.getNativeWorkoutControlData)return false;
+    try{
+      const payload=JSON.parse(String(window.AndroidBridge.getNativeWorkoutControlData()||'{}')),runtime=payload.timerRuntime||{},timer=payload.state?.timer||{};
+      nativeTimerStatus=String(runtime.timerStatus||timer.timerStatus||'idle');
+      const remainingMs=Math.max(0,Number(runtime.remainingMs)||0);
+      nativeTimerPausedSeconds=Math.ceil(remainingMs/1000);
+      restTimerEndsAt=nativeTimerStatus==='running'?Date.now()+remainingMs:0;
+      if(restTimerInterval)clearInterval(restTimerInterval);
+      if(nativeTimerStatus==='running')restTimerInterval=setInterval(updateRestTimerDisplay,1000);
+      updateRestTimerDisplay();return true;
+    }catch(error){window.APP_ERROR_BOUNDARY?.capture?.(error,{source:'native-workout-timer'});return false;}
+  }
+  function nativeTimerAction(action){
+    if(nativeTimerEnabled()){
+      try{window.AndroidBridge.handleNativeWorkoutTimerAction(action);setTimeout(syncNativeTimerFromBridge,80);return;}
+      catch(error){window.APP_ERROR_BOUNDARY?.capture?.(error,{source:'native-workout-timer-action'});}
+    }
+    if(action.endsWith('ACTION_TIMER_PAUSE')&&restTimerEndsAt){nativeTimerPausedSeconds=Math.max(1,Math.ceil((restTimerEndsAt-Date.now())/1000));restTimerEndsAt=0;nativeTimerStatus='paused';if(restTimerInterval)clearInterval(restTimerInterval);restTimerInterval=null;updateRestTimerDisplay();return;}
+    if(action.endsWith('ACTION_TIMER_ADD_15')){if(nativeTimerStatus==='paused')nativeTimerPausedSeconds+=15;else if(restTimerEndsAt)restTimerEndsAt+=15000;updateRestTimerDisplay();return;}
+    if(action.endsWith('ACTION_TIMER_RESUME')&&nativeTimerStatus==='paused'){restTimerEndsAt=Date.now()+nativeTimerPausedSeconds*1000;nativeTimerStatus='running';if(restTimerInterval)clearInterval(restTimerInterval);restTimerInterval=setInterval(updateRestTimerDisplay,1000);updateRestTimerDisplay();return;}
+    if(action.endsWith('ACTION_TIMER_START'))startRestTimer();
   }
   function startRestTimer(){
     const current=settings(); if(!current.restTimerEnabled)return;
+    if(nativeTimerEnabled()){
+      try{window.AndroidBridge.handleNativeWorkoutTimerAction('com.protocolo.cien.ACTION_TIMER_START');setTimeout(syncNativeTimerFromBridge,80);return;}
+      catch(error){window.APP_ERROR_BOUNDARY?.capture?.(error,{source:'native-workout-timer-start'});}
+    }
     restTimerEndsAt=Date.now()+Math.max(15,Number(current.restSeconds)||90)*1000;
+    nativeTimerStatus='running';
     if(restTimerInterval)clearInterval(restTimerInterval);
     restTimerInterval=setInterval(updateRestTimerDisplay,1000);updateRestTimerDisplay();
   }
@@ -1020,20 +1184,21 @@
       window.APP_DRAFTS?.announceRestored?.({id:persistentDraft.id,label:'Borrador de serie restaurado.',onDiscard:()=>{quickDrafts.delete(quickDraftKey(currentQuickExerciseId));renderQuickLogger();}});
     }
     const hint=document.getElementById('quickLastHint');
-    if(h) hint.textContent=`Última vez: ${h.name} — ${h.lastSet?setPerformanceText(h.lastSet,exercise):`${displayWeight(h.lastWeight)} ${settings().unit} x ${h.lastReps||0} reps`}. Podés repetir el registro anterior; si te sentís bien, progresá de forma gradual.`;
-    else hint.textContent='Última vez: sin datos todavía. Si estás fatigado, mantener carga también cuenta.';
+    if(h) hint.textContent=`Última: ${h.lastSet?setPerformanceText(h.lastSet,exercise):`${displayWeight(h.lastWeight)} ${settings().unit} × ${h.lastReps||0}`}.`;
+    else hint.textContent='Última: todavía sin datos.';
     const stat=document.getElementById('quickSetStats');
     if(stat){
       const exerciseSets=exerciseSetCount(exercise);
       const muscleSets=muscleSetCount(source,exercise.muscle);
       const typeCounts=setModel()?.counts?.(sets)||{working:exerciseSets,warmup:0,supplementary:0};
       const detail=[`${typeCounts.working} efectiva(s)`,typeCounts.warmup?`${typeCounts.warmup} calentamiento(s)`:null,typeCounts.supplementary?`${typeCounts.supplementary} complementaria(s)`:null].filter(Boolean).join(' · ');
-      stat.textContent=`Series de este ejercicio: ${exerciseSets} (${detail}). Total de ${exercise.muscle}: ${muscleSets}.`;
+      stat.textContent=`Ejercicio: ${exerciseSets} · ${exercise.muscle}: ${muscleSets}${detail?` · ${detail}`:''}.`;
     }
     const logged=document.getElementById('quickLoggedSets'); if(logged)logged.innerHTML=quickSetRowsHtml(exercise);
     const save=document.getElementById('saveQuickSetBtn'); if(save)save.textContent=editingSet?'Guardar cambios':'Guardar serie';
-    const undo=document.getElementById('undoQuickSetDeleteBtn'); if(undo)undo.disabled=!lastDeletedQuickSet;
-    updateRestTimerDisplay();
+    const undo=document.getElementById('undoQuickSetDeleteBtn'); if(undo){undo.disabled=!lastDeletedQuickSet;undo.hidden=!lastDeletedQuickSet;}
+    const repeat=document.getElementById('repeatLastSetBtn');if(repeat)repeat.hidden=!(last||h);
+    if(!syncNativeTimerFromBridge())updateRestTimerDisplay();
     const show=settings().showRir;
     ['quickRir','quickRpe'].forEach(id=>{const field=document.getElementById(id)?.closest('.field'); if(field) field.classList.toggle('hidden',!show);});
   }
@@ -1056,11 +1221,25 @@
   }
   function openQuickSetLogger(exerciseId){
     const session=ensureSession(todayStr());
+    activateNativeControlsForSession();
     if(exerciseId) currentQuickExerciseId=exerciseId;
     else if(session) currentQuickExerciseId=currentExercise(session)?.id || currentExercise(session)?.exerciseId || null;
     openGymToday();
     renderQuickLogger();
     document.getElementById('quickSetLoggerPanel')?.scrollIntoView({behavior:window.preferredMotionBehavior?.()||'auto',block:'start'});
+  }
+  function activateNativeControlsForSession(){
+    if(!window.AndroidBridge?.requestWorkoutNotificationPermission)return;
+    enableNativeWorkoutFeatures({notification:true});
+    const permission=String(window.AndroidBridge.workoutNotificationPermissionState?.()||'');
+    if(permission==='prompt')window.AndroidBridge.requestWorkoutNotificationPermission();
+    else {
+      const state=syncWorkoutWidget();
+      if(permission==='granted'&&state&&window.AndroidBridge?.startWorkoutNotification){
+        try{window.AndroidBridge.startWorkoutNotification(JSON.stringify(state));}catch(error){}
+      }
+    }
+    window.setTimeout(renderWorkoutQuickAccessStatus,350);
   }
   function selectedSessionForQuick(){
     return ensureSession(todayStr());
@@ -1603,10 +1782,136 @@
     if(rest) rest.checked=!!s.showRestDays;
     const timer=document.getElementById('gymRestTimerEnabled'),seconds=document.getElementById('gymRestSeconds'),haptic=document.getElementById('gymHapticEnabled');
     if(timer)timer.checked=!!s.restTimerEnabled;if(seconds)seconds.value=Math.max(15,Number(s.restSeconds)||90);if(haptic)haptic.checked=!!s.hapticEnabled;
+    renderWorkoutQuickAccessStatus();
   }
   function saveSettingsFromUi(){
     saveSettings({widgetEnabled:document.getElementById('gymWidgetEnabled').checked,showRir:document.getElementById('gymShowRir').checked,unit:document.getElementById('gymUnit').value,mode:document.getElementById('gymMode').value,showRestDays:document.getElementById('gymShowRestDays').checked,restTimerEnabled:document.getElementById('gymRestTimerEnabled').checked,restSeconds:Math.max(15,numeric(document.getElementById('gymRestSeconds').value,90)),hapticEnabled:document.getElementById('gymHapticEnabled').checked});
     renderQuickLogger();
+  }
+  function nativeBridgeJson(method,...args){
+    try{
+      const fn=window.AndroidBridge?.[method];
+      if(typeof fn!=='function')return null;
+      const raw=fn.apply(window.AndroidBridge,args);
+      return typeof raw==='string'?JSON.parse(raw):raw;
+    }catch(error){return null;}
+  }
+  function enableNativeWorkoutFeatures({notification=false}={}){
+    window.APP_FEATURE_FLAGS?.set?.({nativeWorkoutControlsV1:true,nativeRestTimer:true,lockScreenWorkoutControls:notification});
+    saveSettings({widgetEnabled:true,showWorkoutOnLockScreen:notification||settings().showWorkoutOnLockScreen!==false});
+    syncWorkoutWidget();
+  }
+  function requestWorkoutWidgetInstall(){
+    if(!window.AndroidBridge?.requestPinWorkoutWidget){
+      flash('El widget requiere instalar el APK Android.');
+      return;
+    }
+    enableNativeWorkoutFeatures();
+    const result=nativeBridgeJson('requestPinWorkoutWidget');
+    if(result?.code==='pin-requested')flash('Confirmá Agregar en la pantalla del sistema.');
+    else if(result?.code==='manual-install-required')flash('Tu launcher requiere agregar el widget manualmente.');
+    else flash('No se pudo abrir el selector. Podés agregarlo desde Widgets.');
+    window.setTimeout(renderWorkoutQuickAccessStatus,500);
+  }
+  function enableNativeWorkoutControls(){
+    if(!window.AndroidBridge?.requestWorkoutNotificationPermission){
+      flash('Los controles de pantalla de bloqueo requieren el APK Android.');
+      return;
+    }
+    const currentStatus=nativeBridgeJson('getWorkoutWidgetStatus');
+    const capabilities=nativeBridgeJson('getWorkoutQuickAccessCapabilities');
+    const permission=capabilities?.notificationPermission||'';
+    if((['not-posted','active'].includes(currentStatus?.notificationCode)||currentStatus?.notificationCode==='permission-required'&&['blocked','denied'].includes(permission))&&window.AndroidBridge?.openWorkoutNotificationSettings){
+      nativeBridgeJson('openWorkoutNotificationSettings');
+      flash('Revisá que Controles de entrenamiento pueda mostrarse en la pantalla de bloqueo.');
+      return;
+    }
+    enableNativeWorkoutFeatures({notification:true});
+    const state=window.AndroidBridge.requestWorkoutNotificationPermission();
+    if(state==='granted')flash('Controles activados para la sesión en curso.');
+    else if(state==='requested')flash('Permití las notificaciones para ver los controles mientras entrenás.');
+    else if(state==='settings-opened')flash('Activá las notificaciones de Protocolo 0→100 y volvé a la app.');
+    else flash('Activá las notificaciones de Protocolo 0→100 en los ajustes de Android.');
+    renderWorkoutQuickAccessStatus();
+  }
+  function renderWorkoutQuickAccessStatus(platformCapabilities){
+    const widgetStatus=document.getElementById('workoutWidgetInstallStatus');
+    const lockStatus=document.getElementById('workoutLockScreenStatus');
+    const notificationStatus=document.getElementById('workoutNotificationStatus');
+    const overall=document.getElementById('workoutQuickAccessState');
+    const diagnostic=document.getElementById('workoutQuickAccessDiagnostic');
+    const addButton=document.getElementById('addWorkoutWidgetBtn');
+    const enableButton=document.getElementById('enableWorkoutControlsBtn');
+    const liveBar=document.getElementById('nativeWorkoutLiveBar');
+    const liveText=document.getElementById('nativeWorkoutLiveText');
+    const liveButton=document.getElementById('nativeWorkoutLiveButton');
+    const quickAccessDetails=document.querySelector('details.workoutQuickAccess');
+    if(!widgetStatus||!lockStatus||!overall)return;
+    const platform=platformCapabilities||window.APP_PLATFORM_CAPABILITIES?.detect?.()||{runtimeMode:'browser'};
+    const capabilities=nativeBridgeJson('getWorkoutQuickAccessCapabilities');
+    const status=nativeBridgeJson('getWorkoutWidgetStatus');
+    const enabled=window.APP_FEATURE_FLAGS?.isEnabled?.('nativeWorkoutControlsV1')===true;
+    const lockEnabled=window.APP_FEATURE_FLAGS?.isEnabled?.('lockScreenWorkoutControls')===true;
+    const setStateDisabled=(button,disabled)=>{
+      if(!button)return;
+      if(disabled)button.dataset.workoutStateDisabled='true';else delete button.dataset.workoutStateDisabled;
+      button.disabled=!!disabled||button.dataset.workoutBusyDisabled==='true';
+    };
+    const trustedApk=platform.runtimeMode==='android-apk'&&capabilities?.platform==='android-apk';
+    if(!trustedApk){
+      if(liveBar)liveBar.hidden=true;
+      widgetStatus.textContent='No disponible en la versión web. Requiere el APK Android.';
+      lockStatus.textContent='En desarrollo para el APK Android; depende de Android, el fabricante y la configuración.';
+      if(notificationStatus)notificationStatus.textContent='Disponible en la beta Android; pendiente de revisión. No está disponible en stable.';
+      overall.textContent='Tus registros web continúan guardándose normalmente.';
+      setStateDisabled(addButton,true);
+      setStateDisabled(enableButton,true);
+      if(diagnostic)diagnostic.textContent='El navegador no ofrece controles Android.';
+      return;
+    }
+    if(liveBar)liveBar.hidden=false;
+    const instances=Math.max(0,Number(capabilities.widgetInstances||status?.instances||0));
+    widgetStatus.textContent=instances>0?`Widget agregado (${instances}).`:(capabilities.pinWidgetSupported?'Widget no agregado. Podés instalarlo ahora.':'El launcher requiere agregarlo manualmente.');
+    if(addButton){setStateDisabled(addButton,instances>0);addButton.textContent=instances>0?'Widget agregado':'Agregar widget';}
+    const permission=capabilities.notificationPermission||'unknown';
+    const notificationCode=status?.notificationCode||'';
+    if(notificationCode==='active')lockStatus.textContent='Notificación activa. Si no aparece al bloquear, revisá su visibilidad en Android.';
+    else if(notificationCode==='not-posted')lockStatus.textContent='Android no está mostrando los controles. Revisá el canal de notificaciones.';
+    else if(notificationCode==='waiting-for-session')lockStatus.textContent='Controles activados. Iniciá un entrenamiento para que aparezcan.';
+    else if(lockEnabled&&permission==='granted')lockStatus.textContent='Controles activados. Iniciá un entrenamiento para que aparezcan.';
+    else if(permission==='blocked'||permission==='denied')lockStatus.textContent='Notificaciones desactivadas. Podés habilitarlas desde Ajustes de Android.';
+    else lockStatus.textContent='Puede depender de tu versión de Android y del fabricante.';
+    if(notificationStatus)notificationStatus.textContent=notificationCode==='active'?'Controles privados activos durante la sesión.':notificationCode==='not-posted'?'Android no está mostrando la notificación privada; revisá el canal.':notificationCode==='waiting-for-session'?'Controles preparados; aparecerán al iniciar una sesión.':permission==='blocked'||permission==='denied'?'Permiso denegado; Gym continúa funcionando sin notificación.':'Disponible en esta beta Android cuando inicies una sesión y concedas permiso.';
+    if(enableButton){
+      const needsNotificationReview=['not-posted','active'].includes(notificationCode);
+      setStateDisabled(enableButton,lockEnabled&&permission==='granted'&&!needsNotificationReview);
+      enableButton.textContent=notificationCode==='active'?'Configurar bloqueo':notificationCode==='not-posted'?'Revisar notificación':lockEnabled&&permission==='granted'?'Controles activos':'Activar controles';
+    }
+    if(liveText&&liveButton){
+      if(notificationCode==='active'){
+        liveText.textContent='Activos. Desplegá la notificación para ver ±0,5, ±5 y elegir ejercicio.';
+        liveButton.textContent='Configurar';
+      }else if(notificationCode==='not-posted'){
+        liveText.textContent='Android está ocultando la notificación.';
+        liveButton.textContent='Revisar';
+      }else if(permission==='blocked'||permission==='denied'){
+        liveText.textContent='Falta permitir las notificaciones.';
+        liveButton.textContent='Activar';
+      }else if(notificationCode==='waiting-for-session'){
+        liveText.textContent='Listos: aparecen al iniciar el entrenamiento.';
+        liveButton.textContent='Configurar';
+      }else{
+        liveText.textContent='Activá el acceso para usarlo con el teléfono bloqueado.';
+        liveButton.textContent='Activar';
+      }
+      setStateDisabled(liveButton,false);
+    }
+    if(quickAccessDetails&&['disabled','permission-required','not-posted'].includes(notificationCode))quickAccessDetails.open=true;
+    const queue=status?.queue||{};
+    const pending=Math.max(0,Number(queue.pending||0));
+    const rejected=Math.max(0,Number(queue.rejected||0));
+    overall.textContent=rejected>0?'Necesita atención. Revisá el diagnóstico.':pending>0?`${pending} cambio${pending===1?'':'s'} pendiente${pending===1?'':'s'} de importar.`:enabled?'Guardado en el dispositivo y listo para registrar.':'Disponible. Activá el widget o los controles cuando vayas a entrenar.';
+    if(diagnostic)diagnostic.textContent=`Widget: ${instances} · Pendientes: ${pending} · Permiso: ${permission}.`;
   }
   function planDraftId(dayKey=currentPlanEditorDay){return `gym-routine:${dayKey}`;}
   function capturePlanDraft(){
@@ -1904,8 +2209,86 @@
     const quickHint=h
       ? `Ultima vez: ${h.name} — ${displayWeight(h.lastWeight,s.unit)} ${s.unit} x ${h.lastReps||0} reps.`
       : 'Ajusta reps/kg y guarda desde el widget.';
+    const candidateSet={
+      reps:Math.max(0,Math.round(quickReps)),
+      weightKg:window.WORKOUT_EQUIPMENT?.kgFromDisplay?.(quickWeight,s.unit)??quickWeight,
+      durationSeconds:Math.max(0,Number(quickMatches?previousQuick.durationSeconds:normalizedLast.durationSeconds)||0),
+      distanceMeters:Math.max(0,Number(quickMatches?previousQuick.distanceMeters:normalizedLast.distanceMeters)||0),
+      bodyweight:quickBodyweight,
+      measurementMode:normalizedLast.measurementMode||current?.measurementMode||'reps',
+      loadMode:normalizedLast.loadMode||(quickBodyweight?'bodyweight':'total'),
+      equipmentId:normalizedLast.equipmentId||current?.equipmentId||'',
+      equipmentName:normalizedLast.equipmentName||'',
+      barWeightKg:normalizedLast.barWeightKg||0,
+      laterality:normalizedLast.laterality||'bilateral',
+      repsMode:normalizedLast.repsMode||'total'
+    };
+    const workoutSessions=sessions();
+    const calculateGuidance=(exercise,override=null)=>{
+      if(!exercise||!window.WORKOUT_LOAD_GUIDANCE?.calculate)return null;
+      const exerciseSets=exercise.sets||[];
+      const exerciseLast=exerciseSets.slice().reverse().find(set=>setModel()?.countsForProgression?.(set)??true)||exerciseSets[exerciseSets.length-1]||null;
+      const exerciseHistory=exercise.exerciseId?history()[exercise.exerciseId]:null;
+      const normalized=normalizeSet(exerciseLast||exerciseHistory?.lastSet||{
+        reps:exerciseHistory?.lastReps??8,
+        weightKg:exerciseHistory?.lastWeight??0,
+        measurementMode:exercise.measurementMode||'reps',
+        loadMode:exercise.defaultLoadMode||(exercise.bodyweight?'bodyweight':'total')
+      },exercise);
+      const comparableCandidate=override||{
+        reps:Math.max(0,Number(normalized.reps??exerciseHistory?.lastReps??8)||0),
+        weightKg:Math.max(0,Number(normalized.weightKg??exerciseHistory?.lastWeight??0)||0),
+        durationSeconds:Math.max(0,Number(normalized.durationSeconds)||0),
+        distanceMeters:Math.max(0,Number(normalized.distanceMeters)||0),
+        bodyweight:!!(normalized.bodyweight||exercise.bodyweight),
+        measurementMode:normalized.measurementMode||exercise.measurementMode||'reps',
+        loadMode:normalized.loadMode||exercise.defaultLoadMode||(exercise.bodyweight?'bodyweight':'total'),
+        equipmentId:normalized.equipmentId||exercise.equipmentId||'',
+        equipmentName:normalized.equipmentName||exercise.equipmentName||'',
+        barWeightKg:Math.max(0,Number(normalized.barWeightKg)||0),
+        laterality:normalized.laterality||'bilateral',
+        repsMode:normalized.repsMode||'total'
+      };
+      return window.WORKOUT_LOAD_GUIDANCE.calculate({sessions:workoutSessions,exercise,candidateSet:comparableCandidate});
+    };
+    const guidance=current?calculateGuidance(current,candidateSet):null;
+    const exerciseLoadGuidance={};
+    exercises.forEach(exercise=>{
+      const id=exercise.id||exercise.exerciseId;
+      const value=id===currentId?guidance:calculateGuidance(exercise);
+      if(!id||!value)return;
+      const snapshot={
+        lastComparableSet:value.lastComparableSet||null,
+        historicalLoadRecord:value.historicalLoadRecord||null,
+        loadGuidanceSnapshot:{
+          exerciseId:value.exerciseId,
+          comparisonKey:value.comparisonKey,
+          last:value.lastComparableSet||null,
+          record:value.historicalLoadRecord||null,
+          recordKind:value.recordKind,
+          comparisonLabel:value.comparisonLabel,
+          confidence:value.confidence,
+          calculatedAt:value.calculatedAt,
+          policyVersion:value.policyVersion
+        }
+      };
+      exerciseLoadGuidance[id]=snapshot;
+    });
     return {
       schemaVersion:3,
+      clientVersion:`${window.APP_VERSION_INFO?.version||'2.7.0'}+${Number(window.APP_VERSION_INFO?.build)||0}`,
+      featureFlags:window.APP_FEATURE_FLAGS?.all?.()||{schemaVersion:1,nativeWorkoutControlsV1:false,lockScreenWorkoutControls:false,nativeRestTimer:false,multiPartyWorkoutSharing:false},
+      nativeWorkoutSettings:{
+        restSeconds:Math.max(15,Number(s.restSeconds)||90),
+        autoStartRestTimer:!!s.restTimerEnabled,
+        hapticEnabled:s.hapticEnabled!==false,
+        timerVibration:s.hapticEnabled!==false,
+        timerSound:!!s.timerSound,
+        showWorkoutOnLockScreen:s.showWorkoutOnLockScreen!==false,
+        showWeightOnLockScreen:s.showWeightOnLockScreen!==false,
+        showRecordOnLockScreen:s.showRecordOnLockScreen!==false,
+        lockScreenVisibility:['public','private','hidden'].includes(s.lockScreenVisibility)?s.lockScreenVisibility:'private'
+      },
       date,
       dayKey:plan.dayKey,
       weekday:plan.weekday,
@@ -1943,23 +2326,41 @@
       currentExerciseSets,
       currentMuscleSets,
       currentMuscleName:current?.muscle||'',
+      lastComparableSet:guidance?.lastComparableSet||null,
+      historicalLoadRecord:guidance?.historicalLoadRecord||null,
+      loadGuidanceSnapshot:guidance?{
+        exerciseId:guidance.exerciseId,
+        comparisonKey:guidance.comparisonKey,
+        last:guidance.lastComparableSet,
+        record:guidance.historicalLoadRecord,
+        recordKind:guidance.recordKind,
+        comparisonLabel:guidance.comparisonLabel,
+        confidence:guidance.confidence,
+        calculatedAt:guidance.calculatedAt,
+        policyVersion:guidance.policyVersion
+      }:null,
+      exerciseLoadGuidance,
       quickLog:{
         currentExerciseId:currentId,
         exerciseName:current?.name||'',
         setNumber:(currentSets.length||0)+1,
         reps:Math.max(0,Math.round(quickReps)),
         weight:Math.max(0,Math.round(quickWeight*2)/2),
+        durationSeconds:candidateSet.durationSeconds,
+        distanceMeters:candidateSet.distanceMeters,
         setType:'working',
         bodyweight:quickBodyweight,
-        measurementMode:normalizedLast.measurementMode||'reps',
-        loadMode:normalizedLast.loadMode||(quickBodyweight?'bodyweight':'total'),
-        equipmentId:normalizedLast.equipmentId||current?.equipmentId||'',
-        equipmentName:normalizedLast.equipmentName||'',
+        measurementMode:candidateSet.measurementMode,
+        loadMode:candidateSet.loadMode,
+        equipmentId:candidateSet.equipmentId,
+        equipmentName:candidateSet.equipmentName,
         barWeight:displayWeight(normalizedLast.barWeightKg||0,s.unit),
+        barWeightKg:Math.max(0,Number(normalizedLast.barWeightKg)||0),
         laterality:normalizedLast.laterality||'bilateral',
         unit:s.unit,
         weightStep:0.5,
         weightFastStep:5,
+        weightAdjustmentStep:[0.5,5].includes(Number(previousQuick.weightAdjustmentStep))?Number(previousQuick.weightAdjustmentStep):0.5,
         currentExerciseSets,
         currentMuscleSets,
         currentMuscleName:current?.muscle||'',
@@ -2002,10 +2403,11 @@
     else if(action===actionWidgetSaveSet){syncWorkoutWidget();openGymToday();}
   }
 
-  window.WORKOUT_FEATURES={keys,dayOrder,defaultWeeklyPlan:clone(defaultWeeklyPlan),exerciseLibrary:clone(exerciseLibrary),EXERCISE_LIBRARY_VERSION,ready:()=>initializeWorkoutFeatures(),getExerciseLibrary:()=>clone(libraryData()),getPendingMuscleClassifications:()=>clone(pendingMuscleClassifications()),confirmExerciseClassificationPayload,previewHistoricalClassificationMigration,applyHistoricalClassificationMigration,undoHistoricalClassificationMigration,getWeeklyWorkoutPlan:()=>clone(weeklyPlan()),getEquipmentProfiles:()=>clone(equipmentProfiles()),getGymSettings:()=>clone(settings()),updateGymSettings:next=>{saveSettings(next||{});return clone(settings());},displayWeight,canonicalWeight,displayVolume,migrateExerciseLibrary,migrateLegacyGymSessions,dayKeyForDate,planForDate,rankExercisesForContext,getQuickWorkoutState,addManualExercisePayload,saveQuickSetPayload,updateQuickSetPayload,reviewAnomalousSetResult,deleteQuickSetPayload,undoDeleteQuickSetPayload,undoSavedQuickSetPayload,canUndoQuickSetDelete:()=>!!lastDeletedQuickSet,replaceSessionPayload,completeQuickExercisePayload,finishWorkoutPayload,buildWorkoutWidgetState,syncWorkoutWidget,importWidgetStateFromAndroid};
+  window.WORKOUT_FEATURES={keys,dayOrder,defaultWeeklyPlan:clone(defaultWeeklyPlan),exerciseLibrary:clone(exerciseLibrary),EXERCISE_LIBRARY_VERSION,ready:()=>initializeWorkoutFeatures(),getExerciseLibrary:()=>clone(libraryData()),getPendingMuscleClassifications:()=>clone(pendingMuscleClassifications()),confirmExerciseClassificationPayload,previewHistoricalClassificationMigration,applyHistoricalClassificationMigration,undoHistoricalClassificationMigration,getWeeklyWorkoutPlan:()=>clone(weeklyPlan()),getEquipmentProfiles:()=>clone(equipmentProfiles()),getGymSettings:()=>clone(settings()),updateGymSettings:next=>{saveSettings(next||{});return clone(settings());},displayWeight,canonicalWeight,displayVolume,migrateExerciseLibrary,migrateLegacyGymSessions,dayKeyForDate,planForDate,rankExercisesForContext,getQuickWorkoutState,addManualExercisePayload,saveQuickSetPayload,updateQuickSetPayload,reviewAnomalousSetResult,deleteQuickSetPayload,undoDeleteQuickSetPayload,undoSavedQuickSetPayload,canUndoQuickSetDelete:()=>!!lastDeletedQuickSet,replaceSessionPayload,completeQuickExercisePayload,finishWorkoutPayload,buildWorkoutWidgetState,syncWorkoutWidget,importWidgetStateFromAndroid,importNativeWorkoutMutationsFromAndroid,adoptNativeWorkoutSelection};
   window.openGymToday=openGymToday;
   window.openQuickSetLogger=openQuickSetLogger;
   window.handleAndroidWidgetIntent=(action,payload)=>handleAndroidWidgetIntent(action,payload||{});
+  window.addEventListener?.('native-workout-notification-permission',renderWorkoutQuickAccessStatus);
 
   const originalRenderGym=renderGym;
   renderGym=function(){ originalRenderGym(); renderWorkoutDashboard(); };

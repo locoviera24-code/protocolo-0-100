@@ -1,6 +1,20 @@
 import {test,expect} from '@playwright/test';
 import {waitForAppReady} from './helpers/app-ready.mjs';
 
+test('la hidratacion temprana de cache no depende del renderer nutricional avanzado',async ({page})=>{
+  await clean(page);
+  const result=await page.evaluate(()=>{
+    delete window.renderAdvancedNutrition;
+    window.dispatchEvent(new CustomEvent('app-data-primary-ready',{detail:{domain:'nutritionCache'}}));
+    return{
+      recoveryHidden:document.getElementById('appRecoveryBackdrop')?.classList.contains('hidden'),
+      renderErrors:window.APP_ERROR_BOUNDARY.logs().filter(item=>String(item.message||'').includes('renderAdvancedNutrition')).length
+    };
+  });
+  expect(result.recoveryHidden).toBe(true);
+  expect(result.renderErrors).toBe(0);
+});
+
 const NUTRITION_KEY='protocolo_0_100_nutrition_entries_v1';
 const WORKOUT_KEY='protocolo_0_100_workout_sessions_v1';
 const FDC_FOODS_KEY='protocolo_0_100_cached_fdc_foods_v1';
@@ -67,7 +81,8 @@ test('la cache nutricional se recupera y permite rollback sin tocar historiales'
     window.APP_DATA.write(foodsKey,[{id:'fdc-44',fdcId:44,name:'Cache recuperable',cachedAt:new Date().toISOString()}]);
     await window.APP_DATA.flush();localStorage.removeItem(foodsKey);
   },{foodsKey:FDC_FOODS_KEY,nutritionKey:NUTRITION_KEY});
-  await page.reload();await page.evaluate(()=>window.APP_DATA.ready());
+  await page.reload();
+  await waitForAppReady(page);
   const recovered=await page.evaluate(async ({foodsKey,nutritionKey})=>({foods:window.APP_DATA.readResult(foodsKey),local:JSON.parse(localStorage.getItem(foodsKey)),nutrition:window.APP_DATA.readResult(nutritionKey),status:await window.APP_DATA.primaryDomainStatus('nutritionCache')}),{foodsKey:FDC_FOODS_KEY,nutritionKey:NUTRITION_KEY});
   expect(recovered.foods.value[0].fdcId).toBe(44);
   expect(recovered.local[0].fdcId).toBe(44);

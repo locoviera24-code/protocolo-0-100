@@ -1,8 +1,8 @@
 globalThis.PRECACHE_MANIFEST=Object.freeze({
   "schemaVersion": 1,
   "version": "2.7.0",
-  "build": 90,
-  "cacheName": "protocolo-0-100-pwa-2.7.0-b90",
+  "build": 96,
+  "cacheName": "protocolo-0-100-pwa-2.7.0-b96",
   "required": [
     {
       "url": "./advanced-features.js",
@@ -12,12 +12,12 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     {
       "url": "./app-version.js",
       "bytes": 358,
-      "sha256": "1b45d33be81feb0dc27595b13fdd4a159edb5065120a4e924502739c2379d42c"
+      "sha256": "cd59f9cacffe9452f782c7dccb45717d77e0b381926c9272101ccac619d9bf90"
     },
     {
       "url": "./app/build-guard.js",
       "bytes": 1811,
-      "sha256": "dc511ce47b4acbde16f5235ed4b4c1e92ce96fbb7097a2ec2f63a8975a79e3b5"
+      "sha256": "866d5ce0b55d3fd33453fb196e669646dcb57633b97001bd30b2f838c7f4c69a"
     },
     {
       "url": "./app/build-info.js",
@@ -40,6 +40,11 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
       "sha256": "d8d116cdb107864d4f5ba0b317717b1fe6c338eff69e9f85723e4d5af65938d6"
     },
     {
+      "url": "./app/feature-flags.js",
+      "bytes": 1655,
+      "sha256": "72cd20cd5bbbbbed1d40c3e10d28856e7299a256ab53a6d6d50a9ed46b677418"
+    },
+    {
       "url": "./app/home-state.js",
       "bytes": 608,
       "sha256": "4a80cba246d88cf4f45e4dad6f505ef15dd4e0fdee52642e42d68e5ac25336b8"
@@ -56,8 +61,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     },
     {
       "url": "./build-info.json",
-      "bytes": 189,
-      "sha256": "4b5c6f9ebda440159b2b39a8d65a4953c92f7ebf0390af148297eb5d6c23b40c"
+      "bytes": 218,
+      "sha256": "7ab28e17c9a00d9f083e6da1c54a072ddbc1dda1ceab833cbc7bf0c42bfd6ade"
     },
     {
       "url": "./data/backup-service.js",
@@ -76,8 +81,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     },
     {
       "url": "./data/schema-registry.js",
-      "bytes": 14948,
-      "sha256": "93919afd8367a3bdaf0fc482170b2d7224dc897544f527a78c8e161b9b814677"
+      "bytes": 15269,
+      "sha256": "462291d5b2dc635450745f8bcc85fbc1bc040b060e7d844cc26cbe0f506de9c8"
     },
     {
       "url": "./fdc-client.js",
@@ -125,6 +130,11 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
       "sha256": "dc0bbf00454e76a6c664c7fed7bbd94613764a8dce866e64d3661c9e1738b027"
     },
     {
+      "url": "./gym/native-workout-importer.js",
+      "bytes": 7311,
+      "sha256": "6f578ef9b54caafc3b7031b1de9eb97c65dd81e5f6991d35e952f7234138f6a1"
+    },
+    {
       "url": "./gym/progression-engine.js",
       "bytes": 15553,
       "sha256": "824da5faa4c51d11c610be2b1ec3e672a2fe7fc36bc9c9d08944425dc15563e6"
@@ -135,14 +145,19 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
       "sha256": "1d42acf228a0b9556d43596b1c7b9e729f55d9aa2cba1568902086b8e6a96583"
     },
     {
+      "url": "./gym/workout-load-guidance.js",
+      "bytes": 5288,
+      "sha256": "2ee8a06d5e42eef28cccd5bcac00c22d9d6460ebce70c44d73115156418dadb0"
+    },
+    {
       "url": "./gym/workout-quick-actions.js",
       "bytes": 10657,
       "sha256": "e1f94e485f3dcae694493d37cca97fcfe25220172677418a407638326e2f9207"
     },
     {
       "url": "./index.html",
-      "bytes": 331548,
-      "sha256": "43b5ae428dc849c92c4310d246e38f69d0f71f4b74c502272f5446bfec830c45"
+      "bytes": 331710,
+      "sha256": "d48538cd5da14c13ceeed4d1defb05092400023b2d3c8cc3c5de3d91284f83ae"
     },
     {
       "url": "./nutrition-data.js",
@@ -251,8 +266,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     },
     {
       "url": "./styles/components.css",
-      "bytes": 10689,
-      "sha256": "2d6b53c4958fe6830cb65026f68b785ab90d7dcf04ef54fe7a2bb0da63588a70"
+      "bytes": 10982,
+      "sha256": "fa560d92791270e332e302519164be514f771ce6ff6367c266b2a638b6062df6"
     },
     {
       "url": "./styles/features.css",
@@ -266,8 +281,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     },
     {
       "url": "./styles/gym.css",
-      "bytes": 8228,
-      "sha256": "ffedb719087335ce56733c17b054fadd891f2a78b14c1c48a80e80f327caf1fe"
+      "bytes": 13160,
+      "sha256": "c5c1d33b4020cdcfa6567b7d6b02fd195faf19451d4a0b2fb36328902bb1191b"
     },
     {
       "url": "./styles/modules.css",
@@ -276,8 +291,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     },
     {
       "url": "./styles/responsive.css",
-      "bytes": 7113,
-      "sha256": "c1799c42a4055660cc33d3765ae044fa9d7638b55abe35af87342eb83e89ebbd"
+      "bytes": 7008,
+      "sha256": "23b3169f16011f6b4e45c66b1d383f4e71ea921b69e45583534a1e3a3d3392f8"
     },
     {
       "url": "./styles/tokens.css",
@@ -326,8 +341,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     },
     {
       "url": "./workout-features.js",
-      "bytes": 163102,
-      "sha256": "df2ceb3ad6480cd43fe9327942976039ad465f57c67e0da05ce316bae8a3be98"
+      "bytes": 191869,
+      "sha256": "bdf2b8f9deca20f85fffc704b1d08cc92f3c82be200df8ddb51a459a3afed283"
     },
     {
       "url": "./workout-metrics.js",
@@ -359,7 +374,7 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     {
       "url": "./app-version.json",
       "bytes": 90,
-      "sha256": "34d9e56c114346c63cde1820723440bd94bca04e5fe63f5b107e60b8403bb1f0"
+      "sha256": "438d5dde21b5833552a45a0643d788459b325db91771aef9f7d947527b3ccc76"
     },
     {
       "url": "./icons/icon-192.png",

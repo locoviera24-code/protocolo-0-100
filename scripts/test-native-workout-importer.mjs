@@ -1,0 +1,30 @@
+import fs from'node:fs';import vm from'node:vm';import assert from'node:assert/strict';
+const window={APP_VERSION_INFO:{version:'2.7.0',build:94}},context=vm.createContext({window,console,Date,JSON,Object,Array,Set,Number,String,Math,TextEncoder,Uint8Array,encodeURIComponent});
+vm.runInContext(fs.readFileSync('gym/workout-quick-actions.js','utf8'),context);
+vm.runInContext(fs.readFileSync('gym/native-workout-importer.js','utf8'),context);
+const contract=window.WORKOUT_QUICK_ACTIONS,importer=window.NATIVE_WORKOUT_IMPORTER;
+const now='2026-07-28T10:00:00.000Z';
+const ids={save:'11111111-1111-4111-8111-111111111111',undo:'22222222-2222-4222-8222-222222222222',other:'33333333-3333-4333-8333-333333333333'};
+const basePayload={date:'2026-07-28',dayKey:'tuesday',weekday:'Martes',routine:{name:'Torso'},startedAt:now,currentExerciseIndex:0,exercise:{id:'press-row',exerciseId:'press',name:'Press banca',muscle:'Pecho'},setId:'set-1',values:{id:'set-1',setNumber:1,reps:8,weight:80,weightKg:80,setType:'working',completed:true}};
+const action=contract.createAction({actionType:'SAVE_SET',mutationId:ids.save,source:'android-widget',sessionId:'session-1',exerciseId:'press',createdAt:now,clientVersion:'2.7.0+94',expectedRevision:3,payload:basePayload},{now:()=>now,uuid:()=>ids.save});
+const first=importer.apply([],action,{protectSet:set=>({...set,protected:true})});
+assert.equal(first.status,'applied');assert.equal(first.errorCode,'OK');assert.equal(first.sessions.length,1);assert.equal(first.sessions[0].exercises[0].sets[0].protected,true);assert.equal(first.sessions[0].exercises[0].sets[0].privateImportState,'imported');
+const second=importer.apply(first.sessions,action);assert.equal(second.status,'duplicate');assert.equal(second.errorCode,'DUPLICATE_MUTATION');assert.equal(second.sessions[0].exercises[0].sets.length,1);
+const differentSession={...action,mutationId:ids.other,sessionId:'session-2'};const duplicateAcrossSessions=importer.apply(first.sessions,differentSession);assert.equal(duplicateAcrossSessions.status,'duplicate');
+const invalid=importer.apply([],{...action,payload:{...basePayload,setId:'other'}});assert.equal(invalid.status,'invalid');assert.equal(invalid.error,'set-id-mismatch');
+
+const undo=contract.createAction({actionType:'UNDO_SET',mutationId:ids.undo,source:'android-notification',sessionId:'session-1',exerciseId:'press',createdAt:now,clientVersion:'2.7.0+94',expectedRevision:4,payload:{setId:'set-1'}},{now:()=>now,uuid:()=>ids.undo});
+const undone=importer.apply(first.sessions,undo);assert.equal(undone.status,'applied');assert.equal(undone.sessions[0].exercises[0].sets.length,0);
+const repeatedUndo=importer.apply(undone.sessions,undo);assert.equal(repeatedUndo.status,'duplicate');assert.equal(repeatedUndo.errorCode,'SET_NOT_FOUND');
+const missingSession=importer.apply([],undo);assert.equal(missingSession.errorCode,'SESSION_NOT_FOUND');
+
+const legacy={id:ids.other,type:'save_set',source:'android-widget',sessionId:'legacy-session',exerciseId:'press',setId:'legacy-set',expectedRevision:0,createdAt:now,payload:{...basePayload,set:{...basePayload.values,id:'legacy-set'}}};
+delete legacy.payload.values;delete legacy.payload.setId;
+const before=JSON.stringify(legacy),adapted=importer.adaptLegacy(legacy);assert.equal(adapted.actionType,'SAVE_SET');assert.equal(adapted.payload.setId,'legacy-set');assert.equal(adapted.type,undefined);assert.equal(JSON.stringify(legacy),before,'La adaptacion no debe reescribir el registro persistido.');
+const importedLegacy=importer.apply([],legacy);assert.equal(importedLegacy.status,'applied');
+assert.equal(importer.adaptLegacy({...legacy,type:'unknown'}),null);
+assert.equal(importer.apply([],{...legacy,id:'bad-id',mutationId:'bad-id'}).status,'invalid');
+assert.equal(importer.apply([],{...action,schemaVersion:2}).errorCode,'INVALID_SCHEMA');
+assert.equal(importer.apply([],{...action,payloadVersion:2}).errorCode,'INVALID_SCHEMA');
+assert.equal(importer.apply([],{...action,payload:JSON.parse('{"setId":"set-x","values":{"__proto__":{"polluted":true}}}')}).errorCode,'INVALID_PAYLOAD');
+console.log('Importador nativo correcto: schema 1, adaptacion legacy en memoria, guardado y Deshacer idempotentes.');

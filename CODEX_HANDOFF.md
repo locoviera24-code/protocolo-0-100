@@ -1,10 +1,10 @@
 # CODEX_HANDOFF - Protocolo 0->100
 
-Ultima actualizacion: 2026-08-04
-Rama esperada: `codex/web-core-flow-p0`
+Ultima actualizacion: 2026-08-24
+Rama esperada: `codex/android-quick-access-v1`
 Version actual: `2.7.0` (fuente unica: `app-version.json`)
-Android: `versionCode 33`, `versionName "2.7.0"`
-Service worker cache: `protocolo-0-100-pwa-2.7.0-b90`
+Android: `versionCode 40`, `versionName "2.7.0"`
+Service worker cache: `protocolo-0-100-pwa-2.7.0-b96`
 Backup consolidado: `schemaVersion: 3`
 
 Leer primero este archivo y luego `README.md`, `index.html`,
@@ -12,11 +12,122 @@ Leer primero este archivo y luego `README.md`, `index.html`,
 `manifest.webmanifest`, `sw.js`, `firebase/README.md` y los archivos Android
 en `android-native-wrapper/`.
 
-## Trabajo en curso: Web Core Flow P0
+## Integracion actual: Android Quick Access sobre Web Core
 
-Rama: `codex/web-core-flow-p0` desde `main` (`1a9186e`). La version sigue en
-`2.7.0`, build web `90`, Android `versionCode 33` y backup schema 3. El build se
-incremento una sola vez durante el cierre del Gate D.
+`main` `569cb591` ya contiene Web Core Flow P0 build 90. La rama Android fue
+rebasada desde la base antigua `1a9186e`; su estado previo permanece en la rama
+remota inmutable `backup/android-quick-access-v1-pre-web-core-9464faa`, SHA
+`9464faaad3d7bd81db2d71fc6aabf40aeb4dc7d5`.
+
+La integracion usa build web/PWA beta 96, Android `versionCode 40` y backup
+schema 3. Stable permanece en build 89 y no se publico una release nueva.
+
+- `gym/workout-quick-actions.js` schema 1 es el unico contrato publico.
+- Android produce `actionType: SAVE_SET` y `UNDO_SET`, UUID v4, UTC,
+  `expectedRevision`, kg, segundos y metros canonicos.
+- `SELECT_EXERCISE` y `TOGGLE_WEIGHT_STEP` son comandos locales, no mutaciones
+  publicas.
+- `WorkoutMutationQueue` separa `action` de metadatos privados `transport` y
+  el bridge expone solamente el envelope schema 1.
+- El adaptador legacy acepta en memoria `type`, `save_set`, `undo_set` y
+  `UNDO_LAST_SET`; no reescribe la cola durante la lectura ni crea nuevas
+  entradas antiguas.
+- `workoutSessions` sigue siendo la fuente canonica. Gym Party sincroniza solo
+  despues de la importacion privada desde la WebView; no hay Firebase nativo.
+- Tests JVM cubren contrato, cola parcialmente corrupta, orden, retencion,
+  confirmacion parcial, redelivery, doble toque y dos guardados deliberados.
+- Los tres widgets y la notificacion privada conservan -0,5, +0,5, -5, +5,
+  selector directo, ultima carga y maximo comparable.
+
+Gate local posterior al rebase, completado el 2026-08-05:
+
+- Contratos, versionado, manifest, precache, service worker, modulos, datos,
+  backups, Workout, Gym Party, Nutricion, Progreso y accesibilidad estructural:
+  aprobados.
+- Playwright: 397 escenarios funcionales y 33 Axe aprobados, 430 en total;
+  14 omisiones deliberadas por plataforma. Web Core conserva sus 421 casos y
+  Android Quick Access agrega 9, sin reduccion de cobertura.
+- Firestore Emulator con Firebase Tools 15.23.0 y Java 21: aprobado. Los
+  `PERMISSION_DENIED` del log corresponden a casos negativos esperados.
+- Artifact web: 88 recursos, rutas profundas, offline y smoke servido
+  aprobados. ZIP local: 554.203 bytes, SHA-256
+  `829929971F44AA918C094B75A1E8FDE3E48B689802F49FC861C09DEB77D20871`.
+- Gradle 8.10.2 con Java 17 y Android 35: unitarias, APK debug y release de
+  prueba aprobados. Debug: 1.907.726 bytes, SHA-256
+  `C5256050D7FB2557F1802886179323C77EE68FD5F92784C0C6B6CC14DD37205E`.
+  Release efimero: 1.564.773 bytes, firma v1/v2 valida, SHA-256
+  `CAC8512931793FFD8462DC3516417E86537792EADB83DDC4A97C6F68E88795D8`.
+- Paridad web/assets Android: exacta. `.github/stable-release.json` permanece
+  en build 89 y no se publico ningun artifact estable.
+
+Gate remoto posterior al rebase: run `31030685854`, intento 1, aprobado en
+21m08s. Repitio contratos, 397 escenarios funcionales, 33 Axe, 14 omisiones
+deliberadas, Firestore Emulator, artifact/offline, Android debug/release y
+paridad. Artifact web ZIP: 556.373 bytes, SHA-256
+`8D027951784745212803EED5A9F6E4AC9177D7C0F32A75B86CD5E7AEC31D91DE`;
+artifact Android ZIP: 1.856.915 bytes, SHA-256
+`B2AF63353EA20F88284C2E0EE4EC7C9D9CC08EA03F5631A13D9D0147C746D16F`;
+APK debug contenido: 1.905.901 bytes, SHA-256
+`9DF971213C28D7CB92B21BA1F72210B9ED438D99D298FE16522DD8A5827999BB`.
+
+Validacion fisica del 2026-08-23 en Samsung SM-A165M, Android 16 y One UI 8:
+
+- PASS: instalacion/actualizacion local con la misma clave, datos conservados,
+  smoke WebView, widgets compacto/estandar/expandido y redimensionado;
+- PASS: selector directo, reps, -0,5/+0,5/-5/+5, doble toque, Deshacer por
+  `setId`, cola/importacion unica, offline, reinicio y temporizador;
+- PASS: notificacion privada, permiso concedido/denegado y `publicVersion`
+  observada con bloqueo seguro: solo **Entrenamiento en curso**;
+- PASS: kg/lb, peso corporal, asistencia, lastre, unilateral, tiempo,
+  distancia, `REPEAT_LAST_SET` y `NEXT_EXERCISE`;
+- PASS: PWA Android instalada desde artifact local, standalone, service worker,
+  recarga offline y shortcut **Serie rapida**;
+- N/A: `PREVIOUS_EXERCISE` no esta expuesto ni prometido en Android V1; el
+  selector directo es la navegacion comprometida;
+- N/A: upgrade desde release CI efimero, porque su clave temporal no representa
+  la clave estable de produccion;
+- BLOCKED no bloqueantes: Gym Party con dos clientes sin backend comun y PWA
+  iPhone sin hardware/preview HTTPS. No queda ningun FAIL fisico abierto.
+
+El recorrido PWA reprodujo dos veces `renderAdvancedNutrition is not defined`
+al abrir **Mas > Telefono** durante una hidratacion temprana de IndexedDB. El
+listener ahora usa `window.renderAdvancedNutrition?.()` y una prueba elimina
+temporalmente el renderer antes de emitir `app-data-primary-ready`. El fix se
+revalido fisicamente en un origen limpio y offline; por ello el candidato final
+subio una sola vez a build 96/versionCode 40.
+
+Gate local final del candidato 96/40, completado el 2026-08-24:
+
+- contratos, versionado, manifest, precache, service worker, datos, backups,
+  Workout, importador nativo, Gym Party, Nutricion, Progreso y accesibilidad
+  estructural: aprobados;
+- Playwright: 403 escenarios funcionales aprobados y 14 omisiones deliberadas
+  por plataforma; Axe 33/33. Una perdida aislada de contexto de Chromium paso
+  5/5 al repetirla. Tres timeouts WebKit causados por la suspension del equipo
+  pasaron 9/9 al reanudar; la matriz limpia posterior termino 403/403;
+- Firestore Emulator con Firebase Tools 15.23.0 y Java 21: aprobado. Los
+  `PERMISSION_DENIED` del log son rechazos negativos esperados;
+- artifact web: 88 recursos, rutas profundas, service worker y smoke servido
+  aprobados. ZIP local: 554.393 bytes, SHA-256
+  `39A167560B6B665FB08A35200F6B91114635507EFBD4E843FF0FBCE7EF0476D5`;
+- Gradle 8.10.2/Java 17: JVM, lint vital, debug y release de prueba aprobados.
+  Debug: 1.921.041 bytes, SHA-256
+  `F3222E3A88370F715A9FF9CB72F2BB62F2CD8820EE0847216E3D4D144DEB95C5`.
+  Release efimero: 1.565.415 bytes, firma v1/v2 valida, SHA-256
+  `44F5813148927DA9A3A281DD09FD40409D4E1FC2B74FFFB0EAC178AD7E087A23`;
+- paridad web/assets Android: exacta. Stable permanece en build 89, backup en
+  schema 3 y `main` sin cambios.
+
+Los defectos fisicos corregidos en todo el ciclo fueron el solapamiento con la
+barra de estado, la falta de relayout del widget, la intercepcion de controles
+por la raiz, el recorte del compacto, el solapamiento de Ajustes de Gym, la
+seleccion nativa no adoptada y la carrera PWA descrita. Ver
+`docs/physical-test-checklist.md`.
+
+## Linea base fusionada: Web Core Flow P0
+
+El PR Web Core #2 fue fusionado en `main` y conserva como referencia historica
+la version `2.7.0`, build web `90`, Android `versionCode 33` y backup schema 3.
 
 Gate A completado:
 
@@ -132,7 +243,7 @@ Estado actual:
 - Gym Party implementado como modulo web/PWA opcional.
 - Nutricion local/FDC opcional.
 - Backups JSON `schemaVersion: 3`.
-- PWA offline con cache derivada `protocolo-0-100-pwa-2.7.0-b90` y
+- PWA offline con cache derivada `protocolo-0-100-pwa-2.7.0-b94` y
   actualizacion consentida desde el aviso visible.
 - APK con widget Android y permiso `INTERNET` para Firebase/Gym Party.
 
@@ -194,7 +305,7 @@ Web:
   tombstones, backoff y contexto horario.
 - `gym-party.js`: modulo Gym Party, registro rapido, graficas y edicion/eliminacion de series.
 - `advanced-features.js`: version `2.7.0`, backup/importacion Gym Party.
-- `sw.js`: cache derivada del build 90, actualización atómica consentida y sin mezcla de assets; evita
+- `sw.js`: cache derivada del build 96, actualización atómica consentida y sin mezcla de assets; evita
   persistir una configuracion Firebase obsoleta.
 - `README.md`: documenta Gym Party, demo, Firebase, privacidad y pruebas.
 - `CODEX_HANDOFF.md`: este handoff.
@@ -213,7 +324,7 @@ Android:
 - `android-native-wrapper/app/src/main/java/com/protocolo/cien/MainActivity.java`:
   usa `WebViewAssetLoader` sobre HTTPS interno, bloquea file/content/universal
   access y mixed content, activa Safe Browsing y limita origenes remotos.
-- `android-native-wrapper/app/build.gradle`: `versionCode 33`,
+- `android-native-wrapper/app/build.gradle`: `versionCode 40`,
   `versionName 2.7.0`, firma release solo desde variables seguras.
 - `android-native-wrapper/app/src/main/assets/*`: sincronizado desde raiz.
 
@@ -3831,3 +3942,450 @@ APK instalado y actualización desde APK anterior, widget en launcher, voz y
 Gym Party entre dos teléfonos. La checklist exacta está en
 `docs/physical-test-checklist.md`. No debe atribuirse ningún resultado físico
 hasta completarla.
+
+## 82. Controles Android de acceso rapido V1 en rama beta
+
+La rama `codex/android-quick-access-v1` se origino en `main` build 89 y fue
+rebasada despues sobre Web Core build 90; no modifica la referencia estable
+`baseline-stable-2.7`. El bloque P0 reemplaza la logica
+monolitica del widget por tres responsabilidades nativas:
+
+- `WorkoutQuickActionReducer` procesa las mismas acciones para widget y
+  notificacion;
+- `WorkoutNativeRepository` conserva snapshot, revision y entregas procesadas;
+- `WorkoutMutationQueue` mantiene hasta 200 mutaciones durables `pending`,
+  `imported`, `rejected` o `undone` con UUID y cuarentena de entradas corruptas.
+
+`NativeWorkoutControlRepository` escribe `SAVE_SET` schema 1 antes de actualizar
+la UI, valida la revision esperada, bloquea doble toque accidental durante 650 ms y
+crea `UNDO_SET` compensatorio durante diez segundos. Una confirmacion tardia
+solo puede importar mutaciones que continuen `pending`, por lo que no reactiva
+una serie ya deshecha. `gym/native-workout-importer.js` aplica y deshace por
+`setId` de forma idempotente; despues de importar prepara la sincronizacion
+existente de Gym Party, sin introducir Firebase nativo.
+
+El widget usa `widget_workout_compact.xml`,
+`widget_workout_standard.xml` y `widget_workout_expanded.xml`; los nombres
+small/medium se conservan como aliases. La seleccion combina ancho y alto del
+launcher. No hay controles de 1 dp, los botones funcionales miden 48 dp, el
+compacto tiene hasta cuatro acciones y el estandar siete. Peso corporal no
+muestra `0 kg`; tiempo y distancia abren el editor cuando no pueden corregirse
+con seguridad desde `RemoteViews`.
+
+`MainActivity.AndroidBridge` expone JSON estructurado para capacidades,
+instalacion mediante `requestPinAppWidget`, cola pendiente, confirmacion por IDs
+y ciclo de la notificacion. Gym contiene **Acceso rapido durante el
+entrenamiento**; en web explica que se requiere el APK y en Android ofrece
+**Agregar widget** y **Activar controles**. El permiso de notificaciones se
+solicita solo desde esa accion; si ya fue rechazado se abren Ajustes de Android.
+
+La notificacion usa canal de importancia baja, maximo tres acciones,
+`VISIBILITY_PRIVATE` y una version publica que solo indica **Entrenamiento en
+curso**. No usa full-screen intent ni declara widget keyguard. El descanso usa
+reloj monotonico y `AlarmManager`; se recalibra tras reinicio. Fecha, zona
+horaria y reemplazo de paquete refrescan las superficies.
+
+Verificacion real del bloque hasta este punto:
+
+- `scripts/test-native-workout-controls.mjs`: aprobado; ejecuta importacion,
+  reentrega, deduplicacion, Deshacer y Deshacer repetido, ademas de contratos
+  Android y layouts;
+- importador nativo, guia de carga y `test-workout-features`: aprobados;
+- Android `:app:assembleDebug` con JDK 17/Gradle 8.10.2: aprobado en 67 s;
+- previews de los tres layouts en `docs/previews/`;
+- hardware fisico: no disponible, todas las pruebas de launcher, bloqueo,
+  permiso y reinicio siguen pendientes y no se consideran aprobadas.
+
+Antes de cerrar la rama faltan sincronizar assets web/Android, incrementar una
+sola vez el build beta, ejecutar gate completo, producir artifacts, actualizar
+la checklist fisica, enviar la rama y abrir el pull request. No publicar stable.
+
+## 83. Empaquetado beta 90 y validacion local
+
+El bloque completo incrementa una sola vez `app-version.json`: version `2.7.0`,
+build web/PWA `90` y Android `versionCode 34`. La solicitud estable
+`.github/stable-release.json` permanece deliberadamente en build 89; la prueba
+del quality gate permite que una beta este por delante, pero rechaza una
+solicitud estable futura o de otra version. Por tanto esta rama no publica ni
+solicita stable.
+
+Resultados locales posteriores al empaquetado:
+
+- version, cache `protocolo-0-100-pwa-2.7.0-b90` y Android 34 alineados;
+- precache: 83 recursos descubiertos;
+- artifact `dist-pages`: 84 recursos con SHA-256, rutas profundas y cero 404;
+- smoke del artifact: 1/1, service worker instalado y sin errores de pagina;
+- acceso rapido E2E: 6/6 en Android Chromium, iPhone WebKit y escritorio;
+- axe: 27/27 en las tres plataformas, sin infracciones graves;
+- contratos de Workout, datos, backup, PWA, Gym Party, Progreso, Nutricion,
+  router, layout, Ajustes, seguridad Android y release: aprobados;
+- Firestore Emulator: aprobado; los `PERMISSION_DENIED` del log corresponden a
+  casos negativos que las reglas deben rechazar;
+- paridad web/Android: aprobada con 496 IDs estaticos;
+- Android `assembleDebug`: aprobado; APK de 1.874.536 bytes, SHA-256
+  `E548DF5D59AA0243777D28654750FE1CF1D2C239E8B7A13D648BFF02E8AC0A72`.
+
+El primer intento local de axe se cancelo por el timeout de cuatro minutos; la
+repeticion con margen termino correctamente en 5,2 minutos. El primer intento
+de Firestore no encontro Java en `PATH`; al incorporar el JDK 21 local, la
+suite ejecuto y aprobo. No se ocultan estos intentos de entorno.
+
+`adb devices -l` no detecto hardware. No se ejecutaron pruebas fisicas de
+launcher, redimensionamiento, doble toque, bloqueo, permiso, proceso destruido,
+reinicio o actualizacion desde APK anterior. Todas permanecen sin marcar en
+`docs/physical-test-checklist.md`.
+
+Siguiente accion exacta: commit del build 90, push de
+`codex/android-quick-access-v1`, pull request draft, quality gate remoto beta y
+descarga de sus artifacts. No fusionar a `main` ni publicar stable desde este
+bloque.
+
+## 84. Pull request y correccion del primer gate remoto
+
+La rama se envio a GitHub y el pull request borrador es el numero 1,
+`Android: controles rapidos de entrenamiento v1`. El primer quality gate remoto
+fue el run `30481489857`. Completo correctamente contratos, PWA, axe y 349
+escenarios E2E, con 14 omisiones documentadas, pero fallo antes de Firestore y
+Android por tres ejecuciones del mismo escenario de borradores.
+
+La causa no fue una regresion funcional: `tests/e2e/drafts-time.spec.mjs`
+seleccionaba todos los `summary` descendientes de `planAdvancedEditor`. Tras
+incorporar paneles anidados, el locator dejo de ser estricto. Ademas, la recarga
+usada para probar persistencia vuelve a plegar el `details`, por lo que el test
+intentaba pulsar un boton oculto. El escenario ahora selecciona el `summary`
+directo con `:scope > summary` y reabre el panel despues de `page.reload()`.
+
+Validacion local de la correccion:
+
+- escenario afectado: 3/3 en Android Chromium, iPhone WebKit y escritorio;
+- archivo completo `drafts-time.spec.mjs`: 18/18 en los tres proyectos;
+- no se cambio la aplicacion ni se relajo la comprobacion de restauracion y
+  limpieza del borrador.
+
+Siguiente accion exacta: enviar este commit correctivo, esperar el nuevo quality
+gate hasta Firestore, artifact web y Android, y registrar los artifacts. Las
+pruebas fisicas siguen pendientes; no fusionar ni publicar stable.
+
+## 85. Carrera de inicializacion IndexedDB detectada por CI
+
+El segundo quality gate remoto fue el run `30483471213`. La correccion de
+borradores quedo validada y la matriz avanzo a 351 escenarios aprobados con 14
+omisiones, pero una ejecucion de escritorio fallo al recuperar la cache
+nutricional. El fallo fue `Execution context was destroyed` entre
+`page.reload()` y una llamada directa a `window.APP_DATA.ready()`; no hubo una
+divergencia ni perdida de datos.
+
+`tests/e2e/indexeddb-primary.spec.mjs` ya importaba el helper comun
+`waitForAppReady`, que reintenta de forma acotada cuando una navegacion sustituye
+el contexto. La recarga afectada ahora usa ese helper en lugar de una llamada
+directa vulnerable a la carrera. Se mantienen todas las expectativas sobre
+recuperacion, copia compatible en localStorage, aislamiento del historial y
+rollback.
+
+Validacion local:
+
+- caso afectado repetido cinco veces en escritorio: 5/5;
+- caso afectado en Android Chromium, iPhone WebKit y escritorio: 3/3.
+
+El commit con esta correccion se envio y el siguiente gate completo alcanzo los
+pasos que los dos runs anteriores no habian podido ejecutar.
+
+## 86. Quality gate beta aprobado y artifacts remotos
+
+El run remoto definitivo del codigo fue `30484923207`, sobre el commit
+`6c3e63d`. Termino aprobado en 18 minutos y 6 segundos:
+
+- axe: 27 escenarios aprobados;
+- E2E funcional: 352 aprobados y 14 omitidos ya documentados;
+- Firestore Emulator: aprobado;
+- artifact web final y service worker: aprobados;
+- Android debug y release de prueba: aprobados;
+- paridad de assets: aprobada.
+
+Artifacts del run:
+
+- `protocolo-web-beta`, artifact `8737724132`, 539.956 bytes comprimidos;
+- `protocolo-android-debug-beta`, artifact `8737724993`, 1.824.188 bytes
+  comprimidos;
+- APK descargado `protocolo-0-100-debug.apk`: 1.872.205 bytes, SHA-256
+  `82646530DD7F4D146618484D9FDDE99281CE41061637FBFFD2948F0639F495F7`.
+
+El pull request numero 1 permanece borrador. La rama no se fusiono, la etiqueta
+`baseline-stable-2.7` no se movio y stable build 89 no se publico de nuevo. No
+hubo hardware ADB conectado: todas las pruebas fisicas de widget, launcher,
+bloqueo, notificacion, reinicio y actualizacion continúan pendientes en
+`docs/physical-test-checklist.md`.
+
+## 87. Correccion de widget estable y controles de bloqueo, beta 91
+
+La correccion parte de `285eeef` y mantiene la rama
+`codex/android-quick-access-v1`. Se incremento una sola vez el paquete beta a
+version `2.7.0`, build web/PWA `91` y Android `versionCode 35`; stable continua
+en build 89 y no se modifica la referencia `baseline-stable-2.7`.
+
+Problemas confirmados y solucionados:
+
+- `ensureSession()` creaba la sesion web pero no ejecutaba
+  `syncWorkoutWidget()`. Android conservaba `sessionStatus: sin iniciar` y
+  `WorkoutControlNotificationManager` cancelaba la notificacion. Ahora tocar
+  **Empezar entrenamiento** publica inmediatamente `en progreso`.
+- `WorkoutWidgetUpdateService.selectLayout()` usaba el maximo entre tamaños de
+  orientaciones. El primer toque podia reconstruir un compacto como expandido.
+  La seleccion usa el tamaño actual/minimo y reserva expandido para una altura y
+  anchura realmente grandes.
+- compacto queda en -5, Guardar, +5 y temporizador; estandar y expandido usan
+  -5/+5 para carga. El expandido elimina Anterior, Abrir, Editar y la segunda
+  pareja de ajustes rápidos. No hay controles de 1 dp ni botones menores a
+  48 dp.
+- `getWorkoutWidgetStatus()` diferencia `disabled`, `permission-required`,
+  `waiting-for-session`, `active` y `not-posted`. El ultimo se basa en
+  `NotificationManager.getActiveNotifications()`, no solo en tener permiso.
+  **Revisar notificacion** abre directamente el canal Android **Controles de
+  entrenamiento**.
+
+Archivos funcionales principales: `workout-features.js`, `MainActivity.java`,
+`WorkoutControlNotificationManager.java`, `WorkoutWidgetUpdateService.java` y
+los layouts `widget_workout_compact.xml`, `widget_workout_standard.xml` y
+`widget_workout_expanded.xml`. Los assets WebView están sincronizados; previews,
+README, documentación Android y checklist física reflejan la interfaz nueva.
+
+Resultados locales reales:
+
+- version alineada: 2.7.0, Android 35, cache
+  `protocolo-0-100-pwa-2.7.0-b91`;
+- contratos nativos, guia de carga e importador idempotente: aprobados;
+- artifact web: 84 recursos con hash y sin recursos faltantes;
+- `validate-app.ps1 -CheckAndroidAssets`: aprobado, 496 IDs y paridad exacta;
+- acceso rapido: 6/6 en Android Chromium, iPhone WebKit y escritorio Chromium;
+- Android `:app:clean :app:assembleDebug`: aprobado con Java 17 y Gradle
+  8.10.2; APK local de 1.875.449 bytes y SHA-256
+  `7D7B9A80E3ED3587B987E55BE292A920440A22ED9A2DE58D17D9CC4E2B4CCE9E`.
+
+El primer intento de compilacion detecto una referencia inexistente a `unit` en
+el modelo visual; se agrego el campo derivado del snapshot y la recompilacion
+paso. El primer validador general tambien conservaba la expectativa obsoleta de
+`widgetPreviousButton`; ahora valida `widgetNextButton` y los limites reales.
+
+No se detecto hardware con `adb devices -l`. Launcher, pantalla bloqueada,
+canal OEM, reinicio y actualizacion desde APK anterior siguen pendientes de
+prueba fisica. Para probar: instalar el APK, abrir **Gym > Rutina > Acceso rapido
+durante el entrenamiento**, tocar **Activar controles**, aceptar notificaciones,
+tocar **Empezar entrenamiento** y bloquear el telefono. Si aparece **Revisar
+notificacion**, habilitar el canal en los ajustes que abre la app.
+
+El primer intento del quality gate `30493302864` termino con 351 E2E aprobados,
+14 omisiones y un unico fallo WebKit en el escenario de alimento personalizado.
+Ese dominio no fue modificado; el caso paso localmente 5/5 al repetirlo. La
+reejecucion completa (attempt 2, job `90720259439`) aprobo en 17 min 22 s:
+352 E2E, 14 omisiones documentadas, 27 axe, Firestore Emulator, artifact web,
+Android debug/release y paridad de assets.
+
+Artifacts remotos del run:
+
+- `protocolo-web-beta`, artifact `8741451912`, 540.292 bytes comprimidos;
+- `protocolo-android-debug-beta`, artifact `8741452495`, 1.825.189 bytes
+  comprimidos;
+- APK extraido: 1.873.071 bytes, SHA-256
+  `C686EEF45418D60B83C3AF06B4C23B4277EF2CB94302A48E9E6B6E4C0FF9FAEF`.
+
+La prerelease publica, no estable, es
+`v2.7.0-native-controls-v1-beta.4`. Su descarga directa fue comprobada sin
+credenciales con HTTP 200:
+`https://github.com/locoviera24-code/protocolo-0-100/releases/download/v2.7.0-native-controls-v1-beta.4/protocolo-0-100-v2.7.0-build91-android-quick-access-beta.apk`.
+La etiqueta apunta al commit funcional `20df644`; el pull request 1 permanece
+borrador, no se fusiono a main y stable build 89 no fue modificado.
+
+## 88. Selector directo, paso de carga estable y bloqueo, beta 92
+
+Este bloque mantiene `2.7.0`, incrementa una sola vez el build web/PWA a `92`
+y Android a `versionCode 36`. La rama sigue siendo
+`codex/android-quick-access-v1`; no se fusiono a `main`, no se movio
+`baseline-stable-2.7` y stable build 89 permanece intacto.
+
+Cambios funcionales:
+
+- `WorkoutExercisePickerActivity` abre una lista nativa de todos los ejercicios
+  de la rutina desde el nombre actual, desde **Elegir** en el widget y desde la
+  accion **Ejercicio** de la notificacion. La seleccion usa el reducer comun y
+  persiste el indice sin crear una serie ni abrir el WebView completo.
+- Los botones de carga vuelven a usar `0,5 kg` por defecto. Tocar el valor de
+  peso alterna el paso entre `0,5` y `5 kg`; no aparecen controles adicionales
+  ni cambia el layout. El mismo contrato se aplica al registro web de Gym.
+- `buildWorkoutWidgetState()` publica `exerciseLoadGuidance` por cada ejercicio.
+  Al seleccionarlo, Android actualiza **Ultima** y **Max.** usando la guia
+  comparable por ejercicio, equipo, modalidad y semantica de carga. El compacto
+  utiliza su linea breve para esa guia; estandar y expandido la muestran aparte.
+- La notificacion usa el canal nuevo `workout_controls_v5`, silencioso y de
+  `IMPORTANCE_DEFAULT`. Los canales Android son inmutables; cambiar el ID evita
+  heredar la prioridad baja de instalaciones anteriores. El permiso se solicita
+  al activar controles o iniciar una sesion desde ese flujo, y **Configurar
+  bloqueo** abre los ajustes exactos del canal.
+- Android moderno no expone un widget keyguard general. La experiencia de
+  bloqueo es la notificacion persistente `VISIBILITY_PRIVATE`, con version
+  publica generica. El fabricante todavia puede exigir habilitar notificaciones
+  en pantalla bloqueada; la app no afirma poder saltar esa politica.
+- Gym reduce carga visual: resumen superior 2x2 en movil, rutina del dia plegada,
+  registro primero, cuatro ajustes de carga visibles, una sola accion primaria Guardar,
+  acciones contextuales compactas y configuracion Android/salud plegada.
+
+Archivos principales: `workout-features.js`, `styles/gym.css`,
+`WorkoutWidgetUpdateService.java`, `WorkoutQuickActionReducer.java`,
+`WorkoutControlNotificationManager.java`, `WorkoutExercisePickerActivity.java`,
+`AndroidManifest.xml`, los tres layouts RemoteViews, pruebas E2E/nativas y
+`docs/previews/widget-workout-*.svg`.
+
+Resultados locales reales del build 92:
+
+- contratos completos de Workout, datos, backup, PWA, Gym Party, Nutricion,
+  Progreso, seguridad Android y paridad: aprobados;
+- axe: 27/27 en Android Chromium, iPhone WebKit y escritorio;
+- E2E funcional: 355 aprobados, 14 omitidos por plataforma, 0 fallos, en 44 min;
+- Firestore Emulator: aprobado; los `PERMISSION_DENIED` corresponden a casos
+  negativos esperados por las reglas;
+- artifact web: 84 recursos con hash, cero faltantes y smoke del service worker
+  1/1;
+- Android `assembleDebug` y `assembleRelease`: aprobados con Java 17/Gradle
+  8.10.2. Debug final: 1.889.345 bytes, SHA-256
+  `1281ACDCF34322B06C983EE1BC86E4C0C8C730281ACF5567912D76CCDBC97D1E`;
+  release de prueba: 1.544.134 bytes, SHA-256
+  `F9E9C5102F1BCC65DA404329748C2D3026A250E8DE6BB8CB3BD20B91FD120BDC`.
+
+El primer intento E2E fue cortado por el limite local de 30 minutos sin resumen;
+la repeticion con margen termino completa. No habia dispositivo en `adb devices
+-l`: launcher real, visibilidad OEM en bloqueo, reinicio y actualizacion desde
+APK anterior siguen pendientes y no se marcan como aprobados. La checklist
+actualizada esta en `docs/physical-test-checklist.md`.
+
+El quality gate remoto `30504161727` valido el commit funcional `55c9cf2`. Sus
+dos primeros intentos encontraron dos timeouts intermitentes distintos y no
+relacionados de Nutricion en iPhone WebKit; las matrices restantes aprobaron y
+la repeticion local del archivo de recetas paso 30/30. El attempt 3 completo
+termino verde con 355 E2E aprobados, 14 omisiones documentadas, 27 axe,
+Firestore Emulator, artifact web, Android debug/release y paridad aprobados.
+
+Artifacts del run:
+
+- `protocolo-web-beta`, artifact `8745874268`, 541.783 bytes comprimidos;
+- `protocolo-android-debug-beta`, artifact `8745874673`, 1.830.720 bytes
+  comprimidos;
+- APK extraido: 1.878.673 bytes, SHA-256
+  `1EA9D7573653651F000CCA4675D6AAE53920A0682F1052C53477ECCD129B7E87`.
+
+La prerelease publica no estable es `v2.7.0-native-controls-v1-beta.5`. La
+descarga directa fue comprobada sin credenciales con HTTP 200 y el mismo hash:
+`https://github.com/locoviera24-code/protocolo-0-100/releases/download/v2.7.0-native-controls-v1-beta.5/protocolo-0-100-v2.7.0-build92-android-quick-access-beta.apk`.
+El tag apunta a `55c9cf2`; el pull request 1 sigue en borrador, no se fusiono a
+`main` y stable build 89 no fue modificado.
+
+Ese artifact debug quedo supersedido para instalacion por el APK release firmado
+descrito a continuacion. No publicar stable hasta tener evidencia fisica.
+
+### APK release firmado beta 6
+
+El artifact debug de beta 5 sirve para validacion, pero la instalacion destinada
+al usuario debe usar la firma release persistente. Se despacho
+`build-release-apk.yml` sobre la rama y el run `30507861678` termino verde:
+quality gate completo y job **Compilar APK firmado y publicar checksum**
+aprobados. Creo la prerelease `v2.7.0-native-controls-v1-beta.6` con:
+
+- APK firmado: 1.542.371 bytes;
+- SHA-256:
+  `F6D7AA50BC72D37DDBB5D8041FDB7BE6698825891162E398006624585FF26CB3`;
+- descarga directa comprobada sin credenciales con HTTP 200:
+  `https://github.com/locoviera24-code/protocolo-0-100/releases/download/v2.7.0-native-controls-v1-beta.6/protocolo-0-100-v2.7.0-release.apk`;
+- checksum publico:
+  `https://github.com/locoviera24-code/protocolo-0-100/releases/download/v2.7.0-native-controls-v1-beta.6/protocolo-0-100-v2.7.0-release.apk.sha256`.
+
+El workflow creo inicialmente el tag sobre la rama predeterminada aunque habia
+compilado el checkout correcto. Se movio el tag beta 6 a `a72266f` y se corrigio
+`build-release-apk.yml` para usar `gh release create --target "$GITHUB_SHA"` en
+futuros releases. Stable y `baseline-stable-2.7` siguen intactos.
+
+Beta 6 queda conservada solo como antecedente y fue supersedida por la correccion
+build 93 descrita a continuacion. No recomendarla para probar los controles.
+
+### Correccion visible build 93
+
+La auditoria posterior a beta 6 confirmo que la experiencia publicada no
+coincidia con lo solicitado: el peso alternaba entre pasos de 0,5 y 5 al tocar
+el valor, el selector directo no era evidente en todos los tamaños y el acceso
+de bloqueo quedaba dentro de un bloque plegado. Ademas, una instalacion APK
+actualizada podia seguir controlada por un service worker antiguo del origen
+`appassets`, mostrando assets anteriores aunque el paquete contuviera archivos
+nuevos.
+
+El build 93 corrige esos contratos:
+
+- los tres layouts RemoteViews muestran simultaneamente `-0,5`, `+0,5`, `-5`
+  y `+5`; tocar el peso ya no cambia de layout ni despliega acciones;
+- `Elegir · <ejercicio>` abre `WorkoutExercisePickerActivity` desde cualquier
+  layout; la seleccion recalcula `Ultima` y `Max.` para ese ejercicio;
+- `notification_workout_controls.xml` aporta la vista expandida privada con
+  los mismos cuatro ajustes, reps, Guardar y selector directo;
+- el canal `workout_controls_v5` evita heredar un canal anterior ocultado y
+  `openWorkoutNotificationSettings()` garantiza que el canal exista;
+- Gym muestra una barra visible de estado de pantalla de bloqueo junto al
+  registro y publica explicitamente la sesion al iniciar;
+- el registro web queda en una columna a 600 px o menos, con cuatro ajustes que
+  caben a 320/390 px, serie calculada oculta y una sola accion primaria;
+- `MainActivity.auditPackagedWebCache()` elimina solamente caches PWA del
+  origen empaquetado y desregistra workers antiguos. No toca localStorage,
+  IndexedDB ni backups; luego recarga los assets incluidos en el APK;
+- el widget requiere como minimo 180 x 230 dp. Tras actualizar conviene quitarlo
+  y volverlo a agregar para que el launcher aplique las nuevas dimensiones.
+
+Archivos principales del bloque: `WorkoutWidgetUpdateService.java`,
+`WorkoutControlNotificationManager.java`, `NativeWorkoutControlRepository.java`,
+`MainActivity.java`, `widget_workout_compact.xml`,
+`widget_workout_standard.xml`, `widget_workout_expanded.xml`,
+`notification_workout_controls.xml`, `workout_widget_info.xml`,
+`workout-features.js`, `styles/gym.css`, `styles/responsive.css`, pruebas y
+previews de `docs/previews/`.
+
+Resultados comprobados antes del gate final:
+
+- version alineada `2.7.0`, Android `37`, build/cache `93`;
+- contratos nativos, orientacion de carga, importador idempotente y Workout:
+  aprobados;
+- validacion con paridad Android y artifact web de 84 recursos sin 404:
+  aprobada;
+- regresion Playwright completa: 380 aprobadas y 14 omisiones en 51,1 min;
+  aparecieron dos fallos aislados (viewport de la nueva prueba y conversion lb
+  en WebKit). El contrato de viewport se corrigio y las repeticiones dirigidas
+  terminaron 4/4; el caso WebKit no requirio cambios de producto;
+- Playwright Android quick access posterior: 3/3 en Android Chromium, iPhone
+  WebKit y Chromium escritorio con viewport movil explicito;
+- Firestore Emulator: aprobado con las reglas actuales;
+- Android `assembleDebug` y `assembleRelease`: aprobados con Java 17/Gradle
+  8.10.2 despues de compilar la limpieza de cache empaquetada;
+- APK local debug: 1.946.242 bytes, SHA-256
+  `D892A4469E842167A1B128AD5C70A88B4C0032A4E61E7515F02B5FEE00DC8F72`;
+- APK local release firmado solo con keystore de prueba: 1.547.952 bytes,
+  SHA-256
+  `2CC3770E9BEDED9E670C91BE1CCDFF1F08CADCB1E493B93727B7CF77625DD4B9`;
+- inspeccion visual en 390 x 844: cuatro controles visibles, una columna y cero
+  scroll horizontal;
+- hardware Android conectado: ninguno; launcher, OEM y bloqueo real siguen
+  expresamente pendientes en `docs/physical-test-checklist.md`.
+
+El workflow remoto `30555984931` valido el commit `8c5af8a` y termino en
+**Success**. El gate ejecuto 355 E2E funcionales, 27 auditorias axe, mantuvo 14
+omisiones documentadas y aprobo Firestore Emulator, artifact web, Android
+debug/release y paridad de assets. El job posterior genero el APK con la firma
+release persistente.
+
+La prerelease no estable es `v2.7.0-native-controls-v1-beta.7`:
+
+- tag y release apuntan a `8c5af8a4b72041c42fecb7f6a0f7e4e7fc3eff24`;
+- APK firmado: 1.546.198 bytes;
+- SHA-256:
+  `94ED3476543B71C2642A1949E105C83D8BF50EF92EBB4E3A42780C4653DBA27C`;
+- descarga publica comprobada sin credenciales con HTTP 200:
+  `https://github.com/locoviera24-code/protocolo-0-100/releases/download/v2.7.0-native-controls-v1-beta.7/protocolo-0-100-v2.7.0-release.apk`;
+- checksum publico:
+  `https://github.com/locoviera24-code/protocolo-0-100/releases/download/v2.7.0-native-controls-v1-beta.7/protocolo-0-100-v2.7.0-release.apk.sha256`.
+
+El checksum descargado coincide con el artifact. La rama sigue separada de
+`main`, el pull request permanece en borrador y stable no fue publicado. Las
+pruebas fisicas de launcher y pantalla de bloqueo siguen pendientes; no hay un
+dispositivo Android conectado a este entorno.

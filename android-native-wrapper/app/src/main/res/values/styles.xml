@@ -6,4 +6,12 @@
         <item name="android:statusBarColor">#0b1220</item>
         <item name="android:navigationBarColor">#0b1220</item>
     </style>
+
+    <style name="WorkoutPickerTheme" parent="android:style/Theme.Material.Dialog.Alert">
+        <item name="android:windowBackground">#111b2d</item>
+        <item name="android:colorAccent">#6ee7a8</item>
+        <item name="android:textColorPrimary">#eef5ff</item>
+        <item name="android:textColorSecondary">#b9c8dc</item>
+        <item name="android:windowNoTitle">true</item>
+    </style>
 </resources>

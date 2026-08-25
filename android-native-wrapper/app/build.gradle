@@ -23,7 +23,10 @@ android {
         targetSdk 35
         versionCode appVersion.versionCode as int
         versionName appVersion.version as String
+        buildConfigField 'int', 'WEB_BUILD', String.valueOf(appVersion.build as int)
     }
+
+    buildFeatures { buildConfig true }
 
     signingConfigs {
         release {
@@ -56,4 +59,6 @@ gradle.taskGraph.whenReady { graph ->
 
 dependencies {
     implementation 'androidx.webkit:webkit:1.15.0'
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.json:json:20240303'
 }

@@ -74,6 +74,10 @@ $androidManifest = Read-Utf8 'android-native-wrapper/app/src/main/AndroidManifes
 $mainActivity = Read-Utf8 'android-native-wrapper/app/src/main/java/com/protocolo/cien/MainActivity.java'
 $widgetProvider = Read-Utf8 'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetProvider.java'
 $widgetUpdater = Read-Utf8 'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetUpdateService.java'
+$nativeWorkoutRepository = Read-Utf8 'android-native-wrapper/app/src/main/java/com/protocolo/cien/NativeWorkoutControlRepository.java'
+$workoutMutationQueue = Read-Utf8 'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutMutationQueue.java'
+$workoutNativeState = Read-Utf8 'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutNativeRepository.java'
+$workoutQuickReducer = Read-Utf8 'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutQuickActionReducer.java'
 $deployWorkflow = Read-Utf8 '.github/workflows/deploy-pages.yml'
 $apkWorkflow = Read-Utf8 '.github/workflows/build-debug-apk.yml'
 $validationWorkflow = Read-Utf8 '.github/workflows/validate-app.yml'
@@ -122,7 +126,7 @@ $requiredFiles = @(
     'data/schema-registry.js', 'data/backup-service.js', 'scripts/test-schema-registry.mjs', 'scripts/test-data-integrity.mjs', 'scripts/test-backup-service.mjs', 'tests/e2e/backup-import.spec.mjs', 'tests/e2e/data-integrity.spec.mjs', 'tests/e2e/data-compatibility.spec.mjs', 'tests/e2e/indexeddb-primary.spec.mjs',
     'ui/confirmation-dialog.js',
     'build-info.json', 'app/build-info.js', 'scripts/build-info.mjs', 'scripts/generate-build-info.mjs',
-    'app-version.json', 'app-version.js', 'app/build-guard.js', 'precache-manifest.js', 'offline.html', 'scripts/precache-manifest.mjs', 'scripts/generate-precache-manifest.mjs', 'scripts/test-build-guard.mjs', 'scripts/test-quality-gate.mjs', 'scripts/test-manifest.mjs', 'scripts/generate-pwa-icons.ps1', 'scripts/capture-pwa-screenshots.mjs', '.github/workflows/quality-gate.yml', 'app/numbers.js', 'scripts/test-numbers.mjs', 'data/indexeddb.js', 'data/repositories.js', 'nutrition-data.js', 'fdc-client.js', 'workout-store.js', 'workout-plan.js', 'gym/equipment.js', 'gym/set-model.js', 'gym/anomaly-detector.js', 'gym/progression-engine.js', 'workout-metrics.js', 'workout-ranking.js', 'workout-ui.js', 'workout-features.js', 'advanced-features.js', 'ui/router.js', 'ui/navigation.js', 'ui/notifications.js', 'ui/form-dialog.js', 'ui/error-boundary.js', 'ui/recovery-view.js', 'progress/muscle-taxonomy.js', 'progress/progress-data-model.js', 'progress/gym-progress-model.js', 'progress/muscle-progress.js', 'progress/exercise-progress.js', 'progress/personal-records.js', 'progress/progress-view.js',
+    'app-version.json', 'app-version.js', 'app/build-guard.js', 'precache-manifest.js', 'offline.html', 'scripts/precache-manifest.mjs', 'scripts/generate-precache-manifest.mjs', 'scripts/test-build-guard.mjs', 'scripts/test-quality-gate.mjs', 'scripts/test-manifest.mjs', 'scripts/generate-pwa-icons.ps1', 'scripts/capture-pwa-screenshots.mjs', '.github/workflows/quality-gate.yml', 'app/numbers.js', 'app/feature-flags.js', 'scripts/test-numbers.mjs', 'scripts/test-feature-flags.mjs', 'data/indexeddb.js', 'data/repositories.js', 'nutrition-data.js', 'fdc-client.js', 'workout-store.js', 'workout-plan.js', 'gym/equipment.js', 'gym/set-model.js', 'gym/workout-load-guidance.js', 'gym/native-workout-importer.js', 'gym/anomaly-detector.js', 'gym/progression-engine.js', 'workout-metrics.js', 'workout-ranking.js', 'workout-ui.js', 'workout-features.js', 'advanced-features.js', 'ui/router.js', 'ui/navigation.js', 'ui/notifications.js', 'ui/form-dialog.js', 'ui/error-boundary.js', 'ui/recovery-view.js', 'progress/muscle-taxonomy.js', 'progress/progress-data-model.js', 'progress/gym-progress-model.js', 'progress/muscle-progress.js', 'progress/exercise-progress.js', 'progress/personal-records.js', 'progress/progress-view.js',
     'firebase-config.js', 'firebase-service.js', 'gym-party-sync.js', 'gym-party-metrics.js', 'gym-party-ui.js', 'gym-party.js',
     'scripts/test-android-webview-security.mjs',
     'scripts/test-android-release.mjs',
@@ -133,9 +137,20 @@ $requiredFiles = @(
     'styles/tokens.css', 'styles/base.css', 'styles/components.css', 'styles/features.css', 'styles/gym.css', 'styles/gym-party.css', 'styles/modules.css', 'styles/responsive.css',
     'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetProvider.java',
     'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutWidgetUpdateService.java',
+  'android-native-wrapper/app/src/main/java/com/protocolo/cien/NativeWorkoutControlRepository.java',
+  'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutMutationQueue.java',
+  'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutNativeRepository.java',
+  'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutQuickActionReducer.java',
+  'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutTimerController.java',
+  'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutControlNotificationManager.java',
+  'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutControlReceiver.java',
+  'android-native-wrapper/app/src/main/java/com/protocolo/cien/WorkoutExercisePickerActivity.java',
     'android-native-wrapper/app/src/main/res/xml/workout_widget_info.xml',
-    'android-native-wrapper/app/src/main/res/layout/widget_workout_small.xml',
-    'android-native-wrapper/app/src/main/res/layout/widget_workout_medium.xml',
+    'android-native-wrapper/app/src/main/res/layout/widget_workout_compact.xml',
+    'android-native-wrapper/app/src/main/res/layout/widget_workout_standard.xml',
+    'android-native-wrapper/app/src/main/res/layout/widget_workout_expanded.xml',
+    'android-native-wrapper/app/src/main/res/layout/notification_workout_controls.xml',
+    'android-native-wrapper/app/src/main/res/values/widget_layout_aliases.xml',
     'android-native-wrapper/app/src/main/res/drawable/widget_background.xml',
     'android-native-wrapper/app/src/main/res/drawable/widget_button.xml',
     'android-native-wrapper/app/src/main/res/drawable/widget_button_secondary.xml'
@@ -153,6 +168,8 @@ foreach ($script in @('data/schema-registry.js', 'data/indexeddb.js', 'data/repo
     Assert-True ($precacheManifest.Contains('"url": "./' + $script + '"')) "precache-manifest.js no cachea $script"
 }
 Assert-True ($html.Contains('<script src="app/numbers.js"></script>')) 'index.html no carga app/numbers.js'
+Assert-True ($html.Contains('<script src="app/feature-flags.js"></script>')) 'index.html no carga app/feature-flags.js'
+Assert-True ($html.IndexOf('<script src="data/repositories.js"></script>') -lt $html.IndexOf('<script src="app/feature-flags.js"></script>')) 'Feature flags debe usar la capa de repositorios ya cargada'
 Assert-True ($html.IndexOf('<script src="app-version.js"></script>') -lt $html.IndexOf('<script src="app/build-guard.js"></script>')) 'El guard de build debe cargar despues de la version'
 Assert-True ($html.IndexOf('<script src="app/build-info.js"></script>') -lt $html.IndexOf('<script src="app/numbers.js"></script>')) 'Los metadatos de build deben cargar antes de los modulos'
 Assert-True ($html.IndexOf('<script src="app/build-guard.js"></script>') -lt $html.IndexOf('<script src="app/numbers.js"></script>')) 'El guard de build debe cargar antes de los modulos'
@@ -293,7 +310,7 @@ foreach ($contract in @('helpButton','statCard','renderRoot','syncLabel')) { Ass
 foreach ($contract in @('calculateSetMetrics','calculateSetsMetrics','bodyweightReps','addedLoadVolume','estimatedOneRepMax','Sin series registradas')) {
     Assert-True ($workoutMetrics.Contains($contract)) "Falta contrato de metricas de gym: $contract"
 }
-foreach ($contract in @('quickStickyActions','data-quick-adjust="reps:1"','data-quick-adjust="weight:0.5"','data-quick-adjust="weight:2.5"','data-quick-adjust="weight:5"','undoDeleteQuickSetPayload','restTimerEnabled','hapticEnabled','quickDrafts','Finalizar entrenamiento')) {
+foreach ($contract in @('quickStickyActions','data-quick-adjust="reps:1"','data-quick-adjust="weight:-5"','data-quick-adjust="weight:-0.5"','data-quick-adjust="weight:0.5"','data-quick-adjust="weight:5"','nativeWorkoutLiveBar','undoDeleteQuickSetPayload','restTimerEnabled','hapticEnabled','quickDrafts','Finalizar entrenamiento')) {
     Assert-True ($workout.Contains($contract)) "Falta UX de registro rapido Gym: $contract"
 }
 foreach ($contract in @('partyStickySave','data-party-adjust="reps:1"','data-party-adjust="weight:0.5"','data-party-adjust="weight:2.5"','data-party-adjust="weight:5"','partyQuickDrafts','party-undo-delete-set','Finalizar entrenamiento')) {
@@ -681,7 +698,7 @@ foreach ($contract in @(
     'migrateExerciseLibrary',
     'exerciseLibraryEditor',
     'handleExerciseLibraryAction',
-    'Registro r'
+    'Guardar serie'
 )) {
     Assert-True ($workout.Contains($contract)) "Falta contrato web gym/widget: $contract"
 }
@@ -711,14 +728,35 @@ foreach ($contract in @(
 )) {
     Assert-True (($widgetProvider + $widgetUpdater + $mainActivity).Contains($contract)) "Falta contrato nativo de widget: $contract"
 }
-foreach ($contract in @('widgetPreviousButton', 'widgetSetStats', 'widgetWeightFastPlusButton', 'WEIGHT_STEP = 0.5', 'WEIGHT_FAST_STEP = 5.0', 'currentExerciseSets', 'currentMuscleSets')) {
-    Assert-True ($widgetUpdater.Contains($contract) -or ($contract -eq 'widgetPreviousButton' -and (($widgetUpdater + (Read-Utf8 'android-native-wrapper/app/src/main/res/layout/widget_workout_medium.xml') + (Read-Utf8 'android-native-wrapper/app/src/main/res/layout/widget_workout_small.xml')).Contains($contract)))) "Falta contrato de widget directo: $contract"
+foreach ($contract in @('widgetCurrentExercise', 'widgetSetStats', 'widgetLoadGuidance', 'widgetWeightMinusButton', 'widgetWeightPlusButton', 'widgetWeightFastMinusButton', 'widgetWeightFastPlusButton', 'WEIGHT_STEP = 0.5', 'WEIGHT_FAST_STEP = 5.0', 'currentExerciseSets', 'currentMuscleSets', 'exercisePickerIntent')) {
+    Assert-True ($widgetUpdater.Contains($contract)) "Falta contrato de widget directo: $contract"
+}
+
+foreach ($contract in @('native_mutation_queue_v1', 'pending', 'imported', 'rejected', 'undone', 'acknowledgeImported')) {
+    Assert-True ($workoutMutationQueue.Contains($contract)) "Falta contrato de cola nativa: $contract"
+}
+foreach ($contract in @('privateImportState', 'DOUBLE_TAP_WINDOW_MS = 650L', 'expectedRevision', 'revision-conflict')) {
+    Assert-True ($nativeWorkoutRepository.Contains($contract)) "Falta contrato de repositorio nativo: $contract"
+}
+foreach ($contract in @('UUID.randomUUID', 'claimDelivery', 'nativeRevision')) {
+    Assert-True ($workoutNativeState.Contains($contract)) "Falta contrato de estado nativo: $contract"
+}
+foreach ($contract in @('ADJUST_REPS', 'ADJUST_WEIGHT', 'SAVE_SET', 'UNDO_LAST_SET', 'COMPLETE_TIME_SET')) {
+    Assert-True ($workoutQuickReducer.Contains($contract)) "Falta reducer nativo comun: $contract"
 }
 
 foreach ($contract in @(
     'saveWorkoutWidgetData',
     'getWorkoutWidgetData',
     'updateWorkoutWidget',
+    'getNativeWorkoutControlData',
+    'getPendingWorkoutMutations',
+    'acknowledgeWorkoutMutations',
+    'getWorkoutQuickAccessCapabilities',
+    'requestPinWorkoutWidget',
+    'startWorkoutNotification',
+    'stopWorkoutNotification',
+    'acknowledgeNativeWorkoutMutation',
     'handleAndroidWidgetIntent'
 )) {
     Assert-True ($mainActivity.Contains($contract)) "Falta puente Android/WebView: $contract"

@@ -137,9 +137,15 @@ aplicados y responde `ignored` con `DUPLICATE_MUTATION` sin crear otra serie.
 sobre un estado anterior. `createAction(input, { now, uuid })` admite reloj y
 UUID inyectados para pruebas deterministas.
 
-## Fuera de alcance
+## Implementacion Android beta
 
-Este bloque no implementa cola durable, SharedPreferences, IndexedDB adicional,
-Firebase, importación Android ni sincronización Gym Party. Esas capas deben
-reutilizar este schema y el modelo `workoutSessions` cuando se integre la rama
-Android.
+Android Quick Access V1 adopta este contrato desde el build 94. La cola nativa
+expone solamente envelopes schema 1 y conserva estado de transporte fuera del
+envelope. Un adaptador temporal convierte en memoria entradas persistidas con
+`type`, `save_set`, `undo_set` o `UNDO_LAST_SET`; no se crean nuevas entradas
+legacy ni se reescribe toda la cola al leerla. `workoutSessions` permanece como
+fuente canonica y Gym Party sincroniza despues de la importacion privada.
+
+La cola, SharedPreferences y el bridge son implementaciones de transporte, no
+parte de este contrato puro. No existe Firebase nativo ni un segundo historial
+Workout.

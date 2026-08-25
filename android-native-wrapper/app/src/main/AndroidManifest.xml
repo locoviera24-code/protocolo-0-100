@@ -1,5 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />
     <application
         android:allowBackup="false"
@@ -18,6 +20,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".WorkoutExercisePickerActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:theme="@style/WorkoutPickerTheme" />
         <receiver
             android:name=".WorkoutWidgetProvider"
             android:exported="false"
@@ -31,14 +38,29 @@
                 <action android:name="com.protocolo.cien.ACTION_WIDGET_WEIGHT_UP" />
                 <action android:name="com.protocolo.cien.ACTION_WIDGET_WEIGHT_FAST_DOWN" />
                 <action android:name="com.protocolo.cien.ACTION_WIDGET_WEIGHT_FAST_UP" />
+                <action android:name="com.protocolo.cien.ACTION_WIDGET_TOGGLE_WEIGHT_STEP" />
+                <action android:name="com.protocolo.cien.ACTION_WIDGET_SELECT_EXERCISE" />
                 <action android:name="com.protocolo.cien.ACTION_WIDGET_SAVE_SET" />
                 <action android:name="com.protocolo.cien.ACTION_WIDGET_REPEAT_LAST" />
                 <action android:name="com.protocolo.cien.ACTION_WIDGET_PREVIOUS_EXERCISE" />
                 <action android:name="com.protocolo.cien.ACTION_WIDGET_NEXT_EXERCISE" />
+                <action android:name="com.protocolo.cien.ACTION_WIDGET_UNDO_LAST_SET" />
+                <action android:name="com.protocolo.cien.ACTION_WIDGET_COMPLETE_TIME_SET" />
+                <action android:name="com.protocolo.cien.ACTION_WIDGET_PINNED" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/workout_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".WorkoutControlReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
         </receiver>
     </application>
 </manifest>
