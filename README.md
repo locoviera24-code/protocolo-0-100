@@ -45,9 +45,10 @@ genera. Focus Coins, rankings, referidos y afiliados están en **Más > Funcione
 experimentales**, desactivados por defecto sin borrar sus datos anteriores.
 
 **Gym > Ajustes > Acceso rápido durante el entrenamiento** diferencia el
-shortcut de la PWA, el widget que requiere el APK, la pantalla bloqueada en
-desarrollo y la notificacion disponible solo en la beta Android pendiente de
-revision. **Más > Acerca de** compara capacidades
+shortcut de la PWA, el widget que requiere el APK y la notificacion privada que
+sirve como acceso de bloqueo en Android compatible. Android Quick Access V1 ya
+esta integrado en `main`, pero build 96 todavia no fue publicado como stable.
+**Más > Acerca de** compara capacidades
 Web/PWA y APK sin
 afirmar que una PWA está instalada cuando el navegador no puede comprobarlo.
 
@@ -529,10 +530,11 @@ La PWA/GitHub Pages no puede crear widgets ni controles de pantalla de bloqueo.
 Estas funciones viven en el APK y usan `AppWidgetProvider`, `AppWidgetManager`,
 `RemoteViews`, `PendingIntent` y una notificacion privada de entrenamiento.
 
-La integracion actual de la rama es **2.7.0 beta build 96**, Android
-`versionCode 40`. Todavia no tiene un APK publico nuevo: beta 7 corresponde al
+La integracion actual esta en `main` mediante el merge commit
+`39c40a204b79b502aeee50a6b7048ad1e94f6fe6`: **2.7.0 beta build 96**, Android
+`versionCode 40`. Todavia no tiene un APK stable nuevo: beta 7 corresponde al
 build 93 anterior y queda solo como antecedente. Ninguna beta reemplaza el
-canal estable ni mueve `baseline-stable-2.7`.
+canal stable ni mueve `baseline-stable-2.7`.
 
 Desde **Gym > Acceso rapido durante el entrenamiento** se puede tocar **Agregar
 widget**. Cuando el launcher admite `requestPinAppWidget`, Android muestra su
@@ -560,7 +562,7 @@ validacion fisica cubrio widgets compacto/estandar/expandido, permiso de
 notificaciones concedido y denegado, `publicVersion` con bloqueo seguro, doble
 toque, Deshacer, temporizador, cierre del proceso, offline, reinicio, kg/lb,
 peso corporal, asistencia, lastre, unilateral, tiempo y distancia. La PWA del
-branch se instalo en el mismo Samsung, funciono standalone/offline y abrio el
+candidato se instalo en el mismo Samsung, funciono standalone/offline y abrio el
 shortcut **Serie rapida**. Los casos externos bloqueados y los `N/A` se detallan
 en `docs/physical-test-checklist.md`.
 

@@ -1,7 +1,7 @@
 # CODEX_HANDOFF - Protocolo 0->100
 
-Ultima actualizacion: 2026-08-24
-Rama esperada: `codex/android-quick-access-v1`
+Ultima actualizacion: 2026-08-25
+Rama esperada: `main`
 Version actual: `2.7.0` (fuente unica: `app-version.json`)
 Android: `versionCode 40`, `versionName "2.7.0"`
 Service worker cache: `protocolo-0-100-pwa-2.7.0-b96`
@@ -12,11 +12,17 @@ Leer primero este archivo y luego `README.md`, `index.html`,
 `manifest.webmanifest`, `sw.js`, `firebase/README.md` y los archivos Android
 en `android-native-wrapper/`.
 
-## Integracion actual: Android Quick Access sobre Web Core
+## Integracion actual: Android Quick Access en main
 
-`main` `569cb591` ya contiene Web Core Flow P0 build 90. La rama Android fue
-rebasada desde la base antigua `1a9186e`; su estado previo permanece en la rama
-remota inmutable `backup/android-quick-access-v1-pre-web-core-9464faa`, SHA
+El PR Android #1 fue fusionado mediante merge commit
+`39c40a204b79b502aeee50a6b7048ad1e94f6fe6`. Su segundo padre es el candidato
+fisicamente validado `a69657d89a841386c1fcc648594edbdc22e1b6cd`; ambos
+commits tienen exactamente el mismo arbol. `main` tambien conserva Web Core
+Flow P0, fusionado previamente por el PR #2.
+
+La rama Android fue rebasada desde la base antigua `1a9186e`; su estado previo
+permanece en la rama remota inmutable
+`backup/android-quick-access-v1-pre-web-core-9464faa`, SHA
 `9464faaad3d7bd81db2d71fc6aabf40aeb4dc7d5`.
 
 La integracion usa build web/PWA beta 96, Android `versionCode 40` y backup
@@ -39,7 +45,31 @@ schema 3. Stable permanece en build 89 y no se publico una release nueva.
 - Los tres widgets y la notificacion privada conservan -0,5, +0,5, -5, +5,
   selector directo, ultima carga y maximo comparable.
 
-Gate local posterior al rebase, completado el 2026-08-05:
+Quality gate post-merge disparado directamente sobre `main` el 2026-08-25:
+
+- run `32888821534`, intento 2, aprobado en 18m50s sobre
+  `39c40a204b79b502aeee50a6b7048ad1e94f6fe6` con canal `beta`;
+- Playwright: 403 escenarios funcionales aprobados y 14 omisiones deliberadas;
+  Axe: 33/33;
+- Firestore Emulator, artifact web, smoke, offline, service worker, Android
+  JVM/debug/release, firma de prueba y paridad web/Android: aprobados;
+- el intento 1 tuvo un unico timeout WebKit en el flujo de alimento
+  personalizado (402 aprobados, 14 omitidos). El caso paso 3/3 localmente sin
+  cambios y la matriz completa del intento 2 quedo verde;
+- artifact web `protocolo-web-beta`: 556.561 bytes comprimidos, digest SHA-256
+  `0E6AE02BB49830532624063AD9A0280C579019284A0539C3F5ADED16BA439061`;
+- artifact Android `protocolo-android-debug-beta`: 1.857.951 bytes comprimidos,
+  digest SHA-256
+  `B4EB307C5C2A47D3C3A0749B13CF2A6D4EB31F73711D44B7B1B9F10DEC22F0DB`;
+- APK debug contenido: 1.906.947 bytes, SHA-256
+  `6E047DEBEFECCA2C63A2A0E48F00FC96950773FD09F6BE95352AD2839EE34340`;
+- `build-info.json` del artifact declara `2.7.0`, build 96, Android 40,
+  canal `beta` y el merge commit completo de `main`.
+
+Stable permanece deliberadamente en build 89. Este cierre no publica una
+release ni cambia `.github/stable-release.json`.
+
+Gate local historico posterior al rebase, completado el 2026-08-05:
 
 - Contratos, versionado, manifest, precache, service worker, modulos, datos,
   backups, Workout, Gym Party, Nutricion, Progreso y accesibilidad estructural:
@@ -96,7 +126,7 @@ temporalmente el renderer antes de emitir `app-data-primary-ready`. El fix se
 revalido fisicamente en un origen limpio y offline; por ello el candidato final
 subio una sola vez a build 96/versionCode 40.
 
-Gate local final del candidato 96/40, completado el 2026-08-24:
+Gate local final del candidato 96/40 previo al merge, completado el 2026-08-24:
 
 - contratos, versionado, manifest, precache, service worker, datos, backups,
   Workout, importador nativo, Gym Party, Nutricion, Progreso y accesibilidad
@@ -115,8 +145,8 @@ Gate local final del candidato 96/40, completado el 2026-08-24:
   `F3222E3A88370F715A9FF9CB72F2BB62F2CD8820EE0847216E3D4D144DEB95C5`.
   Release efimero: 1.565.415 bytes, firma v1/v2 valida, SHA-256
   `44F5813148927DA9A3A281DD09FD40409D4E1FC2B74FFFB0EAC178AD7E087A23`;
-- paridad web/assets Android: exacta. Stable permanece en build 89, backup en
-  schema 3 y `main` sin cambios.
+- paridad web/assets Android: exacta. Stable permanecia en build 89, backup en
+  schema 3 y `main` aun no contenia el candidato en ese corte historico.
 
 Los defectos fisicos corregidos en todo el ciclo fueron el solapamiento con la
 barra de estado, la falta de relayout del widget, la intercepcion de controles
@@ -4385,7 +4415,7 @@ La prerelease no estable es `v2.7.0-native-controls-v1-beta.7`:
 - checksum publico:
   `https://github.com/locoviera24-code/protocolo-0-100/releases/download/v2.7.0-native-controls-v1-beta.7/protocolo-0-100-v2.7.0-release.apk.sha256`.
 
-El checksum descargado coincide con el artifact. La rama sigue separada de
-`main`, el pull request permanece en borrador y stable no fue publicado. Las
-pruebas fisicas de launcher y pantalla de bloqueo siguen pendientes; no hay un
-dispositivo Android conectado a este entorno.
+El checksum descargado coincide con el artifact. En ese corte historico la rama
+seguia separada de `main`, el pull request permanecia en borrador y stable no
+habia sido publicado. Esa situacion fue reemplazada por el merge y la
+validacion fisica/post-merge documentados al inicio de este archivo.

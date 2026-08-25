@@ -1,8 +1,9 @@
 # Controles Android de acceso rapido V1
 
-Estado: beta `2.7.0+96`, Android `versionCode 40`, en
-`codex/android-quick-access-v1`. No forma parte de la linea estable 2.7 hasta
-que se fusione y publique de forma explicita.
+Estado actual: integrado en `main` por el PR #1, merge commit
+`39c40a204b79b502aeee50a6b7048ad1e94f6fe6`. El candidato beta es
+`2.7.0+96`, Android `versionCode 40`. No forma parte del canal stable hasta una
+publicacion explicita posterior; stable permanece en build 89.
 
 ## Experiencia
 

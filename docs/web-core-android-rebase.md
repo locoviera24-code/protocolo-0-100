@@ -1,8 +1,9 @@
 # Integracion de Android Quick Access con Web Core Flow P0
 
-Estado: rebase completado sobre `main` `569cb591`. La rama Android conserva sus
-commits funcionales y adopta el contrato publico definido por
-`gym/workout-quick-actions.js`.
+Estado actual: rebase completado e integrado por el PR #1 en `main`, merge
+commit `39c40a204b79b502aeee50a6b7048ad1e94f6fe6`. Este documento conserva la
+trazabilidad historica del rebase sobre `main` `569cb591`; el resultado adopta
+el contrato publico definido por `gym/workout-quick-actions.js`.
 
 ## Contrato resultante
 

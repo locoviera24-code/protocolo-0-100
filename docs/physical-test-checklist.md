@@ -1,7 +1,9 @@
 # Checklist de pruebas físicas
 
-Referencia objetivo beta: Protocolo 0->100 `2.7.0`, build web/PWA `96`, Android
-`versionCode 40`, rama `codex/android-quick-access-v1`.
+Referencia objetivo integrada: Protocolo 0->100 `2.7.0`, build web/PWA `96`,
+Android `versionCode 40`, `main`
+`39c40a204b79b502aeee50a6b7048ad1e94f6fe6`. El arbol es identico al
+candidato fisico `a69657d89a841386c1fcc648594edbdc22e1b6cd`.
 
 Este documento separa resultados automatizados de pruebas sobre hardware real.
 No marcar una prueba física por inferencia a partir de Playwright, Gradle o un
@@ -24,7 +26,7 @@ Semantica vigente:
 Las listas de casillas anteriores al registro de hardware son recorridos de
 referencia y no representan por si solas el estado del candidato. La tabla
 **Registro de hardware de Controles Android V1** es la fuente vigente para esta
-beta; no se convierten casillas historicas en PASS por inferencia.
+linea integrada; no se convierten casillas historicas en PASS por inferencia.
 
 Anotar para cada ejecución: fecha, modelo, versión del sistema, navegador,
 build probado y resultado. Adjuntar captura o diagnóstico solo si no contiene
@@ -92,7 +94,7 @@ pruebas físicas.
 - [ ] Agregar y redimensionar los widgets compacto, estandar y expandido.
 - [ ] Pulsar -0,5/+0,5 repetidamente y confirmar que el widget no cambia de layout.
 - [ ] Tocar el valor de carga, alternar a 5 kg y confirmar que no aparecen botones nuevos.
-- [ ] Confirmar que el compacto conserva solo -0,5, Guardar, +0,5 y temporizador.
+- [ ] Confirmar que el compacto conserva -0,5, +0,5, -5, +5, Guardar y temporizador.
 - [ ] Confirmar que ningun control queda oculto o truncado con fuente aumentada.
 - [ ] Corregir reps y carga hacia abajo y hacia arriba desde el widget.
 - [ ] Tocar el nombre del ejercicio, elegir uno no contiguo y confirmar el cambio directo.
@@ -174,7 +176,7 @@ al precache ni al APK.
 | Lastre | PASS | Peso corporal + 5 kg de lastre, cierre forzado y reapertura | Recibo y serie persistida conservaron la semantica de lastre. |
 | Unilateral | PASS | Modalidad por lado, lado derecho, 5 kg x 8, cierre forzado y edicion | La lateralidad persistio y no se duplico volumen automaticamente. |
 | Gym Party entre dos clientes | BLOCKED | APK en modo local/demo; `firebase-config.js` del candidato es un stub seguro | El navegador de escritorio es un segundo cliente valido, pero no existe backend comun configurado. Bloqueo externo, no defecto Android; no se modifico Firebase de produccion. |
-| PWA Android del branch | PASS | Artifact local por ADB reverse, WebAPK instalado, navegacion, offline, recarga y shortcut | Chrome la detecto como browser/PWA, no APK; service worker controlo la pagina, `Serie rapida` abrio Gym y widget/notificacion quedaron exclusivos de APK. |
+| PWA Android del candidato integrado | PASS | Artifact local por ADB reverse, WebAPK instalado, navegacion, offline, recarga y shortcut | Chrome la detecto como browser/PWA, no APK; service worker controlo la pagina, `Serie rapida` abrio Gym y widget/notificacion quedaron exclusivos de APK. El merge no cambio el arbol probado. |
 | PWA iPhone | BLOCKED | Hardware y preview HTTPS no disponibles | Validacion cross-platform pendiente y no bloqueante para este PR Android. |
 | Upgrade desde artifact CI anterior | N/A | Auditoria del workflow de firma | El release de prueba CI usa una clave efimera de dos dias. No representa la ruta de upgrade de produccion, que debe usar la clave estable; no se intento saltar la proteccion ni se desinstalo la app. |
 
