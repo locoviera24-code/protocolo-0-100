@@ -746,8 +746,11 @@ revision.
 - **APK debug:** `Construir APK Android validado` es manual y reutiliza el mismo
   gate; no recompila desde una matriz mas debil.
 - **APK release:** `Publicar APK Android release` espera el mismo gate y luego
-  compila `v2.7.0` con la firma privada de GitHub Secrets, publica el APK
-  versionado y adjunta su checksum SHA-256.
+  compila con la firma privada de GitHub Secrets. El despacho es manual, usa un
+  tag inmutable `v<version>-build.<build>`, incluye `versionCode` en el nombre
+  del APK y falla si el tag o la release ya existen; nunca reemplaza assets con
+  `--clobber`. La política completa está en
+  `docs/stable-release-tag-policy.md`.
 
 `scripts/build-web-dist.mjs` descubre las dependencias declaradas en HTML,
 manifest, service worker y CSS, conserva su estructura en `dist-pages` y genera

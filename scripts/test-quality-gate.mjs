@@ -35,8 +35,11 @@ assert.ok(Number(stableRelease.build)<=Number(appVersion.build),'La solicitud es
 assert.doesNotMatch(debug,/\n  push:/,'El APK manual no debe duplicar el gate automatico de main');
 assert.doesNotMatch(debug,/gh release/);
 assert.match(release,/needs: quality/);
+assert.match(release,/node \.\/scripts\/release-identity\.mjs/);
 assert.match(release,/gh release create/);
 assert.match(release,/gh release create[^\n]+--target "\$GITHUB_SHA"/);
+assert.doesNotMatch(release,/--clobber/);
+assert.doesNotMatch(release,/\n  push:/,'El release estable debe requerir despacho manual deliberado');
 
 for(const caller of callers)assert.doesNotMatch(caller,/npm run test:e2e/,'Las matrices no deben duplicarse fuera del gate');
 
