@@ -1,8 +1,8 @@
 # Auditoría de preparación stable 2.7.0+96
 
-Fecha de auditoría: 2026-08-25
+Fecha de auditoría: 2026-08-25; cierre de blocker: 2026-08-26
 
-Estado: **NOT READY FOR STABLE**
+Estado: **READY FOR STABLE**
 
 Alcance: auditoría solamente; no se publicó web, PWA ni APK y no se modificó la configuración stable.
 
@@ -10,7 +10,8 @@ Alcance: auditoría solamente; no se publicó web, PWA ni APK y no se modificó 
 
 | Elemento | Valor |
 | --- | --- |
-| `main` auditado | `420da1b6b79fa01c48c61d43b0eec5402decc90a` |
+| Árbol productivo auditado | `420da1b6b79fa01c48c61d43b0eec5402decc90a` |
+| Base `main` tras fusionar la auditoría histórica | `342ec29aa4868ede9e00fc64c12e484607f50157` |
 | Merge Android Quick Access | `39c40a204b79b502aeee50a6b7048ad1e94f6fe6` |
 | Candidato Android validado físicamente | `a69657d89a841386c1fcc648594edbdc22e1b6cd` |
 | Versión | `2.7.0` |
@@ -44,7 +45,7 @@ El sitio publicado seguía declarando build `89`, Android `33` y commit
 | PWA iPhone física | RISK ACCEPTED | WebKit automatizado cubre flujos; falta Safari/PWA en hardware real. | No |
 | Segundo OEM/launcher | RISK ACCEPTED | Samsung One UI 8 está validado; widget, batería y launcher pueden variar por OEM. | No |
 | Firma Android de producción | RISK ACCEPTED | Los cuatro Secrets requeridos existen y el workflow estable los exige; el certificado del candidato debe compararse con el APK público antes de subirlo. | No |
-| Política de tag/APK | BLOCKED | El default `v2.7.0` omite build 96 y `--clobber` puede reemplazar assets sin mover el tag. | **Sí** |
+| Política de tag/APK | PASS | Stable usa `v2.7.0-build.96`, APK/checksum incluyen build y `versionCode` 40, y cualquier tag o release existente aborta sin `--clobber`. | No |
 | Quality gate post-merge documental | PASS | Run `32911832691`, attempt 2, sobre `420da1b`: matriz completa verde. | No |
 
 ## Diferencia stable 89 a candidato 96
@@ -68,7 +69,7 @@ abarca 37 commits, 119 archivos, 9.793 inserciones y 1.142 eliminaciones.
 | Android nativo | Java 17, receivers estrictos, RemoteViews y foreground notification. | Variación OEM y lifecycle. |
 | Permisos | Notificaciones y boot se gestionan sin bloquear Gym. | Denegación/OEM; física Samsung cubierta. |
 | Notificaciones | Contenido privado y `publicVersion` genérica. | Exposición en lockscreen; prueba física con bloqueo seguro PASS. |
-| Versionado | Web 89→96 y Android 33→40 en el baseline fuente; el APK público salta de 31→40. La versión semántica pasa de 2.6.0 a 2.7.0 para APK. | Tag de APK no incorpora build/versionCode. |
+| Versionado | Web 89→96 y Android 33→40 en el baseline fuente; el APK público salta de 31→40. La versión semántica pasa de 2.6.0 a 2.7.0 para APK. | La identidad inmutable incorpora build 96 y `versionCode` 40; resta ejecutar el plan de publicación separado. |
 
 ## Compatibilidad de datos
 
@@ -136,27 +137,39 @@ los Secrets de firma no cambiaron desde esa release, pero el plan debe verificar
 el certificado del candidato contra el APK público antes de subirlo, sin extraer
 ni revelar el keystore.
 
-## Gate obligatorio de tag y `--clobber`
+## Gate cerrado de tag y artifacts inmutables
 
-No existe actualmente un tag o GitHub Release `v2.7.0`. Sí existen prereleases
-`v2.7.0-native-controls-v1-beta.1` a `.7`.
+La política aprobada deriva la identidad stable exclusivamente de
+`app-version.json`:
 
-El workflow estable usa por defecto `v<versionName>`, por lo que build 96 y un
-eventual build posterior de `2.7.0` competirían por `v2.7.0` y por el nombre
-`protocolo-0-100-v2.7.0-release.apk`. Si la release ya existe, ejecuta
-`gh release upload --clobber`. Eso puede reemplazar APK/checksum sin actualizar
-el commit al que apunta el tag, debilitando trazabilidad y rollback.
+```text
+tag: v2.7.0-build.96
+APK: protocolo-0-100-v2.7.0-build.96-android.40-release.apk
+checksum: protocolo-0-100-v2.7.0-build.96-android.40-release.apk.sha256
+```
 
-Recomendación obligatoria antes de publicar:
+El workflow de APK stable:
 
-- aprobar un tag inmutable que incluya build, por ejemplo `v2.7.0-build.96`;
-- pasar ese valor explícitamente por `release_tag`;
-- no reutilizar el tag ni ejecutar `--clobber` sobre una release publicada;
-- incluir build 96 y `versionCode` 40 en nombre/notas/checksum;
-- verificar que tag, `GITHUB_SHA`, APK, certificado y SHA-256 correspondan al mismo candidato.
+- solo se inicia mediante `workflow_dispatch`;
+- exige `main` para una publicación no prerelease;
+- calcula `v<version>-build.<build>` y rechaza cualquier `release_tag` stable distinto;
+- comprueba que no exista ni la GitHub Release ni el tag antes de crear;
+- aborta cada caso de existencia con `exit 1`;
+- crea la release contra `--target "$GITHUB_SHA"`;
+- no usa `gh release upload`, no usa `--clobber` y nunca mueve un tag;
+- publica APK y checksum con build 96 y `versionCode` 40 en sus nombres;
+- no modifica `.github/stable-release.json` ni despliega Pages;
+- conserva la firma exclusivamente mediante los cuatro Secrets Android ya auditados.
 
-No se cambió el workflow durante esta auditoría. Hasta aprobar esa política,
-el candidato queda **NOT READY FOR STABLE**.
+Las regresiones deterministas cubren identidad vacía stable, rechazo de
+`v2.7.0`, rama stable distinta de `main`, prerelease sin sufijo, versión/build/
+`versionCode` inválidos, nombres exactos del candidato, ausencia de upload o
+clobber y orden de los rechazos antes de `gh release create`.
+
+La política no crea por sí misma ningún tag o release. La publicación continúa
+siendo una tarea separada y debe comparar certificado, commit y SHA-256 antes de
+su ejecución. Con este gate cerrado, no queda un blocker técnico abierto para
+preparar stable.
 
 ## Canales stable independientes
 
@@ -236,18 +249,23 @@ reproducirla localmente sin cambios; el attempt 2 pasó la matriz completa. No s
 relajó la aserción, no se añadió espera y no se modificó producto ni tests. CI
 no sustituye ni amplía la evidencia física registrada.
 
+El cierre de la política inmutable añade pruebas estructurales y unitarias sin
+cambiar producto. Su HEAD final debe completar nuevamente el quality gate del
+PR y `main` debe repetir el gate en canal beta después del merge; los Run ID y
+hashes de artifacts se registran en el PR para no convertir este documento en
+una referencia circular que requiera otro commit tras cada ejecución.
+
 ## Recomendación final
 
-**NOT READY FOR STABLE**
+**READY FOR STABLE**
 
-Blocker concreto:
+Blockers concretos restantes: ninguno.
 
-1. Definir y aprobar una política de tag/APK inmutable para build 96 que evite
-   publicar o reemplazar assets ambiguos bajo `v2.7.0` mediante `--clobber`.
-
-No son blockers del candidato: iPhone físico, segundo OEM y Gym Party físico
-multi-cliente. Permanecen como riesgos aceptados y deben constar en el plan de
-publicación y en la observación posterior al release.
+Permanecen como **RISK ACCEPTED**, no como PASS: PWA iPhone física, segundo
+OEM/launcher y Gym Party físico multi-cliente. Deben constar en el plan de
+publicación, en los criterios de aborto y en la observación posterior al release.
+La declaración READY autoriza diseñar y revisar el plan; no publica, etiqueta ni
+promueve por sí misma el candidato.
 
 ## Acciones prohibidas durante esta auditoría
 
