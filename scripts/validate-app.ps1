@@ -82,6 +82,7 @@ $deployWorkflow = Read-Utf8 '.github/workflows/deploy-pages.yml'
 $apkWorkflow = Read-Utf8 '.github/workflows/build-debug-apk.yml'
 $validationWorkflow = Read-Utf8 '.github/workflows/validate-app.yml'
 $releaseWorkflow = Read-Utf8 '.github/workflows/build-release-apk.yml'
+$releaseIdentity = Read-Utf8 'scripts/release-identity.mjs'
 $qualityWorkflow = Read-Utf8 '.github/workflows/quality-gate.yml'
 $qualityGateTest = Read-Utf8 'scripts/test-quality-gate.mjs'
 $serviceWorkerTest = Read-Utf8 'scripts/test-service-worker.mjs'
@@ -129,6 +130,7 @@ $requiredFiles = @(
     'app-version.json', 'app-version.js', 'app/build-guard.js', 'precache-manifest.js', 'offline.html', 'scripts/precache-manifest.mjs', 'scripts/generate-precache-manifest.mjs', 'scripts/test-build-guard.mjs', 'scripts/test-quality-gate.mjs', 'scripts/test-manifest.mjs', 'scripts/generate-pwa-icons.ps1', 'scripts/capture-pwa-screenshots.mjs', '.github/workflows/quality-gate.yml', 'app/numbers.js', 'app/feature-flags.js', 'scripts/test-numbers.mjs', 'scripts/test-feature-flags.mjs', 'data/indexeddb.js', 'data/repositories.js', 'nutrition-data.js', 'fdc-client.js', 'workout-store.js', 'workout-plan.js', 'gym/equipment.js', 'gym/set-model.js', 'gym/workout-load-guidance.js', 'gym/native-workout-importer.js', 'gym/anomaly-detector.js', 'gym/progression-engine.js', 'workout-metrics.js', 'workout-ranking.js', 'workout-ui.js', 'workout-features.js', 'advanced-features.js', 'ui/router.js', 'ui/navigation.js', 'ui/notifications.js', 'ui/form-dialog.js', 'ui/error-boundary.js', 'ui/recovery-view.js', 'progress/muscle-taxonomy.js', 'progress/progress-data-model.js', 'progress/gym-progress-model.js', 'progress/muscle-progress.js', 'progress/exercise-progress.js', 'progress/personal-records.js', 'progress/progress-view.js',
     'firebase-config.js', 'firebase-service.js', 'gym-party-sync.js', 'gym-party-metrics.js', 'gym-party-ui.js', 'gym-party.js',
     'scripts/test-android-webview-security.mjs',
+    'scripts/release-identity.mjs',
     'scripts/test-android-release.mjs',
     'scripts/test-accessibility.mjs',
     'scripts/test-module-boundaries.mjs', 'scripts/test-design-system.mjs', 'scripts/design-token-allowlist.json', 'scripts/test-router.mjs', 'scripts/test-layout-coordinator.mjs', 'scripts/test-home-settings.mjs', 'scripts/test-progress-view.mjs', 'scripts/test-workout-equipment.mjs', 'scripts/test-workout-anomalies.mjs', 'scripts/test-progression-engine.mjs', 'scripts/sync-app-version.mjs', 'scripts/test-version-alignment.mjs', 'scripts/test-settings-contract.mjs', 'scripts/test-data-layer.mjs',
@@ -354,9 +356,10 @@ Assert-True ([int]$buildInfoManifest.build -eq [int]$appVersionManifest.build) '
 Assert-True ($advanced.Contains('window.APP_VERSION_INFO')) 'advanced-features.js no consume la fuente unica de version'
 Assert-True ($androidBuild.Contains("new groovy.json.JsonSlurper().parse(rootProject.file('../app-version.json'))")) 'Gradle no consume app-version.json'
 Assert-True ($serviceWorker.Contains('CACHE_NAME=APP_VERSION_INFO.cacheName')) 'El cache PWA no deriva de app-version.json'
-Assert-True ($releaseWorkflow.Contains('VERSION_NAME')) 'El workflow release debe obtener versionName dinamicamente'
-Assert-True ($releaseWorkflow.Contains("require('./app-version.json').version")) 'El workflow release no consume app-version.json'
-Assert-True ($releaseWorkflow.Contains('protocolo-0-100-v${VERSION_NAME}-release.apk')) 'El APK release debe llevar la version en el nombre'
+Assert-True ($releaseWorkflow.Contains('node ./scripts/release-identity.mjs')) 'El workflow release no usa la identidad inmutable'
+Assert-True ($releaseIdentity.Contains("resolve(root,'app-version.json')")) 'La identidad release no consume app-version.json'
+Assert-True ($releaseIdentity.Contains('v${version}-build.${build}')) 'El tag release debe incluir version y build'
+Assert-True ($releaseIdentity.Contains('android.${versionCode}-release')) 'El APK release debe incluir versionCode en el nombre'
 Assert-True ($readme.Contains("v$appVersion")) "README.md no menciona v$appVersion"
 Assert-True ($handoff.Contains($appVersion)) "CODEX_HANDOFF.md no menciona la version $appVersion"
 Assert-True ($handoff.Contains($cacheName)) "CODEX_HANDOFF.md no menciona el cache PWA $cacheName"

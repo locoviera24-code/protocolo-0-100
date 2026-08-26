@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: Tag de release; vacio usa v<versionName>
+        description: Tag inmutable; estable usa v<version>-build.<build>, prerelease exige sufijo
         required: false
         type: string
       prerelease:
@@ -12,10 +12,6 @@ on:
         required: false
         default: false
         type: boolean
-  push:
-    tags:
-      - 'v*'
-
 permissions:
   contents: write
 
@@ -46,6 +42,13 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: '22'
+
+      - name: Resolver identidad inmutable de release
+        id: identity
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          RELEASE_PRERELEASE: ${{ inputs.prerelease }}
+        run: node ./scripts/release-identity.mjs
 
       - name: Configurar Android SDK
         uses: android-actions/setup-android@v4
@@ -103,45 +106,51 @@ jobs:
       - name: Preparar APK versionado y SHA-256
         id: package
         shell: bash
+        env:
+          APK_NAME: ${{ steps.identity.outputs.apk }}
+          CHECKSUM_NAME: ${{ steps.identity.outputs.checksum }}
         run: |
-          VERSION_NAME=$(node -p "require('./app-version.json').version")
-          test -n "$VERSION_NAME"
           mkdir -p dist
-          APK="dist/protocolo-0-100-v${VERSION_NAME}-release.apk"
+          APK="dist/$APK_NAME"
+          CHECKSUM="dist/$CHECKSUM_NAME"
           cp android-native-wrapper/app/build/outputs/apk/release/app-release.apk "$APK"
-          sha256sum "$APK" > "${APK}.sha256"
-          echo "version=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+          sha256sum "$APK" > "$CHECKSUM"
           echo "apk=$APK" >> "$GITHUB_OUTPUT"
-          echo "checksum=${APK}.sha256" >> "$GITHUB_OUTPUT"
+          echo "checksum=$CHECKSUM" >> "$GITHUB_OUTPUT"
 
       - name: Subir artifact release verificable
         uses: actions/upload-artifact@v7
         with:
-          name: protocolo-0-100-v${{ steps.package.outputs.version }}-release
+          name: ${{ steps.identity.outputs.artifact }}
           path: |
             ${{ steps.package.outputs.apk }}
             ${{ steps.package.outputs.checksum }}
           retention-days: 90
 
-      - name: Crear o actualizar GitHub Release
+      - name: Crear GitHub Release inmutable
         env:
           GH_TOKEN: ${{ github.token }}
-          INPUT_TAG: ${{ inputs.release_tag }}
           INPUT_PRERELEASE: ${{ inputs.prerelease }}
           APK: ${{ steps.package.outputs.apk }}
           CHECKSUM: ${{ steps.package.outputs.checksum }}
-          VERSION_NAME: ${{ steps.package.outputs.version }}
+          TAG: ${{ steps.identity.outputs.tag }}
+          TITLE: ${{ steps.identity.outputs.title }}
+          VERSION_NAME: ${{ steps.identity.outputs.version }}
+          BUILD_NUMBER: ${{ steps.identity.outputs.build }}
+          VERSION_CODE: ${{ steps.identity.outputs.versionCode }}
         shell: bash
         run: |
-          TAG="${GITHUB_REF_TYPE:-}"
-          if [ "$TAG" = "tag" ]; then TAG="$GITHUB_REF_NAME"; else TAG="${INPUT_TAG:-v$VERSION_NAME}"; fi
           FLAGS=()
           if [ "$INPUT_PRERELEASE" = "true" ]; then FLAGS+=(--prerelease); fi
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" "$APK" "$CHECKSUM" --clobber
-          else
-            gh release create "$TAG" "$APK" "$CHECKSUM" --target "$GITHUB_SHA" --title "Protocolo 0-100 v$VERSION_NAME" --notes "APK Android release firmado. Verifica la descarga con el archivo SHA-256." "${FLAGS[@]}"
+            echo "La release $TAG ya existe; los releases publicados son inmutables." >&2
+            exit 1
           fi
+          if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" >/dev/null 2>&1; then
+            echo "El tag $TAG ya existe; no se reutiliza ni se mueve." >&2
+            exit 1
+          fi
+          gh release create "$TAG" "$APK" "$CHECKSUM" --target "$GITHUB_SHA" --title "$TITLE" --notes "APK Android release firmado para v$VERSION_NAME, build $BUILD_NUMBER, versionCode $VERSION_CODE. Commit: $GITHUB_SHA. Verifica la descarga con el archivo SHA-256." "${FLAGS[@]}"
 
       - name: Eliminar keystore temporal
         if: always()

@@ -67,8 +67,10 @@ Para GitHub Actions, codificar el keystore en base64 y crear estos Secrets:
 - `ANDROID_KEY_PASSWORD`
 
 El workflow `Publicar APK Android release` genera un APK versionado y un
-checksum SHA-256. Nunca subir `.jks`, `.keystore`, service accounts o claves
-privadas al repo.
+checksum SHA-256. Su tag incorpora el build, el nombre incorpora `versionCode`
+y una release existente no se sobrescribe. Ver
+`../docs/stable-release-tag-policy.md`. Nunca subir `.jks`, `.keystore`, service
+accounts o claves privadas al repo.
 
 ## Instalar y agregar widget
 
