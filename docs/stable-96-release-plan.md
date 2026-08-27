@@ -6,11 +6,12 @@ Este documento define una publicacion posterior y explicitamente autorizada.
 No crea tags, GitHub Releases ni despliegues, y no modifica
 `.github/stable-release.json`.
 
-## Identidad bloqueada del candidato
+## Identidad del candidato
 
 | Elemento | Valor |
 | --- | --- |
-| Commit a publicar | `c0d409b29d5c185e2f85e92ac49cd8e939077db0` |
+| Product baseline validado | `c0d409b29d5c185e2f85e92ac49cd8e939077db0` |
+| `FINAL_RELEASE_SHA` | HEAD exacto de `origin/main` despues de integrar los guards y este plan, antes de publicar |
 | Version | `2.7.0` |
 | Build web/PWA | `96` |
 | Android `versionCode` | `40` |
@@ -20,15 +21,22 @@ No crea tags, GitHub Releases ni despliegues, y no modifica
 | Checksum previsto | `protocolo-0-100-v2.7.0-build.96-android.40-release.apk.sha256` |
 | Stable actual antes de publicar | `2.7.0+89` |
 
-La publicacion debe abortarse si `main` deja de apuntar al commit indicado o si
-cambia version, build, `versionCode`, backup schema o metadata stable antes de
-comenzar. Cualquier correccion posterior requiere una nueva identidad de build;
-no se debe reutilizar este tag.
+`c0d409b29d5c185e2f85e92ac49cd8e939077db0` identifica el arbol productivo
+validado antes del cierre de infraestructura; no es un SHA final fijado de forma
+autorreferencial. La tarea de publicacion debe resolver `origin/main`, congelar
+ese valor como `FINAL_RELEASE_SHA`, verificar que desde el product baseline solo
+se integraron cambios de release o documentacion permitidos, repetir el quality
+gate sobre ese SHA e impedir commits posteriores durante la publicacion.
+
+La publicacion debe abortarse si `main` deja de apuntar a `FINAL_RELEASE_SHA` o
+si cambia version, build, `versionCode`, backup schema o metadata stable antes
+de comenzar. Cualquier correccion productiva posterior requiere una nueva
+identidad de build; no se debe reutilizar este tag.
 
 ## Evidencia previa
 
 El quality gate beta post-merge `33017845835`, attempt 1, valido exactamente el
-commit candidato en 18m26s:
+product baseline en 18m26s:
 
 - 403 pruebas Playwright aprobadas y 14 omisiones deliberadas;
 - Axe 33/33;
@@ -47,15 +55,17 @@ con la firma de produccion.
 
 ## Orden recomendado
 
-1. Congelar el SHA candidato y repetir las comprobaciones previas de identidad,
-   tag/release inexistentes y quality gate verde.
+1. Resolver y congelar `FINAL_RELEASE_SHA`, comprobar el diff permitido desde el
+   product baseline y repetir las comprobaciones de identidad, tag/release
+   inexistentes y quality gate verde.
 2. Verificar la firma Android de produccion y preparar el APK estable sin
    exponer el keystore.
 3. Publicar primero el APK y su checksum mediante el workflow Android estable.
 4. Descargar el APK publicado, verificar firma, hash, version y actualizacion
    sobre el ultimo APK publico compatible.
-5. Solo despues de validar Android, promover Web/PWA build 96 mediante el flujo
-   de Pages estable.
+5. Solo despues de validar Android, crear y fusionar el PR minimo que cambia
+   `.github/stable-release.json` de build 89 a 96; ese merge dispara el flujo de
+   Pages estable.
 6. Ejecutar smoke conjunto de APK, web, PWA, rutas profundas, offline y update.
 
 Publicar Android primero mantiene Web/PWA 89 disponible mientras se valida el
@@ -67,37 +77,42 @@ mover ni reemplazar un release Android.
 
 Antes de cualquier workflow con canal estable:
 
-1. Confirmar que `main` y `origin/main` apuntan al SHA candidato y que el arbol
-   esta limpio.
-2. Confirmar `2.7.0+96`, Android `40`, backup schema `3` y stable `89`.
-3. Confirmar que no existen el tag ni la GitHub Release
+1. Resolver `git rev-parse origin/main`, congelarlo como `FINAL_RELEASE_SHA`,
+   confirmar que `main` coincide y que el arbol esta limpio.
+2. Confirmar que `git diff` desde el product baseline hasta
+   `FINAL_RELEASE_SHA` contiene solo cambios de release/documentacion aprobados.
+3. Confirmar `2.7.0+96`, Android `40`, backup schema `3` y stable `89`.
+4. Confirmar que no existen el tag ni la GitHub Release
    `v2.7.0-build.96`.
-4. Confirmar que el quality gate mas reciente sobre el SHA candidato esta verde.
-5. Confirmar que los cuatro Secrets Android requeridos existen, sin imprimir sus
+5. Confirmar que el quality gate mas reciente sobre `FINAL_RELEASE_SHA` esta
+   verde.
+6. Confirmar que los cuatro Secrets Android requeridos existen, sin imprimir sus
    valores.
-6. Confirmar que la configuracion Firebase esperada esta disponible y que el
+7. Confirmar que la configuracion Firebase esperada esta disponible y que el
    artifact no cae accidentalmente al stub/demo.
-7. Descargar y conservar localmente la evidencia del ultimo Pages estable y del
+8. Descargar y conservar localmente la evidencia del ultimo Pages estable y del
    ultimo APK publico compatible para rollback y comparacion.
 
 ## Verificacion del certificado Android
 
-La firma debe compararse **antes de crear la GitHub Release**:
+El workflow estable ya implementa una comprobacion fail-closed **antes de crear
+la GitHub Release**:
 
-1. Descargar el ultimo APK publico compatible desde su release oficial.
-2. Obtener con `apksigner verify --print-certs` el digest SHA-256 del certificado
+1. Derivar la ultima GitHub Release no prerelease y exigir exactamente un APK
+   publico compatible.
+2. Descargar ese APK desde su release oficial.
+3. Obtener con `apksigner verify --print-certs` el digest SHA-256 del certificado
    del APK anterior. El digest del certificado es publico; el keystore y sus
    contrasenas no lo son.
-3. En el entorno protegido de Actions, construir el candidato con los Secrets de
+4. En el entorno protegido de Actions, construir el candidato con los Secrets de
    produccion y obtener el mismo digest del APK candidato.
-4. Comparar ambos digests y abortar antes de `gh release create` si difieren.
-5. No descargar, imprimir ni persistir el keystore. El archivo temporal debe
+5. Comparar certificado, package y `versionCode`; abortar si el certificado o el
+   package difieren, o si el `versionCode` candidato no es mayor.
+6. No descargar, imprimir ni persistir el keystore. El archivo temporal debe
    eliminarse mediante el paso `always()` ya definido.
 
-La tarea de publicacion debe asegurar un punto de control verificable entre la
-compilacion firmada y `gh release create`. Si el workflow no puede demostrar esa
-comparacion antes de publicar, se considera criterio de aborto y debe ajustarse
-en un PR separado.
+La ausencia, ambiguedad o fallo de descarga del APK anterior tambien aborta. No
+existe un bypass silencioso entre la compilacion firmada y `gh release create`.
 
 ## Publicacion Android prevista
 
@@ -118,22 +133,37 @@ Tras publicar:
 
 1. Descargar ambos assets desde la GitHub Release.
 2. Calcular SHA-256 del APK descargado y compararlo con el archivo `.sha256`.
-3. Verificar que tag, release y commit objetivo coinciden con el SHA candidato.
+3. Registrar `ANDROID_RELEASE_SHA = FINAL_RELEASE_SHA` y verificar que tag,
+   release y commit objetivo coinciden con ese SHA.
 4. Verificar paquete, `versionName 2.7.0`, `versionCode 40` y certificado.
 5. Instalar como actualizacion sobre el ultimo APK publico compatible sin borrar
    datos y comprobar inicio, Gym, nutricion, progreso, widget y notificacion.
 
 ## Promocion Web/PWA prevista
 
-Solo despues de validar Android, la tarea autorizada debe promover build 96 con
-`.github/workflows/deploy-pages.yml` en `channel=stable` y actualizar el registro
-stable mediante el procedimiento versionado del repositorio.
+Solo despues de validar Android, la via canonica es un PR explicito y minimo que
+cambia `.github/stable-release.json` de build 89 a 96, manteniendo version
+`2.7.0` y canal `stable`. El merge dispara Pages stable; no se usa un dispatch
+manual desalineado como camino principal.
+
+El guard de Pages exige, antes de desplegar, que version y build de
+`app-version.json` coincidan con `.github/stable-release.json` y que el canal
+registrado sea `stable`. Con app 96 y registro 89, un intento estable falla sin
+desplegar; el canal beta no queda bloqueado.
+
+Sea `R = ANDROID_RELEASE_SHA`. El merge del PR de promocion genera
+`W = WEB_PROMOTION_SHA`. Android queda publicado desde `R` y Pages desde `W`;
+no se afirma que ambos SHA deban ser iguales. Antes del deploy debe verificarse
+que `git diff R..W` contiene solo el cambio de metadata stable autorizado u
+otros cambios administrativos aprobados, y que el codigo productivo sigue
+correspondiendo al build 96.
 
 La promocion debe:
 
-- ejecutar el quality gate sobre el mismo SHA candidato;
+- ejecutar el quality gate y el guard de alineacion sobre
+  `WEB_PROMOTION_SHA`;
 - publicar el artifact completo, nunca archivos sueltos;
-- declarar build 96 y el SHA candidato en `build-info.json`;
+- declarar build 96 y `WEB_PROMOTION_SHA` en `build-info.json`;
 - mantener hashes de precache y service worker consistentes;
 - evitar mezcla de HTML 89 con JavaScript/CSS 96;
 - conservar la evidencia del deployment anterior antes de reemplazarlo.
@@ -186,7 +216,7 @@ La promocion debe:
 
 Abortar antes de publicar cualquiera de los canales si ocurre al menos uno:
 
-- `main` no coincide con el SHA candidato o el arbol no esta limpio;
+- `main` no coincide con `FINAL_RELEASE_SHA` o el arbol no esta limpio;
 - version, build, `versionCode`, backup schema o metadata stable difieren;
 - quality gate incompleto, cancelado o fallido;
 - tag o GitHub Release candidatos ya existentes;
@@ -202,12 +232,14 @@ Abortar antes de publicar cualquiera de los canales si ocurre al menos uno:
 
 La publicacion se considera completa solo cuando:
 
-- tag `v2.7.0-build.96` y release apuntan al SHA candidato;
+- tag `v2.7.0-build.96` y release apuntan a `ANDROID_RELEASE_SHA`;
 - APK y checksum publicos coinciden, y certificado/versionado son correctos;
 - la actualizacion Android conserva los datos y supera el smoke fisico;
 - Pages sirve exclusivamente `2.7.0+96` con service worker y precache coherentes;
 - carga, recarga, ruta profunda, offline y acciones cotidianas funcionan;
 - ambos canales conservan artifacts, hashes, Run IDs y evidencia de rollback;
+- quedan registrados `ANDROID_RELEASE_SHA` y `WEB_PROMOTION_SHA`, junto con la
+  verificacion de su diff administrativo;
 - no se ha convertido en PASS ninguno de los riesgos fisicos aceptados sin
   observacion real.
 
