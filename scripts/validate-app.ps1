@@ -83,6 +83,8 @@ $apkWorkflow = Read-Utf8 '.github/workflows/build-debug-apk.yml'
 $validationWorkflow = Read-Utf8 '.github/workflows/validate-app.yml'
 $releaseWorkflow = Read-Utf8 '.github/workflows/build-release-apk.yml'
 $releaseIdentity = Read-Utf8 'scripts/release-identity.mjs'
+$androidReleaseContinuity = Read-Utf8 'scripts/android-release-continuity.mjs'
+$stablePagesGuard = Read-Utf8 'scripts/stable-pages-guard.mjs'
 $qualityWorkflow = Read-Utf8 '.github/workflows/quality-gate.yml'
 $qualityGateTest = Read-Utf8 'scripts/test-quality-gate.mjs'
 $serviceWorkerTest = Read-Utf8 'scripts/test-service-worker.mjs'
@@ -98,6 +100,7 @@ $firestoreRulesTest = Read-Utf8 'firebase/rules.test.mjs'
 $gymPartySyncTest = Read-Utf8 'scripts/test-gym-party-sync.mjs'
 $androidSecurityTest = Read-Utf8 'scripts/test-android-webview-security.mjs'
 $androidReleaseTest = Read-Utf8 'scripts/test-android-release.mjs'
+$pagesReleaseTest = Read-Utf8 'scripts/test-pages-release.mjs'
 $accessibilityTest = Read-Utf8 'scripts/test-accessibility.mjs'
 $moduleBoundaryTest = Read-Utf8 'scripts/test-module-boundaries.mjs'
 $designSystemTest = Read-Utf8 'scripts/test-design-system.mjs'
@@ -131,7 +134,10 @@ $requiredFiles = @(
     'firebase-config.js', 'firebase-service.js', 'gym-party-sync.js', 'gym-party-metrics.js', 'gym-party-ui.js', 'gym-party.js',
     'scripts/test-android-webview-security.mjs',
     'scripts/release-identity.mjs',
+    'scripts/android-release-continuity.mjs',
+    'scripts/stable-pages-guard.mjs',
     'scripts/test-android-release.mjs',
+    'scripts/test-pages-release.mjs',
     'scripts/test-accessibility.mjs',
     'scripts/test-module-boundaries.mjs', 'scripts/test-design-system.mjs', 'scripts/design-token-allowlist.json', 'scripts/test-router.mjs', 'scripts/test-layout-coordinator.mjs', 'scripts/test-home-settings.mjs', 'scripts/test-progress-view.mjs', 'scripts/test-workout-equipment.mjs', 'scripts/test-workout-anomalies.mjs', 'scripts/test-progression-engine.mjs', 'scripts/sync-app-version.mjs', 'scripts/test-version-alignment.mjs', 'scripts/test-settings-contract.mjs', 'scripts/test-data-layer.mjs',
     'scripts/serve-static.mjs', 'scripts/build-web-dist.mjs', 'scripts/test-web-dist.mjs', 'playwright.config.mjs', 'playwright.web-dist.config.mjs', 'tests/web-dist/web-dist.spec.mjs', 'tests/e2e/gym-flow.spec.mjs', 'tests/e2e/gym-canonical.spec.mjs', 'tests/e2e/gym-set-types.spec.mjs', 'tests/e2e/visual-navigation.spec.mjs', 'tests/e2e/router.spec.mjs', 'tests/e2e/layout-sticky.spec.mjs', 'tests/e2e/home-settings.spec.mjs', 'tests/e2e/notifications-recovery.spec.mjs', 'tests/e2e/progress.spec.mjs', 'tests/e2e/progress-muscle.spec.mjs', 'tests/e2e/progress-exercise.spec.mjs', 'tests/e2e/data-layer.spec.mjs', 'scripts/test-muscle-progress.mjs', 'scripts/test-exercise-progress.mjs',
@@ -360,6 +366,8 @@ Assert-True ($releaseWorkflow.Contains('node ./scripts/release-identity.mjs')) '
 Assert-True ($releaseIdentity.Contains("resolve(root,'app-version.json')")) 'La identidad release no consume app-version.json'
 Assert-True ($releaseIdentity.Contains('v${version}-build.${build}')) 'El tag release debe incluir version y build'
 Assert-True ($releaseIdentity.Contains('android.${versionCode}-release')) 'El APK release debe incluir versionCode en el nombre'
+Assert-True ($androidReleaseContinuity.Contains('ANDROID_SIGNING_CERTIFICATE_MISMATCH')) 'Falta guard de continuidad del certificado Android'
+Assert-True ($stablePagesGuard.Contains('PAGES_STABLE_METADATA_MISMATCH')) 'Falta guard de metadata Pages stable'
 Assert-True ($readme.Contains("v$appVersion")) "README.md no menciona v$appVersion"
 Assert-True ($handoff.Contains($appVersion)) "CODEX_HANDOFF.md no menciona la version $appVersion"
 Assert-True ($handoff.Contains($cacheName)) "CODEX_HANDOFF.md no menciona el cache PWA $cacheName"
@@ -587,11 +595,12 @@ Assert-True (-not $mainActivity.Contains('loadUrl("file:')) 'MainActivity no deb
 Assert-True ($androidBuild.Contains("androidx.webkit:webkit:1.15.0")) 'Falta dependencia AndroidX WebKit compatible con minSdk 23'
 Assert-True ($androidProperties.Contains('android.useAndroidX=true')) 'AndroidX WebKit requiere android.useAndroidX=true'
 Assert-True ($androidManifest.Contains('android.webkit.WebView.EnableSafeBrowsing')) 'Falta Safe Browsing en AndroidManifest'
-foreach ($contract in @('assembleRelease','ANDROID_KEYSTORE_BASE64','ANDROID_KEYSTORE_PASSWORD','ANDROID_KEY_ALIAS','ANDROID_KEY_PASSWORD','sha256sum','gh release create','workflow_dispatch')) {
+foreach ($contract in @('assembleRelease','ANDROID_KEYSTORE_BASE64','ANDROID_KEYSTORE_PASSWORD','ANDROID_KEY_ALIAS','ANDROID_KEY_PASSWORD','sha256sum','releases/latest','apksigner','aapt2','android-release-continuity.mjs','gh release create','workflow_dispatch')) {
     Assert-True ($releaseWorkflow.Contains($contract)) "Falta contrato de APK release: $contract"
 }
 Assert-True (-not $apkWorkflow.Contains('gh release')) 'El workflow debug no debe publicar GitHub Releases'
 Assert-True ($androidReleaseTest.Contains('Release Android separado')) 'Falta prueba de separacion debug/release'
+Assert-True ($pagesReleaseTest.Contains('Pages stable protegido')) 'Falta prueba de promocion Pages stable'
 $accessibilitySource = $html + $styleBase + $styleResponsive + $styleGym + $styleGymParty
 foreach ($contract in @('globalLiveRegion',':focus-visible','prefers-reduced-motion','safe-area-inset-bottom','applyAccessibilityEnhancements','label.htmlFor=control.id','trapOverlayFocus','preferredMotionBehavior')) {
     Assert-True ($accessibilitySource.Contains($contract)) "Falta contrato de accesibilidad: $contract"
@@ -798,9 +807,12 @@ Assert-True ($qualityWorkflow.Contains('npm run build:web')) 'El gate debe const
 Assert-True ($qualityWorkflow.Contains('npm run test:web-dist')) 'El gate debe validar recursos y hashes'
 Assert-True ($qualityWorkflow.Contains('npm run test:web-dist:e2e')) 'El gate debe abrir el artifact sin errores'
 Assert-True ($qualityWorkflow.Contains('npm run test:quality-gate')) 'El gate debe validar su propio contrato'
+Assert-True ($qualityWorkflow.Contains('node ./scripts/test-pages-release.mjs')) 'El gate debe probar el guard Pages stable'
 Assert-True ($deployWorkflow.Contains("if: github.event_name == 'push' || inputs.channel == 'stable'")) 'Pages solo debe publicar el canal estable'
 Assert-True ($deployWorkflow.Contains("- '.github/stable-release.json'")) 'Pages debe exigir una solicitud estable versionada'
 Assert-True ($deployWorkflow.Contains('    paths:')) 'Pages estable no debe sobrescribirse por cada commit'
+Assert-True ($deployWorkflow.Contains('node ./scripts/stable-pages-guard.mjs')) 'Pages debe validar metadata stable antes del deploy'
+Assert-True ($deployWorkflow.Contains('needs: [promotion-guard, quality]')) 'Pages no debe saltarse el guard de promocion'
 Assert-True ($validationWorkflow.Contains('channel: beta')) 'main y PR deben producir artifacts beta'
 Assert-True (-not $deployWorkflow.Contains('cp index.html')) 'Pages no debe mantener una lista manual paralela de archivos'
 foreach ($contract in @('discoverWebAssets','asset-manifest.json','sha256','WEB_FIREBASE_CONFIG_PATH','app-version.json')) {

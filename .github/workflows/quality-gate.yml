@@ -107,6 +107,7 @@ jobs:
           npm run test:fdc
           node ./scripts/test-android-webview-security.mjs
           node ./scripts/test-android-release.mjs
+          node ./scripts/test-pages-release.mjs
           node ./scripts/test-accessibility.mjs
 
       - name: Auditar accesibilidad con axe en Android, iPhone y escritorio

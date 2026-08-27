@@ -33,6 +33,13 @@ Android. Ninguno de esos tres valores se omite de la trazabilidad del APK.
 - El tag y la GitHub Release no deben existir antes del despacho.
 - Una release existente provoca fallo; no se mueven tags ni se usa `--clobber`.
 - Tag, commit, APK, certificado y SHA-256 deben corresponder al mismo candidato.
+- Antes de crear la release, el workflow obtiene el ultimo release no-prerelease,
+  exige un unico APK y compara certificado, `applicationId` y `versionCode`.
+- Si el baseline no puede descargarse, la firma difiere, cambia el paquete o el
+  `versionCode` no aumenta, la publicacion falla cerrada.
+- Pages stable exige que version/build de `.github/stable-release.json`
+  coincidan con `app-version.json`. La via canonica es un PR minimo que promueva
+  ese registro; un dispatch stable desalineado falla y beta no se bloquea.
 
 ## Prerelease
 

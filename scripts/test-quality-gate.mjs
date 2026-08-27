@@ -17,6 +17,7 @@ for(const command of [
   'npm run test:data','npm run test:nutrition','npm run test:progress','npm run test:fdc',
   'npm run test:native-controls',
   'node ./scripts/test-gym-party.mjs','node ./scripts/test-accessibility.mjs','npm run test:web-dist:e2e',
+  'node ./scripts/test-android-release.mjs','node ./scripts/test-pages-release.mjs',
   'gradle :app:assembleDebug :app:assembleRelease'
 ])assert.ok(gate.includes(command),`El quality gate no ejecuta ${command}`);
 for(const contract of ['workflow_call:','channel:','beta','stable','actions/upload-artifact@v7','android-actions/setup-android@v4','gradle/actions/setup-gradle@v6','protocolo-web-','protocolo-android-debug-','-CheckAndroidAssets','test-release.jks'])assert.ok(gate.includes(contract),`Falta contrato del quality gate: ${contract}`);
@@ -26,7 +27,10 @@ assert.match(pages,/push:[\s\S]*branches:[\s\S]*- main[\s\S]*paths:[\s\S]*\.gith
 assert.doesNotMatch(pages,/push:[\s\S]*branches:[\s\S]*- main\s+(?![\s\S]*paths:)/,'Pages estable no debe publicarse automaticamente por cada commit');
 assert.match(pages,/if: github\.event_name == 'push' \|\| inputs\.channel == 'stable'/);
 assert.match(pages,/github\.event_name == 'push' && 'stable' \|\| inputs\.channel/);
-assert.match(pages,/needs: quality/);
+assert.match(pages,/promotion-guard:/);
+assert.match(pages,/node \.\/scripts\/stable-pages-guard\.mjs/);
+assert.match(pages,/quality:[\s\S]*?needs: promotion-guard/);
+assert.match(pages,/deploy:[\s\S]*?needs: \[promotion-guard, quality\]/);
 assert.match(pages,/actions\/download-artifact@v8/);
 assert.equal(stableRelease.channel,'stable');
 assert.equal(stableRelease.version,appVersion.version,'La solicitud estable debe usar la version activa');

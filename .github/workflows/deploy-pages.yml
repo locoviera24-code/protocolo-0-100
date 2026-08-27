@@ -27,8 +27,26 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  promotion-guard:
+    name: Validar metadata de promocion
+    runs-on: ubuntu-latest
+    env:
+      PAGES_CHANNEL: ${{ github.event_name == 'push' && 'stable' || inputs.channel }}
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v7
+
+      - name: Configurar Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Validar alineacion stable
+        run: node ./scripts/stable-pages-guard.mjs
+
   quality:
     name: Quality gate previo a Pages
+    needs: promotion-guard
     uses: ./.github/workflows/quality-gate.yml
     with:
       channel: ${{ github.event_name == 'push' && 'stable' || inputs.channel }}
@@ -36,7 +54,7 @@ jobs:
 
   deploy:
     name: Publicar canal estable
-    needs: quality
+    needs: [promotion-guard, quality]
     if: github.event_name == 'push' || inputs.channel == 'stable'
     runs-on: ubuntu-latest
     environment:
