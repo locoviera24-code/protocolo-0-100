@@ -2,8 +2,9 @@
 
 Referencia objetivo integrada: Protocolo 0->100 `2.7.0`, build web/PWA `96`,
 Android `versionCode 40`, `main`
-`39c40a204b79b502aeee50a6b7048ad1e94f6fe6`. El arbol es identico al
-candidato fisico `a69657d89a841386c1fcc648594edbdc22e1b6cd`.
+`2ee22731d63732e094de87c6bae2d29e1c3bb495`. El APK Stable publicado apunta
+a `9675f026f05c35c9d9aed570df3a4b45879d9040`; la diferencia con el SHA Web
+es solo la promocion administrativa de `.github/stable-release.json`.
 
 Este documento separa resultados automatizados de pruebas sobre hardware real.
 No marcar una prueba física por inferencia a partir de Playwright, Gradle o un
@@ -149,7 +150,7 @@ al precache ni al APK.
 
 | Caso | Resultado | Pasos y evidencia | Observaciones |
 | --- | --- | --- | --- |
-| Instalacion y actualizacion local | PASS | `adb install -r`; capturas 07, 32, 34, 118 y 121 | 95/39 con firma local compatible conservo IndexedDB, localStorage, sesion y preferencias. La instalacion final 96/40 queda cubierta por gate automatizado; no se desinstalo ni borro datos. |
+| Instalacion y actualizacion | PASS | Betas locales: `adb install -r`, capturas 07, 32, 34, 118 y 121. Stable publico: descarga de `v2.7.0-build.96`, checksum y prueba fisica del 27 de agosto | 95/39 con firma local compatible conservo datos. Para la primera instalacion del APK publico 96/40 se retiro, con autorizacion humana, la app de prueba firmada con otra clave; no fue un fallo de produccion. Un `adb install -r` posterior del mismo APK publico conservo la sesion y series sinteticas Stable. |
 | Smoke y barras del sistema | PASS | Apertura repetida y captura 07 | La WebView empieza debajo de la barra de estado en Android 16. |
 | Widget compacto | PASS | Captura 101 | Selector, reps, -0,5, +0,5, -5, +5, Guardar, temporizador, Ultima y Max. visibles, sin controles superpuestos. |
 | Widget estandar | PASS | Captura 103 | One UI cambio de variante al redimensionar; contenido legible y controles activos. |
@@ -196,6 +197,13 @@ No queda ningun `FAIL` reproducible abierto. Los `BLOCKED` residuales dependen
 de Firebase/configuracion externa o de hardware/preview iPhone y no afectan
 privacidad, datos ni la funcion principal Android. `PREVIOUS_EXERCISE` y la
 firma efimera CI son `N/A`, no PASS.
+
+Cierre post-release del 27 de agosto de 2026: el APK publico Stable paso
+checksum, package `com.protocolo.cien`, continuidad del certificado,
+`versionCode` 31 a 40, instalacion, Inicio, Gym, selector, guardado unico,
+widget, notificacion, background/reopen y warm/cold start. Crashes/ANR: 0.
+PWA iPhone fisica, segundo OEM/launcher y Gym Party fisico multi-cliente con
+backend compartido permanecen como riesgos aceptados, no como PASS.
 
 El gate automatizado local final del mismo candidato aprobo 403 casos funcionales,
 33 Axe, Firestore Emulator, artifact web, Android JVM/debug/release firmado de
