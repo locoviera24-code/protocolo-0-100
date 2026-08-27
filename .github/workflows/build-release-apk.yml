@@ -118,6 +118,46 @@ jobs:
           echo "apk=$APK" >> "$GITHUB_OUTPUT"
           echo "checksum=$CHECKSUM" >> "$GITHUB_OUTPUT"
 
+      - name: Resolver ultimo APK stable compatible
+        if: ${{ inputs.prerelease == false }}
+        id: previous-stable
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/releases/latest" > "$RUNNER_TEMP/previous-stable-release.json"
+          node ./scripts/android-release-continuity.mjs select "$RUNNER_TEMP/previous-stable-release.json"
+
+      - name: Descargar APK stable anterior
+        if: ${{ inputs.prerelease == false }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREVIOUS_ASSET_ID: ${{ steps.previous-stable.outputs.asset_id }}
+        shell: bash
+        run: |
+          test -n "$PREVIOUS_ASSET_ID" || (echo "No se resolvio un APK stable anterior." >&2; exit 1)
+          gh api -H "Accept: application/octet-stream" "repos/$GITHUB_REPOSITORY/releases/assets/$PREVIOUS_ASSET_ID" > "$RUNNER_TEMP/previous-stable.apk"
+          test -s "$RUNNER_TEMP/previous-stable.apk" || (echo "No se pudo descargar el APK stable anterior." >&2; exit 1)
+
+      - name: Verificar continuidad de firma y paquete Android
+        if: ${{ inputs.prerelease == false }}
+        env:
+          PREVIOUS_CERT_REPORT: ${{ runner.temp }}/previous-stable-cert.txt
+          CANDIDATE_CERT_REPORT: ${{ runner.temp }}/candidate-cert.txt
+          PREVIOUS_BADGING_REPORT: ${{ runner.temp }}/previous-stable-badging.txt
+          CANDIDATE_BADGING_REPORT: ${{ runner.temp }}/candidate-badging.txt
+          CANDIDATE_APK: ${{ steps.package.outputs.apk }}
+        shell: bash
+        run: |
+          APKSIGNER="$ANDROID_HOME/build-tools/35.0.0/apksigner"
+          AAPT2="$ANDROID_HOME/build-tools/35.0.0/aapt2"
+          test -x "$APKSIGNER" && test -x "$AAPT2" || (echo "Faltan herramientas Android para verificar la firma." >&2; exit 1)
+          "$APKSIGNER" verify --print-certs "$RUNNER_TEMP/previous-stable.apk" > "$PREVIOUS_CERT_REPORT"
+          "$APKSIGNER" verify --print-certs "$CANDIDATE_APK" > "$CANDIDATE_CERT_REPORT"
+          "$AAPT2" dump badging "$RUNNER_TEMP/previous-stable.apk" > "$PREVIOUS_BADGING_REPORT"
+          "$AAPT2" dump badging "$CANDIDATE_APK" > "$CANDIDATE_BADGING_REPORT"
+          node ./scripts/android-release-continuity.mjs verify
+
       - name: Subir artifact release verificable
         uses: actions/upload-artifact@v7
         with:

@@ -737,19 +737,21 @@ revision.
 - **Beta automatica:** `Validar aplicacion` se ejecuta en `main`, `master` y pull
   requests. Produce `protocolo-web-beta` y `protocolo-android-debug-beta`; no
   reemplaza la web estable.
-- **PWA estable:** ejecutar manualmente `Publicar PWA en GitHub Pages` con canal
-  `stable`, o actualizar deliberadamente `.github/stable-release.json` en
-  `main`. La restricción por ruta evita que un push normal publique Pages. En
-  ambos casos el job descarga exactamente el artifact aprobado por el gate; un
-  recurso ausente, error de consola, E2E, reglas o Android fallido impide
-  publicar. El canal `beta` solo genera artifacts descargables.
+- **PWA estable:** promover deliberadamente `.github/stable-release.json`
+  mediante un PR minimo en `main`. El merge dispara Pages y un guard exige que
+  version/build del registro coincidan con `app-version.json` antes del deploy.
+  Un dispatch manual stable desalineado falla; el canal `beta` solo genera
+  artifacts descargables. El job publica exclusivamente el artifact aprobado
+  por el gate.
 - **APK debug:** `Construir APK Android validado` es manual y reutiliza el mismo
   gate; no recompila desde una matriz mas debil.
 - **APK release:** `Publicar APK Android release` espera el mismo gate y luego
   compila con la firma privada de GitHub Secrets. El despacho es manual, usa un
   tag inmutable `v<version>-build.<build>`, incluye `versionCode` en el nombre
-  del APK y falla si el tag o la release ya existen; nunca reemplaza assets con
-  `--clobber`. La política completa está en
+  del APK y falla si el tag o la release ya existen. Antes de crear la release,
+  descarga el unico APK del ultimo stable publico y exige continuidad de
+  certificado, paquete y `versionCode`; nunca reemplaza assets con `--clobber`.
+  La política completa está en
   `docs/stable-release-tag-policy.md`.
 
 `scripts/build-web-dist.mjs` descubre las dependencias declaradas en HTML,
