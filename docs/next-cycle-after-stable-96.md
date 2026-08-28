@@ -101,7 +101,7 @@ telemetria real.
 
 | Paso | Experiencia actual | Valor | Esfuerzo / taps estimados | Carga y riesgo | Recuperacion | Oportunidad |
 | --- | --- | ---: | --- | --- | --- | --- |
-| A. Sin rutina | Se instala automaticamente una rutina semanal de cinco dias; el estado realmente vacio queda oculto | 4/10 | 0 taps, pero sin eleccion informada | Alta carga conceptual: la rutina puede no corresponder al usuario | Se puede editar o restablecer sin borrar sesiones | Crear un estado honesto sin rutina y una salida rapida a primera serie |
+| A. Primer uso / entrenamiento no configurado intencionalmente | Se instala automaticamente una rutina semanal de cinco dias; por eso la mera existencia de una rutina no prueba una eleccion del usuario | 4/10 | 0 taps, pero sin eleccion informada | Alta carga conceptual: la rutina puede no corresponder al usuario | Se puede editar o restablecer sin borrar sesiones | Expresar setup solo con una senal fiable; de lo contrario degradar a una propuesta funcional y resolver la intencion en Activation |
 | B. Crear rutina | Gym > panel desplegable > dia > nombre/musculos > biblioteca o ejercicio personalizado | 6/10 | 2 taps para abrir, luego muchas decisiones por dia | Alta; mezcla ajustes, acceso rapido, biblioteca y clasificacion | Borrador, autosave visual, copiar dia, deshacer eliminacion | Flujo minimo separado del editor avanzado |
 | C. Elegir entrenamiento | El dia de la semana decide la rutina; no existe selector cotidiano claro de alternativa | 6/10 | 0 taps si coincide; varios si hay que editar | Riesgo de entrenar el plan equivocado o abandonar | Se puede añadir un ejercicio manual o editar el dia | Mostrar propuesta de hoy y permitir cambiar sin editar toda la semana |
 | D. Iniciar | Gym muestra el logger antes que la tarjeta de hoy; `Empezar` crea sesion, pero guardar tambien puede iniciarla implicitamente | 7/10 | 1 tap a Gym + 0/1 para iniciar | Ambigüedad entre preparar y empezar; notificacion depende de inicio explicito | Borrador y `ensureSession` evitan perdida | Un unico CTA contextual y una transicion de estado explicita |
@@ -164,11 +164,19 @@ Cada estado tiene una unica accion primaria.
 
 | Estado | Hero y contexto minimo | CTA principal | Secundario permitido |
 | --- | --- | --- | --- |
-| A. Nuevo sin rutina | "Tu primer entrenamiento"; explicar que puede crear/importar o empezar simple | **Crear mi primer entrenamiento** | "Ya tengo una rutina" dentro del mismo flujo, no otro hero |
+| A. Primer uso / setup requerido | "Tu primer entrenamiento" solo cuando exista una senal fiable de que el entrenamiento aun no fue configurado intencionalmente | **Configurar entrenamiento** | Acceso al editor actual, sin onboarding nuevo |
 | B. Rutina, sin sesion hoy | "Hoy te toca Push"; ejercicios, ultima sesion comparable y duracion estimada solo si existe | **Empezar entrenamiento** | Cambiar entrenamiento |
 | C. Sesion activa | Ejercicio actual, siguiente serie, progreso real de sesion y timer si esta activo | **Continuar entrenamiento** | Ver rutina |
 | D. Sesion terminada | Series/ejercicios, volumen contextual, PRs verificados y proximo entrenamiento | **Ver resumen** | Registrar recuperacion; otra sesion es accion terciaria explicita |
 | E. Descanso | "Hoy toca descanso"; proxima sesion y un dato contextual de recuperacion | **Ver proxima sesion** | Registrar recuperacion |
+
+La rutina predeterminada de cinco dias que Stable puede crear automaticamente
+impide usar `routine exists` como prueba de configuracion intencional. Home v1
+no introduce metadata, no elimina esa rutina y no compara objetos completos con
+la factory. Si la intencion no puede conocerse con una senal fiable existente,
+el selector debe degradar conservadoramente a un estado funcional (plan de hoy
+o descanso) y documentar la limitacion. Distinguir el origen de la rutina y
+reemplazar el default invisible pertenece a la fase 2, Activation/Onboarding.
 
 Reglas:
 
@@ -383,8 +391,10 @@ Reglas:
 - Datos de objetivo/experiencia son preferencias, no datos medicos ni permiso
   para prescribir.
 
-Este onboarding no forma parte del primer PR; depende del estado Home sin rutina
-y de una decision explicita sobre persistencia compatible.
+Este onboarding no forma parte del primer PR; depende de poder representar
+configuracion intencional con una decision explicita y compatible sobre
+persistencia. Home v1 no crea esa senal ni intenta inferirla comparando la
+rutina almacenada con la factory.
 
 ## 15. Arquitectura Free / Pro
 
