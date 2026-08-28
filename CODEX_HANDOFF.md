@@ -1,11 +1,29 @@
 # CODEX_HANDOFF - Protocolo 0->100
 
-Ultima actualizacion: 2026-08-25
+Ultima actualizacion: 2026-08-27
 Rama esperada: `main`
 Version actual: `2.7.0` (fuente unica: `app-version.json`)
 Android: `versionCode 40`, `versionName "2.7.0"`
 Service worker cache: `protocolo-0-100-pwa-2.7.0-b96`
 Backup consolidado: `schemaVersion: 3`
+
+## Production baseline: Stable 2.7.0+96
+
+Stable 2.7.0+96 quedo cerrado en produccion el 2026-08-27:
+
+- baseline de `main`: `2ee22731d63732e094de87c6bae2d29e1c3bb495`;
+- Android: tag inmutable `v2.7.0-build.96`, `versionCode 40`, release target
+  `9675f026f05c35c9d9aed570df3a4b45879d9040`;
+- Web/PWA: build 96, canal `stable`, Pages run `33110470010` aprobado;
+- artifacts Web/Pages SHA-256 `8e8eae3c1d889e7b791cab70aa809bcc5217c2251525d255bc0b5a14bccc2962`
+  y `9cb4c790e27d47fcc8583ef3d7ba8db5c7978bb36534d02afc8724a9be0b6010`;
+- APK publico validado fisicamente en Samsung SM-A165M: PASS;
+- backup permanece en schema 3 y `workoutSessions` sigue canonico.
+
+La evidencia y los riesgos aceptados estan en
+`docs/stable-96-post-release.md`. Los apartados fechados que siguen conservan
+la historia de beta, rebase y preparacion previa; no describen el canal Stable
+actual salvo que lo indiquen expresamente.
 
 Leer primero este archivo y luego `README.md`, `index.html`,
 `workout-features.js`, `gym-party.js`, `advanced-features.js`,
@@ -25,8 +43,9 @@ permanece en la rama remota inmutable
 `backup/android-quick-access-v1-pre-web-core-9464faa`, SHA
 `9464faaad3d7bd81db2d71fc6aabf40aeb4dc7d5`.
 
-La integracion usa build web/PWA beta 96, Android `versionCode 40` y backup
-schema 3. Stable permanece en build 89 y no se publico una release nueva.
+La integracion publicada usa build Web/PWA Stable 96, Android `versionCode 40`
+y backup schema 3. Android y Pages se publicaron y validaron por separado sin
+cambios productivos entre sus SHA.
 
 - `gym/workout-quick-actions.js` schema 1 es el unico contrato publico.
 - Android produce `actionType: SAVE_SET` y `UNDO_SET`, UUID v4, UTC,
@@ -66,8 +85,9 @@ Quality gate post-merge disparado directamente sobre `main` el 2026-08-25:
 - `build-info.json` del artifact declara `2.7.0`, build 96, Android 40,
   canal `beta` y el merge commit completo de `main`.
 
-Stable permanece deliberadamente en build 89. Este cierre no publica una
-release ni cambia `.github/stable-release.json`.
+En ese corte post-merge Stable permanecia deliberadamente en build 89. La
+promocion posterior a build 96 se registra en la seccion Production baseline y
+en `docs/stable-96-post-release.md`.
 
 Gate local historico posterior al rebase, completado el 2026-08-05:
 

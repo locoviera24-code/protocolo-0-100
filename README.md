@@ -554,7 +554,7 @@ falta recorrerla con Anterior/Siguiente. Al elegirlo se muestran su ultima carga
 comparable y su maximo historico comparable. Peso corporal, lastre, asistencia,
 tiempo y distancia muestran su semantica correspondiente.
 
-La beta 96 incorpora correcciones verificadas en un Samsung SM-A165M con
+Stable 2.7.0+96 incorpora correcciones verificadas en un Samsung SM-A165M con
 Android 16 y One UI 8: respeta la barra de estado, recalcula el layout al
 redimensionar, evita que el contenedor del widget intercepte sus botones y
 adopta en la WebView el ejercicio elegido desde una superficie nativa. La
@@ -562,7 +562,7 @@ validacion fisica cubrio widgets compacto/estandar/expandido, permiso de
 notificaciones concedido y denegado, `publicVersion` con bloqueo seguro, doble
 toque, Deshacer, temporizador, cierre del proceso, offline, reinicio, kg/lb,
 peso corporal, asistencia, lastre, unilateral, tiempo y distancia. La PWA del
-candidato se instalo en el mismo Samsung, funciono standalone/offline y abrio el
+build se instalo en el mismo Samsung, funciono standalone/offline y abrio el
 shortcut **Serie rapida**. Los casos externos bloqueados y los `N/A` se detallan
 en `docs/physical-test-checklist.md`.
 

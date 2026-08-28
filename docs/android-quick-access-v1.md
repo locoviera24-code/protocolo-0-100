@@ -1,9 +1,11 @@
 # Controles Android de acceso rapido V1
 
 Estado actual: integrado en `main` por el PR #1, merge commit
-`39c40a204b79b502aeee50a6b7048ad1e94f6fe6`. El candidato beta es
-`2.7.0+96`, Android `versionCode 40`. No forma parte del canal stable hasta una
-publicacion explicita posterior; stable permanece en build 89.
+`39c40a204b79b502aeee50a6b7048ad1e94f6fe6`. Android Quick Access V1 forma
+parte de Stable `2.7.0+96`: tag `v2.7.0-build.96`, Android `versionCode 40`.
+El baseline de produccion Web/PWA es
+`main@2ee22731d63732e094de87c6bae2d29e1c3bb495`; el APK publicado apunta al
+SHA Android `9675f026f05c35c9d9aed570df3a4b45879d9040`.
 
 ## Experiencia
 
