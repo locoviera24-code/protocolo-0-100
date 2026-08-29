@@ -10,6 +10,21 @@ header {
   flex-direction: column;
   gap: 6px;
 }
+.scoreHero {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: center;
+}
+.ring {
+  position: relative;
+  width: 150px;
+  height: 150px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-round);
+  background: conic-gradient(var(--color-primary) calc(var(--p) * 1%), var(--color-border-soft) 0);
+}
 .ring::after {
   content: "";
   position: absolute;
@@ -339,6 +354,10 @@ canvas {
   }
 }
 @media (max-width: 520px) {
+  .ring {
+    width: 132px;
+    height: 132px;
+  }
   .comparisonRow {
     grid-template-columns: 92px 1fr 64px;
   }

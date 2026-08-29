@@ -1,11 +1,25 @@
 # CODEX_HANDOFF - Protocolo 0->100
 
-Ultima actualizacion: 2026-08-27
-Rama esperada: `main`
+Ultima actualizacion: 2026-08-28
+Rama esperada: `codex/gym-first-home-v1`
 Version actual: `2.7.0` (fuente unica: `app-version.json`)
-Android: `versionCode 40`, `versionName "2.7.0"`
-Service worker cache: `protocolo-0-100-pwa-2.7.0-b96`
+Android beta: `versionCode 41`, `versionName "2.7.0"`
+Service worker cache beta: `protocolo-0-100-pwa-2.7.0-b97`
 Backup consolidado: `schemaVersion: 3`
+
+## Candidato Gym-first Home 2.7.0+97
+
+El primer cambio productivo posterior a Stable 96 convierte Inicio en una
+proyeccion Gym-first de `workoutSessions`, con precedencia determinista:
+sesion activa, sesion completada hoy, entrenamiento planificado, descanso y
+configuracion requerida. El selector es puro, no crea sesiones ni modifica la
+rutina, y los CTA reutilizan el logger, el router y el editor existentes.
+
+La rutina factory de cinco dias no se interpreta como configuracion
+intencional. Mientras no exista una señal canonica de activacion, una rutina
+valida degrada de forma conservadora a entrenamiento planificado o descanso;
+la solucion definitiva pertenece al onboarding posterior. Stable permanece
+congelado en `2.7.0+96`, Android `40` y backup schema 3.
 
 ## Production baseline: Stable 2.7.0+96
 

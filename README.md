@@ -16,7 +16,7 @@ PWA y APK Android para medir habitos, atencion, actividad fisica y nutricion con
 
 ## Navegacion y diseno
 
-La version actual `v2.7.0` (build web `96`, Android `40`) usa una barra inferior movil con cinco destinos: **Inicio**,
+La version actual `v2.7.0` (build web `97`, Android `41`) usa una barra inferior movil con cinco destinos: **Inicio**,
 **Gym**, **Nutricion**, **Progreso** y **Mas**. En escritorio usa una barra
 lateral compacta. Gym Party se abre desde **Gym > Grupo**, desde un acceso
 discreto en Inicio o mediante un enlace `gymPartyCode`; ya no ocupa un boton
@@ -36,8 +36,10 @@ La navegación conserva estado en URLs `module/view`, por ejemplo
 restauran la misma vista; los enlaces antiguos siguen aceptándose como alias.
 
 El flujo cotidiano se concentra en tres acciones: registrar el día, una serie
-y una comida. Inicio muestra una sola acción principal según el estado real del
-registro; Gym abre en **Entrenar**, deja la sesión completa en **Edición
+y una comida. En el candidato Gym-first, Inicio proyecta el estado real del
+entrenamiento y muestra un solo CTA principal para continuar, empezar, revisar
+o preparar la próxima sesión; el registro diario conserva sus datos y guardado
+como superficie secundaria. Gym abre en **Entrenar**, deja la sesión completa en **Edición
 avanzada de sesión** y permite editar o deshacer la serie identificada que se
 acaba de guardar. Progreso no construye paneles ocultos ni gráficos sin datos:
 explica cuántos registros comparables faltan y enlaza con la acción que los
@@ -47,7 +49,8 @@ experimentales**, desactivados por defecto sin borrar sus datos anteriores.
 **Gym > Ajustes > Acceso rápido durante el entrenamiento** diferencia el
 shortcut de la PWA, el widget que requiere el APK y la notificacion privada que
 sirve como acceso de bloqueo en Android compatible. Android Quick Access V1 ya
-esta integrado en `main`, pero build 96 todavia no fue publicado como stable.
+esta publicado en Stable `2.7.0+96` / Android `40`; el candidato beta `97/41`
+mantiene esas capacidades y agrega el Home Gym-first.
 **Más > Acerca de** compara capacidades
 Web/PWA y APK sin
 afirmar que una PWA está instalada cuando el navegador no puede comprobarlo.

@@ -60,10 +60,21 @@
       <div class="pill hidden" id="levelPill" aria-hidden="true">Nivel 1 · 0 XP</div>
     </header>
 
+    <section class="gymHomeHero protocolOnly" id="gymHomeHero" aria-labelledby="gymHomeTitle" data-gym-home-state="PLANNED_TODAY">
+      <div class="gymHomeHeroTop">
+        <span class="homeEyebrow">Entrenamiento</span>
+        <span class="statusChip" aria-hidden="true">Hoy</span>
+      </div>
+      <h2 id="gymHomeTitle">Preparando tu entrenamiento</h2>
+      <p id="gymHomeDescription">Revisando la rutina y las sesiones guardadas en este dispositivo.</p>
+      <ul class="gymHomeFacts" id="gymHomeFacts" hidden></ul>
+      <button type="button" class="good gymHomePrimaryAction" id="gymHomePrimaryAction">Ver entrenamiento</button>
+    </section>
+
     <section class="homeStatusCard protocolOnly" id="homeStatusCard" aria-labelledby="homeStatusTitle" data-home-state="empty">
       <div class="homeStatusMain"><div><span class="muted small" id="homeStatusTitle">Estado de hoy</span><strong id="homeCompactScore">0</strong></div><span class="statusChip" id="homeCompactState">Sin datos</span></div>
       <div class="homeStatusMetrics"><span><strong id="homeCompactStreak">0</strong> racha</span><span id="homeCompactPending">4 datos esenciales pendientes</span></div>
-      <button type="button" class="good" id="homeCompactActionBtn">Empezar registro</button>
+      <button type="button" class="secondary" id="homeCompactActionBtn">Empezar registro</button>
     </section>
 
     <section class="grid">
@@ -857,6 +868,7 @@
 <script src="app/drafts.js"></script>
 <script src="app/dates.js"></script>
 <script src="app/home-state.js"></script>
+<script src="app/gym-home-state.js"></script>
 <script src="app/platform-capabilities.js"></script>
 <script src="app/data-events.js"></script>
 <script src="data/schema-registry.js"></script>
@@ -3460,5 +3472,6 @@ window.addEventListener('app-time-context-changed',()=>{
 <script src="progress/personal-records.js"></script>
 <script src="progress/progress-view.js"></script>
 <script src="advanced-features.js"></script>
+<script src="app/gym-home-controller.js"></script>
 </body>
 </html>
