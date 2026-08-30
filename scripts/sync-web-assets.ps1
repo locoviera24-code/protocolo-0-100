@@ -18,6 +18,8 @@ $relativeFiles = @(
     'app/drafts.js',
     'app/dates.js',
     'app/home-state.js',
+    'app/gym-home-state.js',
+    'app/gym-home-controller.js',
     'app/platform-capabilities.js',
     'app/data-events.js',
     'app/feature-flags.js',

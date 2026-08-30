@@ -101,6 +101,16 @@
 }
 
 @media (max-width: 600px) {
+  .gymHomeHero {
+    gap: var(--space-2);
+    padding: var(--space-4);
+  }
+  .gymHomeHero h2 {
+    font-size: var(--font-title);
+  }
+  .gymHomePrimaryAction {
+    width: 100%;
+  }
   .moduleTopbar .topbarTitle span {
     display: none;
   }
