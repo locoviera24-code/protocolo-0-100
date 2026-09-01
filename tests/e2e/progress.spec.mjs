@@ -62,8 +62,11 @@ test('Progreso renderiza solamente la subsección visible y conserva una caché 
   state=await page.evaluate(()=>window.PROGRESS_VIEW.state());
   expect(state.gym.rendered).toBe(true);
   expect(state.nutrition.rendered).toBe(false);
-  await page.evaluate(()=>window.PROGRESS_VIEW.markDirty(['gym']));
-  await expect.poll(()=>page.evaluate(()=>window.PROGRESS_VIEW.state().gym.dirty)).toBe(true);
+  const dirtyAfterInvalidation=await page.evaluate(()=>{
+    window.PROGRESS_VIEW.markDirty(['gym']);
+    return window.PROGRESS_VIEW.state().gym.dirty;
+  });
+  expect(dirtyAfterInvalidation).toBe(true);
 });
 
 test('Gym exige dos sesiones comparables y no mezcla equipos incompatibles',async({page})=>{

@@ -14,9 +14,20 @@ test('Nutricion usa el repositorio y conserva entradas tras recargar',async({pag
   await page.locator('#foodMealNextBtn').click();
   await page.locator('#addFoodBtn').click();
   await expect(page.locator('#nutritionDayList')).not.toContainText('Todavía no registraste');
-  const before=await page.evaluate(async()=>{await window.APP_DATA.flush();const local=window.NUTRITION_STORE.entries();const indexed=await window.APP_REPOSITORIES.nutrition.getAsync(window.NUTRITION_STORE.keys.entries,[]);return{local,indexed,backup:window.buildCompleteBackup()};});
-  expect(before.local).toHaveLength(1);expect(before.local[0].grams).toBe(150);expect(before.local[0].meal).toBe('Almuerzo');
-  expect(before.indexed[0].id).toBe(before.local[0].id);expect(before.backup.nutritionEntries).toHaveLength(1);
+  await expect.poll(async()=>{
+    try{
+      return await page.evaluate(async()=>{
+        if(!window.APP_DATA?.flush||!window.NUTRITION_STORE?.entries||!window.APP_REPOSITORIES?.nutrition?.getAsync)return null;
+        await window.APP_DATA.flush();
+        const local=window.NUTRITION_STORE.entries();
+        const indexed=await window.APP_REPOSITORIES.nutrition.getAsync(window.NUTRITION_STORE.keys.entries,[]);
+        return{localCount:local.length,grams:local[0]?.grams,meal:local[0]?.meal,sameId:indexed[0]?.id===local[0]?.id,backupCount:window.buildCompleteBackup().nutritionEntries.length};
+      });
+    }catch(error){
+      if(String(error).includes('Execution context was destroyed'))return null;
+      throw error;
+    }
+  }).toEqual({localCount:1,grams:150,meal:'Almuerzo',sameId:true,backupCount:1});
   await page.reload();
   expect(await page.evaluate(()=>window.NUTRITION_STORE.entries().length)).toBe(1);
 });
