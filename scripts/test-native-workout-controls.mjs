@@ -96,6 +96,10 @@ for(const contract of ['setOngoing(true)','VISIBILITY_PRIVATE','setPublicVersion
 for(const id of ['notificationExerciseButton','notificationWeightMinusButton','notificationWeightPlusButton','notificationWeightFastMinusButton','notificationWeightFastPlusButton','notificationSaveSetButton'])assert.ok(source.notificationLayout.includes(id),`La notificacion expandida no ofrece ${id}.`);
 assert.match(source.notification,/getActiveNotifications/,'El estado debe distinguir permiso concedido de notificacion realmente publicada.');
 assert.doesNotMatch(source.notification,/setFullScreenIntent/);
+const publicVersion=source.notification.match(/private static Notification publicVersion\(Context context\) \{[\s\S]*?\n    \}/)?.[0]||'';
+assert.ok(publicVersion.includes('Entrenamiento en curso'),'La publicVersion debe conservar un titulo generico');
+assert.ok(publicVersion.includes('Controles disponibles al desbloquear'),'La publicVersion debe conservar contenido generico');
+for(const sensitive of ['exerciseName','weight','reps','routine','notes','Gym Party','setCustomContentView','addAction'])assert.ok(!publicVersion.includes(sensitive),'La publicVersion no debe exponer '+sensitive);
 for(const contract of ['endsAtElapsedRealtime','startedAtElapsedRealtime','restoreAfterBoot','setAndAllowWhileIdle'])assert.ok(source.timer.includes(contract),`Falta timer durable: ${contract}`);
 assert.doesNotMatch(source.timer,/Thread\.sleep|setInterval|startForeground/);
 for(const text of ['workoutQuickAccessTitle','Agregar widget','Controles mediante','No disponible en la versi'])assert.ok(source.features.includes(text),`Falta UX de descubrimiento: ${text}`);

@@ -1,13 +1,25 @@
 # CODEX_HANDOFF - Protocolo 0->100
 
-Ultima actualizacion: 2026-08-28
-Rama esperada: `codex/gym-first-home-v1`
+Ultima actualizacion: 2026-08-31
+Rama esperada: `codex/android-capability-truth-v1`
 Version actual: `2.7.0` (fuente unica: `app-version.json`)
-Android beta: `versionCode 41`, `versionName "2.7.0"`
-Service worker cache beta: `protocolo-0-100-pwa-2.7.0-b97`
+Android beta: `versionCode 42`, `versionName "2.7.0"`
+Service worker cache beta: `protocolo-0-100-pwa-2.7.0-b98`
 Backup consolidado: `schemaVersion: 3`
 
-## Candidato Gym-first Home 2.7.0+97
+## Phase 0: verdad de capacidades Android 2.7.0+98
+
+El candidato corrige solamente la informacion de capacidades ya publicadas:
+Web/PWA muestra notificacion y pantalla bloqueada como exclusivas del APK;
+el APK informa la notificacion como disponible con permiso y los controles de
+bloqueo como disponibles mediante esa notificacion, sujetos a Android, OEM y
+configuracion. `app/platform-capabilities.js` es la fuente de la tabla de
+Acerca de y conserva la deteccion segura mediante `AndroidBridge.getAppInfo`.
+La implementacion nativa y su `publicVersion` generica no cambian.
+
+Stable permanece congelado en `2.7.0+96`, Android `40` y backup schema 3.
+
+## Candidato Gym-first Home 2.7.0+97 (integrado)
 
 El primer cambio productivo posterior a Stable 96 convierte Inicio en una
 proyeccion Gym-first de `workoutSessions`, con precedencia determinista:

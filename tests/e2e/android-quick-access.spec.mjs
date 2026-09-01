@@ -9,7 +9,8 @@ test('la web explica el requisito APK sin mostrar diagnostico tecnico',async({pa
   await page.goto('/index.html?module=gym&view=routine');
   await expect(page.locator('#workoutQuickAccessTitle')).toContainText('Acceso rápido durante el entrenamiento');
   await expect(page.locator('#workoutWidgetInstallStatus')).toContainText('Requiere el APK Android');
-  await expect(page.locator('#workoutLockScreenStatus')).toContainText('En desarrollo para el APK Android');
+  await expect(page.locator('#workoutLockScreenStatus')).toContainText('No disponible en esta versión. Requiere el APK Android.');
+  await expect(page.locator('#workoutNotificationStatus')).toContainText('No disponible en esta versión. Requiere el APK Android.');
   await expect(page.locator('#addWorkoutWidgetBtn')).toBeDisabled();
   await expect(page.locator('#enableWorkoutControlsBtn')).toBeDisabled();
   await expect(page.locator('#workoutConfigPanel')).not.toContainText('Puente Android');
@@ -68,6 +69,8 @@ test('el APK simulado instala y activa controles solo desde acciones explicitas'
   });
   await page.goto('/index.html?module=gym&view=routine');
   await expect(page.locator('#workoutWidgetInstallStatus')).toContainText('Widget no agregado');
+  await expect(page.locator('#workoutLockScreenStatus')).toContainText('Controles activados');
+  await expect(page.locator('#workoutNotificationStatus')).toContainText('Controles preparados');
   await expect(page.locator('#nativeWorkoutLiveBar')).toBeVisible();
   await page.locator('#addWorkoutWidgetBtn').click();
   await page.locator('#enableWorkoutControlsBtn').click();

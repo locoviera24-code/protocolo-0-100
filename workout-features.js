@@ -767,8 +767,8 @@
           <div class="workoutQuickAccessGrid">
             <article class="auditItem workoutQuickAccessItem"><div><strong>Acceso directo de la PWA</strong><span class="muted small">El shortcut “Serie rápida” abre Entrenar directamente.</span><span class="muted small" id="quickAccessPwaStatus">Comprobando instalación…</span></div><button type="button" class="secondary" id="showPwaInstallHelpBtn">Ver instalación</button></article>
             <article class="auditItem workoutQuickAccessItem"><div><strong>Widget de entrenamiento</strong><span class="muted small" id="workoutWidgetInstallStatus" role="status">Requiere el APK Android.</span></div><button type="button" class="good" id="addWorkoutWidgetBtn">Agregar widget</button><p class="muted small" id="workoutWidgetInstallHelp">Mantené presionada la pantalla de inicio → Widgets → Protocolo 0→100 · Gym.</p></article>
-            <article class="auditItem workoutQuickAccessItem"><div><strong>Controles en pantalla bloqueada</strong><span class="muted small" id="workoutLockScreenStatus" role="status">Dependen de Android, el fabricante y la configuración del dispositivo.</span></div></article>
-            <article class="auditItem workoutQuickAccessItem"><div><strong>Controles mediante notificación</strong><span class="muted small" id="workoutNotificationStatus" role="status">Disponibles en esta beta Android; pendientes de revisión. No están disponibles en stable.</span></div><button type="button" class="secondary" id="enableWorkoutControlsBtn">Activar controles</button><p class="muted small">La versión pública muestra solo “Entrenamiento en curso”; no expone ejercicio, peso, repeticiones ni Gym Party.</p></article>
+            <article class="auditItem workoutQuickAccessItem"><div><strong>Controles en pantalla bloqueada</strong><span class="muted small" id="workoutLockScreenStatus" role="status">Comprobando disponibilidad…</span></div></article>
+            <article class="auditItem workoutQuickAccessItem"><div><strong>Controles mediante notificación</strong><span class="muted small" id="workoutNotificationStatus" role="status">Comprobando disponibilidad…</span></div><button type="button" class="secondary" id="enableWorkoutControlsBtn">Activar controles</button><p class="muted small">Con bloqueo seguro se muestra solo “Entrenamiento en curso”; no se exponen ejercicio, peso, repeticiones, rutina ni notas.</p></article>
           </div>
           <div class="workoutQuickAccessState" id="workoutQuickAccessState" role="status" aria-live="polite">Guardado en el dispositivo.</div>
           <details class="advancedDetails workoutQuickAccessDiagnostics">
@@ -1861,8 +1861,8 @@
     if(!trustedApk){
       if(liveBar)liveBar.hidden=true;
       widgetStatus.textContent='No disponible en la versión web. Requiere el APK Android.';
-      lockStatus.textContent='En desarrollo para el APK Android; depende de Android, el fabricante y la configuración.';
-      if(notificationStatus)notificationStatus.textContent='Disponible en la beta Android; pendiente de revisión. No está disponible en stable.';
+      lockStatus.textContent='No disponible en esta versión. Requiere el APK Android.';
+      if(notificationStatus)notificationStatus.textContent='No disponible en esta versión. Requiere el APK Android.';
       overall.textContent='Tus registros web continúan guardándose normalmente.';
       setStateDisabled(addButton,true);
       setStateDisabled(enableButton,true);
@@ -1880,8 +1880,8 @@
     else if(notificationCode==='waiting-for-session')lockStatus.textContent='Controles activados. Iniciá un entrenamiento para que aparezcan.';
     else if(lockEnabled&&permission==='granted')lockStatus.textContent='Controles activados. Iniciá un entrenamiento para que aparezcan.';
     else if(permission==='blocked'||permission==='denied')lockStatus.textContent='Notificaciones desactivadas. Podés habilitarlas desde Ajustes de Android.';
-    else lockStatus.textContent='Puede depender de tu versión de Android y del fabricante.';
-    if(notificationStatus)notificationStatus.textContent=notificationCode==='active'?'Controles privados activos durante la sesión.':notificationCode==='not-posted'?'Android no está mostrando la notificación privada; revisá el canal.':notificationCode==='waiting-for-session'?'Controles preparados; aparecerán al iniciar una sesión.':permission==='blocked'||permission==='denied'?'Permiso denegado; Gym continúa funcionando sin notificación.':'Disponible en esta beta Android cuando inicies una sesión y concedas permiso.';
+    else lockStatus.textContent='Disponible mediante la notificación; depende de Android, el fabricante y la configuración.';
+    if(notificationStatus)notificationStatus.textContent=notificationCode==='active'?'Controles privados activos durante la sesión.':notificationCode==='not-posted'?'Android no está mostrando la notificación privada; revisá el canal.':notificationCode==='waiting-for-session'?'Controles preparados; aparecerán al iniciar una sesión.':permission==='blocked'||permission==='denied'?'Permiso denegado; Gym continúa funcionando sin notificación.':'Disponible en el APK Android al iniciar una sesión; puede requerir permiso.';
     if(enableButton){
       const needsNotificationReview=['not-posted','active'].includes(notificationCode);
       setStateDisabled(enableButton,lockEnabled&&permission==='granted'&&!needsNotificationReview);
