@@ -2407,7 +2407,7 @@
   window.openGymToday=openGymToday;
   window.openQuickSetLogger=openQuickSetLogger;
   window.handleAndroidWidgetIntent=(action,payload)=>handleAndroidWidgetIntent(action,payload||{});
-  window.addEventListener?.('native-workout-notification-permission',renderWorkoutQuickAccessStatus);
+  window.addEventListener?.('native-workout-notification-permission',()=>renderWorkoutQuickAccessStatus());
 
   const originalRenderGym=renderGym;
   renderGym=function(){ originalRenderGym(); renderWorkoutDashboard(); };

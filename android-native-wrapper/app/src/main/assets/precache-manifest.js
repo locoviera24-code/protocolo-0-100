@@ -351,8 +351,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     },
     {
       "url": "./workout-features.js",
-      "bytes": 191744,
-      "sha256": "c1c1dc03a744b15471a545a61135cc191a50e34ac4bbf67169c3e2fa117d7ac0"
+      "bytes": 191750,
+      "sha256": "9450416e1d8fd444a421afbae406443ce01f3cb42fcb73e09c5249ecd3306c92"
     },
     {
       "url": "./workout-metrics.js",
