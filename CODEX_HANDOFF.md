@@ -1,13 +1,13 @@
 # CODEX_HANDOFF - Protocolo 0->100
 
-Ultima actualizacion: 2026-08-31
-Rama esperada: `codex/android-capability-truth-v1`
+Ultima actualizacion: 2026-09-02
+Estado actual: Phase 0 de capacidades Android integrado en `main`
 Version actual: `2.7.0` (fuente unica: `app-version.json`)
 Android beta: `versionCode 42`, `versionName "2.7.0"`
 Service worker cache beta: `protocolo-0-100-pwa-2.7.0-b98`
 Backup consolidado: `schemaVersion: 3`
 
-## Phase 0: verdad de capacidades Android 2.7.0+98
+## Phase 0: verdad de capacidades Android 2.7.0+98 (integrado)
 
 El candidato corrige solamente la informacion de capacidades ya publicadas:
 Web/PWA muestra notificacion y pantalla bloqueada como exclusivas del APK;
