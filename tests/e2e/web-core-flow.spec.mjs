@@ -12,11 +12,36 @@ test('Acerca de distingue navegador, PWA y APK sin afirmar una instalacion desco
   await expect(page.getByRole('heading',{name:'Qué funciona en cada versión'})).toBeVisible();
   await expect(page.locator('#platformCapabilitiesTable')).toContainText('Widget');
   await expect(page.locator('#platformCapabilitiesTable')).toContainText('Solo APK');
-  await expect(page.locator('#platformCapabilitiesTable')).toContainText('En desarrollo');
+  await expect(page.locator('#platformCapabilitiesTable')).toContainText('Disponible · puede requerir permiso');
+  await expect(page.locator('#platformCapabilitiesTable')).toContainText('Disponible mediante notificación · depende del sistema');
+  await expect(page.locator('#platformCapabilitiesTable')).not.toContainText('En desarrollo');
   await expect(page.locator('#platformInstallationStatus')).toHaveText(/No se puede comprobar|Podés instalarla|Ejecutándose/);
   const capabilities=await page.evaluate(()=>window.APP_PLATFORM_CAPABILITIES.detect());
   expect(['browser','standalone-pwa','android-apk']).toContain(capabilities.runtimeMode);
   expect(['running-installed','install-available','unknown']).toContain(capabilities.installationStatus);
+});
+
+test('Acerca de mantiene accesible la columna APK en viewport movil',async({page})=>{
+  await page.setViewportSize({width:390,height:844});
+  await clean(page,'/index.html?module=more&view=about');
+  const scroller=page.locator('#platformCapabilitiesScroller');
+  await expect(scroller).toHaveAttribute('tabindex','0');
+  const metrics=await scroller.evaluate(element=>({
+    clientWidth:element.clientWidth,
+    scrollWidth:element.scrollWidth,
+    overflowX:getComputedStyle(element).overflowX,
+    documentClientWidth:document.documentElement.clientWidth,
+    documentScrollWidth:document.documentElement.scrollWidth
+  }));
+  expect(metrics.overflowX).toBe('auto');
+  expect(metrics.scrollWidth).toBeGreaterThan(metrics.clientWidth);
+  expect(metrics.documentScrollWidth).toBeLessThanOrEqual(metrics.documentClientWidth);
+  const scrollLeft=await scroller.evaluate(element=>{
+    element.scrollLeft=element.scrollWidth;
+    return element.scrollLeft;
+  });
+  expect(scrollLeft).toBeGreaterThan(0);
+  await expect(page.getByRole('columnheader',{name:'APK Android'})).toBeInViewport();
 });
 
 test('Experimental permanece inerte al abrirse y no concede recompensas anteriores al activarse',async({page})=>{
@@ -127,13 +152,14 @@ test('Funciones experimentales se navega con teclado y conserva foco accesible',
   await expect(page.locator('#experimentalFeaturesEnabled')).toBeChecked();
 });
 
-test('Acceso rapido explica shortcut, APK y controles pendientes',async({page})=>{
+test('Acceso rapido explica shortcut y reserva controles nativos para el APK',async({page})=>{
   await clean(page,'/index.html?module=gym&view=routine');
   const section=page.locator('.workoutQuickAccess');
   await expect(section).toContainText('Serie rápida');
   await expect(section).toContainText('Requiere el APK Android');
-  await expect(section).toContainText('En desarrollo para el APK Android');
-  await expect(section).toContainText('pendiente de revisión');
+  await expect(section).toContainText('No disponible en esta versión. Requiere el APK Android.');
+  await expect(section).not.toContainText('En desarrollo');
+  await expect(section).not.toContainText('pendiente de revisión');
   await expect(section).not.toContainText('puente Android');
   await expect(section).not.toContainText('widget interno');
 });

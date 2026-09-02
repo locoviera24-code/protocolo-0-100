@@ -344,6 +344,11 @@ details[open] > summary::after {
   border-color: var(--color-border-soft);
   border-radius: var(--radius-card);
 }
+.aboutCapabilities .history {
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
 table {
   min-width: 680px;
 }

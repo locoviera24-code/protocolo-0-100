@@ -755,7 +755,7 @@
               </div>
               <div class="auditItem aboutUpdateCheck" aria-live="polite"><div><strong id="aboutUpdateStatus">Actualización no comprobada</strong><span class="muted small" id="aboutLastUpdateCheck">Todavía no se realizó una comprobación.</span></div><button type="button" class="secondary" id="checkForUpdateBtn">Comprobar actualización</button></div>
               <p class="muted small">Datos local-first. Herramienta orientativa de autoorganización; no reemplaza asesoramiento profesional de salud o entrenamiento.</p>
-              <section class="aboutCapabilities" aria-labelledby="platformCapabilitiesTitle"><h3 id="platformCapabilitiesTitle">Qué funciona en cada versión</h3><div class="history"><table><thead><tr><th>Función</th><th>Web/PWA</th><th>APK Android</th></tr></thead><tbody id="platformCapabilitiesTable"></tbody></table></div><p class="muted small" id="platformInstallationStatus">Comprobando el modo actual…</p></section>
+              <section class="aboutCapabilities" aria-labelledby="platformCapabilitiesTitle"><h3 id="platformCapabilitiesTitle">Qué funciona en cada versión</h3><div class="history" id="platformCapabilitiesScroller" tabindex="0" aria-label="Comparación de capacidades Web/PWA y APK Android"><table><thead><tr><th>Función</th><th>Web/PWA</th><th>APK Android</th></tr></thead><tbody id="platformCapabilitiesTable"></tbody></table></div><p class="muted small" id="platformInstallationStatus">Comprobando el modo actual…</p></section>
               <div class="buttons"><button type="button" class="secondary" data-more-view="privacy">Ver privacidad</button><a class="btn-secondary aboutRepoLink" href="https://github.com/locoviera24-code/protocolo-0-100" target="_blank" rel="noopener noreferrer">Código y licencias</a></div>
             </div>
           </section>
@@ -1112,8 +1112,8 @@ function setExperimentalFeatures(enabled){
 function platformCapabilities(){return window.APP_PLATFORM_CAPABILITIES?.detect?.({installPromptAvailable:!!deferredInstallPrompt})||{runtimeMode:'browser',installationStatus:'unknown'};}
 function renderPlatformCapabilities(){
   const capabilities=platformCapabilities(),table=document.getElementById('platformCapabilitiesTable'),status=document.getElementById('platformInstallationStatus');
-  const rows=[['Registro diario','Disponible','Disponible'],['Gym','Disponible','Disponible'],['Nutrición','Disponible','Disponible'],['Progreso','Disponible','Disponible'],['Offline','Disponible','Disponible'],['Shortcuts','Disponible','Disponible'],['Uso automático del teléfono','Solo APK','Requiere permiso'],['Reconocimiento de voz','Requiere permiso','Requiere permiso'],['Widget','Solo APK','Disponible'],['Notificación de entrenamiento','En desarrollo','En desarrollo'],['Pantalla bloqueada','En desarrollo','En desarrollo']];
-  if(table)table.innerHTML=rows.map(row=>`<tr><th scope="row">${escapeHtml(row[0])}</th><td>${escapeHtml(row[1])}</td><td>${escapeHtml(row[2])}</td></tr>`).join('');
+  const rows=window.APP_PLATFORM_CAPABILITIES?.comparisonRows?.()||[];
+  if(table)table.innerHTML=rows.map(row=>`<tr><th scope="row">${escapeHtml(row.label)}</th><td>${escapeHtml(row.webLabel)}</td><td>${escapeHtml(row.androidLabel)}</td></tr>`).join('');
   const labels={'running-installed':capabilities.runtimeMode==='android-apk'?'Ejecutándose dentro del APK Android.':'Ejecutándose como aplicación instalada.','install-available':'Podés instalar la PWA desde este navegador.',unknown:'No se puede comprobar la instalación desde este navegador.'};
   if(status)status.textContent=labels[capabilities.installationStatus]||labels.unknown;
   window.dispatchEvent(new CustomEvent('platform-capabilities-change',{detail:capabilities}));

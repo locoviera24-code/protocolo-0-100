@@ -9,7 +9,8 @@ test('la web explica el requisito APK sin mostrar diagnostico tecnico',async({pa
   await page.goto('/index.html?module=gym&view=routine');
   await expect(page.locator('#workoutQuickAccessTitle')).toContainText('Acceso rápido durante el entrenamiento');
   await expect(page.locator('#workoutWidgetInstallStatus')).toContainText('Requiere el APK Android');
-  await expect(page.locator('#workoutLockScreenStatus')).toContainText('En desarrollo para el APK Android');
+  await expect(page.locator('#workoutLockScreenStatus')).toContainText('No disponible en esta versión. Requiere el APK Android.');
+  await expect(page.locator('#workoutNotificationStatus')).toContainText('No disponible en esta versión. Requiere el APK Android.');
   await expect(page.locator('#addWorkoutWidgetBtn')).toBeDisabled();
   await expect(page.locator('#enableWorkoutControlsBtn')).toBeDisabled();
   await expect(page.locator('#workoutConfigPanel')).not.toContainText('Puente Android');
@@ -56,10 +57,11 @@ test('el APK simulado instala y activa controles solo desde acciones explicitas'
   await page.clock.setFixedTime(new Date('2026-08-17T15:00:00.000Z'));
   await page.addInitScript(()=>{
     window.__quickAccessCalls={pin:0,permission:0,saves:0,states:[]};
+    window.__quickAccessNative={permission:'prompt',notificationCode:'waiting-for-session'};
     window.AndroidBridge={
       getAppInfo:()=>JSON.stringify({versionName:'2.7.0',versionCode:39}),
-      getWorkoutQuickAccessCapabilities:()=>JSON.stringify({platform:'android-apk',widgetInstances:0,pinWidgetSupported:true,notificationPermission:'prompt'}),
-      getWorkoutWidgetStatus:()=>JSON.stringify({code:'widget-not-added',instances:0,notificationCode:'waiting-for-session',queue:{pending:0,rejected:0}}),
+      getWorkoutQuickAccessCapabilities:()=>JSON.stringify({platform:'android-apk',widgetInstances:0,pinWidgetSupported:true,notificationPermission:window.__quickAccessNative.permission}),
+      getWorkoutWidgetStatus:()=>JSON.stringify({code:'widget-not-added',instances:0,notificationCode:window.__quickAccessNative.notificationCode,queue:{pending:0,rejected:0}}),
       requestPinWorkoutWidget:()=>{window.__quickAccessCalls.pin++;return JSON.stringify({ok:true,code:'pin-requested'});},
       requestWorkoutNotificationPermission:()=>{window.__quickAccessCalls.permission++;return'requested';},
       saveWorkoutWidgetData:json=>{window.__quickAccessCalls.saves++;window.__quickAccessCalls.states.push(JSON.parse(json));},
@@ -68,6 +70,8 @@ test('el APK simulado instala y activa controles solo desde acciones explicitas'
   });
   await page.goto('/index.html?module=gym&view=routine');
   await expect(page.locator('#workoutWidgetInstallStatus')).toContainText('Widget no agregado');
+  await expect(page.locator('#workoutLockScreenStatus')).toContainText('Controles activados');
+  await expect(page.locator('#workoutNotificationStatus')).toContainText('Controles preparados');
   await expect(page.locator('#nativeWorkoutLiveBar')).toBeVisible();
   await page.locator('#addWorkoutWidgetBtn').click();
   await page.locator('#enableWorkoutControlsBtn').click();
@@ -78,6 +82,16 @@ test('el APK simulado instala y activa controles solo desde acciones explicitas'
   expect(result.flags.nativeWorkoutControlsV1).toBe(true);
   expect(result.flags.nativeRestTimer).toBe(true);
   expect(result.flags.lockScreenWorkoutControls).toBe(true);
+
+  await page.evaluate(()=>{
+    window.__quickAccessNative.permission='denied';
+    window.__quickAccessNative.notificationCode='permission-required';
+    window.dispatchEvent(new CustomEvent('native-workout-notification-permission',{detail:{granted:false}}));
+  });
+  await expect(page.locator('#workoutWidgetInstallStatus')).toContainText('Widget no agregado');
+  await expect(page.locator('#workoutLockScreenStatus')).toContainText('Notificaciones desactivadas');
+  await expect(page.locator('#workoutNotificationStatus')).toContainText('Permiso denegado');
+  await expect(page.locator('#workoutNotificationStatus')).not.toContainText('versión web');
 
   await page.locator('#startTodayWorkoutBtn').click();
   const active=await page.evaluate(()=>window.__quickAccessCalls.states.at(-1));
