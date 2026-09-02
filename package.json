@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "codex:preflight": "node scripts/codex-preflight.mjs",
+    "gate:local": "node scripts/local-gate.mjs",
     "build:precache": "node scripts/generate-precache-manifest.mjs",
     "build:pwa-screenshots": "node scripts/capture-pwa-screenshots.mjs",
     "build:web-core-evidence": "node scripts/capture-web-core-flow-p0.mjs",
