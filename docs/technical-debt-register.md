@@ -7,7 +7,8 @@ relevante, P2 mantenibilidad, P3 limpieza.
 ## Resumen
 
 - P0: 0
-- P1: 5
+- P1 open: 4
+- P1 closed/guarded: 1
 - P2: 4
 - P3: 1
 
@@ -15,7 +16,7 @@ relevante, P2 mantenibilidad, P3 limpieza.
 
 | ID | Severity | Area | Evidence | Risk | Proposed direction | Status |
 |---|---|---|---|---|---|---|
-| GOV-001 | P1 | GitHub governance | API de proteccion de `main` responde `Branch not protected`; `repos/.../rulesets` devuelve `[]`. | Push/force-push/delete o merge sin CI pueden saltar el proceso documentado. | Configurar PR requerido, quality gate requerido, bloquear force push/delete y mantener merge commits, verificando no bloquear al unico maintainer. | OPEN; no cambiar settings en este PR |
+| GOV-001 | P1 | GitHub governance | Historicamente `main` no estaba protegida. El ruleset activo `Protect main` (ID `22116471`) ahora exige PR, cero aprobaciones, resolucion de threads y el check estricto `Quality gate beta / Web, Firebase y Android`; bloquea force push/delete y no tiene bypass actors. | Mitigado; una eliminacion o deriva futura del ruleset reabriria el riesgo. | Verificar el ruleset por API en cambios de gobernanza y usar PRs reales como prueba operacional; conservar merge commits. | CLOSED / GUARDED |
 | DATA-001 | P1 | Estado derivado | `advanced-features.js::syncVersionedState()` copia muchos stores en `protocolo_0_100_state_v2`; `renderAdvancedProgress()` y el wrapper de `renderAll()` lo escriben. | Snapshot duplicado y escritura por render pueden quedar desalineados o ocultar ownership. | Separar export/sync explicito; reconstruir bajo demanda y eliminar writes de render con migracion si se retira la key. | OPEN |
 | DATA-002 | P1 | Gym Party | `gym-party.js::settings()` crea y persiste `localUserId` cuando una lectura no lo encuentra; se invoca desde caminos de render. | Lecturas con side effects, carreras y tests menos deterministas. | Mover identidad a inicializacion/comando explicito e idempotente. | OPEN |
 | DATA-003 | P1 | Backup schema | Schema 3 aparece en la entrada `backup:versionedState`, `BACKUP_SERVICE.CURRENT_SCHEMA` y el agregado experimental; no existe una derivacion unica. | Un cambio parcial puede exportar/aceptar contratos incompatibles. | Derivar el servicio del registro o agregar una comprobacion unica de alineacion antes del proximo cambio de schema. | OPEN |
