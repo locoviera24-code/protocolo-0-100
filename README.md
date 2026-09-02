@@ -49,8 +49,9 @@ experimentales**, desactivados por defecto sin borrar sus datos anteriores.
 **Gym > Ajustes > Acceso rápido durante el entrenamiento** diferencia el
 shortcut de la PWA, el widget que requiere el APK y la notificacion privada que
 sirve como acceso de bloqueo en Android compatible. Android Quick Access V1 ya
-esta publicado en Stable `2.7.0+96` / Android `40`; el candidato beta `97/41`
-mantiene esas capacidades y agrega el Home Gym-first.
+esta publicado en Stable `2.7.0+96` / Android `40`. El Home Gym-first se
+integro originalmente en el candidato `97/41`; el candidato actual `98/42`
+lo conserva y corrige la presentacion de estas capacidades ya publicadas.
 **Más > Acerca de** compara capacidades
 Web/PWA y APK sin
 afirmar que una PWA está instalada cuando el navegador no puede comprobarlo.
@@ -533,11 +534,11 @@ La PWA/GitHub Pages no puede crear widgets ni controles de pantalla de bloqueo.
 Estas funciones viven en el APK y usan `AppWidgetProvider`, `AppWidgetManager`,
 `RemoteViews`, `PendingIntent` y una notificacion privada de entrenamiento.
 
-La integracion actual esta en `main` mediante el merge commit
+Android Quick Access se integro originalmente en `main` mediante el merge commit
 `39c40a204b79b502aeee50a6b7048ad1e94f6fe6`: **2.7.0 beta build 96**, Android
-`versionCode 40`. Todavia no tiene un APK stable nuevo: beta 7 corresponde al
-build 93 anterior y queda solo como antecedente. Ninguna beta reemplaza el
-canal stable ni mueve `baseline-stable-2.7`.
+`versionCode 40`. En ese corte todavia no existia el APK Stable 96 y beta 7
+correspondia al build 93 anterior; hoy queda solo como antecedente. Stable
+`2.7.0+96` / Android `40` se publico y valido posteriormente.
 
 Desde **Gym > Acceso rapido durante el entrenamiento** se puede tocar **Agregar
 widget**. Cuando el launcher admite `requestPinAppWidget`, Android muestra su
@@ -572,8 +573,9 @@ en `docs/physical-test-checklist.md`.
 El cierre 96/40 corrige una carrera PWA observada al entrar en **Mas > Telefono**
 durante la hidratacion temprana de IndexedDB. La llamada al renderer avanzado
 es opcional y una regresion automatizada impide reintroducir el fallo. El gate
-final y sus hashes se registran en `CODEX_HANDOFF.md`; stable continua en build
-89 y el backup permanece en schema 3.
+final y sus hashes se registran en `CODEX_HANDOFF.md`. Antes de esa promocion,
+Stable permanecia en build 89; el estado publicado actual es build 96 y el
+backup permanece en schema 3.
 
 El widget y la notificacion reutilizan `WorkoutQuickActionReducer`. Cada serie
 produce una accion durable `SAVE_SET` del contrato publico schema 1 antes de actualizar la interfaz. El
