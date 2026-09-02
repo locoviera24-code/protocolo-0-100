@@ -1,9 +1,11 @@
 # Workflow de desarrollo con Codex
 
 Este proceso reduce cambios accidentales sin reemplazar revision humana ni
-protecciones GitHub. El bundle operativo `skills/protocolo-pr-gate/` lo usa como
-fuente y actua como capa fina, no como otra copia de reglas. Ese directorio es
-la fuente portable; su instalacion o activacion en Codex se realiza por separado.
+protecciones GitHub. La Skill repo-local descubrible
+`.agents/skills/protocolo-pr-gate/` lo usa como fuente y actua como capa fina,
+no como otra copia de reglas. Ese directorio es la unica fuente versionada. Si
+una superficie Codex no la descubre, verificar primero su version y soporte;
+cualquier fallback de usuario se configura por separado.
 
 ## 1. Precheck
 
