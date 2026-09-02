@@ -18,7 +18,8 @@ const content=renderPrecacheManifest(createPrecacheManifest({version,assets}));
 
 if(process.argv.includes('--check')){
   const current=await readFile(output,'utf8').catch(()=>null);
-  if(current!==content)throw new Error('precache-manifest.js esta desactualizado. Ejecuta npm run build:precache.');
+  const normalizedCurrent=current?.replace(/\r\n?/g,'\n')??null;
+  if(normalizedCurrent!==content)throw new Error('precache-manifest.js esta desactualizado. Ejecuta npm run build:precache.');
   console.log(`Precache alineado: build ${version.build}, ${assets.length} recursos descubiertos.`);
 }else{
   await writeFile(output,content,'utf8');
