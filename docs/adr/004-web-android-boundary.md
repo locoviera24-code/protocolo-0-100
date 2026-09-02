@@ -12,9 +12,11 @@ telefono y controles de bloqueo solo existen en Android.
 ## Decision
 
 La raiz Web es la fuente de los assets empaquetados. El wrapper los sincroniza
-con script y los carga mediante HTTPS local seguro. El runtime APK solo se
-reconoce con `AndroidBridge.getAppInfo`. Los contratos nativos son versionados y
-el importador aplica mutaciones idempotentes al modelo Workout canonico.
+con script y los carga mediante HTTPS local seguro. `AndroidBridge.getAppInfo`
+es el marcador contractual actual del entorno APK. No constituye por si solo
+autenticacion criptografica del runtime ni reemplaza las defensas WebView, CSP o
+contra inyeccion de scripts. Los contratos nativos son versionados y el
+importador aplica mutaciones idempotentes al modelo Workout canonico.
 
 ## Consequences
 

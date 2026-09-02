@@ -76,8 +76,11 @@ crea una copia recuperable para Deshacer.
 | PWA | Web instalada con cache offline | Standalone y actualizacion PWA |
 | APK | Web empaquetada en wrapper Android | Widget, notificacion, bridges y cola nativa |
 
-Los archivos Web se copian al APK con un script y se comparan por hash. Un
-objeto JavaScript cualquiera no puede hacerse pasar por el bridge Android.
+Los archivos Web se copian al APK con un script y se comparan por hash. La app
+solo muestra capacidades APK cuando encuentra el contrato esperado
+`AndroidBridge.getAppInfo`. Esa comprobacion distingue un navegador normal del
+wrapper esperado, pero no es una autenticacion criptografica ni sustituye las
+protecciones de WebView y contra inyeccion de scripts.
 
 ## Como llega un cambio a Stable
 

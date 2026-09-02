@@ -22,7 +22,7 @@ flowchart TD
   WEB[Web/PWA fuente] --> SW[Service worker y artifact web]
   WEB --> SYNC[sync-web-assets.ps1]
   SYNC --> APK[Assets WebView Android]
-  APK --> BR[AndroidBridge confiable]
+  APK --> BR[Contrato AndroidBridge]
   BR --> N[Widgets, notificacion y cola nativa]
   N --> D
 ```
@@ -52,8 +52,10 @@ flowchart TD
    convertirlos en stores nuevos.
 4. Gym Party puede leer Workout para compartir una proyeccion autorizada; una
    reconciliacion remota termina en el mismo `workoutSessions` canonico.
-5. El wrapper Android intercambia contratos versionados con Web. La deteccion de
-   APK exige el bridge confiable; Web/PWA no simulan capacidades nativas.
+5. El wrapper Android intercambia contratos versionados con Web. Las capacidades
+   APK requieren el marcador contractual `AndroidBridge.getAppInfo`; un
+   Browser/PWA normal no lo expone. El marcador no autentica criptograficamente
+   el runtime ni reemplaza las defensas de WebView, CSP o contra inyeccion.
 6. El arbol Web de la raiz es fuente. Los assets Android son una copia generada
    y verificada por hash.
 

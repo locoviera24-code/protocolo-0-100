@@ -56,9 +56,11 @@ gestionan con los scripts existentes.
 
 ## Web y Android
 
-Browser/PWA nunca se autodeclaran APK. Conservar la deteccion confiable basada
-en `AndroidBridge.getAppInfo`. Una capacidad nativa Android no implica paridad
-universal en Web/PWA ni entre OEM.
+Browser/PWA normales no reciben capacidades APK sin el marcador contractual
+`AndroidBridge.getAppInfo`. Este marcador identifica el contrato esperado del
+wrapper; no autentica criptograficamente el runtime ni reemplaza las defensas
+de WebView, CSP o contra inyeccion de scripts. Una capacidad nativa Android no
+implica paridad universal en Web/PWA ni entre OEM.
 
 ## Stable y releases
 

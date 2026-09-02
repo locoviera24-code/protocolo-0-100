@@ -54,12 +54,14 @@ segundo test que pruebe lo mismo con otro nombre.
   `scripts/test-data-integrity.mjs`, `tests/e2e/backup-import.spec.mjs`.
 - **FAILURE CONSEQUENCE:** backup incompatible o perdida de datos.
 
-## INV-006 - Browser/PWA no pueden hacerse pasar por APK
+## INV-006 - Las capacidades APK requieren el marcador contractual AndroidBridge
 
-- **WHY:** capacidades y permisos nativos requieren un bridge real.
+- **WHY:** evita anunciar capacidades nativas en un runtime Web normal.
 - **SOURCE OF TRUTH:** `app/platform-capabilities.js`.
-- **CURRENT ENFORCEMENT:** APK confiable exige `AndroidBridge.getAppInfo` como
-  funcion.
+- **CURRENT ENFORCEMENT:** `hasTrustedAndroidBridge()` exige
+  `AndroidBridge.getAppInfo` como funcion.
+- **LIMITATION:** es deteccion contractual de plataforma, no autenticacion
+  criptografica del runtime ni defensa autonoma contra inyeccion de scripts.
 - **TEST/GATE:** `scripts/test-platform-capabilities.mjs` cubre browser, PWA,
   objetos vacios, incompletos y spoof.
 - **FAILURE CONSEQUENCE:** UI falsa y llamadas a capacidades inexistentes.
