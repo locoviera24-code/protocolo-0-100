@@ -19,16 +19,19 @@ const widget=await readFile(new URL('../android-native-wrapper/app/src/main/java
 
 assert.match(debug,/uses: \.\/\.github\/workflows\/quality-gate\.yml/);
 assert.match(gate,/assembleDebug/);
-assert.match(gate,/actions\/upload-artifact@v7/);
+assert.match(gate,/actions\/upload-artifact@[a-f\d]{40} # v7/);
 assert.doesNotMatch(debug,/gh release/);
 assert.doesNotMatch(debug,/contents: write/);
 assert.match(release,/assembleRelease/);
-assert.match(release,/android-actions\/setup-android@v4/);
-assert.match(release,/gradle\/actions\/setup-gradle@v6/);
+assert.match(release,/android-actions\/setup-android@[a-f\d]{40} # v4/);
+assert.match(release,/gradle\/actions\/setup-gradle@[a-f\d]{40} # v6/);
 assert.match(release,/ANDROID_KEYSTORE_BASE64/);
 assert.match(release,/ANDROID_KEYSTORE_PASSWORD/);
 assert.match(release,/ANDROID_KEY_ALIAS/);
 assert.match(release,/ANDROID_KEY_PASSWORD/);
+assert.doesNotMatch(release,/secrets:\s*inherit/);
+assert.doesNotMatch(release,/ANDROID_KEYSTORE[^\n]*>> "\$GITHUB_ENV"/);
+assert.ok(release.indexOf('gradle/actions/setup-gradle@')<release.indexOf('ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}'));
 assert.match(release,/sha256sum/);
 assert.match(release,/workflow_dispatch:/);
 assert.doesNotMatch(release,/\n  push:/);

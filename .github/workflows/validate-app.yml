@@ -17,4 +17,3 @@ jobs:
     uses: ./.github/workflows/quality-gate.yml
     with:
       channel: beta
-    secrets: inherit
