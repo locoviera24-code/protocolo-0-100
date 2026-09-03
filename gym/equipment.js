@@ -17,6 +17,12 @@
     {id:'distance',label:'Distancia'},
     {id:'assistance',label:'Repeticiones con asistencia'}
   ]);
+  const measurementApplicability=Object.freeze({
+    reps:Object.freeze({reps:true,durationSeconds:false,distanceMeters:false,paceSecondsPerKm:false}),
+    assistance:Object.freeze({reps:true,durationSeconds:false,distanceMeters:false,paceSecondsPerKm:false}),
+    time:Object.freeze({reps:false,durationSeconds:true,distanceMeters:false,paceSecondsPerKm:false}),
+    distance:Object.freeze({reps:false,durationSeconds:true,distanceMeters:true,paceSecondsPerKm:true})
+  });
   const lateralities=Object.freeze([
     {id:'bilateral',label:'Ambos lados'},
     {id:'left',label:'Lado izquierdo'},
@@ -48,6 +54,7 @@
   function round(value,places=2){const factor=10**places;return Math.round(number(value)*factor)/factor;}
   function loadMode(value,fallback='total'){return loadIds.has(value)?value:(loadIds.has(fallback)?fallback:'total');}
   function measurementMode(value,fallback='reps'){return measurementIds.has(value)?value:(measurementIds.has(fallback)?fallback:'reps');}
+  function applicableDimensions(value){return measurementApplicability[measurementMode(value)];}
   function laterality(value){return lateralityIds.has(value)?value:'bilateral';}
   function profile(id,customProfiles=[]){
     return [...profiles,...(Array.isArray(customProfiles)?customProfiles:[])].find(item=>item?.id===id)||null;
@@ -75,6 +82,7 @@
   }
   function normalizeSet(set={},exercise={}){
     const measurement=measurementMode(inferMeasurement(set,exercise));
+    const dimensions=applicableDimensions(measurement);
     const mode=loadMode(inferLoad(set,exercise,measurement));
     const side=laterality(set.laterality);
     const originalUnit=String(set.originalUnit||'kg').toLowerCase()==='lb'?'lb':'kg';
@@ -91,9 +99,12 @@
     else if(mode==='addedLoad') normalizedTotalKg=addedLoadKg;
     normalizedTotalKg=round(normalizedTotalKg);
     const recordLoadKg=round(mode==='perHand'?weightKg:normalizedTotalKg);
-    const durationSeconds=Math.max(0,Math.round(number(set.durationSeconds,0)));
-    const distanceMeters=round(nonNegative(set.distanceMeters,0));
-    const paceSecondsPerKm=distanceMeters>0&&durationSeconds>0?Math.round(durationSeconds/(distanceMeters/1000)):Math.max(0,Math.round(number(set.paceSecondsPerKm,0)));
+    const reps=dimensions.reps?Math.max(0,number(set.reps,0)):0;
+    const durationSeconds=dimensions.durationSeconds?Math.max(0,Math.round(number(set.durationSeconds,0))):0;
+    const distanceMeters=dimensions.distanceMeters?round(nonNegative(set.distanceMeters,0)):0;
+    const paceSecondsPerKm=dimensions.paceSecondsPerKm
+      ?(distanceMeters>0&&durationSeconds>0?Math.round(durationSeconds/(distanceMeters/1000)):Math.max(0,Math.round(number(set.paceSecondsPerKm,0))))
+      :0;
     const profileValue=profile(set.equipmentId)||null;
     const equipmentName=String(set.equipmentName||profileValue?.name||exercise.equipmentName||'').trim();
     const equipmentId=String(set.equipmentId||exercise.equipmentId||'').trim();
@@ -101,6 +112,7 @@
     return {
       ...set,
       measurementMode:measurement,
+      reps,
       loadMode:mode,
       weight:weightKg,
       weightKg,
@@ -145,6 +157,7 @@
     profile,
     loadMode,
     measurementMode,
+    applicableDimensions,
     laterality,
     normalizeSet,
     comparisonKey,

@@ -4,8 +4,10 @@ import vm from 'node:vm';
 
 const source=await readFile(new URL('../workout-metrics.js',import.meta.url),'utf8');
 const setModelSource=await readFile(new URL('../gym/set-model.js',import.meta.url),'utf8');
+const equipmentSource=await readFile(new URL('../gym/equipment.js',import.meta.url),'utf8');
 const context={window:null};context.window=context;
 const vmContext=vm.createContext(context);
+vm.runInContext(equipmentSource,vmContext,{filename:'gym/equipment.js'});
 vm.runInContext(setModelSource,vmContext,{filename:'gym/set-model.js'});
 vm.runInContext(source,vmContext,{filename:'workout-metrics.js'});
 const metrics=context.WORKOUT_METRICS;
@@ -27,6 +29,15 @@ assert.equal(weighted.addedLoadReps,16);
 assert.equal(metrics.percentChange(100,0),null);
 assert.equal(metrics.percentChange(120,100),20);
 assert.equal(metrics.estimatedOneRepMax(60,8),76);
+const historicalDirty={measurementMode:'reps',reps:8,weight:60,durationSeconds:60,distanceMeters:1000,paceSecondsPerKm:60};
+const historicalSnapshot=structuredClone(historicalDirty);
+const historicalMetrics=metrics.calculateSetsMetrics([historicalDirty]);
+assert.equal(historicalMetrics.totalReps,8);
+assert.equal(historicalMetrics.durationSeconds,0);
+assert.equal(historicalMetrics.distanceMeters,0);
+assert.equal(historicalMetrics.bestPaceSecondsPerKm,0);
+assert.equal(metrics.formatProgress(historicalMetrics),'480 kg de volumen externo');
+assert.deepEqual(historicalDirty,historicalSnapshot,'Las metricas no deben reescribir una serie historica incompatible');
 const typed=metrics.calculateSetsMetrics([
   {reps:10,weight:20,setType:'warmup'},
   {reps:8,weight:60,setType:'working'},

@@ -131,10 +131,15 @@ const quickSaved = quickWorkout.saveQuickSetPayload({
   exerciseId: quickState.currentExerciseId,
   reps: 10,
   weight: 20.5,
+  durationSeconds: 60,
+  distanceMeters: 1000,
   bodyweight: false
 });
 assert.equal(quickSaved.ok, true);
 assert.equal(quickSaved.set.weight, 20.5);
+assert.equal(quickSaved.set.durationSeconds, 0);
+assert.equal(quickSaved.set.distanceMeters, 0);
+assert.equal(quickSaved.set.paceSecondsPerKm, 0);
 assert.equal(quickSaved.set.setType, 'working');
 assert.equal(quickSaved.set.completed, true);
 const firstCapturedSession=JSON.parse(quickStore.get(quickWorkout.keys.workoutSessions))[0];
@@ -194,6 +199,36 @@ assert.equal(savedUndoWorkout.undoSavedQuickSetPayload(secondSavedUndo.undoRecei
 const sameValueSaved=savedUndoWorkout.saveQuickSetPayload({date:'2026-06-22',exerciseId:savedUndoState.currentExerciseId,reps:5,weight:70});
 assert.equal(savedUndoWorkout.updateQuickSetPayload({date:'2026-06-22',exerciseId:savedUndoState.currentExerciseId,setId:sameValueSaved.set.id,reps:5,weight:70}).ok,true);
 assert.equal(savedUndoWorkout.undoSavedQuickSetPayload(sameValueSaved.undoReceipt).reason,'set-edited','Deshacer debe detectar una edicion aunque los valores finales coincidan');
+
+const {context:modeIntegrityContext}=createContext();
+const modeIntegrityWorkout=modeIntegrityContext.WORKOUT_FEATURES;
+const modeIntegrityState=modeIntegrityWorkout.getQuickWorkoutState({date:'2026-06-22'});
+const timedSaved=modeIntegrityWorkout.saveQuickSetPayload({date:'2026-06-22',exerciseId:modeIntegrityState.currentExerciseId,measurementMode:'time',reps:8,durationSeconds:90,distanceMeters:1000,weight:0});
+assert.deepEqual(
+  {reps:timedSaved.set.reps,durationSeconds:timedSaved.set.durationSeconds,distanceMeters:timedSaved.set.distanceMeters,paceSecondsPerKm:timedSaved.set.paceSecondsPerKm},
+  {reps:0,durationSeconds:90,distanceMeters:0,paceSecondsPerKm:0}
+);
+const assistanceSaved=modeIntegrityWorkout.saveQuickSetPayload({date:'2026-06-22',exerciseId:modeIntegrityState.currentExerciseId,measurementMode:'assistance',loadMode:'assistance',reps:8,weight:30,durationSeconds:60,distanceMeters:1000});
+assert.deepEqual(
+  {reps:assistanceSaved.set.reps,assistanceKg:assistanceSaved.set.assistanceKg,durationSeconds:assistanceSaved.set.durationSeconds,distanceMeters:assistanceSaved.set.distanceMeters},
+  {reps:8,assistanceKg:30,durationSeconds:0,distanceMeters:0}
+);
+const distanceSaved=modeIntegrityWorkout.saveQuickSetPayload({date:'2026-06-22',exerciseId:modeIntegrityState.currentExerciseId,measurementMode:'distance',reps:8,durationSeconds:1500,distanceMeters:5000,weight:0});
+assert.deepEqual(
+  {reps:distanceSaved.set.reps,durationSeconds:distanceSaved.set.durationSeconds,distanceMeters:distanceSaved.set.distanceMeters,paceSecondsPerKm:distanceSaved.set.paceSecondsPerKm},
+  {reps:0,durationSeconds:1500,distanceMeters:5000,paceSecondsPerKm:300}
+);
+const distanceEditedToReps=modeIntegrityWorkout.updateQuickSetPayload({date:'2026-06-22',exerciseId:modeIntegrityState.currentExerciseId,setId:distanceSaved.set.id,measurementMode:'reps',reps:6,weight:65,durationSeconds:1500,distanceMeters:5000});
+assert.deepEqual(
+  {reps:distanceEditedToReps.set.reps,durationSeconds:distanceEditedToReps.set.durationSeconds,distanceMeters:distanceEditedToReps.set.distanceMeters,paceSecondsPerKm:distanceEditedToReps.set.paceSecondsPerKm},
+  {reps:6,durationSeconds:0,distanceMeters:0,paceSecondsPerKm:0}
+);
+assert.equal(modeIntegrityWorkout.deleteQuickSetPayload({date:'2026-06-22',exerciseId:modeIntegrityState.currentExerciseId,setId:distanceSaved.set.id}).ok,true);
+const restoredModeSet=modeIntegrityWorkout.undoDeleteQuickSetPayload().state.currentSets.find(set=>set.id===distanceSaved.set.id);
+assert.deepEqual(
+  {reps:restoredModeSet.reps,durationSeconds:restoredModeSet.durationSeconds,distanceMeters:restoredModeSet.distanceMeters,paceSecondsPerKm:restoredModeSet.paceSecondsPerKm},
+  {reps:6,durationSeconds:0,distanceMeters:0,paceSecondsPerKm:0}
+);
 assert.equal(quickWorkout.updateGymSettings({restTimerEnabled:true,restSeconds:75,hapticEnabled:false}).restSeconds,75);
 assert.equal(JSON.parse(quickStore.get(quickWorkout.keys.workoutSessions))[0].routine.name, 'Torso A');
 const manualExercise = quickWorkout.addManualExercisePayload({
@@ -286,6 +321,19 @@ assert.equal(migratedHistoricalExercise.sets[0].reps,8);
 assert.equal((await legacySetContext.WORKOUT_FEATURES.undoHistoricalClassificationMigration()).ok,true);
 assert.equal(Object.hasOwn(JSON.parse(legacySetStore.get('protocolo_0_100_workout_sessions_v1'))[0].exercises[0],'muscleClassificationSnapshot'),false);
 
+const historicalDirtySet={id:'historical-dirty-set',setNumber:1,measurementMode:'reps',reps:8,weight:50,durationSeconds:60,distanceMeters:1000,customLegacyField:'preserve'};
+const historicalNativeSession={id:'historical-native-session',date:'2026-06-22',status:'en progreso',currentExerciseIndex:0,routine:{name:'Legacy'},exercises:[{id:'historical-native-exercise',exerciseId:'press-banca',name:'Press de banca',muscle:'Pecho',sets:[historicalDirtySet]}]};
+const {context:historicalNativeContext,store:historicalNativeStore}=createContext({protocolo_0_100_workout_sessions_v1:JSON.stringify([historicalNativeSession])});
+const incomingHistoricalNative=structuredClone(historicalNativeSession);
+incomingHistoricalNative.exercises[0].sets.push({id:'native-new-cleaned',setNumber:2,measurementMode:'reps',reps:7,weight:52.5,durationSeconds:60,distanceMeters:1000});
+assert.equal(historicalNativeContext.WORKOUT_FEATURES.importWidgetStateFromAndroid({lastNativeMutationAt:'2026-06-22T12:00:00.000Z',lastNativeMutationSource:'android-widget-direct',workoutSession:incomingHistoricalNative}),true);
+const historicalNativeSets=JSON.parse(historicalNativeStore.get('protocolo_0_100_workout_sessions_v1'))[0].exercises[0].sets;
+assert.deepEqual(historicalNativeSets[0],historicalDirtySet,'Una escritura nativa distinta no debe reescribir un set histórico intacto');
+assert.deepEqual({durationSeconds:historicalNativeSets[1].durationSeconds,distanceMeters:historicalNativeSets[1].distanceMeters,paceSecondsPerKm:historicalNativeSets[1].paceSecondsPerKm},{durationSeconds:0,distanceMeters:0,paceSecondsPerKm:0});
+const replacementSession={id:'replacement-session',date:'2026-06-22',status:'finalizado',routine:{name:'Compartida'},exercises:[{id:'replacement-exercise',exerciseId:'press-banca',name:'Press de banca',sets:[{id:'replacement-set',measurementMode:'reps',reps:8,weight:60,durationSeconds:60,distanceMeters:1000}]}]};
+const replaced=historicalNativeContext.WORKOUT_FEATURES.replaceSessionPayload(replacementSession);
+assert.deepEqual({durationSeconds:replaced.session.exercises[0].sets[0].durationSeconds,distanceMeters:replaced.session.exercises[0].sets[0].distanceMeters,paceSecondsPerKm:replaced.session.exercises[0].sets[0].paceSecondsPerKm},{durationSeconds:0,distanceMeters:0,paceSecondsPerKm:0});
+
 const {context: poundsContext,store:poundsStore}=createContext({
   protocolo_0_100_gym_settings_v1:JSON.stringify({unit:'lb'})
 });
@@ -304,6 +352,8 @@ const nativeExercise = {...workout.planForDate('2026-06-22').exercises[1], sets:
   setNumber: 1,
   reps: 8,
   weight: 60,
+  durationSeconds: 60,
+  distanceMeters: 1000,
   bodyweight: false,
   savedAt: '2026-06-22T12:00:00.000Z',
   volume: 480
@@ -331,12 +381,14 @@ assert.equal(workout.importWidgetStateFromAndroid({
   exerciseHistory: {}
 }), true);
 assert.equal(JSON.parse(store.get(workout.keys.workoutSessions))[0].id, 'workout_android_test');
+const nativeImportedSet=JSON.parse(store.get(workout.keys.workoutSessions))[0].exercises[1].sets[0];
+assert.deepEqual({reps:nativeImportedSet.reps,durationSeconds:nativeImportedSet.durationSeconds,distanceMeters:nativeImportedSet.distanceMeters,paceSecondsPerKm:nativeImportedSet.paceSecondsPerKm},{reps:8,durationSeconds:0,distanceMeters:0,paceSecondsPerKm:0});
 assert.equal(JSON.parse(store.get(workout.keys.exerciseHistory))['press-banca'].lastWeight, 60);
 assert.equal(workout.adoptNativeWorkoutSelection({state:{sessionId:nativeSession.id,exerciseId:nativeExercise.id}}),true);
 assert.equal(workout.getQuickWorkoutState({date:'2026-06-22'}).currentExerciseId,nativeExercise.id);
 assert.equal(workout.adoptNativeWorkoutSelection({state:{sessionId:'other-session',exerciseId:nativeFirstExercise.id}}),false);
 
-const nativeMutation={id:'11111111-1111-4111-8111-111111111111',type:'save_set',sessionId:'native-queue-session',exerciseId:'press-banca',setId:'native-queue-set',privateImportState:'pending',payload:{date:'2026-06-22',dayKey:'monday',weekday:'Lunes',routine:{name:'Torso A'},startedAt:'2026-06-22T13:00:00.000Z',currentExerciseIndex:0,exercise:{id:'press-native',exerciseId:'press-banca',name:'Press de banca',muscle:'Pecho'},set:{id:'native-queue-set',setNumber:1,reps:8,weight:70,weightKg:70,measurementMode:'reps',loadMode:'total',equipmentId:'machine',setType:'working',completed:true}}};
+const nativeMutation={id:'11111111-1111-4111-8111-111111111111',type:'save_set',sessionId:'native-queue-session',exerciseId:'press-banca',setId:'native-queue-set',privateImportState:'pending',payload:{date:'2026-06-22',dayKey:'monday',weekday:'Lunes',routine:{name:'Torso A'},startedAt:'2026-06-22T13:00:00.000Z',currentExerciseIndex:0,exercise:{id:'press-native',exerciseId:'press-banca',name:'Press de banca',muscle:'Pecho'},set:{id:'native-queue-set',setNumber:1,reps:8,weight:70,weightKg:70,durationSeconds:60,distanceMeters:1000,measurementMode:'reps',loadMode:'total',equipmentId:'machine',setType:'working',completed:true}}};
 const nativeAcks=[];context.AndroidBridge={acknowledgeNativeWorkoutMutation:(...args)=>{nativeAcks.push(args);return true;}};
 const firstNativeImport=await workout.importNativeWorkoutMutationsFromAndroid({schemaVersion:1,mutations:[nativeMutation]});
 assert.equal(firstNativeImport.ok,true);assert.equal(firstNativeImport.imported,1);
@@ -344,6 +396,7 @@ const secondNativeImport=await workout.importNativeWorkoutMutationsFromAndroid({
 assert.equal(secondNativeImport.ok,true);assert.equal(secondNativeImport.duplicates,1);
 const nativeQueuedSession=JSON.parse(store.get(workout.keys.workoutSessions)).find(item=>item.id==='native-queue-session');
 assert.equal(nativeQueuedSession.exercises[0].sets.length,1);assert.equal(nativeQueuedSession.exercises[0].sets[0].id,'native-queue-set');
+assert.deepEqual({durationSeconds:nativeQueuedSession.exercises[0].sets[0].durationSeconds,distanceMeters:nativeQueuedSession.exercises[0].sets[0].distanceMeters,paceSecondsPerKm:nativeQueuedSession.exercises[0].sets[0].paceSecondsPerKm},{durationSeconds:0,distanceMeters:0,paceSecondsPerKm:0});
 assert.equal(JSON.parse(store.get(workout.keys.exerciseHistory))['press-banca'].lastWeight,70);
 assert.deepEqual(nativeAcks.map(item=>item[1]),['imported','imported']);
 const {context:failedNativeContext,store:failedNativeStore}=createContext();const failedAcks=[];

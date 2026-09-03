@@ -15,6 +15,53 @@ async function openQuickType(page){
   if(!(await details.evaluate(element=>element.open))) await details.locator('summary').click();
 }
 
+test('un set de repeticiones ignora tiempo y distancia ocultos',async({page})=>{
+  await reset(page,'/index.html?module=gym&view=train');
+  await page.locator('#quickExerciseSelect').selectOption({label:'Press de banca'});
+
+  await expect(page.locator('#quickMeasurementMode')).toHaveValue('reps');
+  await expect(page.locator('#quickDurationSeconds')).toHaveValue('60');
+  await expect(page.locator('#quickDistanceMeters')).toHaveValue('1000');
+  await page.locator('#quickReps').fill('8');
+  await page.locator('#quickWeight').fill('60');
+  await page.locator('#saveQuickSetBtn').click();
+
+  const stored=await page.evaluate(()=>{
+    const sessions=JSON.parse(localStorage.getItem(window.WORKOUT_FEATURES.keys.workoutSessions)||'[]');
+    const exercise=sessions[0].exercises.find(item=>item.name==='Press de banca');
+    return {set:exercise.sets[0],summary:sessions[0].summary};
+  });
+  expect(stored.set).toMatchObject({measurementMode:'reps',reps:8,durationSeconds:0,distanceMeters:0,paceSecondsPerKm:0});
+  expect(stored.summary).toMatchObject({totalReps:8,durationSeconds:0,distanceMeters:0,bestPaceSecondsPerKm:0});
+  await expect(page.locator('#todayWorkoutProgress')).not.toContainText('1 min');
+  await expect(page.locator('#todayWorkoutProgress')).not.toContainText('1 km');
+
+  await page.locator('#repeatLastSetBtn').click();
+  await page.locator('#saveQuickSetBtn').click();
+  const repeated=await page.evaluate(()=>JSON.parse(localStorage.getItem(window.WORKOUT_FEATURES.keys.workoutSessions)||'[]')[0].exercises.find(item=>item.name==='Press de banca').sets);
+  expect(repeated).toHaveLength(2);
+  expect(repeated[1]).toMatchObject({measurementMode:'reps',reps:8,durationSeconds:0,distanceMeters:0,paceSecondsPerKm:0});
+  await page.locator('#appSnackbarAction').click();
+  const afterUndo=await page.evaluate(()=>JSON.parse(localStorage.getItem(window.WORKOUT_FEATURES.keys.workoutSessions)||'[]')[0].exercises.find(item=>item.name==='Press de banca').sets);
+  expect(afterUndo).toHaveLength(1);
+  expect(afterUndo[0]).toMatchObject({measurementMode:'reps',durationSeconds:0,distanceMeters:0,paceSecondsPerKm:0});
+});
+
+test('un borrador restaurado no reintroduce dimensiones incompatibles al guardar',async({page})=>{
+  await reset(page,'/index.html?module=gym&view=train');
+  await page.locator('#quickExerciseSelect').selectOption({label:'Press de banca'});
+  await page.locator('#quickReps').fill('9');
+  await page.locator('#quickWeight').fill('55');
+  await page.reload();
+
+  await expect(page.locator('#quickMeasurementMode')).toHaveValue('reps');
+  await expect(page.locator('#quickReps')).toHaveValue('9');
+  await expect(page.locator('#quickWeight')).toHaveValue('55');
+  await page.locator('#saveQuickSetBtn').click();
+  const stored=await page.evaluate(()=>JSON.parse(localStorage.getItem(window.WORKOUT_FEATURES.keys.workoutSessions)||'[]')[0].exercises.find(item=>item.name==='Press de banca').sets[0]);
+  expect(stored).toMatchObject({measurementMode:'reps',reps:9,durationSeconds:0,distanceMeters:0,paceSecondsPerKm:0});
+});
+
 test('Gym separa calentamiento de volumen, progreso y records principales',async({page})=>{
   await reset(page,'/index.html?module=gym&view=train');
   await page.locator('#quickExerciseSelect').selectOption({label:'Press de banca'});
