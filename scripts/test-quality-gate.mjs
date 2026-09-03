@@ -7,6 +7,8 @@ const validate=await read('.github/workflows/validate-app.yml');
 const pages=await read('.github/workflows/deploy-pages.yml');
 const debug=await read('.github/workflows/build-debug-apk.yml');
 const release=await read('.github/workflows/build-release-apk.yml');
+const playwright=await read('playwright.config.mjs');
+const playwrightWebDist=await read('playwright.web-dist.config.mjs');
 const stableRelease=JSON.parse(await read('.github/stable-release.json'));
 const appVersion=JSON.parse(await read('app-version.json'));
 const callers=[validate,pages,debug,release];
@@ -41,7 +43,7 @@ for(const [path,source] of Object.entries(workflows)){
     externalActionCount+=1;
   }
 }
-assert.equal(externalActionCount,20,'Debe auditarse cada uso de Actions externas');
+assert.equal(externalActionCount,22,'Debe auditarse cada uso de Actions externas');
 
 const expectedSecretsByWorkflow={
   '.github/workflows/build-debug-apk.yml':firebaseSecrets,
@@ -72,17 +74,18 @@ for(const command of [
   'npm run test:native-controls',
   'node ./scripts/test-gym-party.mjs','node ./scripts/test-accessibility.mjs','npm run test:web-dist:e2e',
   'node ./scripts/test-android-release.mjs','node ./scripts/test-pages-release.mjs',
-  'gradle :app:assembleDebug :app:assembleRelease'
+  'gradle :app:testDebugUnitTest --stacktrace --no-daemon',
+  'gradle :app:assembleDebug :app:assembleRelease --stacktrace --no-daemon'
 ])assert.ok(gate.includes(command),`El quality gate no ejecuta ${command}`);
 for(const contract of ['workflow_call:','channel:','beta','stable','actions/upload-artifact@','android-actions/setup-android@','gradle/actions/setup-gradle@','protocolo-web-','protocolo-android-debug-','-CheckAndroidAssets','test-release.jks'])assert.ok(gate.includes(contract),`Falta contrato del quality gate: ${contract}`);
 
 for(const caller of callers)assert.doesNotMatch(caller,/secrets:\s*inherit/,'Ningun caller debe heredar todos los Secrets');
 assert.doesNotMatch(validate,/\$\{\{\s*secrets\./,'El gate de PR/main no debe recibir Secrets');
-const workflowCallBlock=gate.match(/workflow_call:\s*\n([\s\S]*?)\n  workflow_dispatch:/)?.[1]||'';
+const workflowCallBlock=gate.match(/workflow_call:\s*\r?\n([\s\S]*?)\r?\n  workflow_dispatch:/)?.[1]||'';
 const declaredWorkflowCallSecrets=[...workflowCallBlock.matchAll(/^      ([A-Z][A-Z0-9_]+):\s*$/gm)].map(match=>match[1]).sort();
 assert.deepEqual(declaredWorkflowCallSecrets,[...firebaseSecrets].sort(),'El reusable debe declarar exclusivamente los Secrets Firebase aprobados');
 for(const secret of firebaseSecrets){
-  assert.match(gate,new RegExp(`\\n      ${secret}:\\n        required: false`),`El reusable debe declarar ${secret} como opcional`);
+  assert.match(gate,new RegExp(`\\r?\\n      ${secret}:\\r?\\n        required: false`),`El reusable debe declarar ${secret} como opcional`);
   for(const [name,caller] of [['debug',debug],['release',release],['pages',pages]]){
     assert.match(caller,new RegExp(`${secret}: \\$\\{\\{ secrets\\.${secret} \\}\\}`),`${name} debe transmitir explicitamente ${secret}`);
   }
@@ -92,6 +95,31 @@ const checkoutCount=[...Object.values(workflows)].reduce((total,source)=>total+(
 const nonPersistentCheckoutCount=[...Object.values(workflows)].reduce((total,source)=>total+(source.match(/uses: actions\/checkout@[a-f\d]{40} # v7\s+with:\s+persist-credentials: false/g)||[]).length,0);
 assert.equal(checkoutCount,3);
 assert.equal(nonPersistentCheckoutCount,checkoutCount,'Todo checkout debe desactivar credenciales persistentes');
+
+const stepBlock=(source,name)=>source.match(new RegExp(`      - name: ${name}\\r?\\n([\\s\\S]*?)(?=\\r?\\n      - name:|$)`))?.[1]||'';
+const jvmStep=stepBlock(gate,'Ejecutar tests JVM Android');
+const junitEvidenceStep=stepBlock(gate,'Conservar resultados JUnit Android');
+const androidBuildStep=stepBlock(gate,'Compilar APK debug y release de prueba');
+const playwrightEvidenceStep=stepBlock(gate,'Conservar evidencia Playwright ante fallo');
+assert.match(jvmStep,/working-directory: android-native-wrapper[\s\S]*run: gradle :app:testDebugUnitTest --stacktrace --no-daemon/,'La suite JVM debug completa debe ejecutarse sin daemon');
+assert.ok(gate.indexOf('- name: Ejecutar tests JVM Android')<gate.indexOf('- name: Compilar APK debug y release de prueba'),'Los tests JVM deben preceder la compilacion Android');
+assert.match(androidBuildStep,/run: gradle :app:assembleDebug :app:assembleRelease --stacktrace --no-daemon/,'La compilacion APK debe permanecer separada y sin daemon');
+assert.doesNotMatch(androidBuildStep,/testDebugUnitTest/,'La compilacion no debe ocultar la tarea JVM');
+assert.match(junitEvidenceStep,/if: always\(\)/,'JUnit debe conservarse incluso cuando falla la tarea JVM');
+assert.match(junitEvidenceStep,/name: protocolo-android-jvm-tests-\$\{\{ env\.QUALITY_CHANNEL \}\}/);
+assert.match(junitEvidenceStep,/path: android-native-wrapper\/app\/build\/test-results\/testDebugUnitTest\//);
+assert.match(junitEvidenceStep,/if-no-files-found: ignore/,'La ausencia legitima de XML no debe ocultar el fallo original');
+assert.match(junitEvidenceStep,/retention-days: \$\{\{ env\.QUALITY_CHANNEL == 'stable' && 90 \|\| 30 \}\}/);
+assert.match(gate,/id: axe[\s\S]*id: e2e[\s\S]*id: web_dist/,'Cada productor Playwright debe exponer su outcome');
+assert.match(playwrightEvidenceStep,/if: \$\{\{ failure\(\) && \(steps\.axe\.outcome == 'failure' \|\| steps\.e2e\.outcome == 'failure' \|\| steps\.web_dist\.outcome == 'failure'\) \}\}/);
+assert.match(playwrightEvidenceStep,/name: playwright-failure-evidence-\$\{\{ env\.QUALITY_CHANNEL \}\}/);
+assert.match(playwrightEvidenceStep,/path: test-results\//);
+assert.match(playwrightEvidenceStep,/if-no-files-found: ignore/);
+assert.match(playwrightEvidenceStep,/retention-days: \$\{\{ env\.QUALITY_CHANNEL == 'stable' && 90 \|\| 30 \}\}/);
+assert.doesNotMatch(gate,/^\s*continue-on-error:/m,'Los fallos deben conservar su estado autoritativo');
+assert.doesNotMatch(gate,/playwright[^\n]*--retries(?:=|\s)/,'El workflow no debe introducir retries Playwright silenciosos');
+for(const config of [playwright,playwrightWebDist])assert.doesNotMatch(config,/^\s*retries\s*:/m,'Playwright no debe ocultar flakes mediante retries');
+assert.match(playwright,/trace:'retain-on-failure'/,'Playwright debe generar trace ante fallo cuando el proyecto lo soporta');
 
 assert.match(validate,/push:[\s\S]*branches:/,'main y PR deben ejecutar el gate beta');
 assert.match(pages,/push:[\s\S]*branches:[\s\S]*- main[\s\S]*paths:[\s\S]*\.github\/stable-release\.json/,'Una solicitud versionada en main debe poder publicar la linea base estable');
@@ -114,7 +142,7 @@ assert.match(release,/permissions:\s+contents: read/,'Release debe ser read-only
 assert.match(release,/release-apk:[\s\S]*?permissions:\s+contents: write/,'Solo el job publicador necesita contents: write');
 assert.doesNotMatch(release,/\$GITHUB_ENV[^\n]*ANDROID_KEYSTORE|ANDROID_KEYSTORE[^\n]*>> "\$GITHUB_ENV"/,'La firma real no debe persistirse en GITHUB_ENV');
 assert.ok(release.indexOf('gradle/actions/setup-gradle@')<release.indexOf('ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}'),'Actions externas deben configurarse antes de exponer firma real');
-const signingStep=release.match(/      - name: Compilar APK release firmado\n([\s\S]*?)(?=\n      - name:)/)?.[1]||'';
+const signingStep=stepBlock(release,'Compilar APK release firmado');
 for(const secret of ['ANDROID_KEYSTORE_BASE64','ANDROID_KEYSTORE_PASSWORD','ANDROID_KEY_ALIAS','ANDROID_KEY_PASSWORD']){
   assert.match(signingStep,new RegExp(`\\$\\{\\{ secrets\\.${secret} \\}\\}`),`El paso de firma debe recibir ${secret}`);
   assert.equal((release.match(new RegExp(`secrets\\.${secret}`,'g'))||[]).length,1,`${secret} no debe exponerse fuera del paso de firma`);

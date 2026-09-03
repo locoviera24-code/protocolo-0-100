@@ -88,6 +88,24 @@ Ante fallo:
 4. corregir la causa dentro del scope;
 5. volver a validar el nuevo HEAD.
 
+### Politica de flakes
+
+- `PASS`: ejecucion limpia, sin un retry exitoso ocultando un fallo anterior.
+- `FAIL`: fallo vigente; conservar evidencia y tratarlo como fallo hasta
+  clasificarlo.
+- `SUSPECTED_FLAKE`: observacion que no se reproduce en investigacion dirigida
+  sobre el mismo SHA. No implica que la causa raiz sea conocida.
+- `CONFIRMED_FLAKE`: mecanismo no determinista reproducido con evidencia; debe
+  tener owner, deuda o issue y una estrategia de correccion.
+
+No ejecutar reruns hasta obtener verde, introducir retries silenciosos ni subir
+timeouts sin explicar el mecanismo. Conservar `trace.zip`, `error-context.md` y
+la evidencia disponible. Un rerun diagnostico, si se autoriza, es unico,
+deliberado y registrado; su exito no borra el fallo previo y una causa
+desconocida permanece `UNKNOWN`. El run `33668698934` es el precedente minimo:
+fallo WebKit no reproducido localmente y segundo intento remoto autorizado en
+SUCCESS, clasificado `SUSPECTED_FLAKE`, no como causa resuelta.
+
 ## 7. Independent review
 
 Una revision independiente comprueba diff completo, ownership, seguridad,
