@@ -136,8 +136,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     },
     {
       "url": "./gym/equipment.js",
-      "bytes": 8188,
-      "sha256": "dc0bbf00454e76a6c664c7fed7bbd94613764a8dce866e64d3661c9e1738b027"
+      "bytes": 9021,
+      "sha256": "188dde71c7a4d87895e524dec2403169c2ac5275e738225c327050467ffa2c84"
     },
     {
       "url": "./gym/native-workout-importer.js",
@@ -351,8 +351,8 @@ globalThis.PRECACHE_MANIFEST=Object.freeze({
     },
     {
       "url": "./workout-features.js",
-      "bytes": 191750,
-      "sha256": "9450416e1d8fd444a421afbae406443ce01f3cb42fcb73e09c5249ecd3306c92"
+      "bytes": 192655,
+      "sha256": "5fb964cfbcc619c2fe95813cf4997ba187e6ad87a5f20d52a7b4c9c38a940a65"
     },
     {
       "url": "./workout-metrics.js",

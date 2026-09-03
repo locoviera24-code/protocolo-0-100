@@ -13,6 +13,18 @@ const metrics=context.WORKOUT_METRICS;
 assert.equal(equipment.VERSION,1);
 assert.equal(equipment.normalizeSet({reps:8,weight:60}).loadMode,'total');
 assert.equal(equipment.normalizeSet({reps:8,weight:60}).measurementMode,'reps');
+assert.deepEqual(
+  {...equipment.applicableDimensions('distance')},
+  {reps:false,durationSeconds:true,distanceMeters:true,paceSecondsPerKm:true}
+);
+
+const dirtyReps={measurementMode:'reps',reps:8,weight:60,durationSeconds:60,distanceMeters:1000,paceSecondsPerKm:60};
+const cleanReps=equipment.normalizeSet(dirtyReps);
+assert.deepEqual(
+  {reps:cleanReps.reps,durationSeconds:cleanReps.durationSeconds,distanceMeters:cleanReps.distanceMeters,paceSecondsPerKm:cleanReps.paceSecondsPerKm},
+  {reps:8,durationSeconds:0,distanceMeters:0,paceSecondsPerKm:0}
+);
+assert.deepEqual(dirtyReps,{measurementMode:'reps',reps:8,weight:60,durationSeconds:60,distanceMeters:1000,paceSecondsPerKm:60},'Normalizar una lectura no debe mutar el historial');
 
 const perHand=equipment.normalizeSet({reps:8,weight:20,loadMode:'perHand',laterality:'bilateral',equipmentId:'dumbbells'});
 assert.equal(perHand.weightKg,20);
@@ -42,14 +54,19 @@ const assisted=metrics.calculateSetsMetrics([{reps:8,loadMode:'assistance',measu
 assert.equal(assisted.externalLoadVolume,0);
 assert.equal(assisted.lowestAssistanceKg,25);
 assert.equal(assisted.estimated1RM,null);
+const dirtyAssisted=equipment.normalizeSet({measurementMode:'assistance',loadMode:'assistance',reps:8,assistanceKg:30,durationSeconds:60,distanceMeters:1000});
+assert.deepEqual({reps:dirtyAssisted.reps,assistanceKg:dirtyAssisted.assistanceKg,durationSeconds:dirtyAssisted.durationSeconds,distanceMeters:dirtyAssisted.distanceMeters},{reps:8,assistanceKg:30,durationSeconds:0,distanceMeters:0});
 
-const timed=metrics.calculateSetsMetrics([{measurementMode:'time',durationSeconds:90},{measurementMode:'time',durationSeconds:60}]);
+const timed=metrics.calculateSetsMetrics([{measurementMode:'time',reps:8,durationSeconds:90,distanceMeters:1000},{measurementMode:'time',reps:8,durationSeconds:60,distanceMeters:1000}]);
 assert.equal(timed.durationSeconds,150);
 assert.equal(timed.totalReps,0);
+assert.equal(timed.distanceMeters,0);
 assert.equal(timed.estimated1RM,null);
 
-const distance=metrics.calculateSetsMetrics([{measurementMode:'distance',distanceMeters:5000,durationSeconds:1500}]);
+const distance=metrics.calculateSetsMetrics([{measurementMode:'distance',reps:8,distanceMeters:5000,durationSeconds:1500}]);
+assert.equal(distance.totalReps,0);
 assert.equal(distance.distanceMeters,5000);
+assert.equal(distance.durationSeconds,1500);
 assert.equal(distance.bestPaceSecondsPerKm,300);
 assert.equal(distance.externalLoadVolume,0);
 

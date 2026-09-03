@@ -123,6 +123,23 @@
     const load=window.WORKOUT_EQUIPMENT?.normalizeSet?.(set,exercise)||set;
     return setModel()?.normalize?.(load)||{...load,setType:load.setType||'working',completed:load.completed!==false,excludeFromRecords:!!load.excludeFromRecords,excludeFromProgression:!!load.excludeFromProgression};
   }
+  function sameStoredValue(left,right){
+    if(left===right)return true;
+    if(!left||!right||typeof left!=='object'||typeof right!=='object'||Array.isArray(left)!==Array.isArray(right))return false;
+    const leftKeys=Object.keys(left).sort(),rightKeys=Object.keys(right).sort();
+    return leftKeys.length===rightKeys.length&&leftKeys.every((key,index)=>key===rightKeys[index]&&sameStoredValue(left[key],right[key]));
+  }
+  function normalizeSessionSetWrites(rawSession,transform=(set,exercise)=>normalizeSet(set,exercise)){
+    const next=clone(rawSession),existingSession=sessions().find(session=>session.id===rawSession?.id);
+    const existingById=new Map((existingSession?.exercises||[]).flatMap(exercise=>(exercise.sets||[]).map(set=>[String(set.id||''),{set,exercise}])));
+    (next.exercises||[]).forEach(exercise=>{
+      exercise.sets=(exercise.sets||[]).map(set=>{
+        const existing=existingById.get(String(set.id||''));
+        return existing&&sameStoredValue(existing.set,set)?clone(existing.set):transform(set,exercise,existing);
+      });
+    });
+    return next;
+  }
   function setTypeLabel(value){return setModel()?.label?.(value,{short:true})||'Efectiva';}
   function setTypeOptions(){return(setModel()?.definitions?.()||[{id:'working',label:'Serie efectiva'}]).map(item=>`<option value="${escapeHtml(item.id)}">${escapeHtml(item.label)}</option>`).join('');}
   function equipmentModel(){return window.WORKOUT_EQUIPMENT||null;}
@@ -394,23 +411,20 @@
     }
   }
   function protectNativeSession(rawSession){
+    if(!rawSession?.id)return rawSession;
     const detector=window.WORKOUT_ANOMALY_DETECTOR;
-    if(!rawSession?.id||!detector?.analyze||!detector?.markPending)return rawSession;
-    const next=clone(rawSession),existingById=new Map(sessions().flatMap(session=>(session.exercises||[]).flatMap(exercise=>(exercise.sets||[]).map(set=>[String(set.id||''),{set,exercise}]))));
-    (next.exercises||[]).forEach(exercise=>{
-      exercise.sets=(exercise.sets||[]).map(set=>{
-        if(set.anomalyReview?.status)return set;
-        const existing=existingById.get(String(set.id||''));
-        if(existing&&detector.signature(existing.set,existing.exercise)===detector.signature(set,exercise))return set;
-        const analysis=detector.analyze({candidate:set,history:historicalSetsForExercise(exercise,set.id),exercise});
-        return analysis.suspicious?detector.markPending(set,analysis):set;
-      });
+    const next=normalizeSessionSetWrites(rawSession,(set,exercise,existing)=>{
+        const normalized=normalizeSet(set,exercise);
+        if(!detector?.analyze||!detector?.markPending||normalized.anomalyReview?.status)return normalized;
+        if(existing&&detector.signature(existing.set,existing.exercise)===detector.signature(normalized,exercise))return normalized;
+        const analysis=detector.analyze({candidate:normalized,history:historicalSetsForExercise(exercise,normalized.id),exercise});
+        return analysis.suspicious?detector.markPending(normalized,analysis):normalized;
     });
     next.summary=sessionSummary(next);
     return next;
   }
   function protectNativeSet(rawSet,exercise){
-    const detector=window.WORKOUT_ANOMALY_DETECTOR,set=clone(rawSet);
+    const detector=window.WORKOUT_ANOMALY_DETECTOR,set=normalizeSet(clone(rawSet),exercise);
     if(!detector?.analyze||!detector?.markPending||set.anomalyReview?.status)return set;
     const analysis=detector.analyze({candidate:set,history:historicalSetsForExercise(exercise,set.id),exercise});
     return analysis.suspicious?detector.markPending(set,analysis):set;
@@ -570,7 +584,7 @@
   }
   function replaceSessionPayload(session){
     if(!session?.id) return {ok:false,reason:'missing-session'};
-    const next=clone(session); next.summary=sessionSummary(next); replaceSession(next); return {ok:true,session:clone(next)};
+    const next=normalizeSessionSetWrites(session); next.summary=sessionSummary(next); replaceSession(next); return {ok:true,session:clone(next)};
   }
   function currentExercise(session){
     if(!session || !session.exercises?.length) return null;
@@ -1452,7 +1466,7 @@
     const selectedProfile=equipmentModel()?.profile?.(equipmentId,readStore(keys.equipmentProfiles,[]));
     const base={
       ...existing,
-      reps:measurementMode==='time'||measurementMode==='distance'?0:Math.max(0,numeric(payload.reps,existing.reps||0)),
+      reps:Math.max(0,numeric(payload.reps,existing.reps||0)),
       measurementMode,
       loadMode,
       weight:loadMode==='assistance'||loadMode==='bodyweight'?0:inputWeightKg,
