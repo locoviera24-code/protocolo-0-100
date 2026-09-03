@@ -126,9 +126,11 @@ jobs:
           node ./scripts/test-accessibility.mjs
 
       - name: Auditar accesibilidad con axe en Android, iPhone y escritorio
+        id: axe
         run: npm run test:axe
 
       - name: Probar los demas flujos Android, iPhone y escritorio
+        id: e2e
         run: npm run test:e2e -- --grep-invert @axe
 
       - name: Probar reglas Firestore en Emulator
@@ -154,10 +156,20 @@ jobs:
           ./scripts/validate-app.ps1 -CheckAndroidAssets
 
       - name: Construir y probar artifact web final
+        id: web_dist
         run: |
           npm run build:web
           npm run test:web-dist
           npm run test:web-dist:e2e
+
+      - name: Conservar evidencia Playwright ante fallo
+        if: ${{ failure() && (steps.axe.outcome == 'failure' || steps.e2e.outcome == 'failure' || steps.web_dist.outcome == 'failure') }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: playwright-failure-evidence-${{ env.QUALITY_CHANNEL }}
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: ${{ env.QUALITY_CHANNEL == 'stable' && 90 || 30 }}
 
       - name: Configurar Java 17 para Android
         uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
@@ -185,9 +197,22 @@ jobs:
         with:
           gradle-version: '8.10.2'
 
+      - name: Ejecutar tests JVM Android
+        working-directory: android-native-wrapper
+        run: gradle :app:testDebugUnitTest --stacktrace --no-daemon
+
+      - name: Conservar resultados JUnit Android
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: protocolo-android-jvm-tests-${{ env.QUALITY_CHANNEL }}
+          path: android-native-wrapper/app/build/test-results/testDebugUnitTest/
+          if-no-files-found: ignore
+          retention-days: ${{ env.QUALITY_CHANNEL == 'stable' && 90 || 30 }}
+
       - name: Compilar APK debug y release de prueba
         working-directory: android-native-wrapper
-        run: gradle :app:assembleDebug :app:assembleRelease --stacktrace
+        run: gradle :app:assembleDebug :app:assembleRelease --stacktrace --no-daemon
 
       - name: Verificar APKs y preparar artifacts
         id: metadata
