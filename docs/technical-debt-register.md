@@ -8,7 +8,7 @@ relevante, P2 mantenibilidad, P3 limpieza.
 
 - P0: 0
 - P1 open: 4
-- P1 closed/guarded: 1
+- P1 closed/guarded: 3
 - P2: 4
 - P3: 1
 
@@ -17,6 +17,8 @@ relevante, P2 mantenibilidad, P3 limpieza.
 | ID | Severity | Area | Evidence | Risk | Proposed direction | Status |
 |---|---|---|---|---|---|---|
 | GOV-001 | P1 | GitHub governance | Historicamente `main` no estaba protegida. El ruleset activo `Protect main` (ID `22116471`) ahora exige PR, cero aprobaciones, resolucion de threads y el check estricto `Quality gate beta / Web, Firebase y Android`; bloquea force push/delete y no tiene bypass actors. | Mitigado; una eliminacion o deriva futura del ruleset reabriria el riesgo. | Verificar el ruleset por API en cambios de gobernanza y usar PRs reales como prueba operacional; conservar merge commits. | CLOSED / GUARDED |
+| SEC-001 | P1 | Secrets de Actions | Los callers del quality gate heredaban todos los Secrets del repositorio, incluido el workflow automatico de PR. El reusable declara ahora solo los seis valores publicos opcionales de Firebase; PR/main no recibe Secrets, los callers manuales los mapean explicitamente y la firma Android permanece limitada al job de release. | Mitigado; agregar un Secret nuevo a un reusable o volver a usar `secrets: inherit` reabriria exposicion innecesaria. | Mantener contratos que rechacen herencia global y revisar owner/reader/proposito de cada Secret nuevo. | CLOSED / GUARDED |
+| ACT-002 | P1 | Supply chain de Actions | Las 20 invocaciones externas usaban tags mayores mutables. Ahora cada una apunta al SHA completo verificado contra el tag de su repositorio upstream; todos los checkout desactivan credenciales persistentes, Pages limita escritura al deploy y Android limita `contents: write` al job publicador y materializa la firma real solo durante el paso de compilacion con borrado garantizado. | Mitigado; los SHAs requieren actualizaciones deliberadas y una politica GitHub futura puede reforzar el pinning. | Actualizar SHA y comentario de version juntos, verificando upstream; habilitar la exigencia administrativa de SHA solo en una tarea separada. | CLOSED / GUARDED |
 | DATA-001 | P1 | Estado derivado | `advanced-features.js::syncVersionedState()` copia muchos stores en `protocolo_0_100_state_v2`; `renderAdvancedProgress()` y el wrapper de `renderAll()` lo escriben. | Snapshot duplicado y escritura por render pueden quedar desalineados o ocultar ownership. | Separar export/sync explicito; reconstruir bajo demanda y eliminar writes de render con migracion si se retira la key. | OPEN |
 | DATA-002 | P1 | Gym Party | `gym-party.js::settings()` crea y persiste `localUserId` cuando una lectura no lo encuentra; se invoca desde caminos de render. | Lecturas con side effects, carreras y tests menos deterministas. | Mover identidad a inicializacion/comando explicito e idempotente. | OPEN |
 | DATA-003 | P1 | Backup schema | Schema 3 aparece en la entrada `backup:versionedState`, `BACKUP_SERVICE.CURRENT_SCHEMA` y el agregado experimental; no existe una derivacion unica. | Un cambio parcial puede exportar/aceptar contratos incompatibles. | Derivar el servicio del registro o agregar una comprobacion unica de alineacion antes del proximo cambio de schema. | OPEN |

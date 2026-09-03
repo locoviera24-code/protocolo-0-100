@@ -13,7 +13,7 @@ on:
         default: false
         type: boolean
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   quality:
@@ -21,25 +21,35 @@ jobs:
     uses: ./.github/workflows/quality-gate.yml
     with:
       channel: ${{ inputs.prerelease && 'beta' || 'stable' }}
-    secrets: inherit
+    secrets:
+      FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+      FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
+      FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+      FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+      FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
+      FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
 
   release-apk:
     name: Compilar APK firmado y publicar checksum
     needs: quality
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Descargar repositorio
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - name: Configurar Java 17
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
           distribution: temurin
           java-version: '17'
 
       - name: Configurar Node
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: '22'
 
@@ -51,7 +61,7 @@ jobs:
         run: node ./scripts/release-identity.mjs
 
       - name: Configurar Android SDK
-        uses: android-actions/setup-android@v4
+        uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4
 
       - name: Instalar plataforma Android necesaria
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
@@ -74,34 +84,26 @@ jobs:
           ./scripts/sync-web-assets.ps1
           ./scripts/validate-app.ps1 -CheckAndroidAssets
 
-      - name: Decodificar keystore privado
-        env:
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-        run: |
-          test -n "$ANDROID_KEYSTORE_BASE64" || (echo "Falta ANDROID_KEYSTORE_BASE64" && exit 1)
-          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/protocolo-release.keystore"
-          test -s "$RUNNER_TEMP/protocolo-release.keystore"
-          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/protocolo-release.keystore" >> "$GITHUB_ENV"
-
-      - name: Configurar firma desde Secrets
-        env:
-          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: |
-          test -n "$STORE_PASSWORD" && test -n "$KEY_ALIAS" && test -n "$KEY_PASSWORD" || (echo "Faltan Secrets de firma" && exit 1)
-          echo "ANDROID_KEYSTORE_PASSWORD=$STORE_PASSWORD" >> "$GITHUB_ENV"
-          echo "ANDROID_KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
-          echo "ANDROID_KEY_PASSWORD=$KEY_PASSWORD" >> "$GITHUB_ENV"
-
       - name: Configurar Gradle
-        uses: gradle/actions/setup-gradle@v6
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6
         with:
           gradle-version: '8.10.2'
 
       - name: Compilar APK release firmado
         working-directory: android-native-wrapper
-        run: gradle :app:assembleRelease --stacktrace
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/protocolo-release.keystore
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          trap 'rm -f "$ANDROID_KEYSTORE_PATH"' EXIT
+          test -n "$ANDROID_KEYSTORE_BASE64" || (echo "Falta ANDROID_KEYSTORE_BASE64" && exit 1)
+          test -n "$ANDROID_KEYSTORE_PASSWORD" && test -n "$ANDROID_KEY_ALIAS" && test -n "$ANDROID_KEY_PASSWORD" || (echo "Faltan Secrets de firma" && exit 1)
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$ANDROID_KEYSTORE_PATH"
+          test -s "$ANDROID_KEYSTORE_PATH"
+          gradle :app:assembleRelease --stacktrace --no-daemon
 
       - name: Preparar APK versionado y SHA-256
         id: package
@@ -159,7 +161,7 @@ jobs:
           node ./scripts/android-release-continuity.mjs verify
 
       - name: Subir artifact release verificable
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: ${{ steps.identity.outputs.artifact }}
           path: |
@@ -191,7 +193,3 @@ jobs:
             exit 1
           fi
           gh release create "$TAG" "$APK" "$CHECKSUM" --target "$GITHUB_SHA" --title "$TITLE" --notes "APK Android release firmado para v$VERSION_NAME, build $BUILD_NUMBER, versionCode $VERSION_CODE. Commit: $GITHUB_SHA. Verifica la descarga con el archivo SHA-256." "${FLAGS[@]}"
-
-      - name: Eliminar keystore temporal
-        if: always()
-        run: rm -f "$RUNNER_TEMP/protocolo-release.keystore"
