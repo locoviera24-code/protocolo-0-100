@@ -58,6 +58,16 @@ test('Gym Party usa la misma revision antes de compartir una serie anomala',asyn
   await expect(page.locator('#appConfirmationTitle')).toHaveText('Revisar este registro');
   await page.locator('[data-confirmation-choice="exclude-record"]').click();
 
+  await expect.poll(()=>page.evaluate(()=>{
+    const sessions=JSON.parse(localStorage.getItem(window.WORKOUT_FEATURES.keys.workoutSessions)||'[]');
+    const localSet=sessions[0]?.exercises[0]?.sets.at(-1);
+    const shared=JSON.parse(localStorage.getItem('protocolo_0_100_shared_workout_sets_v1')||'[]').find(set=>set.localSetId===localSet?.id);
+    return{
+      localReady:localSet?.id!=='baseline-3'&&localSet?.excludeFromRecords===true&&localSet?.anomalyReview?.decision==='exclude-record',
+      sharedReady:shared?.excludeFromRecords===true&&shared?.excludeFromProgression===false
+    };
+  })).toEqual({localReady:true,sharedReady:true});
+
   const stored=await page.evaluate(()=>{
     const sessions=JSON.parse(localStorage.getItem(window.WORKOUT_FEATURES.keys.workoutSessions)||'[]');
     const localSet=sessions[0].exercises[0].sets.at(-1);
