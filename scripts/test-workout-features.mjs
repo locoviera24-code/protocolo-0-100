@@ -101,6 +101,74 @@ assert.ok(workout.planForDate('2026-06-22').exercises.some(exercise => exercise.
 assert.ok(workout.planForDate('2026-06-23').exercises.some(exercise => exercise.name === 'Máquina de aductores, cerrar piernas'));
 assert.ok(workout.planForDate('2026-06-23').exercises.some(exercise => exercise.name === 'Elevación de punta del pie / tibial anterior'));
 
+const {context: restContext, store: restStore} = createContext({}, '2026-06-27');
+const restWorkout = restContext.WORKOUT_FEATURES;
+const factoryRestPlanBefore = restWorkout.getWeeklyWorkoutPlan();
+assert.equal(restWorkout.getQuickWorkoutState({date:'2026-06-27'}).type,'rest');
+assert.deepEqual(JSON.parse(restStore.get(restWorkout.keys.workoutSessions)),[],'Consultar Gym en descanso no debe crear una sesión');
+assert.equal(restWorkout.buildWorkoutWidgetState('2026-06-27').workoutSession,null,'Renderizar el widget en descanso no debe crear una sesión');
+assert.equal(restWorkout.saveQuickSetPayload({date:'2026-06-27',reps:8,weight:0}).reason,'rest','Guardar sin inicio explícito no debe crear una sesión');
+assert.deepEqual(JSON.parse(restStore.get(restWorkout.keys.workoutSessions)),[]);
+const restStarted = restWorkout.startWorkoutPayload({date:'2026-06-27'});
+assert.equal(restStarted.ok,true);
+assert.equal(restStarted.reused,false);
+assert.equal(restStarted.session.status,'en progreso');
+assert.equal(restStarted.session.routine.name,'Entrenamiento libre');
+assert.equal(restStarted.session.exercises.length,0);
+assert.equal(restStarted.state.type,'workout');
+assert.equal(restWorkout.buildWorkoutWidgetState('2026-06-27').type,'workout');
+assert.equal(restWorkout.buildWorkoutWidgetState('2026-06-27').routineName,'Entrenamiento libre');
+const restStartedAgain = restWorkout.startWorkoutPayload({date:'2026-06-27'});
+assert.equal(restStartedAgain.reused,true);
+assert.equal(restStartedAgain.session.id,restStarted.session.id);
+assert.equal(JSON.parse(restStore.get(restWorkout.keys.workoutSessions)).length,1,'Inicio repetido debe reutilizar la sesión activa');
+const restExercise = restWorkout.addManualExercisePayload({date:'2026-06-27',name:'Press de banca',muscle:'Pecho',persistScope:'session'});
+assert.equal(restExercise.ok,true);
+assert.equal(restExercise.session.id,restStarted.session.id);
+const restSet = restWorkout.saveQuickSetPayload({date:'2026-06-27',exerciseId:restExercise.exercise.id,measurementMode:'reps',reps:8,weight:0,durationSeconds:60,distanceMeters:1000});
+assert.equal(restSet.ok,true);
+assert.deepEqual(
+  {reps:restSet.set.reps,durationSeconds:restSet.set.durationSeconds,distanceMeters:restSet.set.distanceMeters,paceSecondsPerKm:restSet.set.paceSecondsPerKm},
+  {reps:8,durationSeconds:0,distanceMeters:0,paceSecondsPerKm:0}
+);
+const editedRestSet=restWorkout.updateQuickSetPayload({date:'2026-06-27',exerciseId:restExercise.exercise.id,setId:restSet.set.id,measurementMode:'reps',reps:9,weight:0,durationSeconds:60,distanceMeters:1000});
+assert.equal(editedRestSet.ok,true);
+assert.deepEqual({reps:editedRestSet.set.reps,durationSeconds:editedRestSet.set.durationSeconds,distanceMeters:editedRestSet.set.distanceMeters},{reps:9,durationSeconds:0,distanceMeters:0});
+const secondRestSet=restWorkout.saveQuickSetPayload({date:'2026-06-27',exerciseId:restExercise.exercise.id,measurementMode:'reps',reps:7,weight:0});
+assert.equal(restWorkout.undoSavedQuickSetPayload(secondRestSet.undoReceipt).ok,true);
+assert.equal(restWorkout.getQuickWorkoutState({date:'2026-06-27',exerciseId:restExercise.exercise.id}).currentSets.length,1,'Deshacer debe operar sobre la misma sesión libre');
+assert.deepEqual(restWorkout.getWeeklyWorkoutPlan(),factoryRestPlanBefore,'Entrenar durante descanso no debe mutar el plan factory');
+assert.equal(restWorkout.planForDate('2026-06-27').type,'rest');
+const reloadedRest = createContext(Object.fromEntries(restStore), '2026-06-27');
+const reloadedRestWorkout = reloadedRest.context.WORKOUT_FEATURES;
+assert.equal(reloadedRestWorkout.getQuickWorkoutState({date:'2026-06-27'}).session.id,restStarted.session.id,'Reload debe recuperar la misma sesión');
+assert.equal(reloadedRestWorkout.startWorkoutPayload({date:'2026-06-27'}).session.id,restStarted.session.id,'Reanudar no debe duplicar la sesión');
+assert.equal(JSON.parse(reloadedRest.store.get(reloadedRestWorkout.keys.workoutSessions)).length,1);
+
+const customRestPlan=structuredClone(factoryRestPlanBefore);
+customRestPlan.saturday={...customRestPlan.saturday,name:'Descanso personalizado',message:'Recuperación elegida.',suggestions:['caminar'],exercises:[customRestPlan.monday.exercises[0]]};
+const customRestContext=createContext({[restWorkout.keys.weeklyWorkoutPlan]:JSON.stringify(customRestPlan)},'2026-06-27');
+const customRestWorkout=customRestContext.context.WORKOUT_FEATURES;
+const customBefore=customRestWorkout.getWeeklyWorkoutPlan();
+const customStarted=customRestWorkout.startWorkoutPayload({date:'2026-06-27'});
+assert.equal(customStarted.ok,true);
+assert.equal(customStarted.state.exercises.length,0,'Una sesión libre no debe mostrar ejercicios residuales de un REST_DAY legado');
+assert.equal(customRestWorkout.buildWorkoutWidgetState('2026-06-27').exercises.length,0,'El widget no debe proyectar ejercicios que no pertenecen a la sesión libre');
+assert.deepEqual(customRestWorkout.getWeeklyWorkoutPlan(),customBefore,'La excepción diaria no debe mutar un plan existente');
+assert.equal(customRestWorkout.planForDate('2026-06-27').name,'Descanso personalizado');
+
+const normalDayContext=createContext({},'2026-06-22');
+const normalDayWorkout=normalDayContext.context.WORKOUT_FEATURES;
+const normalPlanBefore=normalDayWorkout.getWeeklyWorkoutPlan();
+const normalStarted=normalDayWorkout.startWorkoutPayload({date:'2026-06-22'});
+assert.equal(normalStarted.session.routine.name,'Torso A');
+assert.ok(normalStarted.session.exercises.length>0,'Un día normal conserva los ejercicios planificados');
+assert.deepEqual(normalDayWorkout.getWeeklyWorkoutPlan(),normalPlanBefore);
+const renamedNormalPlan=structuredClone(normalPlanBefore);
+renamedNormalPlan.monday.name='Torso actual';
+normalDayContext.store.set(normalDayWorkout.keys.weeklyWorkoutPlan,JSON.stringify(renamedNormalPlan));
+assert.equal(normalDayWorkout.buildWorkoutWidgetState('2026-06-22').routineName,'Torso actual','El widget de un día normal conserva la proyección del plan actual');
+
 const widgetState = workout.buildWorkoutWidgetState('2026-06-22');
 assert.equal(widgetState.title, 'Lunes — Torso A');
 assert.equal(widgetState.schemaVersion, 3);

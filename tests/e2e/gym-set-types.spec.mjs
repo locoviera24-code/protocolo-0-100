@@ -15,6 +15,56 @@ async function openQuickType(page){
   if(!(await details.evaluate(element=>element.open))) await details.locator('summary').click();
 }
 
+test('un descanso permite entrenar por decisión explícita sin cambiar el plan',async({page})=>{
+  await reset(page,'/index.html?module=gym&view=train');
+  const seeded=await page.evaluate(()=>{
+    const workout=window.WORKOUT_FEATURES,date=todayStr(),dayKey=workout.dayKeyForDate(date);
+    const plan=workout.getWeeklyWorkoutPlan();
+    plan[dayKey]={dayKey,weekday:plan[dayKey].weekday,name:'Descanso de prueba',type:'rest',muscles:['Recuperación'],message:'Recuperación planificada.',suggestions:['caminar'],exercises:[]};
+    window.APP_DATA.write(workout.keys.weeklyWorkoutPlan,plan);
+    return {date,dayKey,plan};
+  });
+  await page.reload();
+
+  const before=await page.evaluate(()=>({
+    plan:window.WORKOUT_FEATURES.getWeeklyWorkoutPlan(),
+    sessions:JSON.parse(localStorage.getItem(window.WORKOUT_FEATURES.keys.workoutSessions)||'[]')
+  }));
+  expect(before.sessions).toHaveLength(0);
+  expect(before.plan).toEqual(seeded.plan);
+  await expect(page.locator('#startTodayWorkoutBtn')).toBeVisible();
+  await expect(page.locator('#startTodayWorkoutBtn')).toHaveText('Entrenar hoy');
+
+  await page.locator('#startTodayWorkoutBtn').click();
+  const started=await page.evaluate(()=>JSON.parse(localStorage.getItem(window.WORKOUT_FEATURES.keys.workoutSessions)||'[]'));
+  expect(started).toHaveLength(1);
+  expect(started[0]).toMatchObject({date:seeded.date,status:'en progreso',routine:{name:'Entrenamiento libre',exercises:[]}});
+  await expect(page.locator('#openQuickLoggerBtn')).toBeVisible();
+
+  await page.locator('#quickExerciseSelect').selectOption({label:'Press de banca'});
+  await page.locator('#quickReps').fill('8');
+  await page.locator('#quickWeight').fill('0');
+  const sessionId=started[0].id;
+  await page.reload();
+  await expect(page.locator('#quickReps')).toHaveValue('8');
+  const resumed=await page.evaluate(()=>JSON.parse(localStorage.getItem(window.WORKOUT_FEATURES.keys.workoutSessions)||'[]'));
+  expect(resumed).toHaveLength(1);
+  expect(resumed[0].id).toBe(sessionId);
+
+  await page.locator('#saveQuickSetBtn').click();
+  await expect(page.locator('#quickLoggedSets')).toContainText('8 reps');
+  const after=await page.evaluate(()=>{
+    const workout=window.WORKOUT_FEATURES;
+    const sessions=JSON.parse(localStorage.getItem(workout.keys.workoutSessions)||'[]');
+    const set=sessions[0].exercises.find(exercise=>exercise.name==='Press de banca').sets[0];
+    return {plan:workout.getWeeklyWorkoutPlan(),sessions,set};
+  });
+  expect(after.sessions).toHaveLength(1);
+  expect(after.set).toMatchObject({measurementMode:'reps',reps:8,durationSeconds:0,distanceMeters:0,paceSecondsPerKm:0});
+  expect(after.plan).toEqual(seeded.plan);
+  expect(after.plan[seeded.dayKey].type).toBe('rest');
+});
+
 test('un set de repeticiones ignora tiempo y distancia ocultos',async({page})=>{
   await reset(page,'/index.html?module=gym&view=train');
   await page.locator('#quickExerciseSelect').selectOption({label:'Press de banca'});

@@ -544,19 +544,20 @@
     const snapshot=taxonomy.snapshotFor({exercise,definition,capturedAt});
     return {...clone(exercise),primaryMuscles:[...snapshot.primaryMuscles],secondaryMuscles:[...snapshot.secondaryMuscles],muscleTaxonomyVersion:snapshot.taxonomyVersion,classificationStatus:snapshot.classificationStatus,classificationSource:snapshot.classificationSource,classificationConfidence:snapshot.classificationConfidence,muscleClassificationNeedsReview:snapshot.classificationStatus==='needs-review',muscleClassificationSnapshot:snapshot};
   }
-  function ensureSession(date=todayStr()){
+  function ensureSession(date=todayStr(),{allowRestDay=false}={}){
     const existing=activeSession(date);
     if(existing) return existing;
     const plan=planForDate(date);
-    if(plan.type==='rest') return null;
+    if(plan.type==='rest'&&!allowRestDay) return null;
     const startedAt=new Date().toISOString(),library=libraryData();
-    const capturedExercises=plan.exercises.map((exercise,index)=>captureMuscleClassification({...exercise,order:index+1},libraryMatchFor(exercise,library),startedAt));
+    const isRestDay=plan.type==='rest';
+    const capturedExercises=(isRestDay?[]:plan.exercises).map((exercise,index)=>captureMuscleClassification({...exercise,order:index+1},libraryMatchFor(exercise,library),startedAt));
     const created={
       id:uid('workout'),
       date,
       dayKey:plan.dayKey,
       weekday:plan.weekday,
-      routine:{dayKey:plan.dayKey,name:plan.name,muscles:plan.muscles,exercises:clone(capturedExercises)},
+      routine:{dayKey:plan.dayKey,name:isRestDay?'Entrenamiento libre':plan.name,muscles:isRestDay?[]:plan.muscles,exercises:clone(capturedExercises)},
       startedAt,
       finishedAt:null,
       status:'en progreso',
@@ -573,6 +574,11 @@
     // the new session now instead of waiting for the first saved set.
     syncWorkoutWidget();
     return created;
+  }
+  function startWorkoutPayload({date=todayStr()}={}){
+    const existing=activeSession(date);
+    const session=ensureSession(date,{allowRestDay:true});
+    return {ok:!!session,reused:!!existing,session:session?clone(session):null,state:getQuickWorkoutState({date})};
   }
   function replaceSession(session){
     const list=sessions();
@@ -969,16 +975,20 @@
     title.textContent=`${plan.weekday} — ${plan.name}`;
     subtitle.textContent=plan.type==='rest'?plan.message:(plan.muscles||[]).join(' · ');
     const settingsValue=settings();
-    if(plan.type==='rest'){
+    if(plan.type==='rest'&&!session){
       const restText=settingsValue.showRestDays ? `${escapeHtml(plan.message)}<br>${escapeHtml((plan.suggestions||[]).join(' · '))}` : 'Día de descanso oculto en ajustes. La recuperación sigue contando.';
       list.innerHTML=`<div class="emptyState">${restText}</div>`;
       progress.innerHTML=[['Estado','Descanso'],['Sugerencia','Movilidad'],['Registro',session?'Hecho':'Opcional'],['Widget',settingsValue.widgetEnabled?'Activo':'Pausado']].map(statCard).join('');
       if(score) score.textContent='Recuperación';
       if(lever) lever.textContent='Hoy toca descanso: recuperación también cuenta.';
-      if(startButton)startButton.hidden=true;
+      if(startButton){startButton.hidden=false;startButton.textContent='Entrenar hoy';}
       if(continueButton)continueButton.hidden=true;
       if(exerciseCount)exerciseCount.textContent='Recuperación';
       return;
+    }
+    if(plan.type==='rest'){
+      title.textContent=`${plan.weekday} — ${session.routine?.name||'Entrenamiento libre'}`;
+      subtitle.textContent=`${plan.name} en tu planificación · entrenamiento opcional.`;
     }
     const exercises=session?.exercises||plan.exercises;
     if(exerciseCount)exerciseCount.textContent=`${exercises.length} ejercicios`;
@@ -994,7 +1004,7 @@
     if(score) score.textContent=`Score gym ${Math.min(100,Math.round((completed/Math.max(1,total))*70 + Math.min(30,totalSets*2)))}/100`;
     if(lever) lever.textContent=totalSets?'Según lo registrado, priorizá técnica antes que carga y registrá la siguiente serie.':'Palanca física de hoy: registrar pesos para medir progreso.';
     const active=session?.status==='en progreso';
-    if(startButton)startButton.hidden=active;
+    if(startButton){startButton.hidden=active;startButton.textContent=plan.type==='rest'?'Entrenar de nuevo':'Empezar entrenamiento';}
     if(continueButton){continueButton.hidden=!active;continueButton.textContent='Continuar entrenamiento';}
   }
   function statCard([k,v]){
@@ -1145,7 +1155,7 @@
     const date=todayStr(),plan=planForDate(date);
     const select=document.getElementById('quickExerciseSelect'); if(!select) return;
     const session=activeSession(date) || latestSessionForDate(date);
-    const source=session?.exercises?.length?session.exercises:plan.exercises;
+    const source=session&&plan.type==='rest'?(session.exercises||[]):session?.exercises?.length?session.exercises:plan.exercises;
     const pendingDraft=window.APP_DRAFTS?.list?.('gym-set')?.find(item=>item.payload?.date===date&&(source||[]).some(exercise=>(exercise.id||exercise.exerciseId)===item.payload.exerciseId));
     if(!currentQuickExerciseId&&pendingDraft?.payload?.exerciseId)currentQuickExerciseId=pendingDraft.payload.exerciseId;
     if(!editingQuickSetId&&pendingDraft?.payload?.setId)editingQuickSetId=pendingDraft.payload.setId;
@@ -1234,7 +1244,7 @@
     document.getElementById('todayWorkoutPanel')?.scrollIntoView({behavior:window.preferredMotionBehavior?.()||'auto',block:'start'});
   }
   function openQuickSetLogger(exerciseId){
-    const session=ensureSession(todayStr());
+    const session=startWorkoutPayload({date:todayStr()}).session;
     activateNativeControlsForSession();
     if(exerciseId) currentQuickExerciseId=exerciseId;
     else if(session) currentQuickExerciseId=currentExercise(session)?.id || currentExercise(session)?.exerciseId || null;
@@ -1267,7 +1277,7 @@
     ensureWorkoutData();
     const plan=planForDate(date);
     const session=activeSession(date) || latestSessionForDate(date);
-    const source=session?.exercises?.length?session.exercises:plan.exercises||[];
+    const source=session&&plan.type==='rest'?(session.exercises||[]):session?.exercises?.length?session.exercises:plan.exercises||[];
     const selectedId=exerciseId || currentQuickExerciseId || currentExercise(session)?.id || source.find(x=>!x.completed)?.id || source[0]?.id || source[0]?.exerciseId || '';
     const exercise=source.find(x=>x.id===selectedId || x.exerciseId===selectedId) || source[0] || null;
     const h=exercise?.exerciseId ? history()[exercise.exerciseId] : null;
@@ -1275,7 +1285,7 @@
     const last=sets[sets.length-1]||null;
     const bodyweight=!!(exercise?.bodyweight || last?.bodyweight || h?.bodyweight);
     const summary=session?sessionSummary(session):null;
-    const effectiveType=session?.exercises?.length?'workout':plan.type;
+    const effectiveType=session?'workout':plan.type;
     const routineName=session?.routine?.name||plan.name;
     const muscles=session?.routine?.muscles?.length?session.routine.muscles:(plan.muscles||[]);
     return {
@@ -2201,7 +2211,9 @@
   }
   function buildWorkoutWidgetState(date=todayStr()){
     const plan=planForDate(date),session=latestSessionForDate(date),summary=session?sessionSummary(session):null;
-    const generatedAt=new Date().toISOString(),sourceExercises=session?.exercises?.length?session.exercises:plan.exercises||[],library=libraryData();
+    const restDaySession=plan.type==='rest'&&!!session;
+    const routineName=restDaySession?(session.routine?.name||'Entrenamiento libre'):plan.name,effectiveType=restDaySession?'workout':plan.type;
+    const generatedAt=new Date().toISOString(),sourceExercises=restDaySession?(session.exercises||[]):session?.exercises?.length?session.exercises:plan.exercises||[],library=libraryData();
     const exercises=sourceExercises.map(exercise=>exercise.muscleClassificationSnapshot?exercise:captureMuscleClassification(exercise,libraryMatchFor(exercise,library),generatedAt));
     const current=currentExercise(session)||exercises.find(x=>!x.completed)||exercises[0]||null;
     const completed=summary?.completedExercises||0,total=exercises.length,totalSets=summary?.totalSets||0,totalVolume=summary?.totalVolume||0;
@@ -2306,11 +2318,11 @@
       date,
       dayKey:plan.dayKey,
       weekday:plan.weekday,
-      title:`${plan.weekday} — ${plan.name}`,
-      routineName:plan.name,
-      type:plan.type,
+      title:`${plan.weekday} — ${routineName}`,
+      routineName,
+      type:effectiveType,
       unit:s.unit,
-      muscles:plan.muscles||[],
+      muscles:restDaySession?(session.routine?.muscles||[]):plan.muscles||[],
       message:restMessage,
       suggestions:s.showRestDays?(plan.suggestions||[]):[],
       weeklyWorkoutPlan:weeklyPlan(),
@@ -2382,7 +2394,7 @@
       },
       workoutSession:session?clone(session):null,
       exerciseHistory:history(),
-      progressText:plan.type==='rest'?restMessage:`${completed}/${total} ejercicios · ${totalSets} series · ${Math.round(s.unit==='lb'?totalVolume*LB_PER_KG:totalVolume).toLocaleString()} ${s.unit}`,
+      progressText:plan.type==='rest'&&!session?restMessage:`${completed}/${total} ejercicios · ${totalSets} series · ${Math.round(s.unit==='lb'?totalVolume*LB_PER_KG:totalVolume).toLocaleString()} ${s.unit}`,
       completedExercises:completed,
       totalExercises:total,
       totalSets,
@@ -2417,7 +2429,7 @@
     else if(action===actionWidgetSaveSet){syncWorkoutWidget();openGymToday();}
   }
 
-  window.WORKOUT_FEATURES={keys,dayOrder,defaultWeeklyPlan:clone(defaultWeeklyPlan),exerciseLibrary:clone(exerciseLibrary),EXERCISE_LIBRARY_VERSION,ready:()=>initializeWorkoutFeatures(),getExerciseLibrary:()=>clone(libraryData()),getPendingMuscleClassifications:()=>clone(pendingMuscleClassifications()),confirmExerciseClassificationPayload,previewHistoricalClassificationMigration,applyHistoricalClassificationMigration,undoHistoricalClassificationMigration,getWeeklyWorkoutPlan:()=>clone(weeklyPlan()),getEquipmentProfiles:()=>clone(equipmentProfiles()),getGymSettings:()=>clone(settings()),updateGymSettings:next=>{saveSettings(next||{});return clone(settings());},displayWeight,canonicalWeight,displayVolume,migrateExerciseLibrary,migrateLegacyGymSessions,dayKeyForDate,planForDate,rankExercisesForContext,getQuickWorkoutState,addManualExercisePayload,saveQuickSetPayload,updateQuickSetPayload,reviewAnomalousSetResult,deleteQuickSetPayload,undoDeleteQuickSetPayload,undoSavedQuickSetPayload,canUndoQuickSetDelete:()=>!!lastDeletedQuickSet,replaceSessionPayload,completeQuickExercisePayload,finishWorkoutPayload,buildWorkoutWidgetState,syncWorkoutWidget,importWidgetStateFromAndroid,importNativeWorkoutMutationsFromAndroid,adoptNativeWorkoutSelection};
+  window.WORKOUT_FEATURES={keys,dayOrder,defaultWeeklyPlan:clone(defaultWeeklyPlan),exerciseLibrary:clone(exerciseLibrary),EXERCISE_LIBRARY_VERSION,ready:()=>initializeWorkoutFeatures(),getExerciseLibrary:()=>clone(libraryData()),getPendingMuscleClassifications:()=>clone(pendingMuscleClassifications()),confirmExerciseClassificationPayload,previewHistoricalClassificationMigration,applyHistoricalClassificationMigration,undoHistoricalClassificationMigration,getWeeklyWorkoutPlan:()=>clone(weeklyPlan()),getEquipmentProfiles:()=>clone(equipmentProfiles()),getGymSettings:()=>clone(settings()),updateGymSettings:next=>{saveSettings(next||{});return clone(settings());},displayWeight,canonicalWeight,displayVolume,migrateExerciseLibrary,migrateLegacyGymSessions,dayKeyForDate,planForDate,rankExercisesForContext,startWorkoutPayload,getQuickWorkoutState,addManualExercisePayload,saveQuickSetPayload,updateQuickSetPayload,reviewAnomalousSetResult,deleteQuickSetPayload,undoDeleteQuickSetPayload,undoSavedQuickSetPayload,canUndoQuickSetDelete:()=>!!lastDeletedQuickSet,replaceSessionPayload,completeQuickExercisePayload,finishWorkoutPayload,buildWorkoutWidgetState,syncWorkoutWidget,importWidgetStateFromAndroid,importNativeWorkoutMutationsFromAndroid,adoptNativeWorkoutSelection};
   window.openGymToday=openGymToday;
   window.openQuickSetLogger=openQuickSetLogger;
   window.handleAndroidWidgetIntent=(action,payload)=>handleAndroidWidgetIntent(action,payload||{});
