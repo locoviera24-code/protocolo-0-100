@@ -32,7 +32,9 @@ test('alimento personalizado usa campos basicos y acepta coma decimal',async({pa
 
   await page.getByRole('button',{name:'Agregar',exact:true}).click();
   await page.getByRole('button',{name:'No encuentro este alimento'}).click();
+  await expect(page.locator('#nutritionRecipesCard').getByRole('heading',{name:'Mis alimentos y recetas',exact:true})).toBeFocused();
   await page.locator('#customFoodName').fill('Yogur decimal de prueba');
+  await expect(page.locator('#customFoodName')).toHaveValue('Yogur decimal de prueba');
   await page.locator('#useCustomFoodBtn').click();
   await expect(page.locator('#customFoodName')).toHaveAttribute('aria-invalid','true');
   await expect(page.locator('#customFoodDetails')).toContainText('Ya existe');
