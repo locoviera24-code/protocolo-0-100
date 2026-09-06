@@ -167,7 +167,62 @@ assert.deepEqual(normalDayWorkout.getWeeklyWorkoutPlan(),normalPlanBefore);
 const renamedNormalPlan=structuredClone(normalPlanBefore);
 renamedNormalPlan.monday.name='Torso actual';
 normalDayContext.store.set(normalDayWorkout.keys.weeklyWorkoutPlan,JSON.stringify(renamedNormalPlan));
-assert.equal(normalDayWorkout.buildWorkoutWidgetState('2026-06-22').routineName,'Torso actual','El widget de un día normal conserva la proyección del plan actual');
+assert.equal(normalDayWorkout.buildWorkoutWidgetState('2026-06-22').routineName,'Torso A','Editar el plan no cambia el snapshot de la sesión iniciada');
+renamedNormalPlan.monday.exercises=[];
+renamedNormalPlan.monday.muscles=[];
+normalDayContext.store.set(normalDayWorkout.keys.weeklyWorkoutPlan,JSON.stringify(renamedNormalPlan));
+assert.deepEqual(normalDayWorkout.getQuickWorkoutState().session,normalStarted.session);
+assert.deepEqual(normalDayWorkout.buildWorkoutWidgetState().exercises.map(e=>e.id),normalStarted.session.exercises.map(e=>e.id));
+assert.deepEqual(normalDayWorkout.buildWorkoutWidgetState().muscles,normalStarted.session.routine.muscles);
+assert.equal(normalDayWorkout.buildWorkoutWidgetState().weeklyWorkoutPlan.monday.name,'Torso actual');
+
+{
+  const own=createContext(),w=own.context.WORKOUT_FEATURES,planBefore=w.getWeeklyWorkoutPlan(),libraryBefore=w.getExerciseLibrary();
+  const writes=[],set=own.store.set.bind(own.store);
+  own.store.set=(key,value)=>{if(key===w.keys.workoutSessions)writes.push(JSON.parse(value));return set(key,value);};
+  const args={startMode:'own',name:'Press de banca',persistScope:'session',rememberForWeekday:false,saveToLibrary:false};
+  assert.equal(w.addManualExercisePayload({...args,name:' '}).reason,'missing-name');
+  assert.equal(writes.length,0,'Validar antes de crear una sesión propia');
+  const first=w.addManualExercisePayload(args);
+  assert.equal(first.ok,true);
+  assert.equal(writes.length,1,'No persistir una sesión vacía intermedia');
+  assert.equal(writes[0].length,1);assert.equal(writes[0][0].exercises.length,1);
+  assert.equal(first.session.routine.name,'Entrenamiento libre');
+  assert.equal(first.exercise.name,'Press de banca');
+  assert.deepEqual(Array.from(first.session.routine.muscles),['Pecho']);
+  assert.deepEqual(w.getWeeklyWorkoutPlan(),planBefore);assert.deepEqual(w.getExerciseLibrary(),libraryBefore);
+  assert.equal(w.addManualExercisePayload(args).session.id,first.session.id);
+  assert.equal(w.startWorkoutPayload().session.id,first.session.id,'Un start nunca reemplaza la sesión activa');
+  const saved=w.saveQuickSetPayload({exerciseId:first.exercise.id,reps:8,weight:80,measurementMode:'reps',durationSeconds:60,distanceMeters:1000});
+  assert.equal(saved.ok,true);
+  assert.equal(saved.session.exercises[0].sets[0].durationSeconds,0);
+  assert.equal(saved.session.exercises[0].sets[0].distanceMeters,0);
+  const changed=structuredClone(planBefore);changed.monday.name='Otro plan';changed.monday.exercises=[];
+  own.store.set(w.keys.weeklyWorkoutPlan,JSON.stringify(changed));
+  const reloaded=createContext(Object.fromEntries(own.store)).context.WORKOUT_FEATURES;
+  assert.equal(reloaded.getQuickWorkoutState().session.id,first.session.id);
+  assert.equal(reloaded.getQuickWorkoutState().exercises.length,1);
+  assert.equal(reloaded.buildWorkoutWidgetState().routineName,'Entrenamiento libre');
+}
+for(const value of [[],undefined,null,{}]){
+  const sample=createContext(),w=sample.context.WORKOUT_FEATURES;
+  const session=w.startWorkoutPayload().session;
+  session.exercises=value;session.routine.muscles=[];
+  sample.store.set(w.keys.workoutSessions,JSON.stringify([session]));
+  const before=sample.store.get(w.keys.workoutSessions);
+  const state=w.getQuickWorkoutState(),widget=w.buildWorkoutWidgetState();
+  assert.equal(state.exercises.length,0);assert.equal(widget.exercises.length,0);
+  assert.equal(widget.muscles.length,0);assert.equal(widget.currentExerciseId,'');
+  if(!Array.isArray(value)){
+    assert.equal(state.error,'invalid-session');assert.equal(widget.workoutSession,null);
+    assert.equal(widget.status,'sin iniciar');
+    assert.equal(w.startWorkoutPayload().reason,'invalid-session');
+    assert.equal(w.addManualExercisePayload({startMode:'own',name:'Press de banca'}).reason,'invalid-session');
+    assert.equal(w.finishWorkoutPayload().reason,'invalid-session');
+    assert.equal(w.replaceSessionPayload(session).reason,'invalid-session');
+  }else assert.equal(state.error,null);
+  assert.equal(sample.store.get(w.keys.workoutSessions),before,'No reparar ni reescribir datos durante lectura');
+}
 
 const widgetState = workout.buildWorkoutWidgetState('2026-06-22');
 assert.equal(widgetState.title, 'Lunes — Torso A');

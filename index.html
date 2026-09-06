@@ -1469,6 +1469,11 @@ function deleteGymSession(id){
   flash('Sesión eliminada.');
 }
 function renderGym(){
+  if(canonicalGymSessions().some(session=>!Array.isArray(session?.exercises))){
+    const stats=document.getElementById('gymStats');if(stats)stats.textContent='No se puede leer este entrenamiento. Revisá los datos antes de continuar.';
+    document.getElementById('gymHistoryTable')?.replaceChildren();
+    return;
+  }
   const sessions=canonicalGymSessions().slice().sort((a,b)=>a.date.localeCompare(b.date)).map(session=>({id:session.id,date:session.date,routine:session.routine?.name||session.routineName||'Entrenamiento',items:gymSessionDraft(session),notes:session.notes||'',volume:window.WORKOUT_METRICS?.calculateSessionMetrics?.(session).externalLoadVolume||0}));
   const stats=document.getElementById('gymStats');
   if(stats){

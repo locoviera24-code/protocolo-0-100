@@ -77,6 +77,8 @@
     sunday:restDay('sunday','Descanso / revisión semanal','Hoy toca descanso o revisión semanal.',['revisar entrenamientos','revisar progresión','preparar semana','movilidad suave'])
   };
   let currentQuickExerciseId=null;
+  let ownWorkoutDate='';
+  let ownExercisePickerOpen=false;
   let currentPlanEditorDay='monday';
   let lastDeletedPlanExercise=null;
   let lastDeletedQuickSet=null;
@@ -544,20 +546,20 @@
     const snapshot=taxonomy.snapshotFor({exercise,definition,capturedAt});
     return {...clone(exercise),primaryMuscles:[...snapshot.primaryMuscles],secondaryMuscles:[...snapshot.secondaryMuscles],muscleTaxonomyVersion:snapshot.taxonomyVersion,classificationStatus:snapshot.classificationStatus,classificationSource:snapshot.classificationSource,classificationConfidence:snapshot.classificationConfidence,muscleClassificationNeedsReview:snapshot.classificationStatus==='needs-review',muscleClassificationSnapshot:snapshot};
   }
-  function ensureSession(date=todayStr(),{allowRestDay=false}={}){
-    const existing=activeSession(date);
-    if(existing) return existing;
-    const plan=planForDate(date);
-    if(plan.type==='rest'&&!allowRestDay) return null;
+  function invalidSession(session){return !!session&&!Array.isArray(session.exercises);}
+  function sessionExercises(session,plan){
+    return session?(Array.isArray(session.exercises)?session.exercises:[]):(Array.isArray(plan?.exercises)?plan.exercises:[]);
+  }
+  function sessionDataError(){return {ok:false,reason:'invalid-session',message:'No se puede leer este entrenamiento. Revisá los datos antes de continuar.'};}
+  function createSession(date,plan,{empty=false}={}){
     const startedAt=new Date().toISOString(),library=libraryData();
-    const isRestDay=plan.type==='rest';
-    const capturedExercises=(isRestDay?[]:plan.exercises).map((exercise,index)=>captureMuscleClassification({...exercise,order:index+1},libraryMatchFor(exercise,library),startedAt));
+    const capturedExercises=(empty?[]:sessionExercises(null,plan)).map((exercise,index)=>captureMuscleClassification({...exercise,order:index+1},libraryMatchFor(exercise,library),startedAt));
     const created={
       id:uid('workout'),
       date,
       dayKey:plan.dayKey,
       weekday:plan.weekday,
-      routine:{dayKey:plan.dayKey,name:isRestDay?'Entrenamiento libre':plan.name,muscles:isRestDay?[]:plan.muscles,exercises:clone(capturedExercises)},
+      routine:{dayKey:plan.dayKey,name:empty?'Entrenamiento libre':plan.name,muscles:empty?[]:clone(plan.muscles||[]),exercises:clone(capturedExercises)},
       startedAt,
       finishedAt:null,
       status:'en progreso',
@@ -567,6 +569,14 @@
       subjectiveNote:'',
       summary:null
     };
+    return created;
+  }
+  function ensureSession(date=todayStr(),{allowRestDay=false}={}){
+    const existing=activeSession(date);
+    if(existing) return invalidSession(existing)?null:existing;
+    const plan=planForDate(date);
+    if(plan.type==='rest'&&!allowRestDay) return null;
+    const created=createSession(date,plan,{empty:plan.type==='rest'});
     const list=sessions();
     list.push(created);
     saveSessions(list);
@@ -577,6 +587,7 @@
   }
   function startWorkoutPayload({date=todayStr()}={}){
     const existing=activeSession(date);
+    if(invalidSession(existing))return sessionDataError();
     const session=ensureSession(date,{allowRestDay:true});
     return {ok:!!session,reused:!!existing,session:session?clone(session):null,state:getQuickWorkoutState({date})};
   }
@@ -590,10 +601,11 @@
   }
   function replaceSessionPayload(session){
     if(!session?.id) return {ok:false,reason:'missing-session'};
+    if(invalidSession(session))return sessionDataError();
     const next=normalizeSessionSetWrites(session); next.summary=sessionSummary(next); replaceSession(next); return {ok:true,session:clone(next)};
   }
   function currentExercise(session){
-    if(!session || !session.exercises?.length) return null;
+    if(!session || !Array.isArray(session.exercises)||!session.exercises.length) return null;
     const byId=currentQuickExerciseId ? session.exercises.find(x=>x.id===currentQuickExerciseId || x.exerciseId===currentQuickExerciseId) : null;
     if(byId) return byId;
     return session.exercises[Math.min(session.currentExerciseIndex||0,session.exercises.length-1)] || session.exercises.find(x=>!x.completed) || session.exercises[0];
@@ -627,6 +639,7 @@
   }
   function selectedMuscleChoices(name){return[...document.querySelectorAll(`input[name="${name}"]:checked`)].map(input=>input.value);}
   function sessionSummary(session){
+    if(invalidSession(session))return null;
     const exercises=session.exercises||[];
     const allSets=exercises.flatMap(e=>(e.sets||[]).map(set=>({...set,exerciseName:e.name,exerciseId:e.exerciseId})));
     const metric=window.WORKOUT_METRICS?.calculateSessionMetrics?.(session)||{totalSets:allSets.length,workingSets:allSets.length,warmupSets:0,supplementarySets:0,totalReps:allSets.reduce((sum,set)=>sum+(Number(set.reps)||0),0),externalLoadVolume:allSets.reduce((sum,set)=>sum+(Number(set.reps)||0)*(Number(set.weight)||0),0),bodyweightReps:0,addedLoadReps:0,addedLoadVolume:0,bestWeight:0,bestSetVolume:0,maxReps:0};
@@ -726,7 +739,9 @@
           <div class="buttons">
             <button type="button" class="good" id="startTodayWorkoutBtn">Empezar entrenamiento</button>
             <button type="button" class="secondary" id="openQuickLoggerBtn">Continuar entrenamiento</button>
+            <button type="button" class="secondary" id="startOwnWorkoutBtn" aria-describedby="ownWorkoutHelp" hidden>Entrenar por mi cuenta</button>
           </div>
+          <p class="muted small" id="ownWorkoutHelp" hidden>Elegí tus ejercicios mientras entrenás. No cambia tu planificación semanal.</p>
         </div>
         <details class="todayExerciseDetails">
           <summary>Ver rutina del día <span class="statusChip" id="todayWorkoutExerciseCount">0 ejercicios</span></summary>
@@ -741,6 +756,11 @@
         <div class="nativeWorkoutLiveBar" id="nativeWorkoutLiveBar" hidden>
           <div><strong>Controles en pantalla de bloqueo</strong><span id="nativeWorkoutLiveText">Comprobando disponibilidad…</span></div>
           <button type="button" class="secondary" id="nativeWorkoutLiveButton">Activar</button>
+        </div>
+        <div id="ownWorkoutEmpty" hidden>
+          <h3>Entrenamiento de hoy</h3><p id="ownWorkoutEmptyMessage">Todavía no agregaste ejercicios.</p>
+          <button type="button" class="good" id="addOwnExerciseBtn">Agregar ejercicio</button>
+          <button type="button" class="secondary" id="cancelOwnWorkoutBtn">Volver</button>
         </div>
         <div class="quickLogger">
           <div class="quickExerciseChooser">
@@ -882,6 +902,18 @@
     });
     document.getElementById('startTodayWorkoutBtn')?.addEventListener('click',()=>openQuickSetLogger());
     document.getElementById('openQuickLoggerBtn')?.addEventListener('click',()=>openQuickSetLogger());
+    document.getElementById('startOwnWorkoutBtn')?.addEventListener('click',()=>{
+      if(activeSession(todayStr()))return openQuickSetLogger();
+      ownWorkoutDate=todayStr();ownExercisePickerOpen=false;currentQuickExerciseId=null;quickFormDirty=false;
+      renderQuickLogger();
+      document.getElementById('ownWorkoutEmpty')?.scrollIntoView({behavior:window.preferredMotionBehavior?.()||'auto',block:'start'});
+    });
+    document.getElementById('addOwnExerciseBtn')?.addEventListener('click',()=>{ownExercisePickerOpen=true;renderQuickLogger();});
+    document.getElementById('cancelOwnWorkoutBtn')?.addEventListener('click',()=>{ownWorkoutDate='';ownExercisePickerOpen=false;renderQuickLogger();});
+    window.addEventListener('app-route-change',event=>{
+      if(event.detail?.module==='gym'&&event.detail?.view==='train')return;
+      if(ownWorkoutDate){ownWorkoutDate='';ownExercisePickerOpen=false;currentQuickExerciseId=null;quickFormDirty=false;renderQuickLogger();}
+    });
     document.getElementById('showPwaInstallHelpBtn')?.addEventListener('click',()=>window.showPwaInstallInstructions?.());
     document.getElementById('addWorkoutWidgetBtn')?.addEventListener('click',requestWorkoutWidgetInstall);
     document.getElementById('enableWorkoutControlsBtn')?.addEventListener('click',enableNativeWorkoutControls);
@@ -971,9 +1003,18 @@
     const title=document.getElementById('todayWorkoutTitle'),subtitle=document.getElementById('todayWorkoutSummary'),list=document.getElementById('todayWorkoutExercises'),progress=document.getElementById('todayWorkoutProgress'),score=document.getElementById('todayWorkoutScore'),lever=document.getElementById('physicalLever');
     const startButton=document.getElementById('startTodayWorkoutBtn'),continueButton=document.getElementById('openQuickLoggerBtn');
     const exerciseCount=document.getElementById('todayWorkoutExerciseCount');
+    const ownButton=document.getElementById('startOwnWorkoutBtn'),ownHelp=document.getElementById('ownWorkoutHelp');
+    const canStartOwn=!session&&plan.type==='workout'&&Array.isArray(plan.exercises)&&plan.exercises.length>0;
+    if(ownButton)ownButton.hidden=!canStartOwn;
+    if(ownHelp)ownHelp.hidden=!canStartOwn;
     if(!title||!subtitle||!list||!progress) return;
-    title.textContent=`${plan.weekday} — ${plan.name}`;
-    subtitle.textContent=plan.type==='rest'?plan.message:(plan.muscles||[]).join(' · ');
+    title.textContent=`${plan.weekday} — ${session?(session.routine?.name||'Entrenamiento'):plan.name}`;
+    subtitle.textContent=session?(session.routine?.muscles||[]).join(' · '):plan.type==='rest'?plan.message:(plan.muscles||[]).join(' · ');
+    if(invalidSession(session)){
+      subtitle.textContent=sessionDataError().message;list.replaceChildren();progress.replaceChildren();
+      if(startButton)startButton.hidden=true;if(continueButton)continueButton.hidden=true;
+      return;
+    }
     const settingsValue=settings();
     if(plan.type==='rest'&&!session){
       const restText=settingsValue.showRestDays ? `${escapeHtml(plan.message)}<br>${escapeHtml((plan.suggestions||[]).join(' · '))}` : 'Día de descanso oculto en ajustes. La recuperación sigue contando.';
@@ -990,7 +1031,7 @@
       title.textContent=`${plan.weekday} — ${session.routine?.name||'Entrenamiento libre'}`;
       subtitle.textContent=`${plan.name} en tu planificación · entrenamiento opcional.`;
     }
-    const exercises=session?.exercises||plan.exercises;
+    const exercises=sessionExercises(session,plan);
     if(exerciseCount)exerciseCount.textContent=`${exercises.length} ejercicios`;
     const current=currentExercise(session)||exercises.find(x=>!x.completed)||exercises[0];
     list.innerHTML=exercises.map(exercise=>{
@@ -1004,7 +1045,7 @@
     if(score) score.textContent=`Score gym ${Math.min(100,Math.round((completed/Math.max(1,total))*70 + Math.min(30,totalSets*2)))}/100`;
     if(lever) lever.textContent=totalSets?'Según lo registrado, priorizá técnica antes que carga y registrá la siguiente serie.':'Palanca física de hoy: registrar pesos para medir progreso.';
     const active=session?.status==='en progreso';
-    if(startButton){startButton.hidden=active;startButton.textContent=plan.type==='rest'?'Entrenar de nuevo':'Empezar entrenamiento';}
+    if(startButton){startButton.hidden=active;startButton.textContent=plan.type==='rest'?'Entrenar de nuevo':`Empezar ${plan.name}`;}
     if(continueButton){continueButton.hidden=!active;continueButton.textContent='Continuar entrenamiento';}
   }
   function statCard([k,v]){
@@ -1046,10 +1087,11 @@
     updateQuickModeFields();
   }
   function captureQuickDraft(){
+    if(ownWorkoutDate===todayStr()&&!activeSession(todayStr()))return;
     const selectedId=document.getElementById('quickExerciseSelect')?.value||currentQuickExerciseId;
     if(!selectedId)return;
     const libraryId=String(selectedId).startsWith('library:')?String(selectedId).slice(8):'';
-    const source=(activeSession(todayStr())||latestSessionForDate(todayStr()))?.exercises||planForDate(todayStr()).exercises||[];
+    const source=sessionExercises(activeSession(todayStr())||latestSessionForDate(todayStr()),planForDate(todayStr()));
     const active=libraryId?source.find(exercise=>exercise.exerciseId===libraryId||exercise.id===libraryId):null;
     const exerciseId=active?.id||active?.exerciseId||selectedId;
     const payload={
@@ -1155,18 +1197,42 @@
     const date=todayStr(),plan=planForDate(date);
     const select=document.getElementById('quickExerciseSelect'); if(!select) return;
     const session=activeSession(date) || latestSessionForDate(date);
-    const source=session&&plan.type==='rest'?(session.exercises||[]):session?.exercises?.length?session.exercises:plan.exercises;
+    const ownPreview=ownWorkoutDate===date&&!session;
+    const source=ownPreview?[]:sessionExercises(session,plan);
+    const empty=ownPreview||!!session&&!source.length;
+    const invalid=invalidSession(session);
+    const emptyPanel=document.getElementById('ownWorkoutEmpty');
+    if(emptyPanel)emptyPanel.hidden=!empty;
+    const emptyMessage=document.getElementById('ownWorkoutEmptyMessage');
+    if(emptyMessage)emptyMessage.textContent=invalid?sessionDataError().message:'Todavía no agregaste ejercicios.';
+    const addButton=document.getElementById('addOwnExerciseBtn');if(addButton)addButton.hidden=invalid;
+    const cancelButton=document.getElementById('cancelOwnWorkoutBtn');if(cancelButton)cancelButton.hidden=!ownPreview;
+    document.querySelectorAll('#quickSetLoggerPanel .quickLogger > *').forEach(element=>{
+      element.hidden=empty&&(!element.classList.contains('quickExerciseChooser')||(ownPreview&&!ownExercisePickerOpen)||invalid);
+    });
+    ['saveQuickSetBtn','nextQuickExerciseBtn','repeatLastSetBtn','finishWorkoutBtn'].forEach(id=>{
+      const button=document.getElementById(id);if(!button)return;
+      if(empty)button.dataset.workoutStateDisabled='true';else delete button.dataset.workoutStateDisabled;
+      button.disabled=empty||button.dataset.workoutBusyDisabled==='true';
+    });
+    if(empty){
+      currentQuickExerciseId=null;editingQuickSetId='';quickFormDirty=false;
+      const context=document.getElementById('quickWorkoutContext');if(context)context.textContent=invalid?sessionDataError().message:session?.routine?.name||'Elegí tus ejercicios mientras entrenás.';
+      const nativeBar=document.getElementById('nativeWorkoutLiveBar');if(nativeBar)nativeBar.hidden=true;
+    }
     const pendingDraft=window.APP_DRAFTS?.list?.('gym-set')?.find(item=>item.payload?.date===date&&(source||[]).some(exercise=>(exercise.id||exercise.exerciseId)===item.payload.exerciseId));
     if(!currentQuickExerciseId&&pendingDraft?.payload?.exerciseId)currentQuickExerciseId=pendingDraft.payload.exerciseId;
     if(!editingQuickSetId&&pendingDraft?.payload?.setId)editingQuickSetId=pendingDraft.payload.setId;
     const query=document.getElementById('quickExerciseSearch')?.value||'';
-    const ranking=rankExercisesForContext({date,currentPlan:plan,query});
+    const rankingPlan=ownPreview?{name:'',exercises:[]}:session?{name:session.routine?.name||'',exercises:source}:plan;
+    const ranking=rankExercisesForContext({date,currentPlan:rankingPlan,query});
     const renderExerciseOption=(exercise,escapeValue=escapeHtml)=>{
       const active=(source||[]).find(item=>item.exerciseId===exercise.exerciseId);
       const value=active?(active.id||active.exerciseId):`library:${exercise.exerciseId}`;
       return `<option value="${escapeValue(value)}">${escapeValue(exercise.name)}</option>`;
     };
     select.innerHTML=window.WORKOUT_UI?.groupedOptions?.(ranking.groups,renderExerciseOption)??ranking.groups.map(group=>`<optgroup label="${escapeHtml(group.label)}">${group.items.map(exercise=>renderExerciseOption(exercise)).join('')}</optgroup>`).join('');
+    if(empty){select.insertAdjacentHTML('afterbegin','<option value="">Elegí un ejercicio</option>');select.value='';return;}
     if(!currentQuickExerciseId && source?.[0]) currentQuickExerciseId=source[0].id||source[0].exerciseId;
     if(currentQuickExerciseId) select.value=currentQuickExerciseId;
     const exercise=(source||[]).find(x=>(x.id||x.exerciseId)===select.value) || source?.[0];
@@ -1232,8 +1298,9 @@
       const libraryId=String(value).slice(8);
       const library=libraryData().find(exercise=>exercise.id===libraryId);
       if(library){
-        const result=addManualExercisePayload({date:todayStr(),name:library.name,muscle:library.group,type:library.type,unit:library.unit,bodyweight:library.bodyweight||library.unit==='peso corporal',persistScope:'session',rememberForWeekday:false,saveToLibrary:false});
-        if(result.ok) currentQuickExerciseId=result.exercise.id;
+        const result=addManualExercisePayload({date:todayStr(),startMode:ownWorkoutDate===todayStr()?'own':'plan',name:library.name,muscle:library.group,type:library.type,unit:library.unit,bodyweight:library.bodyweight||library.unit==='peso corporal',persistScope:'session',rememberForWeekday:false,saveToLibrary:false});
+        if(result.ok){currentQuickExerciseId=result.exercise.id;ownWorkoutDate='';ownExercisePickerOpen=false;renderTodayWorkout();}
+        else flash(result.message);
       }
     }else currentQuickExerciseId=value;
     renderQuickLogger();
@@ -1244,6 +1311,7 @@
     document.getElementById('todayWorkoutPanel')?.scrollIntoView({behavior:window.preferredMotionBehavior?.()||'auto',block:'start'});
   }
   function openQuickSetLogger(exerciseId){
+    ownWorkoutDate='';ownExercisePickerOpen=false;
     const session=startWorkoutPayload({date:todayStr()}).session;
     activateNativeControlsForSession();
     if(exerciseId) currentQuickExerciseId=exerciseId;
@@ -1266,18 +1334,19 @@
     window.setTimeout(renderWorkoutQuickAccessStatus,350);
   }
   function selectedSessionForQuick(){
+    if(ownWorkoutDate===todayStr()&&!activeSession(todayStr()))return null;
     return ensureSession(todayStr());
   }
   function selectedQuickExercise(session){
     const select=document.getElementById('quickExerciseSelect');
     const id=select?.value || currentQuickExerciseId;
-    return session?.exercises?.find(x=>x.id===id || x.exerciseId===id) || currentExercise(session);
+    return sessionExercises(session).find(x=>x.id===id || x.exerciseId===id) || currentExercise(session);
   }
   function getQuickWorkoutState({date=todayStr(),exerciseId=''}={}){
     ensureWorkoutData();
     const plan=planForDate(date);
     const session=activeSession(date) || latestSessionForDate(date);
-    const source=session&&plan.type==='rest'?(session.exercises||[]):session?.exercises?.length?session.exercises:plan.exercises||[];
+    const source=sessionExercises(session,plan);
     const selectedId=exerciseId || currentQuickExerciseId || currentExercise(session)?.id || source.find(x=>!x.completed)?.id || source[0]?.id || source[0]?.exerciseId || '';
     const exercise=source.find(x=>x.id===selectedId || x.exerciseId===selectedId) || source[0] || null;
     const h=exercise?.exerciseId ? history()[exercise.exerciseId] : null;
@@ -1286,11 +1355,12 @@
     const bodyweight=!!(exercise?.bodyweight || last?.bodyweight || h?.bodyweight);
     const summary=session?sessionSummary(session):null;
     const effectiveType=session?'workout':plan.type;
-    const routineName=session?.routine?.name||plan.name;
-    const muscles=session?.routine?.muscles?.length?session.routine.muscles:(plan.muscles||[]);
+    const routineName=session?(session.routine?.name||'Entrenamiento'):plan.name;
+    const muscles=session?(Array.isArray(session.routine?.muscles)?session.routine.muscles:[]):(plan.muscles||[]);
     return {
       date,
       plan:clone(plan),
+      error:invalidSession(session)?sessionDataError().reason:null,
       session:session?clone(session):null,
       type:effectiveType,
       title:`${plan.weekday} — ${routineName}`,
@@ -1327,7 +1397,10 @@
     const saveToLibrary=payload.saveToLibrary===undefined?persistScope==='library':!!payload.saveToLibrary;
     const targetDayKey=dayOrder.includes(payload.targetDayKey)?payload.targetDayKey:dayKeyForDate(date);
     const plan=planForDate(date);
-    let session=ensureSession(date);
+    const existing=activeSession(date);
+    if(invalidSession(existing))return sessionDataError();
+    // Own start is committed only after a valid first exercise has been added.
+    let session=payload.startMode==='own'?(existing||createSession(date,plan,{empty:true})):ensureSession(date);
     if(!session){
       session={
         id:uid('workout'),
@@ -1675,6 +1748,7 @@
     const date=payload.date||todayStr();
     const session=activeSession(date) || latestSessionForDate(date);
     if(!session) return {ok:false,reason:'missing-session',message:'Todavía no hay entrenamiento iniciado.'};
+    if(invalidSession(session))return sessionDataError();
     session.status='finalizado';
     session.finishedAt=new Date().toISOString();
     session.summary=sessionSummary(session);
@@ -1758,6 +1832,7 @@
   }
   function nextExercise(){
     const session=selectedSessionForQuick(); if(!session) return;
+    if(!sessionExercises(session).length)return;
     const current=selectedQuickExercise(session),index=session.exercises.findIndex(x=>x.id===current?.id);
     const next=session.exercises[Math.min(session.exercises.length-1,index+1)];
     session.currentExerciseIndex=session.exercises.findIndex(x=>x.id===next.id);
@@ -1767,6 +1842,7 @@
   }
   function previousExercise(){
     const session=selectedSessionForQuick(); if(!session) return;
+    if(!sessionExercises(session).length)return;
     const current=selectedQuickExercise(session),index=session.exercises.findIndex(x=>x.id===current?.id);
     const previous=session.exercises[Math.max(0,index-1)];
     session.currentExerciseIndex=session.exercises.findIndex(x=>x.id===previous.id);
@@ -2211,9 +2287,8 @@
   }
   function buildWorkoutWidgetState(date=todayStr()){
     const plan=planForDate(date),session=latestSessionForDate(date),summary=session?sessionSummary(session):null;
-    const restDaySession=plan.type==='rest'&&!!session;
-    const routineName=restDaySession?(session.routine?.name||'Entrenamiento libre'):plan.name,effectiveType=restDaySession?'workout':plan.type;
-    const generatedAt=new Date().toISOString(),sourceExercises=restDaySession?(session.exercises||[]):session?.exercises?.length?session.exercises:plan.exercises||[],library=libraryData();
+    const routineName=session?(session.routine?.name||'Entrenamiento'):plan.name,effectiveType=session?'workout':plan.type;
+    const generatedAt=new Date().toISOString(),sourceExercises=sessionExercises(session,plan),library=libraryData();
     const exercises=sourceExercises.map(exercise=>exercise.muscleClassificationSnapshot?exercise:captureMuscleClassification(exercise,libraryMatchFor(exercise,library),generatedAt));
     const current=currentExercise(session)||exercises.find(x=>!x.completed)||exercises[0]||null;
     const completed=summary?.completedExercises||0,total=exercises.length,totalSets=summary?.totalSets||0,totalVolume=summary?.totalVolume||0;
@@ -2322,7 +2397,7 @@
       routineName,
       type:effectiveType,
       unit:s.unit,
-      muscles:restDaySession?(session.routine?.muscles||[]):plan.muscles||[],
+      muscles:session?(Array.isArray(session.routine?.muscles)?session.routine.muscles:[]):plan.muscles||[],
       message:restMessage,
       suggestions:s.showRestDays?(plan.suggestions||[]):[],
       weeklyWorkoutPlan:weeklyPlan(),
@@ -2392,14 +2467,14 @@
         currentMuscleName:current?.muscle||'',
         hintText:quickHint
       },
-      workoutSession:session?clone(session):null,
+      workoutSession:session&&!invalidSession(session)?clone(session):null,
       exerciseHistory:history(),
       progressText:plan.type==='rest'&&!session?restMessage:`${completed}/${total} ejercicios · ${totalSets} series · ${Math.round(s.unit==='lb'?totalVolume*LB_PER_KG:totalVolume).toLocaleString()} ${s.unit}`,
       completedExercises:completed,
       totalExercises:total,
       totalSets,
       totalVolume,
-      status:session?.status||'sin iniciar',
+      status:invalidSession(session)?'sin iniciar':session?.status||'sin iniciar',
       lastNativeMutationAt:previousState.lastNativeMutationAt||null,
       lastNativeMutationSource:previousState.lastNativeMutationSource||'',
       lastWidgetActionText:previousState.lastWidgetActionText||quickHint,
